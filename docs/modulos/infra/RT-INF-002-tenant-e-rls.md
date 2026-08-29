@@ -4,12 +4,12 @@ titulo: Contexto de tenant, RLS e teste de vazamento
 modulo: infra
 fase: 0
 perfil: completo
-status: em-implementacao
+status: implementado
 depende_de: [RT-INF-001]
 permissoes: []
 eventos: []
 regras: [RN-INF-001, RN-INF-002, RN-INF-003, RN-INF-004]
-atualizado_em: 2026-08-28
+atualizado_em: 2026-08-29
 ---
 
 # RT-INF-002 — Contexto de tenant, RLS e teste de vazamento
@@ -220,21 +220,18 @@ outro tenant, indistinguível de recurso inexistente. **Deliberado:** 403 confir
 
 Estes sete são o entregável real da rotina.
 
-> **Status honesto em 28/08/2026:** os testes estão escritos e compilam, mas **ainda não foram
-> executados** — o daemon do Docker não subiu (diálogo de aceite de licença do Docker Desktop
-> pendente). Pela DoD do projeto, rotina só é `implementado` com teste de integração **passando**,
-> então o status desta rotina segue `em-implementacao`. Marcar os itens abaixo só depois de
-> `mvn verify` verde.
+> **Verificado em 29/08/2026:** `mvn verify` verde em três execuções consecutivas.
+> 29 testes no total (22 unitários + 7 de integração), contra Postgres 18 real no Colima.
 
-- [ ] `TenantIsolamentoIT.usuario_do_tenant_a_nao_le_auditoria_do_tenant_b`
-- [ ] `TenantIsolamentoIT.query_sem_tenant_retorna_zero_linhas_e_nao_todas`
+- [x] `TenantIsolamentoIT.usuario_do_tenant_a_nao_le_auditoria_do_tenant_b`
+- [x] `TenantIsolamentoIT.query_sem_tenant_retorna_zero_linhas_e_nao_todas`
       _(o mais importante: prova que a falha é fechada, não aberta)_
-- [ ] `TenantIsolamentoIT.conexao_reusada_do_pool_nao_herda_tenant_anterior`
+- [x] `TenantIsolamentoIT.conexao_reusada_do_pool_nao_herda_tenant_anterior`
       _(pool de tamanho 1, três leituras alternando A → B → A)_
-- [ ] `TenantIsolamentoIT.transacao_sem_escopo_falha`
-- [ ] `TenantIsolamentoIT.insert_com_tenant_alheio_e_bloqueado` _(prova o `with check`)_
-- [ ] `TenantIsolamentoIT.aplicacao_nao_e_dona_das_tabelas`
-- [ ] `SchemaIT.toda_tabela_de_negocio_tem_estabelecimento_id_rls_e_force`
+- [x] `TenantIsolamentoIT.transacao_sem_escopo_falha`
+- [x] `TenantIsolamentoIT.insert_com_tenant_alheio_e_bloqueado` _(prova o `with check`)_
+- [x] `TenantIsolamentoIT.aplicacao_nao_e_dona_das_tabelas`
+- [x] `SchemaIT.toda_tabela_de_negocio_tem_estabelecimento_id_rls_e_force`
       _(varre `pg_class` e `pg_policies`; quebra o build em migration nova esquecida)_
 
 O último é o que faz a garantia sobreviver a seis meses de desenvolvimento. Sem ele, os outros
@@ -263,6 +260,40 @@ no próprio teste dela, não num teste distante de infraestrutura.
 | Falhar sem tenant | Assumir um default | Default silencioso é como vazamento nasce |
 | Função `aplicar_rls_tenant` | Repetir 4 comandos por tabela | Repetição é onde alguém esquece um |
 | 404 para recurso de outro tenant | 403 | 403 confirma a existência |
+
+## 17.1 O que a implementação revelou
+
+Três armadilhas que só apareceram ao rodar de verdade. Nenhuma daria erro compreensível para quem
+as encontrasse pela primeira vez.
+
+### Sobrecarga `Runnable`/`Supplier` vira `StackOverflowError`
+
+`TenantContext` tinha `executar(UUID, Runnable)` e `executar(UUID, Supplier<T>)`. Uma lambda de
+expressão como `() -> tx.execute(...)` é compatível com as duas: uma atribuição é *statement
+expression* (casa com `Runnable`) e também tem valor (casa com `Supplier`). O compilador escolheu
+o `Supplier`, e a sobrecarga que delegava para a outra passou a chamar a si mesma.
+
+O sintoma é `StackOverflowError` sem nenhuma pista no stack trace sobre a origem. **Corrigido
+renomeando**, não castando: hoje são `executar` (Runnable) e `obter` (Supplier). Contornar com
+cast resolveria a chamada de hoje e deixaria a armadilha armada para a próxima.
+
+### Container singleton, não `@Container`
+
+Com `@Testcontainers` + `@Container` estático, a extensão para o container no `afterAll` de cada
+classe e cria outro na seguinte — enquanto o contexto do Spring segue cacheado apontando para o
+anterior. A segunda classe de teste falha com `relation "auditoria" does not exist` num banco que
+acabou de ser migrado, o que manda quem investiga para o lado errado. O container agora é iniciado
+uma vez em bloco estático e vive pelo JVM inteiro.
+
+### Conexão nova por helper derruba o port-forward do Colima
+
+Cada helper de cenário abria a própria conexão de owner. O teste que abre mais delas passou a
+falhar de forma intermitente com `EOFException` ao **conectar** — não ao consultar. Cinco
+handshakes TCP por teste atravessando o port-forward da VM é rotatividade suficiente para o
+forward derrubar conexão. Uma conexão de owner reaproveitada resolveu, e de quebra a classe caiu
+de **188 s para 0,7 s**.
+
+O sintoma parecia bug de isolamento e não era — vale a nota para quando algo parecido reaparecer.
 
 ## 18. Pendências
 

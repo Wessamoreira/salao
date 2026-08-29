@@ -64,6 +64,13 @@
       <groupId>org.springframework.modulith</groupId>
       <artifactId>spring-modulith-starter-core</artifactId>
     </dependency>
+    <!-- Boot 4 separou as autoconfigurações em módulos. Sem spring-boot-flyway,
+         flyway-core entra no classpath mas FlywayAutoConfiguration não existe:
+         as migrations simplesmente não rodam, sem erro nenhum. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-flyway</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-core</artifactId>
@@ -110,6 +117,48 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <profiles>
+    <!--
+      O Colima publica o socket em ~/.colima/default/docker.sock, e o Testcontainers procura em
+      /var/run/docker.sock. O Testcontainers só lê isso de variável de ambiente — propriedade de
+      sistema não funciona —, então a variável é injetada no JVM dos testes por aqui, e não na
+      sessão de quem roda.
+
+      Ativa-se sozinho pela existência do socket: em CI, onde o socket padrão existe e o do
+      Colima não, o profile fica inerte e nada muda.
+    -->
+    <profile>
+      <id>colima</id>
+      <activation>
+        <file><exists>${user.home}/.colima/default/docker.sock</exists></file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <configuration>
+              <environmentVariables>
+                <DOCKER_HOST>unix://${user.home}/.colima/default/docker.sock</DOCKER_HOST>
+                <TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE>/var/run/docker.sock</TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE>
+              </environmentVariables>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <environmentVariables>
+                <DOCKER_HOST>unix://${user.home}/.colima/default/docker.sock</DOCKER_HOST>
+                <TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE>/var/run/docker.sock</TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE>
+              </environmentVariables>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
   <build>
     <plugins>

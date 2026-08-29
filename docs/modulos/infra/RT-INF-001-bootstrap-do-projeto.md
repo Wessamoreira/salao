@@ -141,6 +141,21 @@ explicitamente no `dependencyManagement`, senão o build nem lê o POM.
 `org.testcontainers.postgresql.PostgreSQLContainer` (o antigo
 `org.testcontainers.containers.PostgreSQLContainer` continua presente como compatibilidade).
 
+**O Boot 4 separou as autoconfigurações em módulos próprios, e isso falha em silêncio.**
+`flyway-core` no classpath não traz mais `FlywayAutoConfiguration` — é preciso
+`org.springframework.boot:spring-boot-flyway`. Sem ele **as migrations simplesmente não rodam, sem
+erro nenhum**. O sintoma aparece longe da causa: o Hibernate falha com *"Unable to determine
+Dialect without JDBC metadata"*, porque a role da aplicação, que a migration criaria, não existe.
+Vale checar o mesmo padrão ao adicionar qualquer integração nova do Boot 4.
+
+**O Testcontainers não enxerga o Colima, e só aceita variável de ambiente.** O Colima publica o
+socket em `~/.colima/default/docker.sock`; o Testcontainers procura em `/var/run/docker.sock`.
+`System.setProperty("docker.host", ...)` **não funciona** — a estratégia de descoberta lê variável
+de ambiente e `~/.testcontainers.properties`, nunca propriedade de sistema. Resolvido com um
+profile Maven `colima`, ativado automaticamente pela existência do socket, que injeta
+`DOCKER_HOST` e `TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE` no JVM dos testes. Em CI o profile fica
+inerte e nada muda — e ninguém precisa exportar variável na própria sessão.
+
 **ArchUnit reprova regra sem alvo.** Com os módulos de negócio ainda vazios, regras como
 `dominio_nao_depende_de_spring` não encontram classe nenhuma e falham por padrão. Resolvido com
 `archRule.failOnEmptyShould=false` em `src/test/resources/archunit.properties`. **Isso é
@@ -149,7 +164,7 @@ implementada, senão uma regra que deixou de casar por engano passa despercebida
 
 ## 10. Estado
 
-Implementado. `mvn test` → **5 testes de arquitetura passando**.
+Implementado. `mvn verify` → **29 testes passando** (22 unitários + 7 de integração).
 
 | Arquivo | O quê |
 |---|---|

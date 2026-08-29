@@ -29,10 +29,20 @@ public final class TenantContext {
         ScopedValue.where(TENANT, estabelecimentoId).run(acao);
     }
 
-    /** Idem, devolvendo um valor. */
-    public static <T> T executar(UUID estabelecimentoId, Supplier<T> acao) {
+    /**
+     * Idem, devolvendo um valor.
+     *
+     * <p>Nome diferente de {@code executar} de propósito. Sobrecarregar o mesmo nome com
+     * {@link Runnable} e {@link Supplier} torna a chamada ambígua: uma lambda de expressão como
+     * {@code () -> conta()} é compatível com os dois, o compilador escolhe o {@code Supplier} e a
+     * sobrecarga que delega para a outra vira recursão infinita. O sintoma é um
+     * {@code StackOverflowError} sem nenhuma pista no stack trace de onde veio.
+     */
+    public static <T> T obter(UUID estabelecimentoId, Supplier<T> acao) {
         var resultado = new Object[1];
-        executar(estabelecimentoId, () -> resultado[0] = acao.get());
+        executar(estabelecimentoId, () -> {
+            resultado[0] = acao.get();
+        });
         @SuppressWarnings("unchecked")
         T valor = (T) resultado[0];
         return valor;
@@ -50,10 +60,12 @@ public final class TenantContext {
         ScopedValue.where(SEM_TENANT, Boolean.TRUE).run(acao);
     }
 
-    /** Idem, devolvendo um valor. */
-    public static <T> T executarSemTenant(Supplier<T> acao) {
+    /** Idem, devolvendo um valor. Ver a nota de nomenclatura em {@link #obter}. */
+    public static <T> T obterSemTenant(Supplier<T> acao) {
         var resultado = new Object[1];
-        executarSemTenant(() -> resultado[0] = acao.get());
+        executarSemTenant(() -> {
+            resultado[0] = acao.get();
+        });
         @SuppressWarnings("unchecked")
         T valor = (T) resultado[0];
         return valor;

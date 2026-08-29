@@ -49,7 +49,7 @@ class TenantIsolamentoIT extends AbstractPostgresIT {
         criarAuditorias(a, 3);
         criarAuditorias(b, 5);
 
-        long vistoPorA = TenantContext.executar(a, () -> tx.execute(s -> contarAuditoria()));
+        long vistoPorA = TenantContext.obter(a, () -> tx.execute(s -> contarAuditoria()));
 
         assertThat(vistoPorA)
                 .as("A tem 3 registros; existem 8 no total")
@@ -65,7 +65,7 @@ class TenantIsolamentoIT extends AbstractPostgresIT {
         UUID a = criarEstabelecimento("Salão A");
         criarAuditorias(a, 4);
 
-        long visto = TenantContext.executarSemTenant(() -> tx.execute(s -> contarAuditoria()));
+        long visto = TenantContext.obterSemTenant(() -> tx.execute(s -> contarAuditoria()));
 
         assertThat(visto).isZero();
     }
@@ -82,9 +82,9 @@ class TenantIsolamentoIT extends AbstractPostgresIT {
         criarAuditorias(a, 3);
         criarAuditorias(b, 5);
 
-        long vistoPorA = TenantContext.executar(a, () -> tx.execute(s -> contarAuditoria()));
-        long vistoPorB = TenantContext.executar(b, () -> tx.execute(s -> contarAuditoria()));
-        long vistoPorAdeNovo = TenantContext.executar(a, () -> tx.execute(s -> contarAuditoria()));
+        long vistoPorA = TenantContext.obter(a, () -> tx.execute(s -> contarAuditoria()));
+        long vistoPorB = TenantContext.obter(b, () -> tx.execute(s -> contarAuditoria()));
+        long vistoPorAdeNovo = TenantContext.obter(a, () -> tx.execute(s -> contarAuditoria()));
 
         assertThat(vistoPorA).isEqualTo(3);
         assertThat(vistoPorB).isEqualTo(5);
@@ -105,7 +105,7 @@ class TenantIsolamentoIT extends AbstractPostgresIT {
         UUID a = criarEstabelecimento("Salão A");
         UUID b = criarEstabelecimento("Salão B");
 
-        assertThatThrownBy(() -> TenantContext.executar(a, () -> tx.execute(s ->
+        assertThatThrownBy(() -> TenantContext.obter(a, () -> tx.execute(s ->
                 em.createNativeQuery("""
                                 insert into auditoria (estabelecimento_id, ator, acao, entidade)
                                 values (:outro, 'SISTEMA', 'TESTE', 'teste')
@@ -121,7 +121,7 @@ class TenantIsolamentoIT extends AbstractPostgresIT {
     void aplicacao_nao_e_dona_das_tabelas() {
         // Sem isto, o Postgres ignora a RLS para o owner e todos os testes acima
         // passariam sem provar nada.
-        String dono = TenantContext.executarSemTenant(() -> tx.execute(s ->
+        String dono = TenantContext.obterSemTenant(() -> tx.execute(s ->
                 (String) em.createNativeQuery(
                                 "select tableowner from pg_tables where tablename = 'auditoria'")
                         .getSingleResult()));
