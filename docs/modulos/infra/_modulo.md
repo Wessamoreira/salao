@@ -15,10 +15,10 @@ módulo.
 
 | ID | Título | Fase | Status |
 |---|---|---|---|
-| RT-INF-001 | Bootstrap do projeto | 0 | especificado |
-| RT-INF-002 | Contexto de tenant, RLS e teste de vazamento | 0 | especificado |
-| RT-INF-003 | Catálogo de erros e handler global | 0 | rascunho |
-| RT-INF-004 | Paginação keyset, Money, Relogio, IDs | 0 | rascunho |
+| RT-INF-001 | Bootstrap do projeto | 0 | implementado |
+| RT-INF-002 | Contexto de tenant, RLS e teste de vazamento | 0 | em-implementacao |
+| RT-INF-003 | Catálogo de erros e handler global | 0 | implementado |
+| RT-INF-004 | Money, paginação keyset e relógio | 0 | implementado |
 | RT-INF-005 | Idempotency-Key | 0 | rascunho |
 | RT-INF-006 | Outbox: publisher, expurgo, métrica | 0 | rascunho |
 | RT-INF-007 | Cache Caffeine + listener LISTEN/NOTIFY | 0 | rascunho |
