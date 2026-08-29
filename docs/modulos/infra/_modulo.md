@@ -1,0 +1,38 @@
+# Transversal `infra` (sigla INF)
+
+Não é um módulo de negócio: é o conjunto de rotinas transversais que sustentam todos os módulos.
+Fisicamente mora em `shared/` e na configuração da aplicação.
+
+## Responsabilidade
+
+Contexto de tenant, isolamento, erros, paginação, dinheiro, relógio, idempotência, outbox, cache,
+observabilidade e pipeline.
+
+**Não é responsabilidade:** nenhuma regra de negócio. Se aparecer uma aqui, ela pertence a um
+módulo.
+
+## Rotinas
+
+| ID | Título | Fase | Status |
+|---|---|---|---|
+| RT-INF-001 | Bootstrap do projeto | 0 | especificado |
+| RT-INF-002 | Contexto de tenant, RLS e teste de vazamento | 0 | especificado |
+| RT-INF-003 | Catálogo de erros e handler global | 0 | rascunho |
+| RT-INF-004 | Paginação keyset, Money, Relogio, IDs | 0 | rascunho |
+| RT-INF-005 | Idempotency-Key | 0 | rascunho |
+| RT-INF-006 | Outbox: publisher, expurgo, métrica | 0 | rascunho |
+| RT-INF-007 | Cache Caffeine + listener LISTEN/NOTIFY | 0 | rascunho |
+| RT-INF-008 | Observabilidade: Sentry, Micrometer, log JSON | 0 | rascunho |
+| RT-INF-009 | CI/CD e deploy hmg | 0 | rascunho |
+| RT-INF-010 | Shell do front | 0 | rascunho |
+
+## Invariantes que este transversal garante
+
+| ID | Invariante | Garantida por |
+|---|---|---|
+| RN-INF-001 | Toda tabela de negócio tem `estabelecimento_id` | Teste de arquitetura que varre o schema |
+| RN-INF-002 | Toda tabela de negócio tem RLS habilitada **e forçada** | Teste de arquitetura que varre o schema |
+| RN-INF-003 | Toda transação que toca tabela de negócio tem `app.tenant_id` definido | `TenantTransactionHook`; falha se ausente |
+| RN-INF-004 | A aplicação nunca conecta como dona das tabelas | Migration cria role separada; teste verifica |
+| RN-INF-005 | Dinheiro nunca é `double` ou `float` | Teste de arquitetura |
+| RN-INF-006 | Instante nunca vem de `Instant.now()` direto | Teste de arquitetura; usar o port `Relogio` |
