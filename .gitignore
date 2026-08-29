@@ -1,0 +1,53 @@
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+dependency-reduced-pom.xml
+
+# Gradle (caso migre)
+.gradle/
+build/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+*.code-workspace
+
+# Node / frontend
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+coverage/
+playwright-report/
+test-results/
+
+# Segredos — NUNCA versionar (ver docs/05-seguranca-multitenancy-lgpd.md)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets/
+application-local.yml
+application-prod.yml
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Logs e temporários
+*.log
+logs/
+tmp/
