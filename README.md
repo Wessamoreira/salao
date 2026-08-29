@@ -44,7 +44,7 @@ Leia `CLAUDE.md`. Depois `docs/09-plano-de-implementacao.md` para saber qual rot
 
 ## Estado
 
-**Fase 0 em andamento.** 47 testes passando.
+**Fase 0 em andamento.** 54 testes passando.
 
 | Rotina | Status |
 |---|---|
@@ -55,6 +55,7 @@ Leia `CLAUDE.md`. Depois `docs/09-plano-de-implementacao.md` para saber qual rot
 | RT-INF-005 Idempotência de escrita | implementado |
 | RT-INF-006 Outbox transacional | implementado |
 | RT-INF-007 Cache + LISTEN/NOTIFY | implementado |
-| RT-INF-008 Observabilidade | próxima |
+| RT-INF-008 Observabilidade | implementado |
+| RT-INF-009 CI/CD e deploy hmg | próxima |
 
 Backlog completo em `docs/09-plano-de-implementacao.md`.

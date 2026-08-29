@@ -68,6 +68,18 @@
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>
     </dependency>
+    <!-- RT-INF-008. Sem o registry, /actuator/prometheus simplesmente não existe:
+         as métricas do outbox e do cache seriam coletadas e nunca expostas. -->
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+    </dependency>
+    <!-- Gera traceId/spanId e os publica no MDC. É o que preenche o campo traceId
+         do Problem Details (RT-INF-003), que até agora ia nulo. -->
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-tracing-bridge-otel</artifactId>
+    </dependency>
     <dependency>
       <groupId>org.springframework.modulith</groupId>
       <artifactId>spring-modulith-starter-core</artifactId>

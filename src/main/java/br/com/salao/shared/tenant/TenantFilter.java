@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.UUID;
+import org.slf4j.MDC;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -21,6 +22,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 public class TenantFilter extends OncePerRequestFilter {
 
+    public static final String CAMPO_DE_LOG = "tenantId";
+
     private final ResolvedorDeTenant resolvedor;
 
     public TenantFilter(ResolvedorDeTenant resolvedor) {
@@ -35,6 +38,10 @@ public class TenantFilter extends OncePerRequestFilter {
             cadeia.doFilter(requisicao, resposta);
             return;
         }
+        // RT-INF-008: o tenant vai para o MDC junto com o escopo. Todo log da requisição passa a
+        // dizer de qual estabelecimento é — sem isso, investigar um incidente em produção
+        // multi-tenant vira adivinhação. Nunca telefone, nome ou conteúdo: só o identificador.
+        MDC.put(CAMPO_DE_LOG, tenant.toString());
         try {
             TenantContext.executar(tenant, () -> {
                 try {
@@ -49,6 +56,8 @@ public class TenantFilter extends OncePerRequestFilter {
                 case ServletException se -> throw se;
                 default -> throw e;
             }
+        } finally {
+            MDC.remove(CAMPO_DE_LOG);
         }
     }
 

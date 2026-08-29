@@ -48,11 +48,12 @@ public class MetricasDoOutbox implements MeterBinder {
                 .register(registro);
     }
 
-    double pendentes() {
+    /** Também consumido por {@code SaudeDoOutbox}: métrica responde "como está a série", health responde "está quebrado agora". */
+    public double pendentes() {
         return consultar(PENDENTES);
     }
 
-    double idadeDaMaisAntiga() {
+    public double idadeDaMaisAntiga() {
         return consultar(IDADE_MAIS_ANTIGA);
     }
 

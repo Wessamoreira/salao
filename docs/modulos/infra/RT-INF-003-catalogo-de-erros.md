@@ -78,8 +78,9 @@ alguém achar que é comportamento esperado e conviver com ele.
 
 ## 7. Pendências
 
-- [ ] `traceId` hoje vem do MDC, que só é populado quando `RT-INF-008` (OpenTelemetry) entrar.
-      Até lá o campo vai nulo — e é melhor nulo e honesto do que um valor inventado
+- [ ] `traceId` continua indo nulo. `RT-INF-008` colocou `micrometer-tracing-bridge-otel` no
+      classpath, mas sem controller não há span de servidor para correlacionar — verificado no
+      arquivo de log dos testes. Fecha com o primeiro endpoint real (RT-IAM-002/006)
 - [ ] Teste de contrato com MockMvc quando existir o primeiro controller
 - [ ] Handler de `OptimisticLockingFailureException` → `VERSAO_DESATUALIZADA` quando houver a
       primeira entidade com `@Version`

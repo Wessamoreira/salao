@@ -60,7 +60,28 @@ app.outbox:
   idade-minima-para-reenvio: ${OUTBOX_IDADE_REENVIO:PT5M}
 
 management:
+  # Porta separada: enquanto não houver Spring Security (RT-IAM-002), tirar o
+  # /actuator da porta pública é a proteção que dá para ter hoje. Métrica de
+  # negócio e health interno não são endpoint de aplicação.
+  server.port: ${MANAGEMENT_PORT:9090}
   endpoints.web.exposure.include: health,info,metrics,prometheus
-  endpoint.health.probes.enabled: true
+  endpoint.health:
+    probes.enabled: true
+    show-details: always
+  observations.annotations.enabled: true
 
-logging.level.br.com.salao: ${LOG_LEVEL:INFO}
+  tracing.sampling.probability: ${TRACE_SAMPLE:0.1}
+
+logging:
+  level.br.com.salao: ${LOG_LEVEL:INFO}
+  structured:
+    # JSON em arquivo sempre; no console só fora de dev, onde ninguém lê JSON com o olho.
+    format.file: ${LOG_FORMAT:ecs}
+    json.context.include: true
+  file.name: ${LOG_FILE:logs/salao.log}
+  pattern.correlation: "[${spring.application.name:salao},%X{traceId:-},%X{spanId:-}] "
+
+app.observabilidade:
+  # Acima disto o outbox é considerado parado, e o health passa a reportar
+  # degradado. Casado com o alerta de 5 min do Prometheus.
+  outbox-parado-apos: ${OUTBOX_PARADO_APOS:PT5M}

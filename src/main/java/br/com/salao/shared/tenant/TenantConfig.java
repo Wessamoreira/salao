@@ -1,6 +1,8 @@
 package br.com.salao.shared.tenant;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.persistence.EntityManagerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,9 +19,13 @@ public class TenantConfig {
      * recebe {@code app.tenant_id} e a RLS filtra tudo — o sistema inteiro lê zero linhas.
      */
     @Bean
-    public PlatformTransactionManager transactionManager(EntityManagerFactory emf) {
+    public PlatformTransactionManager transactionManager(EntityManagerFactory emf,
+                                                        ObjectProvider<MeterRegistry> registro) {
         var tm = new TenantAwareTransactionManager();
         tm.setEntityManagerFactory(emf);
+        // ObjectProvider: o gerenciador de transação precisa existir mesmo sem Micrometer,
+        // e depender dele criaria um ciclo com as métricas que usam o banco.
+        registro.ifAvailable(tm::setMeterRegistry);
         return tm;
     }
 

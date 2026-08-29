@@ -1,6 +1,7 @@
 package br.com.salao.shared.evento;
 
 import br.com.salao.shared.manutencao.ConexaoDeManutencao;
+import br.com.salao.shared.observabilidade.PropagadorDeContexto;
 import br.com.salao.shared.tempo.Relogio;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,12 +16,12 @@ public class EventoConfig {
 
     /**
      * O Boot aplica um único bean {@link TaskDecorator} ao executor de {@code @Async}. É por aqui
-     * que o tenant atravessa a fronteira de thread — sem isto, todo listener assíncrono falha ao
-     * abrir transação.
+     * que o tenant e o MDC atravessam a fronteira de thread — sem isto, todo listener assíncrono
+     * falha ao abrir transação, e o log do trabalho assíncrono perde o {@code traceId}.
      */
     @Bean
-    public TaskDecorator propagadorDeTenant() {
-        return new PropagadorDeTenant();
+    public TaskDecorator propagadorDeContexto() {
+        return new PropagadorDeContexto();
     }
 
     @Bean

@@ -1,5 +1,7 @@
 package br.com.salao.shared.tenant;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.persistence.EntityManager;
 import java.util.UUID;
 import org.springframework.orm.jpa.EntityManagerHolder;
@@ -29,12 +31,28 @@ public class TenantAwareTransactionManager extends JpaTransactionManager {
 
     private static final String SQL = "select set_config('app.tenant_id', :tenant, true)";
 
+    private Counter transacoesSemTenant;
+
+    /**
+     * RT-INF-008. Contador na fonte, e não no handler HTTP: transação sem tenant também acontece
+     * em job agendado e em listener assíncrono, que nunca passam por um controller. Qualquer
+     * ocorrência é bug (RN-INF-003), e por isso o alerta dispara no primeiro incremento.
+     */
+    public void setMeterRegistry(MeterRegistry registro) {
+        this.transacoesSemTenant = Counter.builder("tenant.ausente")
+                .description("Transações iniciadas sem tenant no escopo; qualquer valor é bug")
+                .register(registro);
+    }
+
     @Override
     protected void doBegin(Object transaction, TransactionDefinition definition) {
         super.doBegin(transaction, definition);
 
         UUID tenant = TenantContext.atual();
         if (tenant == null && !TenantContext.semTenantPermitido()) {
+            if (transacoesSemTenant != null) {
+                transacoesSemTenant.increment();
+            }
             throw new TenantNaoDefinidoException();   // RN-INF-003
         }
 

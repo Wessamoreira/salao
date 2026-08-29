@@ -1,0 +1,101 @@
+# RT-INF-008 — regras de alerta.
+#
+# Os dois primeiros grupos são os modos de falha SILENCIOSOS do sistema: nenhum
+# deles gera exceção, 5xx ou evento no Sentry. Sem estes alertas, ninguém fica
+# sabendo — o cliente é que descobre, e conta para o dono do salão.
+
+groups:
+  - name: falhas-silenciosas
+    rules:
+      - alert: OutboxParado
+        expr: outbox_pendente_idade_segundos > 300
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "Outbox parado há mais de 5 minutos"
+          description: >
+            A publicação pendente mais antiga tem {{ $value | humanizeDuration }}.
+            Confirmações de agendamento e lembretes não estão saindo, e a
+            aplicação segue respondendo 200 em tudo.
+          runbook: docs/runbook/outbox-travado.md
+
+      - alert: OuvinteDeCacheCaido
+        expr: cache_listener_up == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "Ouvinte de invalidação de cache desconectado"
+          description: >
+            Invalidações estão sendo perdidas. As instâncias podem servir preço
+            desatualizado por até 30 minutos (o expireAfterWrite), sem nenhum
+            outro sintoma.
+          runbook: docs/runbook/cache-desatualizado.md
+
+  - name: aplicacao
+    rules:
+      - alert: TaxaDeErro5xx
+        expr: >
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+          / sum(rate(http_server_requests_seconds_count[5m])) > 0.01
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: "Mais de 1% das requisições retornando 5xx"
+          runbook: docs/runbook/erros-5xx.md
+
+      - alert: AgendaLenta
+        expr: >
+          histogram_quantile(0.95,
+            sum by (le) (rate(http_server_requests_seconds_bucket{uri=~"/api/v1/agendamentos.*"}[5m]))
+          ) > 1.5
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "p95 da agenda acima de 1,5s"
+          description: >
+            R-UX-01 exige p95 abaixo de 800ms. Acima de 1,5s a recepção volta
+            para a planilha, e aí o projeto perdeu.
+          runbook: docs/runbook/agenda-lenta.md
+
+      - alert: PoolDeConexoesSaturado
+        expr: hikaricp_connections_pending > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Requisições esperando conexão no pool"
+          description: >
+            Risco R-18: virtual threads não aumentam a capacidade do pool. Com
+            requisições empilhadas aqui, aumentar concorrência só piora.
+
+      - alert: TransacaoSemTenant
+        expr: increase(tenant_ausente_total[15m]) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: "Transação iniciada sem tenant no escopo"
+          description: >
+            RN-INF-003. Qualquer ocorrência é bug, nunca fluxo normal — um caso
+            de uso rodou fora do escopo de uma requisição autenticada.
+
+  - name: infraestrutura
+    rules:
+      - alert: DiscoQuaseCheio
+        expr: >
+          (node_filesystem_avail_bytes{mountpoint="/"}
+           / node_filesystem_size_bytes{mountpoint="/"}) < 0.2
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: "Menos de 20% de disco livre"
+          description: >
+            Suspeitar primeiro de event_publication_archive, idempotencia e
+            auditoria — as três crescem e dependem de job de expurgo.
+          runbook: docs/runbook/disco-cheio.md
+
+      - alert: BackupSemTesteDeRestore
+        expr: (time() - backup_ultimo_restore_testado_timestamp_seconds) > 35 * 86400
+        labels: { severity: warning }
+        annotations:
+          summary: "Nenhum teste de restore registrado nos últimos 35 dias"
+          description: >
+            Risco R-04. Backup que nunca foi restaurado não é backup, é esperança.
+          runbook: docs/runbook/restore.md
