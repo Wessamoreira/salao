@@ -22,6 +22,7 @@ spring:
     password: ${DB_OWNER_PASSWORD:salao_owner_dev}
     placeholders:
       senha_app: ${DB_APP_PASSWORD:salao_app_dev}
+      senha_manutencao: ${DB_MANUTENCAO_PASSWORD:salao_manutencao_dev}
 
   jpa:
     hibernate.ddl-auto: validate     # nunca 'update' — ver CLAUDE.md, inviolável nº 9
@@ -31,6 +32,16 @@ spring:
         query.fail_on_pagination_over_collection_fetch: true
         generate_statistics: ${HIBERNATE_STATS:false}
         jdbc.time_zone: UTC
+
+app:
+  # Conexão da role de manutenção: purga de idempotência, expurgo de outbox e
+  # retenção de auditoria. Separada de propósito — ver V4__idempotencia.sql.
+  manutencao:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/salao}
+    username: ${DB_MANUTENCAO_USER:salao_manutencao}
+    password: ${DB_MANUTENCAO_PASSWORD:salao_manutencao_dev}
+  idempotencia:
+    retencao: ${IDEMPOTENCIA_RETENCAO:P7D}
 
 management:
   endpoints.web.exposure.include: health,info,metrics,prometheus

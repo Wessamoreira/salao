@@ -36,11 +36,12 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
  */
 @SpringBootTest
 @ActiveProfiles("test")
-abstract class AbstractPostgresIT {
+public abstract class AbstractPostgresIT {
 
-    static final String OWNER = "salao_owner";
+    public static final String OWNER = "salao_owner";
     static final String OWNER_SENHA = "salao_owner_dev";
     static final String APP_SENHA = "salao_app_dev";
+    static final String MANUTENCAO_SENHA = "salao_manutencao_dev";
 
     static final PostgreSQLContainer POSTGRES;
 
@@ -63,9 +64,11 @@ abstract class AbstractPostgresIT {
         registro.add("spring.datasource.username", () -> "salao_app");
         registro.add("spring.datasource.password", () -> APP_SENHA);
 
-        // Pool de 1 de propósito: força o reuso de conexão entre transações de tenants
-        // diferentes, que é a única forma de provocar o vazamento por SET sem LOCAL.
-        registro.add("spring.datasource.hikari.maximum-pool-size", () -> "1");
+        registro.add("app.manutencao.url", POSTGRES::getJdbcUrl);
+        registro.add("app.manutencao.username", () -> "salao_manutencao");
+        registro.add("app.manutencao.password", () -> MANUTENCAO_SENHA);
+        registro.add("spring.flyway.placeholders.senha_manutencao", () -> MANUTENCAO_SENHA);
+
     }
 
     /**

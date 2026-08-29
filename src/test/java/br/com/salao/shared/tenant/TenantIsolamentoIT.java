@@ -11,6 +11,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -22,6 +24,16 @@ import org.springframework.transaction.support.TransactionTemplate;
  * meses seguintes que ninguém consegue apontar.
  */
 class TenantIsolamentoIT extends AbstractPostgresIT {
+
+    /**
+     * Pool de 1: força transações sequenciais a compartilharem fisicamente a mesma conexão, que é
+     * a única forma determinística de provocar o vazamento por {@code SET} sem {@code LOCAL}.
+     * Declarado aqui, e não na base, porque outros testes precisam de concorrência real.
+     */
+    @DynamicPropertySource
+    static void poolDeUmaConexao(DynamicPropertyRegistry registro) {
+        registro.add("spring.datasource.hikari.maximum-pool-size", () -> "1");
+    }
 
     @Autowired
     private PlatformTransactionManager gerenciadorDeTransacao;
