@@ -44,7 +44,7 @@ Leia `CLAUDE.md`. Depois `docs/09-plano-de-implementacao.md` para saber qual rot
 
 ## Estado
 
-**Fase 0 em andamento.** 54 testes passando.
+**Fase 0 em andamento.** 64 testes passando.
 
 | Rotina | Status |
 |---|---|
@@ -57,6 +57,8 @@ Leia `CLAUDE.md`. Depois `docs/09-plano-de-implementacao.md` para saber qual rot
 | RT-INF-007 Cache + LISTEN/NOTIFY | implementado |
 | RT-INF-008 Observabilidade | implementado |
 | RT-INF-009 CI/CD, imagem e deploy | implementado-parcial · falta máquina de hmg |
-| RT-INF-010 Shell do front | próxima |
+| RT-IAM-001 Provisionar estabelecimento | implementado |
+| RT-IAM-002 Login | próxima |
+| RT-INF-010 Shell do front | aguarda Node |
 
 Backlog completo em `docs/09-plano-de-implementacao.md`.

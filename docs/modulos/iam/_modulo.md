@@ -1,0 +1,52 @@
+# Módulo `iam`
+
+- **Sigla:** IAM · **Fase de introdução:** 0 · **Status:** em construção
+
+## Responsabilidade
+
+Quem é o estabelecimento, quem são os usuários e o que cada um pode fazer.
+
+**Não é responsabilidade:** dados do profissional como PJ (contrato, comissão, jornada) — isso é
+`equipe`. Um usuário faz login; um profissional executa serviço; nem todo profissional tem login.
+
+## Agregados
+
+| Agregado | Invariantes que protege |
+|---|---|
+| `Estabelecimento` | Fuso é IANA válido · moeda é ISO 4217 · nome não vazio |
+| `Usuario` | (RT-IAM-002) |
+| `Perfil` | (RT-IAM-007) |
+
+## API pública (`iam/api`)
+
+| Operação | Assinatura | Consumido por |
+|---|---|---|
+| Configuração do tenant | `EstabelecimentoApi.configuracao(UUID)` | todos |
+| Fuso do tenant | `EstabelecimentoApi.fusoDe(UUID)` | `agenda`, `financeiro`, `estoque` |
+
+`ConfiguracaoDoEstabelecimento`, `BaseDeComissao`, `PeriodicidadeDeFechamento` e `ErrosDoIam` são
+parte do contrato. Nenhum módulo consulta a tabela `estabelecimento` diretamente.
+
+## Tabelas
+
+| Tabela | Agregado | RLS |
+|---|---|---|
+| `estabelecimento` | Estabelecimento | sim — policy pelo próprio `id` |
+
+## Rotinas
+
+| ID | Título | Fase | Status |
+|---|---|---|---|
+| RT-IAM-001 | Provisionar estabelecimento | 0 | implementado |
+| RT-IAM-002 | Login com Argon2id e lockout | 0 | rascunho |
+| RT-IAM-003 | Refresh rotativo com detecção de reuso | 0 | rascunho |
+| RT-IAM-004 | Logout e revogação | 0 | rascunho |
+| RT-IAM-005 | MFA TOTP | 0 | rascunho |
+| RT-IAM-006 | `/me/capabilities` | 0 | rascunho |
+| RT-IAM-007 | CRUD de usuário e perfil | 0 | rascunho |
+| RT-IAM-008 | Auditoria append-only | 0 | rascunho |
+
+## Dependências
+
+Só `shared`. É o módulo mais baixo da pilha — se algum dia ele precisar de outro módulo de
+negócio, a fronteira está errada.
