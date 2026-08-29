@@ -4,7 +4,7 @@ titulo: Contexto de tenant, RLS e teste de vazamento
 modulo: infra
 fase: 0
 perfil: completo
-status: implementado
+status: em-implementacao
 depende_de: [RT-INF-001]
 permissoes: []
 eventos: []
@@ -218,17 +218,23 @@ outro tenant, indistinguível de recurso inexistente. **Deliberado:** 403 confir
 
 ## 15. Testes obrigatórios
 
-Estes seis são o entregável real da rotina.
+Estes sete são o entregável real da rotina.
 
-- [x] `TenantIsolamentoIT.usuario_do_tenant_a_nao_le_auditoria_do_tenant_b`
-- [x] `TenantIsolamentoIT.query_sem_tenant_retorna_zero_linhas_e_nao_todas`
+> **Status honesto em 28/08/2026:** os testes estão escritos e compilam, mas **ainda não foram
+> executados** — o daemon do Docker não subiu (diálogo de aceite de licença do Docker Desktop
+> pendente). Pela DoD do projeto, rotina só é `implementado` com teste de integração **passando**,
+> então o status desta rotina segue `em-implementacao`. Marcar os itens abaixo só depois de
+> `mvn verify` verde.
+
+- [ ] `TenantIsolamentoIT.usuario_do_tenant_a_nao_le_auditoria_do_tenant_b`
+- [ ] `TenantIsolamentoIT.query_sem_tenant_retorna_zero_linhas_e_nao_todas`
       _(o mais importante: prova que a falha é fechada, não aberta)_
-- [x] `TenantIsolamentoIT.conexao_reusada_do_pool_nao_herda_tenant_anterior`
+- [ ] `TenantIsolamentoIT.conexao_reusada_do_pool_nao_herda_tenant_anterior`
       _(pool de tamanho 1, três leituras alternando A → B → A)_
-- [x] `TenantIsolamentoIT.transacao_sem_escopo_falha`
-- [x] `TenantIsolamentoIT.insert_com_tenant_alheio_e_bloqueado` _(prova o `with check`)_
-- [x] `TenantIsolamentoIT.aplicacao_nao_e_dona_das_tabelas`
-- [x] `SchemaIT.toda_tabela_de_negocio_tem_estabelecimento_id_rls_e_force`
+- [ ] `TenantIsolamentoIT.transacao_sem_escopo_falha`
+- [ ] `TenantIsolamentoIT.insert_com_tenant_alheio_e_bloqueado` _(prova o `with check`)_
+- [ ] `TenantIsolamentoIT.aplicacao_nao_e_dona_das_tabelas`
+- [ ] `SchemaIT.toda_tabela_de_negocio_tem_estabelecimento_id_rls_e_force`
       _(varre `pg_class` e `pg_policies`; quebra o build em migration nova esquecida)_
 
 O último é o que faz a garantia sobreviver a seis meses de desenvolvimento. Sem ele, os outros
