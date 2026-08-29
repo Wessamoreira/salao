@@ -4,7 +4,7 @@ titulo: Contexto de tenant, RLS e teste de vazamento
 modulo: infra
 fase: 0
 perfil: completo
-status: especificado
+status: implementado
 depende_de: [RT-INF-001]
 permissoes: []
 eventos: []
@@ -59,23 +59,42 @@ alter table agendamento enable row level security;
 alter table agendamento force row level security;   -- sem FORCE, o owner ignora a RLS
 
 create policy tenant_isolado on agendamento
-  using (estabelecimento_id = current_setting('app.tenant_id', true)::uuid);
+  using      (estabelecimento_id = nullif(current_setting('app.tenant_id', true), '')::uuid)
+  with check (estabelecimento_id = nullif(current_setting('app.tenant_id', true), '')::uuid);
 ```
+
+Dois detalhes descobertos na implementação, ambos necessários:
+
+- **`nullif(..., '')`** — sem ele, `''::uuid` lança erro de cast quando o tenant está vazio, e o
+  modo de falha vira uma exceção confusa em vez de "zero linhas". Com ele, tenant ausente **ou**
+  vazio produz `NULL`, a comparação resulta em `NULL` e nenhuma linha passa. Falha fechada.
+- **`with check`** — `using` sozinho protege só a leitura. Sem o `with check`, um `insert` com
+  `estabelecimento_id` de outro tenant passa.
 
 O `SET LOCAL app.tenant_id` é emitido por um hook no início de **toda** transação:
 
 ```java
-class TenantTransactionHook {
-    void aoIniciarTransacao(Connection conn) {
-        UUID tenant = TenantContext.atual();
-        if (tenant == null) throw new TenantNaoDefinidoException();   // RN-INF-003
-        try (var ps = conn.prepareStatement("select set_config('app.tenant_id', ?, true)")) {
-            ps.setString(1, tenant.toString());   // 'true' = LOCAL, morre no fim da transação
-            ps.execute();
-        }
+// TenantAwareTransactionManager extends JpaTransactionManager
+@Override
+protected void doBegin(Object transaction, TransactionDefinition definition) {
+    super.doBegin(transaction, definition);
+    UUID tenant = TenantContext.atual();
+    if (tenant == null && !TenantContext.semTenantPermitido()) {
+        throw new TenantNaoDefinidoException();                  // RN-INF-003
     }
+    entityManager()
+        .createNativeQuery("select set_config('app.tenant_id', :tenant, true)")
+        .setParameter("tenant", tenant == null ? "" : tenant.toString())
+        .getSingleResult();                                      // 'true' = LOCAL
 }
 ```
+
+**Por que sobrescrever `doBegin` e não usar um `@Aspect`** (decidido na implementação): um aspecto
+teria de rodar *dentro* da transação, o que exige reordenar o `TransactionInterceptor` do Spring —
+que por padrão usa `Ordered.LOWEST_PRECEDENCE` e portanto não admite ninguém depois dele sem
+reconfigurar o `@EnableTransactionManagement`. É frágil e quebra em silêncio numa atualização do
+Boot. `doBegin` engancha exatamente no início da transação, para todas elas, sem depender de ordem
+de advice.
 
 ### Camada 3 — Teste
 
@@ -130,7 +149,11 @@ vaza em produção sob concorrência.
 
 ## 9. Dados
 
-**Migration `V2__tenant_e_rls.sql`:** cria a role `salao_app`, os grants, e uma função auxiliar
+**Duas migrations, não uma** (ajuste da implementação): `V2` cria a role e a função; `V3` cria
+`estabelecimento` e `auditoria`. A RLS precisa de uma raiz de tenant e de pelo menos uma tabela de
+negócio para ser testável — sem elas, os testes de isolamento não teriam sobre o que rodar.
+
+**`V2__tenant_e_rls.sql`:** cria a role `salao_app`, os grants, e uma função auxiliar
 para aplicar RLS padrão a uma tabela — de forma que toda migration futura chame uma linha em vez
 de repetir quatro.
 
@@ -146,6 +169,15 @@ begin
 end;
 $$ language plpgsql;
 ```
+
+`V3__estabelecimento_e_auditoria.sql` cria a raiz do tenant (política sobre o próprio `id`) e a
+trilha de auditoria (`aplicar_rls_tenant('auditoria')`, seguido de
+`revoke update, delete` — trilha é append-only, e a permissão é a garantia, não a convenção).
+
+**Duas conexões diferentes, e isso é o núcleo da rotina.** O Flyway conecta como *owner*
+(`spring.flyway.user`) porque precisa criar tabela, role e política; a aplicação conecta como
+`salao_app` (`spring.datasource.username`), que não é dona de nada. Se os dois usassem a mesma
+role, o Postgres ignoraria a RLS e **todo teste de isolamento passaria sem provar nada**.
 
 **Orçamento de queries:** +1 por transação (`set_config`). Aceito — é o preço do isolamento.
 
@@ -186,19 +218,25 @@ outro tenant, indistinguível de recurso inexistente. **Deliberado:** 403 confir
 
 ## 15. Testes obrigatórios
 
-Estes cinco são o entregável real da rotina.
+Estes seis são o entregável real da rotina.
 
-- [ ] `TenantIsolamentoIT.usuario_do_tenant_a_nao_le_agendamento_do_tenant_b`
-- [ ] `TenantIsolamentoIT.query_sem_tenant_retorna_zero_linhas_e_nao_todas`
+- [x] `TenantIsolamentoIT.usuario_do_tenant_a_nao_le_auditoria_do_tenant_b`
+- [x] `TenantIsolamentoIT.query_sem_tenant_retorna_zero_linhas_e_nao_todas`
       _(o mais importante: prova que a falha é fechada, não aberta)_
-- [ ] `TenantIsolamentoIT.conexao_reusada_do_pool_nao_herda_tenant_anterior`
-      _(pool de tamanho 1, dois tenants em sequência)_
-- [ ] `TenantIsolamentoIT.aplicacao_nao_e_dona_das_tabelas`
-- [ ] `SchemaTest.toda_tabela_de_negocio_tem_estabelecimento_id_rls_e_force`
-      _(varre `information_schema` e `pg_policies`; quebra o build em migration nova esquecida)_
+- [x] `TenantIsolamentoIT.conexao_reusada_do_pool_nao_herda_tenant_anterior`
+      _(pool de tamanho 1, três leituras alternando A → B → A)_
+- [x] `TenantIsolamentoIT.transacao_sem_escopo_falha`
+- [x] `TenantIsolamentoIT.insert_com_tenant_alheio_e_bloqueado` _(prova o `with check`)_
+- [x] `TenantIsolamentoIT.aplicacao_nao_e_dona_das_tabelas`
+- [x] `SchemaIT.toda_tabela_de_negocio_tem_estabelecimento_id_rls_e_force`
+      _(varre `pg_class` e `pg_policies`; quebra o build em migration nova esquecida)_
 
 O último é o que faz a garantia sobreviver a seis meses de desenvolvimento. Sem ele, os outros
-quatro provam apenas que o isolamento funcionava no dia em que foram escritos.
+provam apenas que o isolamento funcionava no dia em que foram escritos.
+
+O `maximum-pool-size: 1` está fixado em `AbstractPostgresIT` para **toda** a suíte de integração,
+não só no teste de reuso: assim qualquer rotina futura que introduza vazamento por conexão falha
+no próprio teste dela, não num teste distante de infraestrutura.
 
 ## 16. Como testar manualmente
 
@@ -222,6 +260,16 @@ quatro provam apenas que o isolamento funcionava no dia em que foram escritos.
 
 ## 18. Pendências
 
-- [ ] Definir o gerenciamento da senha de `salao_app` em prod (variável de ambiente na Fase 0;
-      gerenciador de segredos antes do go-live)
-- [ ] Avaliar `pg_advisory_lock` por tenant quando surgir a primeira necessidade de lock
+- [ ] **Login é cross-tenant e ainda não tem solução.** Autenticar exige achar o usuário pelo
+      e-mail **antes** de saber o tenant, e a RLS bloqueia exatamente isso. Resolver em
+      `RT-IAM-002`, por uma destas vias: função `SECURITY DEFINER` restrita à busca de
+      credencial, e-mail globalmente único, ou login escopado por estabelecimento (subdomínio).
+      **Não resolver afrouxando a política.**
+- [ ] **Provisionar estabelecimento** (`RT-IAM-001`) é a outra operação legitimamente
+      cross-tenant. Roda como owner ou via `SECURITY DEFINER`.
+- [ ] `ResolvedorDeTenantPorCabecalho` é de dev/test. Fora desses perfis o resolvedor devolve
+      sempre `null` e toda transação falha — barulhento de propósito, até `RT-IAM-002` entregar o
+      resolvedor por JWT.
+- [ ] Senha de `salao_app` em prod: hoje vem do placeholder Flyway `${senha_app}` via variável de
+      ambiente. Antes do go-live, gerenciador de segredos.
+- [ ] Avaliar `pg_advisory_lock` por tenant quando surgir a primeira necessidade de lock.

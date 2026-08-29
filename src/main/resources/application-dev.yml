@@ -1,0 +1,5 @@
+spring:
+  jpa.properties.hibernate.generate_statistics: true
+logging.level:
+  br.com.salao: DEBUG
+  org.hibernate.SQL: DEBUG

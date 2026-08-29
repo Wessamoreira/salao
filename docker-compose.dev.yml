@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: salao-postgres
+    environment:
+      POSTGRES_DB: salao
+      POSTGRES_USER: salao_owner
+      POSTGRES_PASSWORD: salao_owner_dev
+    ports: ["5432:5432"]
+    volumes: ["salao-pg:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U salao_owner -d salao"]
+      interval: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio
+    container_name: salao-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio12345
+    ports: ["9000:9000", "9001:9001"]
+    volumes: ["salao-minio:/data"]
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: salao-mailpit
+    ports: ["1025:1025", "8025:8025"]
+
+volumes:
+  salao-pg:
+  salao-minio:

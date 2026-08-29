@@ -4,7 +4,7 @@ titulo: Bootstrap do projeto
 modulo: infra
 fase: 0
 perfil: leve
-status: especificado
+status: implementado
 depende_de: []
 permissoes: []
 eventos: []
@@ -116,7 +116,52 @@ empilhar mil requisições esperando conexão é pior que recusar rápido.
 
 O passo 5 é o único que realmente valida esta rotina.
 
-## 9. Decisões e trade-offs
+## 9. O que a implementação revelou
+
+Três descobertas que só apareceram ao resolver as dependências de verdade. Ficam registradas
+porque nenhuma delas é adivinhável a partir da documentação das bibliotecas.
+
+**Versões reais, conferidas no Maven Central em 28/08/2026** (o rascunho original tinha algumas
+defasadas):
+
+| Artefato | Versão real | Observação |
+|---|---|---|
+| `spring-boot-starter-parent` | **4.1.1** | 4.2.0-M1 existe, mas é milestone |
+| `spring-modulith-bom` | **2.1.1** | par do Boot 4.1 |
+| `archunit-junit5` | **1.5.0** | — |
+| `testcontainers-bom` | **2.0.5** | ver abaixo |
+| Flyway | gerenciado pelo Boot | não fixar versão à mão |
+
+**O Boot 4.1 não gerencia mais a versão do Testcontainers.** O BOM 2.0.5 precisa ser importado
+explicitamente no `dependencyManagement`, senão o build nem lê o POM.
+
+**O Testcontainers 2.x renomeou todos os artefatos.** `org.testcontainers:postgresql` virou
+`org.testcontainers:testcontainers-postgresql`, e `junit-jupiter` virou
+`testcontainers-junit-jupiter`. As classes também mudaram de pacote:
+`org.testcontainers.postgresql.PostgreSQLContainer` (o antigo
+`org.testcontainers.containers.PostgreSQLContainer` continua presente como compatibilidade).
+
+**ArchUnit reprova regra sem alvo.** Com os módulos de negócio ainda vazios, regras como
+`dominio_nao_depende_de_spring` não encontram classe nenhuma e falham por padrão. Resolvido com
+`archRule.failOnEmptyShould=false` em `src/test/resources/archunit.properties`. **Isso é
+temporário** — está anotado no próprio arquivo para voltar a `true` quando a Fase 1 estiver
+implementada, senão uma regra que deixou de casar por engano passa despercebida.
+
+## 10. Estado
+
+Implementado. `mvn test` → **5 testes de arquitetura passando**.
+
+| Arquivo | O quê |
+|---|---|
+| `pom.xml` | Boot 4.1.1, Modulith 2.1.1, Testcontainers 2.0.5, ArchUnit 1.5.0 |
+| `SalaoApplication.java` | `@Modulithic(sharedModules = "shared")` |
+| `<modulo>/package-info.java` | 11 módulos declarados com `@ApplicationModule` |
+| `application.yml` | `ddl-auto: validate`, virtual threads, pool com timeout curto |
+| `docker-compose.dev.yml` | postgres:18, minio, mailpit |
+| `V1__baseline.sql` | `btree_gist`, `pg_trgm`, `unaccent` |
+| `ArquiteturaTest.java` | os 5 testes de fronteira |
+
+## 11. Decisões e trade-offs
 
 | Decisão | Alternativa | Por quê |
 |---|---|---|

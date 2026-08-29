@@ -1,0 +1,39 @@
+spring:
+  application.name: salao
+  threads.virtual.enabled: true
+
+  datasource:
+    # A aplicação conecta como salao_app, que NÃO é dona das tabelas (RN-INF-004).
+    # Sem isso, a RLS é ignorada em silêncio para o owner.
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/salao}
+    username: ${DB_APP_USER:salao_app}
+    password: ${DB_APP_PASSWORD:salao_app_dev}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+      # Curto de propósito: com virtual threads o gargalo passa a ser o pool (risco R-18).
+      # Falhar rápido é melhor que empilhar mil requisições esperando conexão.
+      connection-timeout: 3000
+
+  flyway:
+    enabled: true
+    # Migration roda como OWNER: precisa criar tabela, role e política, e enxergar tudo.
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/salao}
+    user: ${DB_OWNER_USER:salao_owner}
+    password: ${DB_OWNER_PASSWORD:salao_owner_dev}
+    placeholders:
+      senha_app: ${DB_APP_PASSWORD:salao_app_dev}
+
+  jpa:
+    hibernate.ddl-auto: validate     # nunca 'update' — ver CLAUDE.md, inviolável nº 9
+    open-in-view: false
+    properties:
+      hibernate:
+        query.fail_on_pagination_over_collection_fetch: true
+        generate_statistics: ${HIBERNATE_STATS:false}
+        jdbc.time_zone: UTC
+
+management:
+  endpoints.web.exposure.include: health,info,metrics,prometheus
+  endpoint.health.probes.enabled: true
+
+logging.level.br.com.salao: ${LOG_LEVEL:INFO}
