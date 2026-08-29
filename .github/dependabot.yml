@@ -1,0 +1,21 @@
+# RT-INF-009 — atualização de dependências.
+# Dependabot em vez do Renovate previsto no plano: é nativo do GitHub, não exige
+# app instalado nem arquivo de configuração próprio, e para um projeto com um
+# desenvolvedor a diferença de flexibilidade não se paga.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    groups:
+      # Um PR por família: Spring Boot sobe dezenas de artefatos juntos, e
+      # revisá-los separadamente é ruído sem informação.
+      spring:
+        patterns: ["org.springframework*", "io.micrometer*"]
+      testes:
+        patterns: ["org.testcontainers*", "com.tngtech.archunit*", "org.junit*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }

@@ -23,7 +23,7 @@ módulo.
 | RT-INF-006 | Outbox transacional | 0 | implementado |
 | RT-INF-007 | Cache local com invalidação por LISTEN/NOTIFY | 0 | implementado |
 | RT-INF-008 | Observabilidade | 0 | implementado |
-| RT-INF-009 | CI/CD e deploy hmg | 0 | rascunho |
+| RT-INF-009 | CI/CD, imagem e deploy | 0 | implementado-parcial |
 | RT-INF-010 | Shell do front | 0 | rascunho |
 
 ## Invariantes que este transversal garante
