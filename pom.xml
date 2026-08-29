@@ -61,6 +61,14 @@
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-cache</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.modulith</groupId>
       <artifactId>spring-modulith-starter-core</artifactId>
     </dependency>
@@ -83,10 +91,13 @@
       <groupId>org.flywaydb</groupId>
       <artifactId>flyway-database-postgresql</artifactId>
     </dependency>
+    <!-- Escopo de compilação, não runtime: LISTEN/NOTIFY (RT-INF-007) usa a API
+         org.postgresql.PGConnection diretamente. O acoplamento é consciente — LISTEN/NOTIFY
+         não é padrão JDBC, e trocar de banco já estaria descartado pela exclusion constraint
+         da agenda e pela RLS. -->
     <dependency>
       <groupId>org.postgresql</groupId>
       <artifactId>postgresql</artifactId>
-      <scope>runtime</scope>
     </dependency>
 
     <dependency>
