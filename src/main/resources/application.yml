@@ -43,6 +43,22 @@ app:
   idempotencia:
     retencao: ${IDEMPOTENCIA_RETENCAO:P7D}
 
+spring.modulith.events:
+  # Schema vem do Flyway (V5), nunca de inicializador em runtime.
+  jdbc.schema-initialization.enabled: false
+  # ARCHIVE em vez de DELETE: mantém rastro de "esta notificação saiu?" por
+  # alguns dias, que é a pergunta real do suporte. DELETE apagaria a resposta;
+  # UPDATE deixaria a tabela quente crescer para sempre (risco R-12).
+  completion-mode: archive
+  # Desligado: o republish do Modulith roda no startup SEM tenant no escopo, e
+  # toda transação aqui exige um. Quem reenvia é o ReenviadorDeEventos, que
+  # percorre estabelecimento por estabelecimento.
+  republish-outstanding-events-on-restart: false
+
+app.outbox:
+  retencao-arquivo: ${OUTBOX_RETENCAO:P14D}
+  idade-minima-para-reenvio: ${OUTBOX_IDADE_REENVIO:PT5M}
+
 management:
   endpoints.web.exposure.include: health,info,metrics,prometheus
   endpoint.health.probes.enabled: true

@@ -20,7 +20,7 @@ módulo.
 | RT-INF-003 | Catálogo de erros e handler global | 0 | implementado |
 | RT-INF-004 | Money, paginação keyset e relógio | 0 | implementado |
 | RT-INF-005 | Idempotência de escrita | 0 | implementado |
-| RT-INF-006 | Outbox: publisher, expurgo, métrica | 0 | rascunho |
+| RT-INF-006 | Outbox transacional | 0 | implementado |
 | RT-INF-007 | Cache Caffeine + listener LISTEN/NOTIFY | 0 | rascunho |
 | RT-INF-008 | Observabilidade: Sentry, Micrometer, log JSON | 0 | rascunho |
 | RT-INF-009 | CI/CD e deploy hmg | 0 | rascunho |
@@ -38,3 +38,4 @@ módulo.
 | RN-INF-006 | Instante nunca vem de `Instant.now()` direto | Teste de arquitetura; usar o port `Relogio` |
 | RN-INF-007 | Operação cross-tenant usa a role `salao_manutencao`, nunca `salao_app` | Policy `manutencao` + [ADR-0010](../../adr/0010-role-de-manutencao.md) |
 | RN-INF-008 | Registro de idempotência commita na mesma transação do efeito de negócio | `IdempotenciaJdbc`; `IdempotenciaIT.falha_no_negocio_libera_a_chave` |
+| RN-INF-009 | Evento carrega ID, nunca PII — o outbox não tem RLS | `EventoDeDominio`; `ArquiteturaTest.listener_assincrono_so_recebe_evento_de_dominio` |

@@ -1,10 +1,16 @@
 package br.com.salao.arquitetura;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 
 import br.com.salao.SalaoApplication;
+import br.com.salao.shared.evento.EventoDeDominio;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.lang.ArchCondition;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import java.time.Instant;
@@ -57,6 +63,33 @@ class ArquiteturaTest {
                 .orShould().haveRawType(Float.class)
                 .because("dinheiro é BigDecimal/numeric(19,4); ponto flutuante em dinheiro é "
                         + "erro de centavo composto (ADR-0009)")
+                .check(CLASSES);
+    }
+
+    @Test
+    void listener_assincrono_so_recebe_evento_de_dominio() {
+        // RN-INF-009. Um listener assíncrono abre transação ANTES do corpo do método, e a
+        // transação exige tenant. No caminho normal o PropagadorDeTenant resolve; no reenvio de
+        // pendências não há thread de origem, e o tenant só pode vir do payload. Evento sem
+        // EventoDeDominio fica pendente para sempre, em silêncio — por isso o build reprova aqui,
+        // e não um comentário pedindo atenção.
+        methods().that().areAnnotatedWith(
+                        org.springframework.modulith.events.ApplicationModuleListener.class)
+                .should(new ArchCondition<JavaMethod>(
+                        "receber um único parâmetro que implemente EventoDeDominio") {
+                    @Override
+                    public void check(JavaMethod metodo, ConditionEvents eventos) {
+                        var parametros = metodo.getRawParameterTypes();
+                        boolean valido = parametros.size() == 1
+                                && parametros.get(0).isAssignableTo(EventoDeDominio.class);
+                        if (!valido) {
+                            eventos.add(SimpleConditionEvent.violated(metodo,
+                                    metodo.getFullName() + " precisa receber um único evento que "
+                                            + "implemente EventoDeDominio, senão nunca poderá ser "
+                                            + "reenviado se falhar"));
+                        }
+                    }
+                })
                 .check(CLASSES);
     }
 

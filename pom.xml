@@ -64,6 +64,10 @@
       <groupId>org.springframework.modulith</groupId>
       <artifactId>spring-modulith-starter-core</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.springframework.modulith</groupId>
+      <artifactId>spring-modulith-starter-jdbc</artifactId>
+    </dependency>
     <!-- Boot 4 separou as autoconfigurações em módulos. Sem spring-boot-flyway,
          flyway-core entra no classpath mas FlywayAutoConfiguration não existe:
          as migrations simplesmente não rodam, sem erro nenhum. -->

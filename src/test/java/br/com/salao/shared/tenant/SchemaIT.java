@@ -29,8 +29,22 @@ class SchemaIT extends AbstractPostgresIT {
      * </ul>
      * Acrescentar nome aqui é decisão consciente, não conveniência para calar o teste.
      */
-    private static final Set<String> SEM_COLUNA_DE_TENANT =
-            Set.of("flyway_schema_history", "estabelecimento");
+    private static final Set<String> SEM_COLUNA_DE_TENANT = Set.of("estabelecimento");
+
+    /**
+     * Tabelas de infraestrutura, fora da verificação por inteiro. Cada uma precisa de uma razão
+     * escrita — a lista existe para tornar a exceção visível, não para calar o teste.
+     *
+     * <ul>
+     *   <li>{@code flyway_schema_history} — controle de migration;
+     *   <li>{@code event_publication} / {@code event_publication_archive} — outbox do Spring
+     *       Modulith. Estrutura de terceiro, que não conhece nem preencheria uma coluna de tenant;
+     *       e o reenvio de pendências precisa atravessar estabelecimentos, o que sob RLS não
+     *       seria possível. O preço está em RN-INF-009: evento carrega ID, nunca PII.
+     * </ul>
+     */
+    private static final Set<String> TABELAS_DE_INFRAESTRUTURA = Set.of(
+            "flyway_schema_history", "event_publication", "event_publication_archive");
 
     @Test
     @DisplayName("toda tabela de negócio tem estabelecimento_id, RLS e FORCE")
@@ -58,7 +72,7 @@ class SchemaIT extends AbstractPostgresIT {
 
             while (rs.next()) {
                 String tabela = rs.getString("tabela");
-                if ("flyway_schema_history".equals(tabela)) {
+                if (TABELAS_DE_INFRAESTRUTURA.contains(tabela)) {
                     continue;
                 }
                 if (!SEM_COLUNA_DE_TENANT.contains(tabela) && !rs.getBoolean("tem_coluna")) {
