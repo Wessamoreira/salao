@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&display=swap">
+  <style>
+    :root {
+      --papel: oklch(0.981 0.008 85); --tinta: oklch(0.235 0.012 60);
+      --tinta-fraca: oklch(0.545 0.012 60); --tinta-tenue: oklch(0.700 0.010 60);
+      --regua: oklch(0.905 0.008 85); --regua-forte: oklch(0.855 0.010 85);
+    }
+    body { margin: 0; background: var(--papel); color: var(--tinta);
+      font-family: "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+      font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialiased; }
+    a { color: oklch(0.55 0.10 252); } a:hover { color: oklch(0.45 0.10 252); }
+    .serif { font-family: "Instrument Serif", "Iowan Old Style", Georgia, serif; }
+    .rotulo { font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase;
+      color: var(--tinta-tenue); font-weight: 600; }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 10.5px;
+      color: var(--tinta-tenue); }
+  </style>
+</helmet>
+
+<div style="width: 900px; height: 800px; padding: 28px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 20px; background: var(--papel);">
+
+  <div>
+    <span class="serif" style="font-size: 26px;">Vocabulário</span>
+    <div style="font-size: 12.5px; color: var(--tinta-fraca); margin-top: 3px;">Os valores que viram tokens no RT-INF-010. Nenhum foi arredondado para grade de 4/8.</div>
+  </div>
+
+  <div>
+    <div class="rotulo" style="margin-bottom: 8px;">Papel e tinta — quente, não cinza de SaaS</div>
+    <div style="display: flex; gap: 8px;">
+      <sc-for list="{{neutros}}" as="c" hint-placeholder-count="5">
+        <div style="flex-grow: 1; flex-basis: 0;">
+          <div style="{{c.amostra}}"></div>
+          <div style="font-size: 11px; font-weight: 600; margin-top: 5px;">{{c.nome}}</div>
+          <div class="mono">{{c.valor}}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div>
+    <div class="rotulo" style="margin-bottom: 8px;">Status — mesma chroma e luminosidade, só a matiz muda</div>
+    <div style="display: flex; gap: 8px;">
+      <sc-for list="{{status}}" as="c" hint-placeholder-count="4">
+        <div style="flex-grow: 1; flex-basis: 0;">
+          <div style="{{c.amostra}}"></div>
+          <div style="font-size: 11px; font-weight: 600; margin-top: 5px;">{{c.nome}}</div>
+          <div class="mono">{{c.valor}}</div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="font-size: 11.5px; color: var(--tinta-fraca); margin-top: 8px; line-height: 1.5;">
+      Cor aparece <strong style="font-weight: 600;">só onde carrega informação</strong>: status de agendamento,
+      alerta de validade, divergência financeira. O resto do produto é papel e tinta.
+    </div>
+  </div>
+
+  <div>
+    <div class="rotulo" style="margin-bottom: 8px;">Forma, porque cor sozinha não basta</div>
+    <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
+      <sc-for list="{{formas}}" as="f" hint-placeholder-count="5">
+        <div style="display: flex; align-items: center; gap: 7px;">
+          <span style="{{f.amostra}}"></span>
+          <span style="font-size: 12px; color: var(--tinta-fraca);">{{f.rotulo}}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="font-size: 11.5px; color: var(--tinta-fraca); margin-top: 8px; line-height: 1.5;">
+      Daltonismo é comum e o contraste AA é obrigatório — nenhum status é distinguível só pela cor.
+    </div>
+  </div>
+
+  <div style="flex-grow: 1;">
+    <div class="rotulo" style="margin-bottom: 8px;">Tipografia</div>
+    <div style="display: flex; gap: 28px;">
+      <div style="flex-grow: 1;">
+        <div class="serif" style="font-size: 30px; line-height: 1.1;">Instrument Serif</div>
+        <div style="font-size: 11.5px; color: var(--tinta-fraca); margin-top: 4px; line-height: 1.5;">
+          Só identidade e totais. Um gesto editorial — o negócio é beleza —, nunca em texto operacional.
+        </div>
+      </div>
+      <div style="flex-grow: 1;">
+        <div style="font-size: 27px; font-weight: 600; line-height: 1.1; letter-spacing: -0.015em;">Instrument Sans</div>
+        <div style="font-size: 11.5px; color: var(--tinta-fraca); margin-top: 4px; line-height: 1.5;">
+          Tudo o mais, com <span class="mono" style="font-size: 11px;">tnum</span> ligado: horas e dinheiro
+          alinham em coluna, que é o que uma grade densa exige.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="border-top: 1px solid var(--regua-forte); padding-top: 14px;">
+    <div class="rotulo" style="margin-bottom: 7px;">O que este projeto não faz</div>
+    <div style="display: flex; gap: 7px; flex-wrap: wrap;">
+      <sc-for list="{{evitar}}" as="e" hint-placeholder-count="6">
+        <span style="font-size: 11.5px; color: var(--tinta-fraca); border: 1px solid var(--regua-forte); border-radius: 2px; padding: 3px 8px; text-decoration: line-through; text-decoration-color: oklch(0.75 0.10 28);">{{e}}</span>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":900,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    function amostra(cor, borda) {
+      return 'height: 46px; border-radius: 2px; background: ' + cor + ';'
+        + (borda ? ' border: 1px solid var(--regua-forte);' : '');
+    }
+    return {
+      neutros: [
+        { nome: 'papel', valor: 'oklch(0.981 0.008 85)', amostra: amostra('oklch(0.981 0.008 85)', true) },
+        { nome: 'papel-fundo', valor: 'oklch(0.955 0.010 85)', amostra: amostra('oklch(0.955 0.010 85)', true) },
+        { nome: 'régua', valor: 'oklch(0.905 0.008 85)', amostra: amostra('oklch(0.905 0.008 85)', false) },
+        { nome: 'tinta-fraca', valor: 'oklch(0.545 0.012 60)', amostra: amostra('oklch(0.545 0.012 60)', false) },
+        { nome: 'tinta', valor: 'oklch(0.235 0.012 60)', amostra: amostra('oklch(0.235 0.012 60)', false) }
+      ],
+      status: [
+        { nome: 'confirmado', valor: 'oklch(0.62 0.115 158)', amostra: amostra('oklch(0.62 0.115 158)', false) },
+        { nome: 'solicitado', valor: 'oklch(0.62 0.115 78)', amostra: amostra('oklch(0.62 0.115 78)', false) },
+        { nome: 'em atendimento', valor: 'oklch(0.62 0.115 252)', amostra: amostra('oklch(0.62 0.115 252)', false) },
+        { nome: 'não compareceu', valor: 'oklch(0.62 0.115 28)', amostra: amostra('oklch(0.62 0.115 28)', false) }
+      ],
+      formas: [
+        { rotulo: 'confirmado — borda sólida', amostra: 'width: 26px; height: 15px; border-radius: 2px; border: 1px solid oklch(0.62 0.115 158); border-left: 3px solid oklch(0.62 0.115 158); background: oklch(0.985 0.006 85);' },
+        { rotulo: 'solicitado — tracejada', amostra: 'width: 26px; height: 15px; border-radius: 2px; border: 1px dashed oklch(0.62 0.115 78); border-left: 3px solid oklch(0.62 0.115 78); background: oklch(0.985 0.006 85);' },
+        { rotulo: 'em atendimento — barra', amostra: 'width: 26px; height: 15px; border-radius: 2px; border: 1px solid oklch(0.62 0.115 252); border-left: 3px solid oklch(0.62 0.115 252); background: linear-gradient(to top, oklch(0.62 0.115 252) 3px, oklch(0.985 0.006 85) 3px);' },
+        { rotulo: 'química agindo — hachura', amostra: 'width: 26px; height: 15px; border-radius: 2px; border: 1px dashed var(--regua-forte); background: repeating-linear-gradient(-45deg, oklch(0.955 0.010 85), oklch(0.955 0.010 85) 4px, oklch(0.925 0.012 85) 4px, oklch(0.925 0.012 85) 8px);' },
+        { rotulo: 'não compareceu — riscada', amostra: 'width: 26px; height: 15px; border-radius: 2px; border: 1px solid oklch(0.62 0.115 28); border-left: 3px solid oklch(0.62 0.115 28); background: repeating-linear-gradient(-45deg, oklch(0.975 0.012 28), oklch(0.975 0.012 28) 3px, oklch(0.90 0.04 28) 3px, oklch(0.90 0.04 28) 4px);' }
+      ],
+      evitar: ['gradiente roxo', 'sombra grande em card', 'ícone genérico em toda linha',
+               'emoji em título', 'espaçamento uniforme de 24px', 'Inter e Roboto',
+               'cor decorativa']
+    };
+  }
+}
+</script>
+</body>
+</html>

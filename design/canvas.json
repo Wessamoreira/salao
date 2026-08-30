@@ -1,0 +1,19 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 980, "title": "Agenda do dia" },
+    { "file": "Comanda.dc.html", "x": 1560, "y": 0, "w": 1120, "h": 880, "title": "Fechamento de comanda" },
+    { "file": "Painel.dc.html", "x": 0, "y": 1100, "w": 1280, "h": 800, "title": "Painel do balcão" },
+    { "file": "Vocabulario.dc.html", "x": 1400, "y": 1100, "w": 900, "h": 800, "title": "Vocabulário visual" }
+  ],
+  "annotations": [
+    { "id": "encaixe-na-pausa", "x": 0, "y": -190, "w": 430,
+      "text": "Olhe a coluna da Marilda, 10:00–10:40.\n\nA faixa hachurada é a química agindo: a cadeira segue ocupada, mas a profissional está livre — e por isso há um encaixe do Paulo dentro dela.\n\nÉ o modelo de blocos do ADR-0003 aparecendo na tela. Um calendário comum não sabe fazer isso." },
+    { "id": "linha-do-agora", "x": 470, "y": -190, "w": 400,
+      "text": "A linha vermelha em 10:24 é onde o dia está.\n\nFaltava na primeira versão, e é o que separa um calendário de uma tabela — quem olha precisa ver o agora sem procurar.\n\nNo cabeçalho de cada coluna, a carga do dia: é o número que decide se dá para encaixar mais um." },
+    { "id": "restante-a-pagar", "x": 1560, "y": -150, "w": 420,
+      "text": "Metade no cartão e metade no pix é o caso comum, não a exceção.\n\nO \"restante a pagar\" fica sempre à vista e recalcula a cada forma — é o número que a recepção olha enquanto a cliente decide." },
+    { "id": "tres-metros", "x": 0, "y": 1960, "w": 420,
+      "text": "Pensado para ser lido a 2–3 metros, por quem está sentada esperando.\n\nNenhum valor financeiro: é conta de dispositivo em espaço público." }
+  ],
+  "launch": { "view": "canvas" }
+}

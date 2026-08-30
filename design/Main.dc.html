@@ -1,0 +1,364 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+  <style>
+    :root {
+      --papel: oklch(0.981 0.008 85);
+      --papel-fundo: oklch(0.955 0.010 85);
+      --tinta: oklch(0.235 0.012 60);
+      --tinta-fraca: oklch(0.545 0.012 60);
+      --tinta-tenue: oklch(0.700 0.010 60);
+      --regua: oklch(0.905 0.008 85);
+      --regua-forte: oklch(0.855 0.010 85);
+      --confirmado: oklch(0.62 0.115 158);
+      --solicitado: oklch(0.62 0.115 78);
+      --atendendo: oklch(0.62 0.115 252);
+      --falta: oklch(0.62 0.115 28);
+    }
+    body { margin: 0; background: var(--papel-fundo); color: var(--tinta);
+      font-family: "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+      font-feature-settings: "tnum" 1, "cv05" 1; -webkit-font-smoothing: antialiased; }
+    a { color: oklch(0.55 0.10 252); } a:hover { color: oklch(0.45 0.10 252); }
+    .serif { font-family: "Instrument Serif", "Iowan Old Style", Georgia, serif; font-weight: 400; }
+  </style>
+</helmet>
+
+<div style="width: 1440px; height: 980px; display: flex; flex-direction: column; background: var(--papel-fundo); overflow: hidden;">
+
+  <!-- Cabeçalho: identidade à esquerda, dia no centro, ferramentas à direita -->
+  <header style="display: flex; align-items: baseline; gap: 32px; padding: 16px 24px; background: var(--papel); border-bottom: 1px solid var(--regua-forte);">
+    <div style="display: flex; align-items: baseline; gap: 8px;">
+      <span class="serif" style="font-size: 25px; letter-spacing: -0.01em;">Studio Marilda</span>
+      <span style="font-size: 11px; color: var(--tinta-tenue); letter-spacing: 0.08em; text-transform: uppercase;">Agenda</span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="display: flex; border: 1px solid var(--regua-forte); border-radius: 3px; overflow: hidden;">
+        <button style="border: 0; background: var(--papel); padding: 5px 9px; cursor: pointer; color: var(--tinta-fraca); font-size: 13px; line-height: 1;">‹</button>
+        <button style="border: 0; border-left: 1px solid var(--regua); background: var(--papel); padding: 5px 9px; cursor: pointer; color: var(--tinta-fraca); font-size: 13px; line-height: 1;">›</button>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 8px;">
+        <span style="font-size: 16px; font-weight: 600; letter-spacing: -0.01em;">Quarta, 3 de setembro</span>
+        <span style="font-size: 12px; color: var(--tinta-tenue);">hoje</span>
+      </div>
+    </div>
+
+    <div style="flex-grow: 1;"></div>
+
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 7px; border: 1px solid var(--regua-forte); background: var(--papel); border-radius: 3px; padding: 5px 9px; width: 232px;">
+        <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" style="color: var(--tinta-tenue);"><circle cx="9" cy="9" r="6"/><path d="M13.5 13.5 L17 17"/></svg>
+        <span style="font-size: 13px; color: var(--tinta-tenue); flex-grow: 1;">Cliente, ou 4 últimos dígitos</span>
+        <kbd style="font-size: 10px; color: var(--tinta-tenue); border: 1px solid var(--regua-forte); border-radius: 2px; padding: 1px 4px; font-family: inherit;">⌘K</kbd>
+      </div>
+      <div style="display: flex; border: 1px solid var(--regua-forte); border-radius: 3px; overflow: hidden; background: var(--papel);">
+        <sc-for list="{{densidades}}" as="d" hint-placeholder-count="3">
+          <button style="{{d.estilo}}">{{d.rotulo}}</button>
+        </sc-for>
+      </div>
+    </div>
+  </header>
+
+  <!-- Comandas abertas: dinheiro que ainda não foi cobrado, sempre à vista (R-UX-07) -->
+  <div style="display: flex; align-items: center; gap: 16px; padding: 8px 24px; background: var(--papel); border-bottom: 1px solid var(--regua-forte);">
+    <span style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tinta-tenue); font-weight: 600;">3 comandas abertas</span>
+    <div style="display: flex; gap: 8px; flex-grow: 1;">
+      <sc-for list="{{comandas}}" as="c" hint-placeholder-count="3">
+        <div style="{{c.estilo}}">
+          <span style="font-weight: 600;">{{c.cliente}}</span>
+          <span style="color: var(--tinta-fraca);">{{c.valor}}</span>
+          <span style="{{c.estiloTempo}}">{{c.tempo}}</span>
+        </div>
+      </sc-for>
+    </div>
+    <span style="font-size: 12.5px; color: var(--tinta-tenue);">parcial <strong style="color: var(--tinta); font-weight: 600;">R$ 486,00</strong></span>
+  </div>
+
+  <!-- Grade -->
+  <div style="flex-grow: 1; display: flex; overflow: hidden; background: var(--papel);">
+
+    <div style="width: 56px; flex-shrink: 0; border-right: 1px solid var(--regua-forte); padding-top: 44px; position: relative;">
+      <sc-for list="{{horas}}" as="h" hint-placeholder-count="10">
+        <div style="{{h.estilo}}"><span style="font-size: 11px; color: var(--tinta-tenue); position: relative; top: -6px; background: var(--papel); padding-right: 4px;">{{h.rotulo}}</span></div>
+      </sc-for>
+      <div style="{{estiloRotuloAgora}}">10:24</div>
+    </div>
+
+    <div style="flex-grow: 1; display: flex;">
+      <sc-for list="{{profissionais}}" as="p" hint-placeholder-count="4">
+        <div style="{{p.estiloColuna}}">
+          <div style="height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--regua-forte); background: var(--papel);">
+            <div style="{{p.estiloInicial}}">{{p.inicial}}</div>
+            <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+              <span style="font-size: 13px; font-weight: 600; line-height: 1.15;">{{p.nome}}</span>
+              <span style="font-size: 10.5px; color: var(--tinta-tenue); line-height: 1.15;">{{p.papel}}</span>
+            </div>
+            <div style="flex-grow: 1;"></div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+              <span style="font-size: 11px; font-weight: 600; line-height: 1; letter-spacing: -0.01em;">{{p.ocupado}}</span>
+              <div style="width: 34px; height: 3px; border-radius: 2px; background: var(--regua);">
+                <div style="{{p.estiloCarga}}"></div>
+              </div>
+            </div>
+          </div>
+          <div style="{{p.estiloPista}}">
+            <sc-for list="{{p.linhas}}" as="l" hint-placeholder-count="10">
+              <div style="{{l.estilo}}"></div>
+            </sc-for>
+            <div style="{{p.estiloAgora}}"></div>
+            <sc-for list="{{p.blocos}}" as="b" hint-placeholder-count="3">
+              <div style="{{b.estilo}}">
+                <sc-if value="{{b.temTexto}}" hint-placeholder-val="{{ true }}">
+                  <div style="display: flex; flex-direction: column; gap: 1px; overflow: hidden;">
+                    <div style="display: flex; align-items: baseline; gap: 5px;">
+                      <span style="{{b.estiloHora}}">{{b.hora}}</span>
+                      <span style="{{b.estiloServico}}">{{b.servico}}</span>
+                    </div>
+                    <span style="{{b.estiloCliente}}">{{b.cliente}}</span>
+                    <sc-if value="{{b.temRecurso}}" hint-placeholder-val="{{ true }}">
+                      <span style="font-size: 9.5px; color: var(--tinta-tenue); letter-spacing: 0.04em;">{{b.recurso}}</span>
+                    </sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{b.temProgresso}}" hint-placeholder-val="{{ true }}">
+                  <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: oklch(0.88 0.03 252);">
+                    <div style="width: 62%; height: 100%; background: var(--atendendo);"></div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- Legenda: a forma carrega o status junto com a cor (R-UX-12) -->
+  <!-- Legenda discreta: quem usa todo dia já sabe. Ela existe para a primeira semana,
+       não para ocupar altura útil para sempre. -->
+  <footer style="display: flex; align-items: center; gap: 16px; padding: 6px 24px; background: var(--papel); border-top: 1px solid var(--regua-forte);">
+    <sc-for list="{{legenda}}" as="g" hint-placeholder-count="5">
+      <div style="display: flex; align-items: center; gap: 5px;">
+        <span style="{{g.amostra}}"></span>
+        <span style="font-size: 10.5px; color: var(--tinta-tenue);">{{g.rotulo}}</span>
+      </div>
+    </sc-for>
+    <div style="flex-grow: 1;"></div>
+    <span style="font-size: 10.5px; color: var(--tinta-tenue);">arraste para mover · arraste no vazio para bloquear</span>
+  </footer>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"densidade":{"editor":"enum","options":["15 min","30 min","60 min"],"default":"30 min","section":"Grade"},"$preview":{"width":1440,"height":980}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var densidade = this.props.densidade || '30 min';
+    var minutosPorLinha = densidade === '15 min' ? 15 : (densidade === '60 min' ? 60 : 30);
+    var alturaLinha = densidade === '15 min' ? 19 : (densidade === '60 min' ? 62 : 34);
+    var px = alturaLinha / minutosPorLinha;
+
+    var INICIO = 9 * 60, FIM = 19 * 60;
+    var alturaPista = (FIM - INICIO) * px;
+
+    var horas = [];
+    for (var m = INICIO; m < FIM; m += 60) {
+      horas.push({
+        rotulo: (m / 60) + ':00',
+        estilo: 'height: ' + (60 * px) + 'px; border-top: 1px solid var(--regua); text-align: right;'
+      });
+    }
+
+    var linhas = [];
+    for (var t = INICIO; t < FIM; t += minutosPorLinha) {
+      var cheia = t % 60 === 0;
+      linhas.push({
+        estilo: 'position: absolute; left: 0; right: 0; top: ' + ((t - INICIO) * px) + 'px; height: 0; '
+          + 'border-top: 1px solid ' + (cheia ? 'var(--regua-forte)' : 'var(--regua)') + ';'
+      });
+    }
+
+    var CORES = {
+      confirmado: 'var(--confirmado)', solicitado: 'var(--solicitado)',
+      atendendo: 'var(--atendendo)', falta: 'var(--falta)', concluido: 'var(--tinta-tenue)'
+    };
+
+    function bloco(o) {
+      var topo = (o.de - INICIO) * px;
+      var altura = (o.ate - o.de) * px - 2;
+      var cor = CORES[o.estado] || CORES.confirmado;
+      var base = 'position: absolute; left: 3px; right: 3px; top: ' + topo + 'px; height: ' + altura
+        + 'px; border-radius: 2px; padding: 4px 6px 4px 8px; overflow: hidden; box-sizing: border-box;';
+
+      if (o.estado === 'pausa') {
+        // A química agindo: o profissional está LIVRE, a cadeira não. É a decisão de
+        // modelo do ADR-0003 aparecendo na tela — e o motivo de existir encaixe aqui.
+        return {
+          estilo: base + ' background: repeating-linear-gradient(-45deg, oklch(0.955 0.010 85), '
+            + 'oklch(0.955 0.010 85) 5px, oklch(0.925 0.012 85) 5px, oklch(0.925 0.012 85) 10px);'
+            + ' border: 1px dashed var(--regua-forte); border-left: 2px solid var(--regua-forte);',
+          temTexto: true, temProgresso: false, temRecurso: true,
+          hora: o.rotuloHora, servico: 'processando',
+          estiloHora: 'font-size: 10px; color: var(--tinta-tenue); font-weight: 500;',
+          estiloServico: 'font-size: 11.5px; color: var(--tinta-fraca); font-style: italic;',
+          cliente: o.cliente, recurso: o.recurso,
+          estiloCliente: 'font-size: 11px; color: var(--tinta-tenue);'
+        };
+      }
+      if (o.estado === 'bloqueio') {
+        return {
+          estilo: base + ' background: oklch(0.945 0.008 85); border: 1px solid var(--regua-forte);'
+            + ' display: flex; align-items: center;',
+          temTexto: true, temProgresso: false, temRecurso: false,
+          hora: '', servico: o.servico, cliente: '',
+          estiloHora: 'display: none;',
+          estiloServico: 'font-size: 11px; color: var(--tinta-tenue); letter-spacing: 0.04em;',
+          estiloCliente: 'display: none;'
+        };
+      }
+
+      var fundo = o.estado === 'concluido' ? 'oklch(0.975 0.004 85)'
+        : (o.estado === 'falta' ? 'oklch(0.975 0.012 28)' : 'oklch(0.985 0.006 85)');
+      var borda = o.estado === 'solicitado'
+        ? '1px dashed ' + cor
+        : '1px solid ' + (o.estado === 'concluido' ? 'var(--regua-forte)' : cor);
+      var hachura = o.estado === 'falta'
+        ? ' background-image: repeating-linear-gradient(-45deg, transparent, transparent 4px, oklch(0.90 0.04 28) 4px, oklch(0.90 0.04 28) 5px);'
+        : '';
+
+      return {
+        estilo: base + ' background: ' + fundo + '; border: ' + borda
+          + '; border-left: 3px solid ' + cor + ';' + hachura
+          + (o.estado === 'concluido' ? ' opacity: 0.72;' : ''),
+        temTexto: true, temProgresso: o.estado === 'atendendo', temRecurso: !!o.recurso,
+        hora: o.rotuloHora, servico: o.servico, cliente: o.cliente, recurso: o.recurso,
+        estiloHora: 'font-size: 10px; color: var(--tinta-tenue); font-weight: 500;',
+        estiloServico: 'font-size: 11.5px; font-weight: 600; color: var(--tinta); letter-spacing: -0.005em;'
+          + (o.estado === 'falta' ? ' text-decoration: line-through;' : ''),
+        estiloCliente: 'font-size: 10.5px; color: var(--tinta-tenue); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; letter-spacing: 0.005em;'
+      };
+    }
+
+    var equipe = [
+      { nome: 'Marilda', papel: 'coloração', inicial: 'M', agenda: [
+        { de: 570, ate: 600, rotuloHora: '09:30', servico: 'Mechas', cliente: 'Regina Alcântara', estado: 'atendendo', recurso: 'lavatório 1' },
+        { de: 600, ate: 640, rotuloHora: '10:00', servico: '', cliente: 'Regina — profissional livre', estado: 'pausa', recurso: 'cadeira 3 ocupada' },
+        { de: 615, ate: 645, rotuloHora: '10:15', servico: 'Corte', cliente: 'Encaixe · Paulo M.', estado: 'confirmado' },
+        { de: 640, ate: 670, rotuloHora: '10:40', servico: 'Finalização', cliente: 'Regina Alcântara', estado: 'confirmado' },
+        { de: 720, ate: 780, rotuloHora: '12:00', servico: 'almoço', cliente: '', estado: 'bloqueio' },
+        { de: 840, ate: 930, rotuloHora: '14:00', servico: 'Progressiva', cliente: 'Sônia Bittencourt', estado: 'confirmado', recurso: 'lavatório 2' },
+        { de: 960, ate: 1005, rotuloHora: '16:00', servico: 'Retoque de raiz', cliente: 'Vera Nunes', estado: 'solicitado' }
+      ]},
+      { nome: 'Ana', papel: 'cabelo', inicial: 'A', agenda: [
+        { de: 540, ate: 585, rotuloHora: '09:00', servico: 'Escova', cliente: 'Luciana Prado', estado: 'concluido' },
+        { de: 600, ate: 690, rotuloHora: '10:00', servico: 'Corte + escova', cliente: 'Marta Figueiredo', estado: 'atendendo' },
+        { de: 720, ate: 780, rotuloHora: '12:00', servico: 'almoço', cliente: '', estado: 'bloqueio' },
+        { de: 810, ate: 855, rotuloHora: '13:30', servico: 'Corte', cliente: 'Beatriz Salles', estado: 'falta' },
+        { de: 870, ate: 930, rotuloHora: '14:30', servico: 'Corte + hidratação', cliente: 'Cristina Meireles', estado: 'confirmado' },
+        { de: 1020, ate: 1065, rotuloHora: '17:00', servico: 'Escova', cliente: 'Fernanda Lyra', estado: 'confirmado' }
+      ]},
+      { nome: 'Cida', papel: 'manicure', inicial: 'C', agenda: [
+        { de: 540, ate: 600, rotuloHora: '09:00', servico: 'Mão e pé', cliente: 'Dalva Rocha', estado: 'concluido' },
+        { de: 600, ate: 645, rotuloHora: '10:00', servico: 'Mão', cliente: 'Regina Alcântara', estado: 'confirmado' },
+        { de: 660, ate: 720, rotuloHora: '11:00', servico: 'Mão e pé', cliente: 'Neusa Vilar', estado: 'confirmado' },
+        { de: 780, ate: 840, rotuloHora: '13:00', servico: 'Esmaltação em gel', cliente: 'Tatiane Assis', estado: 'confirmado' },
+        { de: 900, ate: 945, rotuloHora: '15:00', servico: 'Pé', cliente: 'Ivone Caldas', estado: 'solicitado' }
+      ]},
+      { nome: 'Duda', papel: 'assistente', inicial: 'D', agenda: [
+        { de: 570, ate: 600, rotuloHora: '09:30', servico: 'Lavagem', cliente: 'apoio · Regina', estado: 'concluido' },
+        { de: 600, ate: 630, rotuloHora: '10:00', servico: 'Lavagem', cliente: 'apoio · Marta', estado: 'concluido' },
+        { de: 840, ate: 870, rotuloHora: '14:00', servico: 'Lavagem', cliente: 'apoio · Sônia', estado: 'confirmado' },
+        { de: 930, ate: 990, rotuloHora: '15:30', servico: 'curso externo', cliente: '', estado: 'bloqueio' }
+      ]}
+    ];
+
+    // Onde o dia está. Um calendário sem isto é uma tabela.
+    var AGORA = 10 * 60 + 24;
+    var topoAgora = (AGORA - INICIO) * px;
+    var estiloAgora = 'position: absolute; left: 0; right: 0; top: ' + topoAgora + 'px; height: 0;'
+      + ' border-top: 1.5px solid var(--falta); z-index: 3; pointer-events: none;';
+    var estiloRotuloAgora = 'position: absolute; right: 4px; top: ' + (44 + topoAgora - 8)
+      + 'px; font-size: 10px; font-weight: 600; color: var(--papel); background: var(--falta);'
+      + ' border-radius: 2px; padding: 1px 4px; line-height: 1.3; letter-spacing: -0.01em;';
+
+    function minutosOcupados(agenda) {
+      var total = 0;
+      agenda.forEach(function (a) {
+        // Pausa não ocupa a profissional — é justamente o que libera encaixe.
+        if (a.estado !== 'pausa' && a.estado !== 'falta') { total += a.ate - a.de; }
+      });
+      return total;
+    }
+
+    var profissionais = equipe.map(function (p, i) {
+      var ocupados = minutosOcupados(p.agenda);
+      var proporcao = Math.min(1, ocupados / (FIM - INICIO));
+      var horasTxt = Math.floor(ocupados / 60) + 'h' + (ocupados % 60 < 10 ? '0' : '') + (ocupados % 60);
+      return {
+        nome: p.nome, papel: p.papel, inicial: p.inicial,
+        estiloColuna: 'flex-grow: 1; flex-basis: 0; display: flex; flex-direction: column;'
+          + (i > 0 ? ' border-left: 1px solid var(--regua-forte);' : ''),
+        estiloInicial: 'width: 22px; height: 22px; border-radius: 50%; background: oklch(0.925 0.012 85);'
+          + ' display: flex; align-items: center; justify-content: center; font-size: 10.5px;'
+          + ' font-weight: 600; color: var(--tinta-fraca); flex-shrink: 0;',
+        ocupado: horasTxt,
+        estiloCarga: 'width: ' + (proporcao * 100) + '%; height: 100%; border-radius: 2px;'
+          + ' background: ' + (proporcao > 0.85 ? 'var(--falta)' : 'var(--tinta-fraca)') + ';',
+        estiloAgora: estiloAgora,
+        estiloPista: 'position: relative; height: ' + alturaPista + 'px;',
+        linhas: linhas,
+        blocos: p.agenda.map(bloco)
+      };
+    });
+
+    var densidades = ['15 min', '30 min', '60 min'].map(function (d, i) {
+      var ativa = d === densidade;
+      return {
+        rotulo: d.replace(' min', ''),
+        estilo: 'border: 0; ' + (i > 0 ? 'border-left: 1px solid var(--regua);' : '')
+          + ' padding: 5px 10px; cursor: pointer; font-family: inherit; font-size: 12px;'
+          + (ativa ? ' background: var(--tinta); color: var(--papel); font-weight: 600;'
+                   : ' background: transparent; color: var(--tinta-fraca);')
+      };
+    });
+
+    function comanda(cliente, valor, tempo, atrasada) {
+      return {
+        cliente: cliente, valor: valor, tempo: tempo,
+        estilo: 'display: flex; align-items: baseline; gap: 8px; font-size: 12px; padding: 3px 9px;'
+          + ' border-radius: 2px; background: '
+          + (atrasada ? 'oklch(0.975 0.012 28)' : 'var(--papel-fundo)') + '; border: 1px solid '
+          + (atrasada ? 'oklch(0.80 0.08 28)' : 'var(--regua-forte)') + ';',
+        estiloTempo: 'font-size: 11px; ' + (atrasada
+          ? 'color: var(--falta); font-weight: 600;' : 'color: var(--tinta-tenue);')
+      };
+    }
+
+    var legenda = [
+      { rotulo: 'confirmado', amostra: 'width: 13px; height: 13px; border-radius: 2px; border: 1px solid var(--confirmado); border-left: 3px solid var(--confirmado); background: oklch(0.985 0.006 85);' },
+      { rotulo: 'solicitado', amostra: 'width: 13px; height: 13px; border-radius: 2px; border: 1px dashed var(--solicitado); border-left: 3px solid var(--solicitado); background: oklch(0.985 0.006 85);' },
+      { rotulo: 'em atendimento', amostra: 'width: 13px; height: 13px; border-radius: 2px; border: 1px solid var(--atendendo); border-left: 3px solid var(--atendendo); background: linear-gradient(to top, var(--atendendo) 2px, oklch(0.985 0.006 85) 2px);' },
+      { rotulo: 'química agindo · profissional livre', amostra: 'width: 13px; height: 13px; border-radius: 2px; border: 1px dashed var(--regua-forte); background: repeating-linear-gradient(-45deg, oklch(0.955 0.010 85), oklch(0.955 0.010 85) 3px, oklch(0.925 0.012 85) 3px, oklch(0.925 0.012 85) 6px);' },
+      { rotulo: 'não compareceu', amostra: 'width: 13px; height: 13px; border-radius: 2px; border: 1px solid var(--falta); border-left: 3px solid var(--falta); background: repeating-linear-gradient(-45deg, oklch(0.975 0.012 28), oklch(0.975 0.012 28) 3px, oklch(0.90 0.04 28) 3px, oklch(0.90 0.04 28) 4px);' }
+    ];
+
+    return {
+      horas: horas, profissionais: profissionais, densidades: densidades, legenda: legenda,
+      estiloRotuloAgora: estiloRotuloAgora,
+      comandas: [
+        comanda('Marta Figueiredo', 'R$ 180,00', 'aberta há 40 min', false),
+        comanda('Regina Alcântara', 'R$ 246,00', 'aberta há 1h10', false),
+        comanda('Dalva Rocha', 'R$ 60,00', 'aberta há 3h20', true)
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -13,7 +13,11 @@ conversacional no WhatsApp. Um desenvolvedor. Documentação é parte do entreg�
    próximo" — já houve um bloco inteiro pulado assim (ver `docs/14-checklist-de-execucao.md`).
 4. **Se faltar regra de negócio, PERGUNTE.** Não assuma. Regra assumida errada custa reescrita
    de fechamento financeiro.
-5. **Toda regra descoberta vira registro** em `docs/modulos/<modulo>/regras.md` com ID `RN-XXX`,
+5. **Acabamento profissional é padrão, não extra.** Antes de entregar, passe o trabalho por uma
+   crítica honesta e aja sobre ela — não narre o que faria. Rigor métrico (escala de espaçamento,
+   nunca números arbitrários), hierarquia deliberada, nada decorativo. Mais profissional é mais
+   rigor e menos ruído, nunca mais coisas.
+6. **Toda regra descoberta vira registro** em `docs/modulos/<modulo>/regras.md` com ID `RN-XXX`,
    antes ou junto com o código. Regra que só existe dentro de um `if` está perdida.
 
 ## Stack (não troque sem ADR)

@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif&display=swap">
+  <style>
+    :root {
+      --papel: oklch(0.981 0.008 85); --tinta: oklch(0.235 0.012 60);
+      --tinta-fraca: oklch(0.545 0.012 60); --tinta-tenue: oklch(0.700 0.010 60);
+      --regua: oklch(0.905 0.008 85); --regua-forte: oklch(0.855 0.010 85);
+      --confirmado: oklch(0.62 0.115 158); --atendendo: oklch(0.62 0.115 252);
+      --atrasado: oklch(0.62 0.115 28);
+    }
+    body { margin: 0; background: var(--papel); color: var(--tinta);
+      font-family: "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+      font-feature-settings: "tnum" 1; -webkit-font-smoothing: antialiased; }
+    a { color: oklch(0.55 0.10 252); } a:hover { color: oklch(0.45 0.10 252); }
+    .serif { font-family: "Instrument Serif", "Iowan Old Style", Georgia, serif; }
+  </style>
+</helmet>
+
+<!-- Lido de 2 a 3 metros. Só o que a cliente sentada na espera precisa: quando, com quem,
+     e se já pode subir. Nenhum valor — é conta de dispositivo em espaço público. -->
+<div style="width: 1280px; height: 800px; display: flex; flex-direction: column; background: var(--papel); overflow: hidden;">
+
+  <header style="display: flex; align-items: baseline; padding: 26px 40px 20px; border-bottom: 2px solid var(--tinta);">
+    <span class="serif" style="font-size: 34px; letter-spacing: -0.01em;">Studio Marilda</span>
+    <div style="flex-grow: 1;"></div>
+    <span style="font-size: 44px; font-weight: 600; letter-spacing: -0.02em;">10:24</span>
+  </header>
+
+  <div style="flex-grow: 1; padding: 8px 40px 0; overflow: hidden;">
+    <div style="display: grid; grid-template-columns: 150px 1fr 260px 210px; gap: 0 24px; padding: 12px 0 10px; border-bottom: 1px solid var(--regua-forte);">
+      <span style="font-size: 15px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--tinta-tenue); font-weight: 600;">Horário</span>
+      <span style="font-size: 15px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--tinta-tenue); font-weight: 600;">Cliente</span>
+      <span style="font-size: 15px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--tinta-tenue); font-weight: 600;">Profissional</span>
+      <span style="font-size: 15px; letter-spacing: 0.10em; text-transform: uppercase; color: var(--tinta-tenue); font-weight: 600;">Situação</span>
+    </div>
+
+    <sc-for list="{{linhas}}" as="l" hint-placeholder-count="7">
+      <div style="{{l.estilo}}">
+        <span style="{{l.estiloHora}}">{{l.hora}}</span>
+        <span style="{{l.estiloCliente}}">{{l.cliente}}</span>
+        <span style="font-size: 27px; color: var(--tinta-fraca); align-self: center;">{{l.profissional}}</span>
+        <div style="display: flex; align-items: center; gap: 10px; align-self: center;">
+          <span style="{{l.marca}}"></span>
+          <span style="{{l.estiloSituacao}}">{{l.situacao}}</span>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <footer style="display: flex; align-items: center; gap: 12px; padding: 16px 40px; border-top: 1px solid var(--regua-forte);">
+    <span style="width: 9px; height: 9px; border-radius: 50%; background: var(--confirmado);"></span>
+    <span style="font-size: 16px; color: var(--tinta-tenue);">atualizado às 10:24</span>
+    <div style="flex-grow: 1;"></div>
+    <span style="font-size: 16px; color: var(--tinta-tenue);">4 atendimentos restantes hoje</span>
+  </footer>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    function linha(hora, cliente, profissional, situacao, estado) {
+      var cor = estado === 'atendendo' ? 'var(--atendendo)'
+        : (estado === 'atrasado' ? 'var(--atrasado)'
+        : (estado === 'concluido' ? 'var(--tinta-tenue)' : 'var(--confirmado)'));
+      var esmaecido = estado === 'concluido';
+
+      return {
+        hora: hora, cliente: cliente, profissional: profissional, situacao: situacao,
+        estilo: 'display: grid; grid-template-columns: 150px 1fr 260px 210px; gap: 0 24px;'
+          + ' padding: 15px 0; border-bottom: 1px solid var(--regua);'
+          + (esmaecido ? ' opacity: 0.42;' : '')
+          + (estado === 'atendendo' ? ' background: oklch(0.972 0.014 252);'
+              + ' box-shadow: inset 4px 0 0 var(--atendendo); padding-left: 14px;'
+              + ' margin-left: -14px; margin-right: -14px; padding-right: 14px;' : '')
+          + (estado === 'proximo' ? ' box-shadow: inset 4px 0 0 var(--confirmado);'
+              + ' padding-left: 14px; margin-left: -14px;' : ''),
+        estiloHora: 'font-size: 31px; font-weight: 600; letter-spacing: -0.015em; align-self: center;'
+          + (estado === 'atrasado' ? ' color: var(--atrasado);' : ''),
+        estiloCliente: 'font-size: 29px; letter-spacing: -0.01em; align-self: center;',
+        // Cor sozinha não carrega o status: o círculo é vazado, cheio ou riscado (R-UX-12).
+        marca: estado === 'concluido'
+          ? 'width: 15px; height: 15px; border-radius: 50%; border: 2px solid ' + cor + '; background: ' + cor + ';'
+          : (estado === 'atendendo'
+              ? 'width: 15px; height: 15px; border-radius: 50%; background: ' + cor + '; box-shadow: 0 0 0 4px oklch(0.90 0.05 252);'
+              : 'width: 15px; height: 15px; border-radius: 50%; border: 2px solid ' + cor + ';'),
+        estiloSituacao: 'font-size: 22px; color: ' + cor + ';'
+          + (estado === 'atrasado' || estado === 'proximo' ? ' font-weight: 600;' : '')
+      };
+    }
+
+    return {
+      linhas: [
+        linha('09:00', 'Luciana Prado', 'Ana', 'concluído', 'concluido'),
+        linha('09:30', 'Regina Alcântara', 'Marilda', 'em atendimento', 'atendendo'),
+        linha('10:00', 'Marta Figueiredo', 'Ana', 'em atendimento', 'atendendo'),
+        linha('10:00', 'Regina Alcântara', 'Cida', 'aguardando há 24 min', 'atrasado'),
+        linha('11:00', 'Neusa Vilar', 'Cida', 'próxima', 'proximo'),
+        linha('13:00', 'Tatiane Assis', 'Cida', 'confirmado', 'confirmado'),
+        linha('14:00', 'Sônia Bittencourt', 'Marilda', 'confirmado', 'confirmado')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

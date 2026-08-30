@@ -187,6 +187,17 @@ Contraste AA (4.5:1 em texto normal) · navegação completa por teclado, sem ar
 `aria-label` em todo controle sem texto visível · alvo de toque ≥ 44px no tablet do balcão ·
 foco visível e nunca removido por CSS · `prefers-reduced-motion` respeitado.
 
+## Padrão de acabamento
+
+**Decidido em 29/08/2026, a pedido do dono do projeto.** Toda entrega passa por crítica antes de
+ser entregue, e a crítica é aplicada — não relatada. O critério não é gosto: é rigor métrico
+(escala de espaçamento, não números soltos), hierarquia deliberada e ausência de decoração.
+
+O que fez diferença na primeira revisão do canvas, e serve de calibragem: a **linha do agora** que
+faltava na agenda (sem ela, um calendário é uma tabela), a escala de espaçamento que estava
+arbitrária, a cor que decorava em vez de informar, e um botão que anunciava um total quando o que
+importava era o que faltava receber.
+
 ## Processo: desenhar antes de codar
 
 **Decidido em 29/08/2026.** Antes de `RT-INF-010` e de qualquer tela, as principais são desenhadas
