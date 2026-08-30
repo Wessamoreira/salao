@@ -3,7 +3,13 @@ package br.com.salao.iam.internal;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.internal.application.AutenticarUseCase;
 import br.com.salao.iam.internal.application.AbridorDeSessao;
+import br.com.salao.iam.internal.application.AlterarPerfilDoUsuarioUseCase;
 import br.com.salao.iam.internal.application.ConsultarCapacidadesUseCase;
+import br.com.salao.iam.internal.application.CriarUsuarioUseCase;
+import br.com.salao.iam.internal.application.DefinirAtivacaoDoUsuarioUseCase;
+import br.com.salao.iam.internal.application.ListarUsuariosUseCase;
+import br.com.salao.iam.internal.application.ResetarSegundoFatorUseCase;
+import br.com.salao.iam.internal.application.TrocarSenhaUseCase;
 import br.com.salao.iam.internal.application.EncerrarSessaoUseCase;
 import br.com.salao.iam.internal.application.RenovarAcessoUseCase;
 import br.com.salao.iam.internal.application.SegundoFatorUseCase;
@@ -14,6 +20,7 @@ import br.com.salao.iam.internal.infra.EstabelecimentoCacheado;
 import br.com.salao.iam.internal.infra.MfaJdbc;
 import br.com.salao.iam.internal.infra.PurgadorDeRefreshTokens;
 import br.com.salao.iam.internal.infra.RefreshTokensJdbc;
+import br.com.salao.iam.internal.infra.UsuariosJdbc;
 import br.com.salao.iam.internal.infra.EstabelecimentoJdbc;
 import br.com.salao.shared.manutencao.ConexaoDeManutencao;
 import br.com.salao.shared.tempo.Relogio;
@@ -108,6 +115,49 @@ public class IamConfig {
                                                    Relogio relogio) {
         return new SegundoFatorUseCase(mfa, credenciais, estabelecimentos, abridor, decoder,
                 relogio);
+    }
+
+    @Bean
+    public UsuariosJdbc usuariosJdbc(DataSource dataSource) {
+        return new UsuariosJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public CriarUsuarioUseCase criarUsuarioUseCase(UsuariosJdbc usuarios,
+                                                   PasswordEncoder codificador) {
+        return new CriarUsuarioUseCase(usuarios, codificador);
+    }
+
+    @Bean
+    public ListarUsuariosUseCase listarUsuariosUseCase(UsuariosJdbc usuarios) {
+        return new ListarUsuariosUseCase(usuarios);
+    }
+
+    @Bean
+    public AlterarPerfilDoUsuarioUseCase alterarPerfilDoUsuarioUseCase(
+            UsuariosJdbc usuarios, CredenciaisJdbc credenciais, RefreshTokensJdbc tokens,
+            Relogio relogio) {
+        return new AlterarPerfilDoUsuarioUseCase(usuarios, credenciais, tokens, relogio);
+    }
+
+    @Bean
+    public DefinirAtivacaoDoUsuarioUseCase definirAtivacaoDoUsuarioUseCase(
+            UsuariosJdbc usuarios, CredenciaisJdbc credenciais, RefreshTokensJdbc tokens,
+            Relogio relogio) {
+        return new DefinirAtivacaoDoUsuarioUseCase(usuarios, credenciais, tokens, relogio);
+    }
+
+    @Bean
+    public ResetarSegundoFatorUseCase resetarSegundoFatorUseCase(
+            MfaJdbc mfa, RefreshTokensJdbc tokens, Relogio relogio) {
+        return new ResetarSegundoFatorUseCase(mfa, tokens, relogio);
+    }
+
+    @Bean
+    public TrocarSenhaUseCase trocarSenhaUseCase(
+            UsuariosJdbc usuarios, CredenciaisJdbc credenciais, RefreshTokensJdbc tokens,
+            PasswordEncoder codificador, Relogio relogio) {
+        return new TrocarSenhaUseCase(usuarios, credenciais, tokens, codificador, relogio);
     }
 
     @Bean

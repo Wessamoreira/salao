@@ -65,6 +65,10 @@ e o Modulith reprova o build se outro módulo alcançar o `internal`.
 | `ER-IAM-SESSAO_EXPIRADA` | 401 | Refresh desconhecido, expirado, revogado ou reusado (RN-IAM-007) | "Sua sessão expirou. Entre novamente." |
 | `ER-IAM-SEGUNDO_FATOR_INVALIDO` | 401 | Desafio, TOTP ou código de recuperação inválidos (RN-IAM-011/012) | "Código de verificação inválido." |
 | `ER-IAM-MFA_NAO_INSCRITO` | 422 | Confirmar ou desativar sem inscrição | "Configure o segundo fator antes." |
+| `ER-IAM-EMAIL_JA_CADASTRADO` | 409 | E-mail já em uso (índice global) | "Este e-mail já está em uso." |
+| `ER-IAM-OPERACAO_SOBRE_SI_MESMO` | 422 | RN-IAM-015 | "Peça a outro administrador para fazer isso na sua conta." |
+| `ER-IAM-ULTIMO_ADMINISTRADOR` | 422 | RN-IAM-015 | "Promova outro administrador antes de remover este." |
+| `ER-IAM-SENHA_ATUAL_INCORRETA` | 422 | Troca de senha | "A senha atual não confere." |
 
 ---
 
@@ -252,3 +256,39 @@ terceira é ação de segurança, e bloqueá-la reduziria a segurança em nome d
 **Testes.** `AutorizacaoWebIT.admin_sem_mfa_e_bloqueado`,
 `AutorizacaoWebIT.caminho_de_saida_permanece_aberto`
 **Erro.** 403 · **Configurável?** Via `MapaDePermissoes.exigeMfa` · **Origem.** 2026-08-29
+
+---
+
+### RN-IAM-015 — O salão não pode ficar sem administrador
+
+**Enunciado.** Ninguém rebaixa ou desativa a própria conta. E não se remove o último administrador
+ativo, seja rebaixando ou desativando.
+
+**Motivo.** Operar sobre si mesmo é quase sempre engano, e quem perceberia o erro é justamente
+quem acabou de perder o acesso. Sem administrador ativo, a única saída seria alterar o banco à mão.
+
+**Onde é garantida.** `GestaoDeUsuarios.recusarSobreSiMesmo` e `exigirOutroAdministrador`,
+compartilhadas entre os casos de uso.
+**Rotinas.** RT-IAM-007
+**Testes.** `GestaoDeUsuariosIT.nao_opera_sobre_si_mesmo`,
+`GestaoDeUsuariosIT.ultimo_administrador_e_protegido`
+**Erros.** `ER-IAM-OPERACAO_SOBRE_SI_MESMO`, `ER-IAM-ULTIMO_ADMINISTRADOR` (422)
+**Configurável?** Não · **Origem.** 2026-08-29
+
+---
+
+### RN-IAM-016 — Mudança de acesso encerra as sessões do usuário
+
+**Enunciado.** Rebaixar perfil, desativar, trocar senha e resetar o segundo fator revogam todas as
+sessões do usuário afetado.
+
+**Motivo.** O access token vale 15 minutos e não é revogável. Sem encerrar as sessões, o token com
+o perfil antigo continuaria valendo — irrelevante numa promoção, e exatamente a janela indesejada
+num rebaixamento. Na troca de senha, cai também a sessão de quem trocou: trocar senha é o que se
+faz ao suspeitar de acesso alheio.
+
+**Onde é garantida.** `RefreshTokensJdbc.revogarTodasDoUsuario`, chamada por cada caso de uso.
+**Rotinas.** RT-IAM-007
+**Testes.** `GestaoDeUsuariosIT.desativar_encerra_sessoes`, `.rebaixar_encerra_sessoes`,
+`.trocar_senha`
+**Configurável?** Não · **Origem.** 2026-08-29

@@ -44,7 +44,7 @@ Leia `CLAUDE.md`. Depois `docs/09-plano-de-implementacao.md` para saber qual rot
 
 ## Estado
 
-**Fase 0 em andamento.** 137 testes passando.
+**Fase 0 em andamento.** 147 testes passando.
 
 | Rotina | Status |
 |---|---|
@@ -63,7 +63,8 @@ Leia `CLAUDE.md`. Depois `docs/09-plano-de-implementacao.md` para saber qual rot
 | RT-IAM-004 Logout e revogação de sessão | implementado |
 | RT-IAM-005 MFA TOTP | implementado |
 | RT-IAM-006 /me/capabilities e autorização | implementado |
-| RT-IAM-007 CRUD de usuário | próxima |
+| RT-IAM-007 CRUD de usuário e perfil | implementado |
+| RT-IAM-008 Auditoria append-only | próxima |
 | RT-INF-010 Shell do front | aguarda Node |
 
 Backlog completo em `docs/09-plano-de-implementacao.md`.

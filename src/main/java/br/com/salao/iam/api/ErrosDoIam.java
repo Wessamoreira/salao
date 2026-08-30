@@ -35,7 +35,21 @@ public enum ErrosDoIam implements CodigoDeErro {
             "Código de verificação inválido"),
 
     MFA_NAO_INSCRITO("ER-IAM-MFA_NAO_INSCRITO", HttpStatus.UNPROCESSABLE_ENTITY,
-            "Segundo fator não configurado");
+            "Segundo fator não configurado"),
+
+    EMAIL_JA_CADASTRADO("ER-IAM-EMAIL_JA_CADASTRADO", HttpStatus.CONFLICT,
+            "E-mail já cadastrado"),
+
+    /** Rebaixar ou desativar a si mesmo é quase sempre engano, e o estrago é imediato. */
+    OPERACAO_SOBRE_SI_MESMO("ER-IAM-OPERACAO_SOBRE_SI_MESMO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Não é possível fazer isso na própria conta"),
+
+    /** Sem administrador ativo, a saída seria mexer no banco à mão. */
+    ULTIMO_ADMINISTRADOR("ER-IAM-ULTIMO_ADMINISTRADOR", HttpStatus.UNPROCESSABLE_ENTITY,
+            "O salão ficaria sem administrador"),
+
+    SENHA_ATUAL_INCORRETA("ER-IAM-SENHA_ATUAL_INCORRETA", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Senha atual incorreta");
 
     private final String codigo;
     private final HttpStatus status;

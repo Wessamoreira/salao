@@ -49,7 +49,7 @@ parte do contrato. Nenhum módulo consulta a tabela `estabelecimento` diretament
 | RT-IAM-004 | Logout e revogação de sessão | 0 | implementado |
 | RT-IAM-005 | MFA TOTP | 0 | implementado |
 | RT-IAM-006 | `/me/capabilities` e autorização por permissão | 0 | implementado |
-| RT-IAM-007 | CRUD de usuário e perfil | 0 | rascunho |
+| RT-IAM-007 | CRUD de usuário e atribuição de perfil | 0 | implementado |
 | RT-IAM-008 | Auditoria append-only | 0 | rascunho |
 
 ## Dependências

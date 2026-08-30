@@ -187,6 +187,16 @@ Contraste AA (4.5:1 em texto normal) · navegação completa por teclado, sem ar
 `aria-label` em todo controle sem texto visível · alvo de toque ≥ 44px no tablet do balcão ·
 foco visível e nunca removido por CSS · `prefers-reduced-motion` respeitado.
 
+## Processo: desenhar antes de codar
+
+**Decidido em 29/08/2026.** Antes de `RT-INF-010` e de qualquer tela, as principais são desenhadas
+como mockup navegável — agenda do dia, fechamento de comanda, painel do balcão — e só então
+implementadas contra os tokens.
+
+Motivo: layout decidido enquanto se escreve JSX vira o primeiro que funcionou, não o melhor. E as
+três telas acima carregam quase toda a densidade de informação do produto; acertá-las no papel é
+mais barato que refatorar componente.
+
 ## Design — como não parecer tela gerada por IA
 
 Fuja de: gradiente roxo, card com sombra grande em tudo, ícone genérico em cada linha, emoji em
