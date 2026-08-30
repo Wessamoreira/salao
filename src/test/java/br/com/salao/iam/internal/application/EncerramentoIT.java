@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.salao.iam.api.SessaoIniciada;
+import br.com.salao.iam.api.ResultadoDeAutenticacao;
+import br.com.salao.iam.api.SessaoIniciada;
 import br.com.salao.iam.internal.domain.SegredoOpaco;
 import br.com.salao.iam.internal.infra.PurgadorDeRefreshTokens;
 import br.com.salao.shared.erro.ErroDeDominio;
@@ -43,7 +45,7 @@ class EncerramentoIT extends AbstractPostgresIT {
     }
 
     private SessaoIniciada entrar(String email) {
-        return autenticar.executar(new AutenticarCommand(email, SENHA));
+        return sessaoDe(new AutenticarCommand(email, SENHA));
     }
 
     @Test
@@ -158,5 +160,14 @@ class EncerramentoIT extends AbstractPostgresIT {
             rs.next();
             return rs.getLong(1);
         }
+    }
+
+    /** O login agora tem dois desfechos; estes testes cobrem o caminho sem segundo fator. */
+    private SessaoIniciada sessaoDe(AutenticarCommand comando) {
+        var resultado = autenticar.executar(comando);
+        if (resultado instanceof ResultadoDeAutenticacao.Autenticado autenticado) {
+            return autenticado.sessao();
+        }
+        throw new IllegalStateException("segundo fator inesperado neste cenário");
     }
 }

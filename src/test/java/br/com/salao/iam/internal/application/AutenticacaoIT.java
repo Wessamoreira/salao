@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.salao.iam.api.Perfil;
+import br.com.salao.iam.api.ResultadoDeAutenticacao;
+import br.com.salao.iam.api.SessaoIniciada;
 import br.com.salao.iam.internal.domain.PoliticaDeBloqueio;
 import br.com.salao.iam.internal.infra.EmissorDeTokenJwt;
 import br.com.salao.shared.erro.ErroDeDominio;
@@ -43,7 +45,7 @@ class AutenticacaoIT extends AbstractPostgresIT {
     void admin_do_provisionamento_entra() {
         UUID estabelecimento = provisionarCom("ana@salao.test");
 
-        var token = autenticar.executar(new AutenticarCommand("ana@salao.test", SENHA));
+        var token = sessaoDe(new AutenticarCommand("ana@salao.test", SENHA));
 
         assertThat(token.acesso().estabelecimentoId()).isEqualTo(estabelecimento);
         assertThat(token.acesso().perfil()).isEqualTo(Perfil.ADMIN);
@@ -56,7 +58,7 @@ class AutenticacaoIT extends AbstractPostgresIT {
     void token_carrega_o_estabelecimento() {
         UUID estabelecimento = provisionarCom("ana@salao.test");
 
-        var token = autenticar.executar(new AutenticarCommand("ana@salao.test", SENHA));
+        var token = sessaoDe(new AutenticarCommand("ana@salao.test", SENHA));
         var jwt = decodificador.decode(token.acesso().token());
 
         assertThat(jwt.getClaimAsString(EmissorDeTokenJwt.CLAIM_ESTABELECIMENTO))
@@ -70,7 +72,7 @@ class AutenticacaoIT extends AbstractPostgresIT {
     void email_case_insensitive() {
         provisionarCom("ana@salao.test");
 
-        var token = autenticar.executar(new AutenticarCommand("  ANA@Salao.TEST ", SENHA));
+        var token = sessaoDe(new AutenticarCommand("  ANA@Salao.TEST ", SENHA));
 
         assertThat(token).isNotNull();
     }
@@ -82,9 +84,9 @@ class AutenticacaoIT extends AbstractPostgresIT {
         provisionarCom("ana@salao.test");
 
         var senhaErrada = org.assertj.core.api.Assertions.catchThrowable(
-                () -> autenticar.executar(new AutenticarCommand("ana@salao.test", "errada-12345")));
+                () -> sessaoDe(new AutenticarCommand("ana@salao.test", "errada-12345")));
         var emailInexistente = org.assertj.core.api.Assertions.catchThrowable(
-                () -> autenticar.executar(new AutenticarCommand("ninguem@salao.test", SENHA)));
+                () -> sessaoDe(new AutenticarCommand("ninguem@salao.test", SENHA)));
 
         assertThat(codigoDe(senhaErrada)).isEqualTo("ER-IAM-CREDENCIAIS_INVALIDAS");
         assertThat(codigoDe(emailInexistente)).isEqualTo(codigoDe(senhaErrada));
@@ -102,7 +104,7 @@ class AutenticacaoIT extends AbstractPostgresIT {
         }
 
         // Agora nem a senha CORRETA passa: é o bloqueio, não a senha, que decide.
-        assertThatThrownBy(() -> autenticar.executar(new AutenticarCommand("ana@salao.test", SENHA)))
+        assertThatThrownBy(() -> sessaoDe(new AutenticarCommand("ana@salao.test", SENHA)))
                 .isInstanceOf(ErroDeDominio.class)
                 .extracting(this::codigoDe)
                 .isEqualTo("ER-IAM-ACESSO_BLOQUEADO");
@@ -116,7 +118,7 @@ class AutenticacaoIT extends AbstractPostgresIT {
                 new AutenticarCommand("ana@salao.test", "errada-12345")));
         assertThat(falhasDe("ana@salao.test")).isEqualTo(1);
 
-        autenticar.executar(new AutenticarCommand("ana@salao.test", SENHA));
+        sessaoDe(new AutenticarCommand("ana@salao.test", SENHA));
 
         assertThat(falhasDe("ana@salao.test")).isZero();
     }
@@ -127,7 +129,7 @@ class AutenticacaoIT extends AbstractPostgresIT {
         provisionarCom("ana@salao.test");
         desativar("ana@salao.test");
 
-        assertThatThrownBy(() -> autenticar.executar(new AutenticarCommand("ana@salao.test", SENHA)))
+        assertThatThrownBy(() -> sessaoDe(new AutenticarCommand("ana@salao.test", SENHA)))
                 .isInstanceOf(ErroDeDominio.class)
                 .extracting(this::codigoDe)
                 .isEqualTo("ER-IAM-CREDENCIAIS_INVALIDAS");
@@ -143,9 +145,9 @@ class AutenticacaoIT extends AbstractPostgresIT {
         UUID b = provisionar.executar(ProvisionarEstabelecimentoCommand.comPadroes(
                 "Outro Salão", null, "Bia", "bia@salao.test", SENHA));
 
-        assertThat(autenticar.executar(new AutenticarCommand("ana@salao.test", SENHA))
+        assertThat(sessaoDe(new AutenticarCommand("ana@salao.test", SENHA))
                 .acesso().estabelecimentoId()).isEqualTo(a);
-        assertThat(autenticar.executar(new AutenticarCommand("bia@salao.test", SENHA))
+        assertThat(sessaoDe(new AutenticarCommand("bia@salao.test", SENHA))
                 .acesso().estabelecimentoId()).isEqualTo(b);
     }
 
@@ -166,5 +168,14 @@ class AutenticacaoIT extends AbstractPostgresIT {
             ps.setString(1, email.toLowerCase());
             ps.executeUpdate();
         }
+    }
+
+    /** O login agora tem dois desfechos; estes testes cobrem o caminho sem segundo fator. */
+    private SessaoIniciada sessaoDe(AutenticarCommand comando) {
+        var resultado = autenticar.executar(comando);
+        if (resultado instanceof ResultadoDeAutenticacao.Autenticado autenticado) {
+            return autenticado.sessao();
+        }
+        throw new IllegalStateException("segundo fator inesperado neste cenário");
     }
 }

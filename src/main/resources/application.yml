@@ -90,6 +90,12 @@ app.jwt:
   validade-do-acesso: ${JWT_VALIDADE:PT15M}
   emissor: ${JWT_EMISSOR:salao}
 
+app.cripto:
+  # AES-256 em Base64 (32 bytes). Sem padrão: a aplicação não sobe sem chave, porque
+  # um padrão em código vira a chave de produção de alguém. Gere com
+  # CofreDeCampo.novaChaveBase64().
+  chave: ${CRIPTO_CHAVE}
+
 app.auth:
   refresh:
     validade: ${REFRESH_VALIDADE:P30D}

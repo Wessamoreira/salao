@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import br.com.salao.iam.api.SessaoIniciada;
+import br.com.salao.iam.api.ResultadoDeAutenticacao;
+import br.com.salao.iam.api.SessaoIniciada;
 import br.com.salao.iam.internal.domain.SegredoOpaco;
 import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.shared.tenant.AbstractPostgresIT;
@@ -45,7 +47,7 @@ class RenovacaoIT extends AbstractPostgresIT {
     private SessaoIniciada entrar() {
         provisionar.executar(ProvisionarEstabelecimentoCommand.comPadroes(
                 "Salão", null, "Ana", "ana@salao.test", SENHA));
-        return autenticar.executar(new AutenticarCommand("ana@salao.test", SENHA));
+        return sessaoDe(new AutenticarCommand("ana@salao.test", SENHA));
     }
 
     private String codigoDe(Throwable e) {
@@ -103,7 +105,7 @@ class RenovacaoIT extends AbstractPostgresIT {
     void familias_sao_independentes() {
         // Entrar de novo no computador não pode derrubar a sessão do celular.
         var primeira = entrar();
-        var segunda = autenticar.executar(new AutenticarCommand("ana@salao.test", SENHA));
+        var segunda = sessaoDe(new AutenticarCommand("ana@salao.test", SENHA));
         renovar.executar(primeira.refresh(), "10.0.0.1", "teste");
 
         catchThrowable(() -> renovar.executar(primeira.refresh(), "10.0.0.2", "ladrao"));
@@ -195,5 +197,14 @@ class RenovacaoIT extends AbstractPostgresIT {
         try (var st = comoOwner().createStatement()) {
             st.execute("update usuario set ativo = false");
         }
+    }
+
+    /** O login agora tem dois desfechos; estes testes cobrem o caminho sem segundo fator. */
+    private SessaoIniciada sessaoDe(AutenticarCommand comando) {
+        var resultado = autenticar.executar(comando);
+        if (resultado instanceof ResultadoDeAutenticacao.Autenticado autenticado) {
+            return autenticado.sessao();
+        }
+        throw new IllegalStateException("segundo fator inesperado neste cenário");
     }
 }

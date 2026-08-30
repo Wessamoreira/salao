@@ -74,6 +74,8 @@ public abstract class AbstractPostgresIT {
         registro.add("app.manutencao.username", () -> "salao_manutencao");
         registro.add("app.manutencao.password", () -> MANUTENCAO_SENHA);
         registro.add("app.jwt.segredo", () -> "segredo-de-teste-com-mais-de-trinta-e-dois-bytes");
+        registro.add("app.cripto.chave",
+                () -> "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=");
 
         // Pool pequeno por padrão em teste: nenhum teste precisa de 20 conexões, e o custo
         // de manter pools grandes se multiplica por contexto. Classes que precisem de outro
@@ -112,7 +114,8 @@ public abstract class AbstractPostgresIT {
     @BeforeEach
     void limparDados() throws SQLException {
         try (var st = comoOwner().createStatement()) {
-            st.execute("truncate auditoria, refresh_token, usuario, estabelecimento "
+            st.execute("truncate auditoria, refresh_token, mfa_credencial, "
+                    + "mfa_codigo_recuperacao, usuario, estabelecimento "
                     + "restart identity cascade");
         }
     }

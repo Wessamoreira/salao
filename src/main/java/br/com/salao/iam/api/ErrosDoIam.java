@@ -28,7 +28,14 @@ public enum ErrosDoIam implements CodigoDeErro {
      * <p>Distinguir diria a quem está testando tokens o que aconteceu com cada um — inclusive que
      * um deles já existiu, o que confirma um vazamento para quem o obteve.
      */
-    SESSAO_EXPIRADA("ER-IAM-SESSAO_EXPIRADA", HttpStatus.UNAUTHORIZED, "Sessão expirada");
+    SESSAO_EXPIRADA("ER-IAM-SESSAO_EXPIRADA", HttpStatus.UNAUTHORIZED, "Sessão expirada"),
+
+    /** Desafio inválido, código TOTP errado, reapresentado, ou recuperação já usada. */
+    SEGUNDO_FATOR_INVALIDO("ER-IAM-SEGUNDO_FATOR_INVALIDO", HttpStatus.UNAUTHORIZED,
+            "Código de verificação inválido"),
+
+    MFA_NAO_INSCRITO("ER-IAM-MFA_NAO_INSCRITO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Segundo fator não configurado");
 
     private final String codigo;
     private final HttpStatus status;

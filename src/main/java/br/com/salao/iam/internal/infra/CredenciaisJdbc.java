@@ -23,16 +23,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class CredenciaisJdbc {
 
     private static final String POR_EMAIL = """
-            select id, estabelecimento_id, senha_hash, perfil, ativo,
-                   falhas_consecutivas, bloqueado_ate
+            select id, estabelecimento_id, email, senha_hash, perfil, ativo,
+                   falhas_consecutivas, bloqueado_ate, mfa_ativo
               from usuario
              where email_normalizado = :email
             """;
 
     /** Usado na renovação: o perfil pode ter mudado desde o login, e o token novo deve refleti-lo. */
     private static final String POR_ID = """
-            select id, estabelecimento_id, senha_hash, perfil, ativo,
-                   falhas_consecutivas, bloqueado_ate
+            select id, estabelecimento_id, email, senha_hash, perfil, ativo,
+                   falhas_consecutivas, bloqueado_ate, mfa_ativo
               from usuario
              where id = :id
             """;
@@ -75,11 +75,13 @@ public class CredenciaisJdbc {
         return new CredencialDeAcesso(
                 rs.getObject("id", UUID.class),
                 rs.getObject("estabelecimento_id", UUID.class),
+                rs.getString("email"),
                 rs.getString("senha_hash"),
                 Perfil.valueOf(rs.getString("perfil")),
                 rs.getBoolean("ativo"),
                 rs.getInt("falhas_consecutivas"),
-                bloqueado == null ? null : bloqueado.toInstant());
+                bloqueado == null ? null : bloqueado.toInstant(),
+                rs.getBoolean("mfa_ativo"));
     }
 
     /**

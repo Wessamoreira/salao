@@ -30,10 +30,23 @@ public class EmissorDeTokenJwt {
     public static final String CLAIM_ESTABELECIMENTO = "estabelecimentoId";
     public static final String CLAIM_PERFIL = "perfil";
 
+    /**
+     * Marca um token que <strong>não</strong> é de acesso.
+     *
+     * <p>Sem essa distinção, o desafio de segundo fator seria um JWT válido como qualquer outro —
+     * e apresentá-lo no {@code Authorization} daria acesso à API sem nunca ter passado pelo MFA.
+     * {@code SegurancaConfig} recusa, no recurso protegido, todo token que traga esta claim.
+     */
+    public static final String CLAIM_ESCOPO = "escopo";
+
+    public static final String ESCOPO_SEGUNDO_FATOR = "mfa-pendente";
+
     private final JwtEncoder codificador;
     private final Relogio relogio;
     private final Duration validade;
     private final String emissor;
+
+    private static final Duration VALIDADE_DO_DESAFIO = Duration.ofMinutes(5);
 
     public EmissorDeTokenJwt(JwtEncoder codificador, Relogio relogio, Duration validade,
                              String emissor) {
@@ -41,6 +54,33 @@ public class EmissorDeTokenJwt {
         this.relogio = relogio;
         this.validade = validade;
         this.emissor = emissor;
+    }
+
+    /**
+     * Desafio de segundo fator: atesta que a senha foi conferida, e nada além disso.
+     *
+     * <p>Vida curta porque é uma credencial parcial em trânsito. Cinco minutos cobrem procurar o
+     * celular e abrir o autenticador; mais que isso só amplia a janela em que a senha, já
+     * conferida, vale alguma coisa sozinha.
+     */
+    public TokenDeAcesso emitirDesafioDeSegundoFator(UUID usuarioId, UUID estabelecimentoId) {
+        Instant agora = relogio.agora();
+        Instant expiraEm = agora.plus(VALIDADE_DO_DESAFIO);
+
+        var claims = JwtClaimsSet.builder()
+                .issuer(emissor)
+                .issuedAt(agora)
+                .expiresAt(expiraEm)
+                .subject(usuarioId.toString())
+                .id(UUID.randomUUID().toString())
+                .claim(CLAIM_ESTABELECIMENTO, estabelecimentoId.toString())
+                .claim(CLAIM_ESCOPO, ESCOPO_SEGUNDO_FATOR)
+                .build();
+
+        var cabecalho = JwsHeader.with(MacAlgorithm.HS256).build();
+        String token = codificador.encode(JwtEncoderParameters.from(cabecalho, claims))
+                .getTokenValue();
+        return new TokenDeAcesso(token, expiraEm, usuarioId, estabelecimentoId, null);
     }
 
     public TokenDeAcesso emitir(UUID usuarioId, UUID estabelecimentoId, Perfil perfil) {

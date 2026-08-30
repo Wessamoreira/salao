@@ -35,6 +35,8 @@ parte do contrato. Nenhum módulo consulta a tabela `estabelecimento` diretament
 | `estabelecimento` | Estabelecimento | sim — policy pelo próprio `id` |
 | `usuario` | Usuario | sim |
 | `refresh_token` | Sessao | sim |
+| `mfa_credencial` | Usuario | sim |
+| `mfa_codigo_recuperacao` | Usuario | sim |
 
 ## Rotinas
 
@@ -44,7 +46,7 @@ parte do contrato. Nenhum módulo consulta a tabela `estabelecimento` diretament
 | RT-IAM-002 | Login com Argon2id e bloqueio progressivo | 0 | implementado |
 | RT-IAM-003 | Refresh rotativo com detecção de reuso | 0 | implementado |
 | RT-IAM-004 | Logout e revogação de sessão | 0 | implementado |
-| RT-IAM-005 | MFA TOTP | 0 | rascunho |
+| RT-IAM-005 | MFA TOTP | 0 | implementado |
 | RT-IAM-006 | `/me/capabilities` | 0 | rascunho |
 | RT-IAM-007 | CRUD de usuário e perfil | 0 | rascunho |
 | RT-IAM-008 | Auditoria append-only | 0 | rascunho |

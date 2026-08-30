@@ -15,9 +15,11 @@ import java.util.UUID;
 public record CredencialDeAcesso(
         UUID usuarioId,
         UUID estabelecimentoId,
+        String email,
         String senhaHash,
         Perfil perfil,
         boolean ativo,
         int falhasConsecutivas,
-        Instant bloqueadoAte) {
+        Instant bloqueadoAte,
+        boolean mfaAtivo) {
 }

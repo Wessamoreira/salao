@@ -63,6 +63,8 @@ e o Modulith reprova o build se outro módulo alcançar o `internal`.
 | `ER-IAM-CREDENCIAIS_INVALIDAS` | 401 | Senha errada, e-mail inexistente ou usuário inativo (RN-IAM-006) | "E-mail ou senha incorretos." |
 | `ER-IAM-ACESSO_BLOQUEADO` | 429 | Bloqueio progressivo ativo (RN-IAM-005) | "Muitas tentativas. Tente novamente em alguns minutos." |
 | `ER-IAM-SESSAO_EXPIRADA` | 401 | Refresh desconhecido, expirado, revogado ou reusado (RN-IAM-007) | "Sua sessão expirou. Entre novamente." |
+| `ER-IAM-SEGUNDO_FATOR_INVALIDO` | 401 | Desafio, TOTP ou código de recuperação inválidos (RN-IAM-011/012) | "Código de verificação inválido." |
+| `ER-IAM-MFA_NAO_INSCRITO` | 422 | Confirmar ou desativar sem inscrição | "Configure o segundo fator antes." |
 
 ---
 
@@ -169,4 +171,48 @@ token válido e inválido faria do logout um **oráculo para testar tokens**.
 **Onde é garantida.** `EncerrarSessaoUseCase.encerrar` — retorno silencioso em todos os casos.
 **Rotinas.** RT-IAM-004
 **Testes.** `EncerramentoIT.logout_nunca_falha`, `AutenticacaoWebIT.logout_sem_cookie`
+**Configurável?** Não · **Origem.** 2026-08-29
+
+---
+
+### RN-IAM-010 — Inscrever no segundo fator não o ativa
+
+**Enunciado.** Gerar o segredo TOTP apenas o guarda. O MFA só passa a valer depois que o usuário
+apresenta um código válido.
+
+**Motivo.** Ativar na inscrição trancaria para fora quem digitasse o segredo errado no
+autenticador — e o único jeito de voltar seria um administrador.
+
+**Onde é garantida.** `mfa_credencial.confirmado_em` nulo até `SegundoFatorUseCase.confirmar`.
+**Rotinas.** RT-IAM-005 · **Teste.** `SegundoFatorIT.inscricao_nao_ativa`
+**Configurável?** Não · **Origem.** 2026-08-29
+
+---
+
+### RN-IAM-011 — Código TOTP não pode ser reapresentado
+
+**Enunciado.** A janela usada com sucesso é registrada, e só se aceita contador estritamente
+maior. Código de recuperação é de uso único.
+
+**Motivo.** Um TOTP vale trinta segundos; sem isso, quem o interceptasse poderia reapresentá-lo
+dentro da janela.
+
+**Onde é garantida.** `UPDATE` condicional em `MfaJdbc.consumirContador` — o banco arbitra.
+**Rotinas.** RT-IAM-005 · **Teste.** `SegundoFatorIT.codigo_nao_pode_ser_reapresentado`
+**Erro.** `ER-IAM-SEGUNDO_FATOR_INVALIDO` (401) · **Configurável?** Não · **Origem.** 2026-08-29
+
+---
+
+### RN-IAM-012 — O desafio de segundo fator não é credencial de acesso
+
+**Enunciado.** Token com a claim `escopo` é recusado no `Authorization`; e `concluirLogin` só
+aceita token com `escopo = mfa-pendente`.
+
+**Motivo.** O desafio é um JWT assinado por nós. Sem a primeira barreira, apresentá-lo no
+`Authorization` daria acesso a quem passou só pela senha — o MFA viraria teatro. Sem a segunda, um
+access token antigo ainda válido permitiria pular a senha.
+
+**Onde é garantida.** `SegurancaConfig.validadorDeEscopo` e
+`SegundoFatorUseCase.decodificarDesafio`.
+**Rotinas.** RT-IAM-005 · **Teste.** `SegundoFatorIT.access_token_nao_serve_de_desafio`
 **Configurável?** Não · **Origem.** 2026-08-29

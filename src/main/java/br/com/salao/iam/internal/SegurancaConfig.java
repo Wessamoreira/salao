@@ -15,7 +15,14 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import br.com.salao.iam.internal.infra.EmissorDeTokenJwt;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
@@ -47,11 +54,42 @@ public class SegurancaConfig {
         return new NimbusJwtEncoder(new ImmutableSecret<>(chave(segredo)));
     }
 
+    /**
+     * Decodificador usado para <em>emitir e conferir</em> qualquer JWT nosso, inclusive o desafio
+     * de segundo fator. Quem restringe o desafio a seu lugar é o {@link #validadorDeEscopo}, na
+     * cadeia do recurso protegido.
+     */
     @Bean
+    @org.springframework.context.annotation.Primary
     public JwtDecoder jwtDecoder(@Value("${app.jwt.segredo}") String segredo) {
         return NimbusJwtDecoder.withSecretKey(chave(segredo))
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
+    }
+
+    /**
+     * Recusa, no {@code Authorization}, qualquer token que carregue {@code escopo}.
+     *
+     * <p>O desafio de segundo fator é um JWT assinado por nós e, sem esta checagem, seria aceito
+     * como credencial em toda a API — dando acesso a quem só passou pela senha e nunca apresentou
+     * o segundo fator. É a falha que transformaria o MFA em teatro.
+     */
+    @Bean
+    public JwtDecoder jwtDecoderDoRecurso(@Value("${app.jwt.segredo}") String segredo) {
+        var decodificador = NimbusJwtDecoder.withSecretKey(chave(segredo))
+                .macAlgorithm(MacAlgorithm.HS256)
+                .build();
+        decodificador.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                JwtValidators.createDefault(), validadorDeEscopo()));
+        return decodificador;
+    }
+
+    private OAuth2TokenValidator<Jwt> validadorDeEscopo() {
+        return jwt -> jwt.getClaimAsString(EmissorDeTokenJwt.CLAIM_ESCOPO) == null
+                ? OAuth2TokenValidatorResult.success()
+                : OAuth2TokenValidatorResult.failure(new OAuth2Error(
+                        "token_invalido",
+                        "Token de escopo restrito não vale como credencial de acesso", null));
     }
 
     private SecretKeySpec chave(String segredo) {
@@ -85,6 +123,9 @@ public class SegurancaConfig {
                 .build();
     }
 
+    @Value("${app.jwt.segredo}")
+    private String segredoDoJwt;
+
     @Bean
     public SecurityFilterChain cadeiaDaApi(HttpSecurity http) throws Exception {
         return http
@@ -96,11 +137,14 @@ public class SegurancaConfig {
                         // Sair não pode depender de um access token que talvez já tenha expirado.
                         // O que autentica é o cookie; e sem cookie válido o logout é inofensivo.
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").permitAll()
+                        // Quem chega aqui tem só o desafio, que sozinho não abre nada.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/mfa/verificar").permitAll()
                         // Tudo o mais fechado por padrão: endpoint novo nasce protegido, e é
                         // preciso um ato deliberado para abri-lo. O contrário — abrir por padrão
                         // e lembrar de fechar — falha na primeira distração.
                         .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> { }))
+                .oauth2ResourceServer(oauth -> oauth.jwt(
+                        jwt -> jwt.decoder(jwtDecoderDoRecurso(segredoDoJwt))))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // Sem sessão e sem cookie, não há o que um site terceiro possa forjar: o token vai
                 // no cabeçalho Authorization, que ele não consegue definir. Isto muda em

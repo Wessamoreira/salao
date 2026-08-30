@@ -1,5 +1,6 @@
 package br.com.salao.iam.internal.web;
 
+import br.com.salao.iam.api.ResultadoDeAutenticacao;
 import br.com.salao.iam.api.SessaoIniciada;
 import br.com.salao.iam.internal.application.AutenticarCommand;
 import br.com.salao.iam.internal.application.AutenticarUseCase;
@@ -48,10 +49,17 @@ public class AutenticacaoController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest requisicao) {
-        var sessao = autenticar.executar(
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest requisicao) {
+        var resultado = autenticar.executar(
                 new AutenticarCommand(requisicao.email(), requisicao.senha()));
-        return responder(sessao);
+
+        // Tipo selado: o compilador obriga a tratar os dois desfechos. Esquecer o segundo fator
+        // aqui significaria entregar sessão a quem ainda não o apresentou.
+        return switch (resultado) {
+            case ResultadoDeAutenticacao.Autenticado a -> responder(a.sessao());
+            case ResultadoDeAutenticacao.SegundoFatorPendente p ->
+                    ResponseEntity.ok(new DesafioResponse(p.desafio(), p.expiraEm()));
+        };
     }
 
     /**
