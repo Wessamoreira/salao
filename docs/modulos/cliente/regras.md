@@ -203,3 +203,93 @@ todo mundo acaba usando.
 **Rotinas.** RT-CLI-002 · **Teste.** `BuscaDeClienteIT.curinga_nao_lista_todo_mundo`
 **Configurável?** Não
 **Origem.** 2026-08-30
+
+---
+
+### RN-CLI-013 — Duplicado é decidido pelo primeiro nome, não pelo escore de semelhança
+
+**Enunciado.** Três graus: `PROVAVEL` (mesmo telefone e mesmo primeiro nome), `POSSIVEL` (sem
+telefone, mesmo primeiro nome e semelhança ≥ 0,5) e `MESMO_TELEFONE` (mesmo telefone, primeiro nome
+diferente). O último **não é aviso de duplicidade**: é contexto de família. A inicial vale como
+primeiro nome, com no máximo dois caracteres.
+
+**Motivo.** Medido no Postgres com pares reais: "maria silva"×"mariana silva" dá 0,733 (pessoas
+diferentes) e "jose antonio"×"jose antonio da costa" dá 0,591 (mesma pessoa). Nenhum limiar separa
+as duas linhas. Mãe e filha compartilham o sobrenome; a mesma pessoa cadastrada duas vezes
+compartilha o primeiro nome — é isso que distingue "Maria"/"Júlia" (0,412) de "Ana"/"Ana Paula"
+(0,400). O limite de dois caracteres na inicial evita casar "Luís" com "Luísa", que num salão é
+com frequência pai e filha.
+
+**Onde é garantida.** Domínio: `Semelhanca.avaliar`.
+**Rotinas.** RT-CLI-003 · **Teste.** `SemelhancaTest.mariana_nao_e_maria`,
+`SemelhancaTest.mae_e_filha_nao_sao_duplicado`
+**Configurável?** Não · **UX.** R-UX-15
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-014 — Mesclar redireciona; a ficha absorvida não é apagada
+
+**Enunciado.** A ficha absorvida recebe `mesclado_para` e `mesclado_em`, some da busca e continua
+resolvendo para a sobrevivente em qualquer leitura por id. As cadeias são mantidas com um salto só.
+
+**Motivo.** Tudo que já guardou o `cliente_id` — agendamento, comanda, comissão — continua achando
+a pessoa certa sem ser reescrito. Apagar exigiria repontar todas as referências numa transação só,
+e a esquecida viraria registro órfão. O redirecionamento falha do lado seguro. Manter a cadeia
+plana evita leitura recursiva, que é onde um ciclo acidental vira laço infinito em produção.
+
+**Onde é garantida.** Banco: `mesclado_para` + checks (V14) · Infra: `ClientesJdbc.redirecionar`
+reponta quem apontava para a absorvida.
+**Rotinas.** RT-CLI-003 · **Teste.** `DuplicadosEMesclagemIT.absorvida_redireciona`,
+`DuplicadosEMesclagemIT.cadeia_fica_plana`
+**Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-015 — A mesclagem completa vazios e nunca sobrescreve
+
+**Enunciado.** Campos preenchidos na ficha sobrevivente são preservados; os vazios recebem o valor
+da absorvida. A observação é a exceção: as duas são concatenadas.
+
+**Motivo.** O dado que já está lá foi conferido por alguém. Bom substituído por bom não melhora
+nada; bom substituído por velho é perda silenciosa. A observação é concatenada porque texto livre
+costuma guardar a única anotação existente sobre a pessoa ("alérgica a amônia"), e descartá-la
+seria perder informação que ninguém saberia ter existido.
+
+**Onde é garantida.** Infra: `ClientesJdbc.absorverCampos`.
+**Rotinas.** RT-CLI-003 · **Teste.** `DuplicadosEMesclagemIT.mesclagem_completa_vazios`
+**Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-016 — A detecção de duplicado avisa, nunca impede
+
+**Enunciado.** A detecção vive num endpoint separado, consultado enquanto se digita. O cadastro
+nunca é recusado por semelhança com uma ficha existente.
+
+**Motivo.** É a mesma razão de não haver `unique` em telefone (RN-CLI-005): recusar cadastro
+legítimo ensina a recepção a contornar, e o contorno é pior — "Maria 2", telefone inventado,
+sobrenome trocado. Embutir a checagem no `POST` obrigaria a escolher entre bloquear e ignorar;
+consultando antes, quem decide é quem está olhando para a cliente.
+
+**Onde é garantida.** `DetectarDuplicadosUseCase`, separado de `CadastrarClienteUseCase`.
+**Rotinas.** RT-CLI-003 · **Teste.** `ClientesWebIT.possiveis_duplicados_trazem_o_grau`
+**Configurável?** Não · **UX.** R-UX-04, R-UX-15
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-017 — Ficha anonimizada não participa de mesclagem
+
+**Enunciado.** Nem como sobrevivente, nem como absorvida.
+
+**Motivo.** Mesclar copia campos entre as fichas. Uma ficha anonimizada receberia de volta dados
+que o titular pediu para apagar — desfazendo a anonimização por um caminho lateral, sem que
+ninguém percebesse.
+
+**Onde é garantida.** Caso de uso: `MesclarClientesUseCase.ficha`.
+**Rotinas.** RT-CLI-003, RT-CLI-005 · **Teste.** — (completo em RT-CLI-005, que cria o estado)
+**Erro.** `ER-CLI-MESCLAGEM_INVALIDA` (422) · **Configurável?** Não
+**Origem.** 2026-08-30

@@ -44,20 +44,11 @@ class BuscaIndexadaIT extends AbstractPostgresIT {
         // Telefone: sufixo vira prefixo pelo `reverse`, e um btree resolve exatamente.
         // Trigram foi tentado aqui e é a ferramenta errada — trigrama de dígito tem seletividade
         // péssima, porque todo número do salão compartilha os mesmos pedacinhos.
-        assertThat(planoDe("""
-                select id from cliente
-                 where telefone is not null and anonimizado_em is null
-                   and reverse(telefone) like reverse('4321') || '%'
-                """))
+        assertThat(planoDe(ClientesJdbc.BUSCAR_POR_TELEFONE))
                 .contains("idx_cliente_telefone_reverso");
 
         // Nome: substring em texto é o caso para o qual o trigram existe.
-        assertThat(planoDe("""
-                select id from cliente
-                 where anonimizado_em is null
-                   and busca like '%' || imutavel_unaccent(lower('silva')) || '%'
-                """))
-                .contains("idx_cliente_busca");
+        assertThat(planoDe(ClientesJdbc.BUSCAR_POR_NOME)).contains("idx_cliente_busca");
     }
 
     @Test
@@ -100,9 +91,23 @@ class BuscaIndexadaIT extends AbstractPostgresIT {
      * A conexão de owner é compartilhada pela suíte e <strong>não</strong> se fecha aqui: fechá-la
      * devolveria a rotatividade de conexões que a classe-base evita de propósito.
      */
+    /**
+     * Troca os parâmetros nomeados por literais para poder dar {@code EXPLAIN}.
+     *
+     * <p>Existe para que o teste meça a consulta <strong>real</strong>, lida da constante, e não
+     * uma cópia. A primeira versão tinha o SQL transcrito à mão e já havia divergido do produto
+     * numa migração — medindo com precisão um plano que ninguém executava.
+     */
+    private static String comLiterais(String sql) {
+        return sql.replace(":termo", "'silva'")
+                .replace(":padrao", "'silva'")
+                .replace(":digitos", "'4321'")
+                .replace(":limite", "20");
+    }
+
     private String planoDe(String sql) throws SQLException {
         try (Statement st = comoOwner().createStatement();
-             var rs = st.executeQuery("explain " + sql)) {
+             var rs = st.executeQuery("explain " + comLiterais(sql))) {
             var plano = new StringBuilder();
             while (rs.next()) {
                 plano.append(rs.getString(1)).append('\n');

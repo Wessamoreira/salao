@@ -5,9 +5,13 @@ import br.com.salao.cliente.internal.application.CadastrarClienteUseCase;
 import br.com.salao.cliente.internal.application.BuscarClientesUseCase;
 import br.com.salao.cliente.internal.application.ConsultarClienteUseCase;
 import br.com.salao.cliente.internal.application.DadosDoCliente;
+import br.com.salao.cliente.internal.application.DetectarDuplicadosUseCase;
+import br.com.salao.cliente.internal.application.MesclarClientesUseCase;
+import br.com.salao.cliente.internal.application.PossivelDuplicado;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.net.URI;
 import java.util.List;
@@ -37,13 +41,19 @@ public class ClientesController {
     private final CadastrarClienteUseCase cadastrar;
     private final ConsultarClienteUseCase consultar;
     private final BuscarClientesUseCase buscar;
+    private final DetectarDuplicadosUseCase duplicados;
+    private final MesclarClientesUseCase mesclar;
 
     public ClientesController(CadastrarClienteUseCase cadastrar,
                               ConsultarClienteUseCase consultar,
-                              BuscarClientesUseCase buscar) {
+                              BuscarClientesUseCase buscar,
+                              DetectarDuplicadosUseCase duplicados,
+                              MesclarClientesUseCase mesclar) {
         this.cadastrar = cadastrar;
         this.consultar = consultar;
         this.buscar = buscar;
+        this.duplicados = duplicados;
+        this.mesclar = mesclar;
     }
 
     /**
@@ -81,6 +91,35 @@ public class ClientesController {
     public List<ClienteResumo> buscar(@RequestParam(name = "q", required = false) String termo,
                                       @RequestParam(required = false) Integer limite) {
         return buscar.executar(termo, limite);
+    }
+
+    /**
+     * RT-CLI-003 — quem já existe e talvez seja esta pessoa.
+     *
+     * <p>Rota separada do cadastro, consultada <strong>enquanto se digita</strong>. Embutir a
+     * checagem no {@code POST} obrigaria a escolher entre bloquear e ignorar; consultando antes,
+     * quem decide é quem está olhando para a cliente.
+     */
+    @GetMapping("/possiveis-duplicados")
+    public List<PossivelDuplicado> possiveisDuplicados(
+            @RequestParam(required = false) String nome,
+            @RequestParam(required = false) String telefone,
+            @RequestParam(required = false) UUID ignorar) {
+        return duplicados.executar(nome, telefone, ignorar);
+    }
+
+    public record MesclarRequest(@NotNull UUID absorvidaId) {
+    }
+
+    /**
+     * RT-CLI-003 — absorve {@code absorvidaId} na ficha do caminho.
+     *
+     * <p>A ficha do caminho é a que <strong>fica</strong>. É a ordem natural do gesto na tela:
+     * abre-se a ficha correta e traz-se a duplicada para dentro dela.
+     */
+    @PostMapping("/{id}/mesclar")
+    public ClienteResumo mesclar(@PathVariable UUID id, @Valid @RequestBody MesclarRequest corpo) {
+        return consultar.executar(mesclar.executar(id, corpo.absorvidaId()));
     }
 
     @GetMapping("/{id}")

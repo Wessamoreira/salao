@@ -3,6 +3,7 @@ package br.com.salao.cliente.internal.infra;
 import br.com.salao.cliente.api.ClienteApi;
 import br.com.salao.cliente.api.ClienteResumo;
 import br.com.salao.cliente.internal.domain.TermoDeBusca;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,14 +34,33 @@ public class ClientesJdbc implements ClienteApi {
             returning id
             """;
 
+    /**
+     * RT-CLI-003 — a leitura segue o redirecionamento da mesclagem.
+     *
+     * <p>Quem guardou o id de uma ficha que depois foi absorvida continua achando a pessoa certa,
+     * sem que a mesclagem precise reescrever referência nenhuma. O {@code left join} tem um salto
+     * só porque {@code redirecionar} mantém as cadeias planas.
+     */
     private static final String BUSCAR = """
-            select id, nome, apelido, telefone, email
-              from cliente
-             where id = :id and anonimizado_em is null
+            select coalesce(destino.id, c.id)             as id,
+                   coalesce(destino.nome, c.nome)         as nome,
+                   coalesce(destino.apelido, c.apelido)   as apelido,
+                   coalesce(destino.telefone, c.telefone) as telefone,
+                   coalesce(destino.email, c.email)       as email
+              from cliente c
+              left join cliente destino on destino.id = c.mesclado_para
+             where c.id = :id
+               and c.anonimizado_em is null
+               and coalesce(destino.anonimizado_em, c.anonimizado_em) is null
             """;
 
     private static final String EXISTE = """
-            select 1 from cliente where id = :id and anonimizado_em is null
+            select 1
+              from cliente c
+              left join cliente destino on destino.id = c.mesclado_para
+             where c.id = :id
+               and c.anonimizado_em is null
+               and coalesce(destino.anonimizado_em, c.anonimizado_em) is null
             """;
 
     /**
@@ -56,7 +76,7 @@ public class ClientesJdbc implements ClienteApi {
      * semelhança em seguida, e o nome como desempate estável — sem ele a mesma busca devolveria
      * ordens diferentes entre execuções.
      */
-    private static final String BUSCAR_POR_NOME = """
+    static final String BUSCAR_POR_NOME = """
             with t as (
               select imutavel_unaccent(lower(:termo))  as termo,
                      imutavel_unaccent(lower(:padrao)) as padrao
@@ -64,6 +84,7 @@ public class ClientesJdbc implements ClienteApi {
             select c.id, c.nome, c.apelido, c.telefone, c.email
               from cliente c, t
              where c.anonimizado_em is null
+               and c.mesclado_para is null
                and c.busca like '%' || t.padrao || '%' escape '\\'
              order by (c.busca like t.padrao || '%' escape '\\') desc,
                       (c.busca like '% ' || t.padrao || '%' escape '\\') desc,
@@ -83,13 +104,40 @@ public class ClientesJdbc implements ClienteApi {
      * digitos} daria o mesmo resultado e nenhum índice — a diferença aparece quando o salão tem
      * dezenas de milhares de fichas, e some do radar até lá.
      */
-    private static final String BUSCAR_POR_TELEFONE = """
+    static final String BUSCAR_POR_TELEFONE = """
             select id, nome, apelido, telefone, email
               from cliente
              where telefone is not null
                and anonimizado_em is null
+               and mesclado_para is null
                and reverse(telefone) like reverse(:digitos) || '%'
              order by nome
+             limit :limite
+            """;
+
+    /**
+     * RT-CLI-003 — candidatos a duplicado.
+     *
+     * <p>O {@code %} do pg_trgm é a rede barata: usa o índice e traz quem tem chance. A decisão
+     * fina fica no domínio ({@code Semelhanca}), que compara primeiro nome — o escore sozinho não
+     * separa "Mariana"/"Maria" de "José Antônio"/"José Antônio da Costa".
+     *
+     * <p>O escore é calculado sobre {@code nome} e não sobre {@code busca}: {@code busca} inclui o
+     * apelido, e um apelido longo derrubaria a semelhança de nomes idênticos.
+     */
+    private static final String CANDIDATOS = """
+            with t as (select imutavel_unaccent(lower(:nome)) as nome_norm)
+            select c.id, c.nome, c.apelido, c.telefone, c.email,
+                   similarity(imutavel_unaccent(lower(c.nome)), t.nome_norm) as escore,
+                   (c.telefone is not null and c.telefone = cast(:telefone as text))
+                       as mesmo_telefone
+              from cliente c, t
+             where c.anonimizado_em is null
+               and c.mesclado_para is null
+               and c.id is distinct from cast(:excluir as uuid)
+               and ((c.telefone is not null and c.telefone = cast(:telefone as text))
+                    or c.busca % t.nome_norm)
+             order by escore desc, c.nome
              limit :limite
             """;
 
@@ -142,6 +190,102 @@ public class ClientesJdbc implements ClienteApi {
                     .list();
             case TermoDeBusca.Insuficiente ignorado -> List.of();
         };
+    }
+
+    /** RT-CLI-003 — traz quem pode ser a mesma pessoa, com o que o domínio precisa para decidir. */
+    @Transactional(readOnly = true)
+    public List<CandidatoADuplicado> candidatos(String nome, String telefone, UUID excluir,
+                                                int limite) {
+        return jdbc.sql(CANDIDATOS)
+                .param("nome", nome)
+                .param("telefone", telefone)
+                .param("excluir", excluir)
+                .param("limite", limite)
+                .query((rs, linha) -> new CandidatoADuplicado(
+                        RESUMO.mapRow(rs, linha),
+                        rs.getDouble("escore"),
+                        rs.getBoolean("mesmo_telefone")))
+                .list();
+    }
+
+    /** Uma ficha existente e o que se sabe da comparação dela com o que foi digitado. */
+    public record CandidatoADuplicado(ClienteResumo cliente, double escore,
+                                      boolean mesmoTelefone) {
+    }
+
+    /** Estado de uma ficha para as validações da mesclagem. */
+    public record EstadoDaFicha(UUID id, UUID mescladoPara, boolean anonimizado) {
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<EstadoDaFicha> estado(UUID id) {
+        return jdbc.sql("select id, mesclado_para, anonimizado_em from cliente where id = :id")
+                .param("id", id)
+                .query((rs, linha) -> new EstadoDaFicha(
+                        rs.getObject("id", UUID.class),
+                        rs.getObject("mesclado_para", UUID.class),
+                        rs.getTimestamp("anonimizado_em") != null))
+                .optional();
+    }
+
+    /**
+     * RT-CLI-003 — completa os vazios da ficha sobrevivente com o que a absorvida tinha.
+     *
+     * <p>{@code coalesce} e nunca sobrescrita: o dado que já está lá foi conferido por alguém, e
+     * um dado bom substituído por outro bom não melhora nada — mas um bom substituído por um
+     * velho é perda silenciosa.
+     *
+     * <p>A observação é a exceção: as duas são concatenadas, porque texto livre costuma guardar a
+     * única anotação que existe sobre a pessoa ("alérgica a amônia") e descartá-la seria perder
+     * informação que ninguém sabe que existiu.
+     */
+    public void absorverCampos(UUID sobrevivente, UUID absorvida) {
+        jdbc.sql("""
+                update cliente s set
+                    apelido    = coalesce(s.apelido, d.apelido),
+                    telefone   = coalesce(s.telefone, d.telefone),
+                    email      = coalesce(s.email, d.email),
+                    observacao = case
+                        when s.observacao is null then d.observacao
+                        when d.observacao is null then s.observacao
+                        else s.observacao || E'\\n---\\n' || d.observacao
+                    end,
+                    versao     = s.versao + 1
+                  from cliente d
+                 where s.id = :sobrevivente and d.id = :absorvida
+                """)
+                .param("sobrevivente", sobrevivente)
+                .param("absorvida", absorvida)
+                .update();
+    }
+
+    /**
+     * Marca a absorvida e <strong>repõe as cadeias em um salto só</strong>.
+     *
+     * <p>O segundo update é o que impede cadeia: quem já apontava para a ficha absorvida passa a
+     * apontar direto para a sobrevivente. Sem ele, A→B→C exigiria seguir ponteiros em toda leitura
+     * — e uma leitura recursiva é onde um ciclo acidental vira laço infinito em produção.
+     */
+    public void redirecionar(UUID absorvida, UUID sobrevivente, Instant quando) {
+        jdbc.sql("""
+                update cliente
+                   set mesclado_para = :sobrevivente, mesclado_em = :quando,
+                       versao = versao + 1
+                 where id = :absorvida
+                """)
+                .param("absorvida", absorvida)
+                .param("sobrevivente", sobrevivente)
+                .param("quando", java.sql.Timestamp.from(quando))
+                .update();
+
+        jdbc.sql("""
+                update cliente
+                   set mesclado_para = :sobrevivente
+                 where mesclado_para = :absorvida
+                """)
+                .param("absorvida", absorvida)
+                .param("sobrevivente", sobrevivente)
+                .update();
     }
 
     /**

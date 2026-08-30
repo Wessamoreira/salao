@@ -6,6 +6,8 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 
 import br.com.salao.SalaoApplication;
 import br.com.salao.shared.evento.EventoDeDominio;
+import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaMethod;
 import com.tngtech.archunit.lang.ArchCondition;
@@ -16,6 +18,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.modulith.core.ApplicationModules;
 
@@ -54,9 +57,35 @@ class ArquiteturaTest {
                 .check(CLASSES);
     }
 
+    /**
+     * Onde ponto flutuante é legítimo, com o motivo. A lista é curta de propósito.
+     *
+     * <p>A regra proíbe {@code double} em todo lugar, e não só onde há dinheiro, porque nomear
+     * "os campos que são dinheiro" exigiria acertar a intenção de quem escreveu — e é justamente
+     * quem não percebeu que aquilo era dinheiro que a regra precisa pegar.
+     *
+     * <p>O preço é este: toda exceção legítima passa por aqui. É o preço certo. Acrescentar um
+     * nome nesta lista é um gesto deliberado, que aparece na revisão e obriga a escrever por que
+     * aquele número não é dinheiro — o oposto de um {@code double} que entra despercebido no meio
+     * de um cálculo de comissão.
+     */
+    private static final String[] NAO_SAO_DINHEIRO = {
+        // RT-CLI-003: escore de similaridade de trigrama, de 0 a 1. É medida de parecença entre
+        // nomes; erro na terceira casa muda no máximo a ordem de dois avisos na tela.
+        "br.com.salao.cliente.internal.domain.Semelhanca",
+        "br.com.salao.cliente.internal.infra.ClientesJdbc$CandidatoADuplicado",
+    };
+
+    private static DescribedPredicate<JavaClass> foraDaListaDoQueNaoEDinheiro() {
+        var permitidas = Set.of(NAO_SAO_DINHEIRO);
+        return DescribedPredicate.describe("fora da lista do que não é dinheiro",
+                classe -> !permitidas.contains(classe.getFullName()));
+    }
+
     @Test
     void dinheiro_nunca_e_double_ou_float() {
         noFields().that().areDeclaredInClassesThat().resideInAPackage("br.com.salao..")
+                .and().areDeclaredInClassesThat(foraDaListaDoQueNaoEDinheiro())
                 .should().haveRawType(double.class)
                 .orShould().haveRawType(Double.class)
                 .orShould().haveRawType(float.class)

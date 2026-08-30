@@ -133,10 +133,60 @@ class ClientesWebIT extends AbstractPostgresIT {
     }
 
     @Test
+    @DisplayName("os possíveis duplicados vêm com o grau, para a tela saber o que dizer")
+    void possiveis_duplicados_trazem_o_grau() throws Exception {
+        // PROVAVEL pede "é esta pessoa?"; MESMO_TELEFONE é só contexto e não pode parecer erro.
+        String token = entrar();
+        post("/api/v1/clientes", "{\"nome\":\"Maria Silva\",\"telefone\":\"11987654321\"}", token);
+
+        var provavel = get("/api/v1/clientes/possiveis-duplicados"
+                + "?nome=Maria%20da%20Silva&telefone=5511987654321", token);
+        assertThat(provavel.statusCode()).isEqualTo(200);
+        assertThat(provavel.body()).contains("PROVAVEL").contains("Maria Silva");
+
+        var familia = get("/api/v1/clientes/possiveis-duplicados"
+                + "?nome=J%C3%BAlia%20Silva&telefone=5511987654321", token);
+        assertThat(familia.body()).contains("MESMO_TELEFONE");
+    }
+
+    @Test
+    @DisplayName("mesclar devolve a ficha que ficou, e o id antigo continua resolvendo")
+    void mesclar_pelo_http() throws Exception {
+        String token = entrar();
+        String fica = idDe(post("/api/v1/clientes",
+                "{\"nome\":\"Maria Silva\",\"telefone\":\"11987654321\"}", token));
+        String sai = idDe(post("/api/v1/clientes", "{\"nome\":\"Maria da Silva\"}", token));
+
+        var resposta = post("/api/v1/clientes/" + fica + "/mesclar",
+                "{\"absorvidaId\":\"" + sai + "\"}", token);
+
+        assertThat(resposta.statusCode()).isEqualTo(200);
+        assertThat(resposta.body()).contains(fica);
+        // O id antigo continua achando a pessoa: é disso que dependem agendamento e comanda.
+        assertThat(get("/api/v1/clientes/" + sai, token).body()).contains(fica);
+    }
+
+    @Test
+    @DisplayName("mesclar sem corpo válido é recusado na borda")
+    void mesclar_sem_corpo_e_recusado() throws Exception {
+        String token = entrar();
+        String fica = idDe(post("/api/v1/clientes", "{\"nome\":\"Maria Silva\"}", token));
+
+        assertThat(post("/api/v1/clientes/" + fica + "/mesclar", "{}", token).statusCode())
+                .isIn(400, 422);
+    }
+
+    @Test
     @DisplayName("sem token, o cadastro não abre")
     void sem_token_nao_cadastra() throws Exception {
         assertThat(post("/api/v1/clientes", "{\"nome\":\"Maria\"}", null).statusCode())
                 .isIn(401, 403);
+    }
+
+    /** O id sai do cabeçalho Location do 201. */
+    private String idDe(HttpResponse<String> criacao) {
+        String local = criacao.headers().firstValue("Location").orElseThrow();
+        return local.substring(local.lastIndexOf('/') + 1);
     }
 
     private String entrar() throws Exception {

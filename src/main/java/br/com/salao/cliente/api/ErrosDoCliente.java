@@ -19,7 +19,16 @@ public enum ErrosDoCliente implements CodigoDeErro {
             "Telefone inválido"),
 
     CLIENTE_NAO_ENCONTRADO("ER-CLI-CLIENTE_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
-            "Cliente não encontrado");
+            "Cliente não encontrado"),
+
+    /**
+     * Mesclagem recusada: a mesma ficha dos dois lados, ou uma delas já absorvida.
+     *
+     * <p>Um código só porque a ação da recepção é a mesma nos três casos — recarregar a tela e
+     * conferir quem sobrou. Códigos separados pediriam mensagens que ninguém saberia diferenciar.
+     */
+    MESCLAGEM_INVALIDA("ER-CLI-MESCLAGEM_INVALIDA", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Não é possível mesclar estas fichas");
 
     private final String codigo;
     private final HttpStatus status;

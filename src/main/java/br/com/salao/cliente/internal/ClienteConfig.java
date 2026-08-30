@@ -4,9 +4,12 @@ import br.com.salao.cliente.api.ClienteApi;
 import br.com.salao.cliente.internal.application.BuscarClientesUseCase;
 import br.com.salao.cliente.internal.application.CadastrarClienteUseCase;
 import br.com.salao.cliente.internal.application.ConsultarClienteUseCase;
+import br.com.salao.cliente.internal.application.DetectarDuplicadosUseCase;
+import br.com.salao.cliente.internal.application.MesclarClientesUseCase;
 import br.com.salao.cliente.internal.infra.ClientesJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
+import br.com.salao.shared.tempo.Relogio;
 import javax.sql.DataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,5 +44,16 @@ public class ClienteConfig {
     @Bean
     public BuscarClientesUseCase buscarClientesUseCase(ClientesJdbc clientes) {
         return new BuscarClientesUseCase(clientes);
+    }
+
+    @Bean
+    public DetectarDuplicadosUseCase detectarDuplicadosUseCase(ClientesJdbc clientes) {
+        return new DetectarDuplicadosUseCase(clientes);
+    }
+
+    @Bean
+    public MesclarClientesUseCase mesclarClientesUseCase(ClientesJdbc clientes,
+                                                         AuditoriaApi auditoria, Relogio relogio) {
+        return new MesclarClientesUseCase(clientes, auditoria, relogio);
     }
 }
