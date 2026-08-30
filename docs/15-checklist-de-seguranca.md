@@ -10,11 +10,11 @@ que a próxima auditoria não precise confiar nesta.
 | 1 | RLS no banco | ✅ Feito, com teste que quebra o build |
 | 2 | Rotas de API protegidas | ✅ Feito, fecha por padrão |
 | 3 | Senha protegida no banco | ✅ Argon2id |
-| 4 | Rate limit em tentativas de login | ⚠️ **Parcial** — por usuário sim, por IP não |
+| 4 | Rate limit em tentativas de login | ✅ Por usuário e por IP (RT-INF-011) |
 | 5 | Dados do usuário cifrados | ⚠️ **Parcial, e é o correto por ora** |
 | 6 | Chave exposta no deploy | 🔴 **Havia. Corrigido nesta auditoria** |
-| 7 | CORS | ❌ Não configurado |
-| 8 | Cabeçalhos de segurança (HSTS, CSP) | ❌ Não configurados |
+| 7 | CORS | ✅ Origens explícitas, nunca curinga (RT-INF-011) |
+| 8 | Cabeçalhos de segurança (HSTS, CSP) | ✅ Configurados e testados (RT-INF-011) |
 | 9 | `statement_timeout` / `lock_timeout` | ❌ Não configurados |
 | 10 | Actuator autenticado | ⚠️ Só em porta separada |
 

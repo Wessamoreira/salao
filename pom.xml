@@ -87,6 +87,11 @@
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>
     </dependency>
+    <dependency>
+      <groupId>com.bucket4j</groupId>
+      <artifactId>bucket4j_jdk17-core</artifactId>
+      <version>8.19.0</version>
+    </dependency>
     <!-- RT-INF-008. Sem o registry, /actuator/prometheus simplesmente não existe:
          as métricas do outbox e do cache seriam coletadas e nunca expostas. -->
     <dependency>

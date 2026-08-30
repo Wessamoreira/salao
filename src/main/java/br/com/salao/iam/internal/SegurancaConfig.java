@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
@@ -19,6 +20,8 @@ import br.com.salao.iam.api.Perfil;
 import br.com.salao.iam.internal.domain.MapaDePermissoes;
 import br.com.salao.iam.internal.infra.ConversorDePermissoes;
 import br.com.salao.iam.internal.infra.EmissorDeTokenJwt;
+import java.time.Duration;
+import java.util.List;
 import java.util.function.Supplier;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.core.Authentication;
@@ -36,6 +39,10 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /** RT-IAM-002 — autenticação e autorização. */
 @Configuration(proxyBeanMethods = false)
@@ -174,9 +181,53 @@ public class SegurancaConfig {
         return new AuthorizationDecision(!exige || tem);
     }
 
+    /**
+     * RT-INF-011 — origens explícitas, nunca {@code *}.
+     *
+     * <p>Com credenciais habilitadas o navegador recusa {@code *} de qualquer forma, mas a razão
+     * de fundo é outra: a lista diz quais front-ends existem. Ela é curta e revisável — um
+     * curinga não é nem uma coisa nem outra.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${app.cors.origens:}") List<String> origens) {
+        var config = new CorsConfiguration();
+        config.setAllowedOrigins(origens);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Idempotency-Key"));
+        // O refresh viaja em cookie: sem isto o navegador não o envia entre origens.
+        config.setAllowCredentials(true);
+        config.setMaxAge(Duration.ofHours(1));
+
+        var fonte = new UrlBasedCorsConfigurationSource();
+        fonte.registerCorsConfiguration("/api/**", config);
+        return fonte;
+    }
+
     @Bean
     public SecurityFilterChain cadeiaDaApi(HttpSecurity http) throws Exception {
         return http
+                // withDefaults() resolve o bean PELO NOME `corsConfigurationSource`. Injetar
+                // pelo tipo seria ambíguo: o mvcHandlerMappingIntrospector do Spring MVC também
+                // implementa CorsConfigurationSource.
+                .cors(Customizer.withDefaults())
+                /*
+                 * Cabeçalhos de segurança. Vários já são padrão do Spring Security — estão aqui
+                 * explícitos porque um padrão que ninguém escreveu é um padrão que ninguém
+                 * revisa, e porque a próxima pessoa precisa saber que foram considerados.
+                 *
+                 * A CSP é `default-src 'none'`: esta aplicação serve JSON e nada mais. A CSP do
+                 * front é outra, e pertence ao servidor que entrega os arquivos estáticos — não
+                 * a esta cadeia, que ele nunca atravessa.
+                 */
+                .headers(h -> h
+                        .httpStrictTransportSecurity(hsts -> hsts
+                                .includeSubDomains(true).maxAgeInSeconds(31_536_000))
+                        .frameOptions(f -> f.deny())
+                        .referrerPolicy(r -> r.policy(
+                                ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                                "default-src 'none'; frame-ancestors 'none'; base-uri 'none'")))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                         // Aberto porque é usado exatamente quando o access token expirou.

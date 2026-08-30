@@ -21,6 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 /**
  * RT-IAM-006 — autorização e imposição de segundo fator pelo HTTP.
@@ -34,6 +36,17 @@ class AutorizacaoWebIT extends AbstractPostgresIT {
 
     private static final String SENHA = "senha-bem-comprida-1";
     private static final String ROTA_PROTEGIDA = "/api/v1/agendamentos";
+
+    /**
+     * Limite de taxa alto: esta classe exercita o fluxo de autenticação e faz muito mais
+     * chamadas seguidas do que uma pessoa faria. O limite tem teste próprio
+     * ({@code LimiteDeTaxaWebIT}) — afrouxá-lo aqui mantém cada teste sobre um assunto só,
+     * em vez de fazer este falhar por um motivo que não é o dele.
+     */
+    @DynamicPropertySource
+    static void semLimiteDeTaxa(DynamicPropertyRegistry registro) {
+        registro.add("app.rede.limite-autenticacao", () -> "1000");
+    }
 
     @Value("${local.server.port}")
     private int porta;

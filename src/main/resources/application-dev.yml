@@ -10,6 +10,7 @@ spring.flyway.placeholders:
 app.manutencao.password: ${DB_MANUTENCAO_PASSWORD:salao_manutencao_dev}
 
 app.auth.cookie-seguro: false
+app.cors.origens: http://localhost:5173
 app.cripto.chave: ${CRIPTO_CHAVE:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
 
 spring:

@@ -16,12 +16,25 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 
 /** RT-IAM-002/003 — o contrato HTTP da autenticação. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class AutenticacaoWebIT extends AbstractPostgresIT {
 
     private static final String SENHA = "senha-bem-comprida-1";
+
+    /**
+     * Limite de taxa alto: esta classe exercita o fluxo de autenticação e faz muito mais
+     * chamadas seguidas do que uma pessoa faria. O limite tem teste próprio
+     * ({@code LimiteDeTaxaWebIT}) — afrouxá-lo aqui mantém cada teste sobre um assunto só,
+     * em vez de fazer este falhar por um motivo que não é o dele.
+     */
+    @DynamicPropertySource
+    static void semLimiteDeTaxa(DynamicPropertyRegistry registro) {
+        registro.add("app.rede.limite-autenticacao", () -> "1000");
+    }
 
     @Value("${local.server.port}")
     private int porta;

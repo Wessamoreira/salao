@@ -96,6 +96,20 @@ app.jwt:
   validade-do-acesso: ${JWT_VALIDADE:PT15M}
   emissor: ${JWT_EMISSOR:salao}
 
+app.rede:
+  # Doze tentativas por minuto por IP nas rotas de autenticação. Quem entra no salão erra
+  # a senha duas ou três vezes; vinte é ataque. O limite geral é largo porque abrir a
+  # agenda dispara várias chamadas de uma vez.
+  limite-autenticacao: ${LIMITE_AUTENTICACAO:12}
+  limite-geral: ${LIMITE_GERAL:300}
+  # Só ligue se NADA alcançar a aplicação sem passar pelo proxy — ver EnderecoDoCliente.
+  atras-de-proxy: ${ATRAS_DE_PROXY:false}
+
+app.cors:
+  # Lista explícita, nunca curinga. Vazia por padrão: sem front declarado, nenhuma
+  # origem cruzada é permitida.
+  origens: ${CORS_ORIGENS:}
+
 app.cripto:
   # AES-256 em Base64 (32 bytes). Sem padrão: a aplicação não sobe sem chave, porque
   # um padrão em código vira a chave de produção de alguém. Gere com
