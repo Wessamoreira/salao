@@ -26,9 +26,6 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/salao}
     user: ${DB_OWNER_USER:salao_owner}
     password: ${DB_OWNER_PASSWORD}
-    placeholders:
-      senha_app: ${DB_APP_PASSWORD}
-      senha_manutencao: ${DB_MANUTENCAO_PASSWORD}
 
   jpa:
     hibernate.ddl-auto: validate     # nunca 'update' — ver CLAUDE.md, inviolável nº 9
@@ -69,6 +66,12 @@ management:
   # Porta separada: enquanto não houver Spring Security (RT-IAM-002), tirar o
   # /actuator da porta pública é a proteção que dá para ter hoje. Métrica de
   # negócio e health interno não são endpoint de aplicação.
+  # 127.0.0.1 por padrão: o actuator não é alcançável da rede, só de dentro da
+  # máquina. Health e métrica precisam ser legíveis por sonda de contêiner e por
+  # scraper, que não carregam token — então a proteção não pode ser autenticação,
+  # e passa a ser alcance. Expor numa interface privada é decisão de quem opera,
+  # feita por variável, com o firewall que a acompanha.
+  server.address: ${MANAGEMENT_ADDRESS:127.0.0.1}
   server.port: ${MANAGEMENT_PORT:9090}
   endpoints.web.exposure.include: health,info,metrics,prometheus
   endpoint.health:

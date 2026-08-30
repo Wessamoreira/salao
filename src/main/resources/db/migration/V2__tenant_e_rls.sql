@@ -6,12 +6,21 @@
 -- O Flyway conecta como owner (precisa criar tabela e política); a aplicação,
 -- como salao_app.
 -- ---------------------------------------------------------------------------
+-- ---------------------------------------------------------------------------
+-- A role é criada SEM SENHA aqui, de propósito (RT-INF-012).
+--
+-- `alter role ... password 'x'` grava a senha dentro do próprio comando SQL. Com
+-- log_statement = 'ddl' ou 'all' no Postgres, ela vai para o log do servidor em
+-- texto claro — e log de banco costuma ser copiado, arquivado e lido por mais
+-- gente do que quem tem acesso ao segredo.
+--
+-- A senha é definida FORA da migration, uma vez por ambiente, por quem provisiona
+-- o banco. Ver docs/runbook/provisionar-banco.md.
+-- ---------------------------------------------------------------------------
 do $$
 begin
   if not exists (select 1 from pg_roles where rolname = 'salao_app') then
-    create role salao_app login password '${senha_app}';
-  else
-    alter role salao_app login password '${senha_app}';
+    create role salao_app login;
   end if;
 end
 $$;

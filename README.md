@@ -44,7 +44,7 @@ Leia `CLAUDE.md`. Depois `docs/09-plano-de-implementacao.md` para saber qual rot
 
 ## Estado
 
-**Fase 0 em andamento.** 161 no backend + 8 no front.
+**Fase 0 concluída.** 163 testes no backend + 8 no front.
 
 | Rotina | Status |
 |---|---|
@@ -67,6 +67,8 @@ Leia `CLAUDE.md`. Depois `docs/09-plano-de-implementacao.md` para saber qual rot
 | RT-IAM-008 Auditoria append-only | implementado |
 | RT-INF-010 Shell do front | implementado |
 | RT-INF-011 Rate limit por IP, CORS, cabeçalhos | implementado |
-| RT-INF-012 Endurecimento: timeouts, actuator, senha da role | próxima |
+| RT-INF-012 Endurecimento | implementado |
+
+**Fase 0 concluída.** Próxima: Fase 1, a partir de `RT-CLI-001`.
 
 Backlog completo em `docs/09-plano-de-implementacao.md`.

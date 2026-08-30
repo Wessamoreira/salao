@@ -15,8 +15,8 @@ que a próxima auditoria não precise confiar nesta.
 | 6 | Chave exposta no deploy | 🔴 **Havia. Corrigido nesta auditoria** |
 | 7 | CORS | ✅ Origens explícitas, nunca curinga (RT-INF-011) |
 | 8 | Cabeçalhos de segurança (HSTS, CSP) | ✅ Configurados e testados (RT-INF-011) |
-| 9 | `statement_timeout` / `lock_timeout` | ❌ Não configurados |
-| 10 | Actuator autenticado | ⚠️ Só em porta separada |
+| 9 | `statement_timeout` / `lock_timeout` | ✅ Nas roles, com valores por papel (RT-INF-012) |
+| 10 | Actuator alcançável da rede | ✅ Ligado a `127.0.0.1` (RT-INF-012) |
 
 ---
 
@@ -106,10 +106,9 @@ e dura até alguém descobrir.
 
 ### Duas exposições que permanecem
 
-**A senha da role vai dentro do SQL da migration** (`alter role salao_app password '...'`). Se o
-Postgres estiver com `log_statement = 'ddl'` ou `'all'`, ela aparece no log do banco. Não é
-exposição no repositório — o valor vem de variável —, mas é exposição no log do servidor.
-→ **Entra como `RT-INF-012`.**
+~~**A senha da role vai dentro do SQL da migration.**~~ **Corrigido em `RT-INF-012`:** as
+migrations criam as roles sem senha, e ela é definida fora, por quem provisiona
+(`runbook/provisionar-banco.md`). Um teste varre os `.sql` e reprova o build se alguém reintroduzir.
 
 **O `.env` está protegido** (`.gitignore` cobre `.env`, `.env.*`, `*.pem`, `*.key` desde o
 primeiro commit), e a imagem Docker não embute segredo nenhum: tudo entra por variável em tempo

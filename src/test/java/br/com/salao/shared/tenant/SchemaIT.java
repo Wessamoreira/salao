@@ -43,6 +43,62 @@ class SchemaIT extends AbstractPostgresIT {
      *       seria possível. O preço está em RN-INF-009: evento carrega ID, nunca PII.
      * </ul>
      */
+    @Test
+    @DisplayName("as roles carregam seus próprios timeouts")
+    void roles_tem_timeouts() throws SQLException {
+        // Nas ROLES e não no cliente: assim os limites acompanham a credencial, inclusive num
+        // psql aberto às pressas durante um incidente — que é quando alguém roda um SELECT sem
+        // WHERE numa tabela grande.
+        var configuracoes = configuracaoDasRoles();
+
+        assertThat(configuracoes.get("salao_app"))
+                .as("sem statement_timeout, uma query ruim segura a conexão indefinidamente")
+                .contains("statement_timeout=30s")
+                .as("o lock_timeout é o teto que RT-INF-005 assumiu por escrito e não tinha")
+                .contains("lock_timeout=5s")
+                .contains("idle_in_transaction_session_timeout=60s");
+
+        assertThat(configuracoes.get("salao_manutencao"))
+                .as("purga varre tabela inteira e leva mais que 30s legitimamente")
+                .contains("statement_timeout=10min");
+    }
+
+    @Test
+    @DisplayName("nenhuma senha de role foi gravada em migration")
+    void migrations_nao_carregam_senha() throws Exception {
+        // `alter role ... password 'x'` grava o segredo dentro do comando SQL, e com
+        // log_statement ligado ele vai para o log do servidor em texto claro.
+        var migrations = java.nio.file.Files.walk(
+                java.nio.file.Path.of("src/main/resources/db/migration")).toList();
+
+        for (var arquivo : migrations) {
+            if (!arquivo.toString().endsWith(".sql")) continue;
+            // Comentários fora: a regra é sobre COMANDO, e o próprio V2 explica a regra em
+            // prosa. Um teste que reprova a explicação da regra é um teste ingênuo.
+            String comandos = java.nio.file.Files.readString(arquivo).lines()
+                    .filter(linha -> !linha.stripLeading().startsWith("--"))
+                    .reduce("", (a, b) -> a + "\n" + b);
+
+            assertThat(comandos)
+                    .as("%s grava senha dentro do SQL; com log_statement ligado ela vai "
+                            + "para o log do servidor em texto claro", arquivo.getFileName())
+                    .doesNotContain("password '");
+        }
+    }
+
+    private java.util.Map<String, String> configuracaoDasRoles() throws SQLException {
+        var porRole = new java.util.HashMap<String, String>();
+        try (var st = comoOwner().createStatement();
+             var rs = st.executeQuery(
+                     "select rolname, coalesce(array_to_string(rolconfig, ','), '') as conf"
+                     + " from pg_roles where rolname like 'salao_%'")) {
+            while (rs.next()) {
+                porRole.put(rs.getString("rolname"), rs.getString("conf"));
+            }
+        }
+        return porRole;
+    }
+
     private static final Set<String> TABELAS_DE_INFRAESTRUTURA = Set.of(
             "flyway_schema_history", "event_publication", "event_publication_archive");
 

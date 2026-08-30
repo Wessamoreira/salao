@@ -13,12 +13,11 @@
 -- Com a role, a permissão é de quem se conecta, não de quem lembra de setar
 -- uma variável. salao_app nunca casa com a policy, então nunca a alcança.
 -- ---------------------------------------------------------------------------
+-- Sem senha aqui, pela mesma razão de V2: ela apareceria no log do servidor.
 do $$
 begin
   if not exists (select 1 from pg_roles where rolname = 'salao_manutencao') then
-    create role salao_manutencao login password '${senha_manutencao}';
-  else
-    alter role salao_manutencao login password '${senha_manutencao}';
+    create role salao_manutencao login;
   end if;
 end
 $$;

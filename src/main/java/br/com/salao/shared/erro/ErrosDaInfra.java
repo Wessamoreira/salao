@@ -26,6 +26,14 @@ public enum ErrosDaInfra implements CodigoDeErro {
     LIMITE_DE_REQUISICOES("ER-INF-LIMITE_DE_REQUISICOES", HttpStatus.TOO_MANY_REQUESTS,
             "Muitas requisições"),
 
+    /**
+     * O recurso está sendo alterado por outra requisição e a espera estourou o
+     * {@code lock_timeout} (RT-INF-012). É estado transitório: tentar de novo costuma resolver,
+     * e é por isso que não é 500 — 500 diz "algo quebrou", e nada quebrou.
+     */
+    OPERACAO_EM_ANDAMENTO("ER-INF-OPERACAO_EM_ANDAMENTO", HttpStatus.CONFLICT,
+            "Operação em andamento"),
+
     METODO_NAO_PERMITIDO("ER-INF-METODO_NAO_PERMITIDO", HttpStatus.METHOD_NOT_ALLOWED,
             "Método não permitido"),
 

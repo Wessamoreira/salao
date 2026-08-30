@@ -80,6 +80,23 @@ public class ManipuladorGlobalDeErros {
                 List.of(), java.util.Map.of());
     }
 
+    /**
+     * Espera por bloqueio que estourou o teto (`lock_timeout`, RT-INF-012).
+     *
+     * <p>Acontece quando duas requisições disputam a mesma linha — o caso desenhado em
+     * RT-INF-005, com dois pedidos idempotentes simultâneos. Não é falha: é a espera tendo um
+     * teto, que é justamente o que se queria. Vira 409 com orientação de repetir, e não 500,
+     * que diria "algo quebrou" quando nada quebrou.
+     */
+    @ExceptionHandler(org.springframework.dao.CannotAcquireLockException.class)
+    public ProblemDetail tratarEsperaPorBloqueio(
+            org.springframework.dao.CannotAcquireLockException erro) {
+        log.info("Espera por bloqueio estourou o limite", erro);
+        return montar(ErrosDaInfra.OPERACAO_EM_ANDAMENTO,
+                "Esta operação está sendo processada. Tente de novo em instantes.",
+                List.of(), java.util.Map.of());
+    }
+
     @ExceptionHandler(Exception.class)
     public ProblemDetail tratarInesperado(Exception erro) {
         log.error("Erro não tratado", erro);

@@ -57,6 +57,37 @@ public abstract class AbstractPostgresIT {
                 // conjunto enquanto passavam isoladas — sintoma que não aponta para a causa.
                 .withCommand("postgres", "-c", "max_connections=300");
         POSTGRES.start();
+        definirSenhasDasRoles();
+    }
+
+    /**
+     * Faz aqui o que o operador faz uma vez por ambiente (RT-INF-012).
+     *
+     * <p>As migrations criam as roles SEM senha de propósito: `alter role ... password 'x'`
+     * gravaria o segredo dentro do comando SQL, e com `log_statement` ligado ele iria para o log
+     * do servidor em texto claro. A senha é definida fora da migration — em produção pelo
+     * runbook, aqui pelo teste, sempre pela conexão de owner.
+     *
+     * <p>Precisa rodar antes de o Spring subir: o Flyway conecta como owner, mas a aplicação
+     * conecta como `salao_app`, e sem senha ela não autenticaria.
+     */
+    private static void definirSenhasDasRoles() {
+        try (var conexao = DriverManager.getConnection(
+                     POSTGRES.getJdbcUrl(), OWNER, OWNER_SENHA);
+             var st = conexao.createStatement()) {
+            // A role só existe depois da migration V2/V4, que ainda não rodou. Criar aqui é o
+            // mesmo que o provisionamento faz: garantir que exista e ter senha.
+            st.execute("do $$ begin"
+                    + " if not exists (select 1 from pg_roles where rolname = 'salao_app')"
+                    + " then create role salao_app login; end if;"
+                    + " if not exists (select 1 from pg_roles where rolname = 'salao_manutencao')"
+                    + " then create role salao_manutencao login; end if;"
+                    + " end $$;");
+            st.execute("alter role salao_app password '" + APP_SENHA + "'");
+            st.execute("alter role salao_manutencao password '" + MANUTENCAO_SENHA + "'");
+        } catch (SQLException e) {
+            throw new IllegalStateException("não foi possível preparar as roles do teste", e);
+        }
     }
 
     @DynamicPropertySource
@@ -64,8 +95,6 @@ public abstract class AbstractPostgresIT {
         registro.add("spring.flyway.url", POSTGRES::getJdbcUrl);
         registro.add("spring.flyway.user", () -> OWNER);
         registro.add("spring.flyway.password", () -> OWNER_SENHA);
-        registro.add("spring.flyway.placeholders.senha_app", () -> APP_SENHA);
-        registro.add("spring.flyway.placeholders.senha_manutencao", () -> MANUTENCAO_SENHA);
 
         registro.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         registro.add("spring.datasource.username", () -> "salao_app");
