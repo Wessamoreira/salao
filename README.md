@@ -44,7 +44,7 @@ Leia `CLAUDE.md`. Depois `docs/09-plano-de-implementacao.md` para saber qual rot
 
 ## Estado
 
-**Fase 0 em andamento.** 89 testes passando.
+**Fase 0 em andamento.** 99 testes passando.
 
 | Rotina | Status |
 |---|---|
@@ -60,7 +60,8 @@ Leia `CLAUDE.md`. Depois `docs/09-plano-de-implementacao.md` para saber qual rot
 | RT-IAM-001 Provisionar estabelecimento | implementado |
 | RT-IAM-002 Login com Argon2id e bloqueio | implementado |
 | RT-IAM-003 Refresh rotativo com detecção de reuso | implementado |
-| RT-IAM-004 Logout e revogação | próxima |
+| RT-IAM-004 Logout e revogação de sessão | implementado |
+| RT-IAM-005 MFA TOTP | próxima |
 | RT-INF-010 Shell do front | aguarda Node |
 
 Backlog completo em `docs/09-plano-de-implementacao.md`.

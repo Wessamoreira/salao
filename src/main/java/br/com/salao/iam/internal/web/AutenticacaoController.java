@@ -3,13 +3,17 @@ package br.com.salao.iam.internal.web;
 import br.com.salao.iam.api.SessaoIniciada;
 import br.com.salao.iam.internal.application.AutenticarCommand;
 import br.com.salao.iam.internal.application.AutenticarUseCase;
+import br.com.salao.iam.internal.application.EncerrarSessaoUseCase;
 import br.com.salao.iam.internal.application.RenovarAcessoUseCase;
 import br.com.salao.shared.tempo.Relogio;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -29,14 +33,16 @@ public class AutenticacaoController {
 
     private final AutenticarUseCase autenticar;
     private final RenovarAcessoUseCase renovar;
+    private final EncerrarSessaoUseCase encerrar;
     private final Relogio relogio;
     private final boolean cookieSeguro;
 
     public AutenticacaoController(AutenticarUseCase autenticar, RenovarAcessoUseCase renovar,
-                                  Relogio relogio,
+                                  EncerrarSessaoUseCase encerrar, Relogio relogio,
                                   @Value("${app.auth.cookie-seguro:true}") boolean cookieSeguro) {
         this.autenticar = autenticar;
         this.renovar = renovar;
+        this.encerrar = encerrar;
         this.relogio = relogio;
         this.cookieSeguro = cookieSeguro;
     }
@@ -59,6 +65,32 @@ public class AutenticacaoController {
         var sessao = renovar.executar(refresh, requisicao.getRemoteAddr(),
                 requisicao.getHeader(HttpHeaders.USER_AGENT));
         return responder(sessao);
+    }
+
+    /**
+     * Aberto, como o refresh: sair não pode depender de um access token que talvez já tenha
+     * expirado. Sempre 204 — ver a nota sobre logout nunca falhar em {@code EncerrarSessaoUseCase}.
+     */
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @CookieValue(name = CookieDeRefresh.NOME, required = false) String refresh) {
+        encerrar.encerrar(refresh);
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, CookieDeRefresh.expirado(cookieSeguro).toString())
+                .build();
+    }
+
+    /**
+     * Encerra todas as sessões do usuário. Exige access token válido: é a ação de quem suspeita
+     * que alguém tem acesso, e não pode depender do cookie do dispositivo atual — que pode ser
+     * exatamente o que foi perdido.
+     */
+    @PostMapping("/logout-all")
+    public ResponseEntity<Void> logoutDeTodos(@AuthenticationPrincipal Jwt jwt) {
+        encerrar.encerrarTodas(UUID.fromString(jwt.getSubject()));
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, CookieDeRefresh.expirado(cookieSeguro).toString())
+                .build();
     }
 
     private ResponseEntity<LoginResponse> responder(SessaoIniciada sessao) {

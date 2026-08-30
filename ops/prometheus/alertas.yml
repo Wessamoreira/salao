@@ -31,6 +31,18 @@ groups:
             outro sintoma.
           runbook: docs/runbook/cache-desatualizado.md
 
+      - alert: ReusoDeRefreshDetectado
+        expr: increase(auth_refresh_reuso_detectado_total[10m]) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: "Refresh token reapresentado após rotação"
+          description: >
+            Um refresh de uso único voltou depois de trocado — o token existia em
+            dois lugares. A família foi revogada automaticamente, mas isto é
+            indício de vazamento e merece investigação: qual usuário, de quais
+            IPs, e o que foi acessado com o access token daquela sessão.
+          runbook: docs/runbook/reuso-de-refresh.md
+
   - name: aplicacao
     rules:
       - alert: TaxaDeErro5xx

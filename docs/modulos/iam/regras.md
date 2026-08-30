@@ -154,3 +154,19 @@ primeira requisição já recebeu o par novo.
 **Rotinas.** RT-IAM-003 · **Teste.** `RenovacaoIT.corrida_e_arbitrada_pelo_banco`
 **Configurável?** Sim — `app.auth.refresh.tolerancia-de-reenvio`
 **Origem.** 2026-08-29
+
+---
+
+### RN-IAM-009 — Logout nunca falha e nunca revela
+
+**Enunciado.** Logout com refresh desconhecido, já revogado, vazio ou ausente termina em sucesso
+(204), com a mesma resposta do logout bem-sucedido.
+
+**Motivo.** Dois. De produto: não há nada que o usuário possa fazer a respeito, e sair de uma
+sessão que já não existe é o resultado que ele queria. De segurança: responder diferente para
+token válido e inválido faria do logout um **oráculo para testar tokens**.
+
+**Onde é garantida.** `EncerrarSessaoUseCase.encerrar` — retorno silencioso em todos os casos.
+**Rotinas.** RT-IAM-004
+**Testes.** `EncerramentoIT.logout_nunca_falha`, `AutenticacaoWebIT.logout_sem_cookie`
+**Configurável?** Não · **Origem.** 2026-08-29

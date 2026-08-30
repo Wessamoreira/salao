@@ -9,7 +9,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import java.util.List;
-import org.springframework.core.Ordered;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /** RT-INF-002 — fiação do isolamento por tenant. */
@@ -46,15 +45,23 @@ public class TenantConfig {
 
 
     /**
-     * Depois do Spring Security (cuja cadeia fica em {@code -100}), porque o resolvedor do JWT lê o
-     * {@code SecurityContext} — que só existe depois da autenticação. E antes de qualquer coisa
-     * que abra transação, porque a transação exige o escopo já aberto.
+     * A cadeia do Spring Security fica em {@code SecurityProperties.DEFAULT_FILTER_ORDER}, que
+     * vale {@code -100}. Este filtro precisa vir <strong>logo depois</strong> dela: o resolvedor
+     * do JWT lê o {@code SecurityContext}, que só existe após a autenticação. E antes de qualquer
+     * coisa que abra transação, porque a transação exige o escopo já aberto.
+     *
+     * <p><strong>Valor absoluto, não {@code HIGHEST_PRECEDENCE + n}.</strong> A primeira versão
+     * usava {@code Ordered.HIGHEST_PRECEDENCE + 90}, que é {@code Integer.MIN_VALUE + 90} — um
+     * número ordens de grandeza <em>antes</em> de -100, exatamente o contrário da intenção. O erro
+     * ficou invisível enquanto não havia endpoint autenticado, e apareceu como
+     * {@code TenantNaoDefinidoException} no primeiro deles.
      */
+    private static final int DEPOIS_DO_SPRING_SECURITY = -90;
     @Bean
     public FilterRegistrationBean<TenantFilter> tenantFilter(
             List<ResolvedorDeTenant> resolvedores) {
         var registro = new FilterRegistrationBean<>(new TenantFilter(resolvedores));
-        registro.setOrder(Ordered.HIGHEST_PRECEDENCE + 90);
+        registro.setOrder(DEPOIS_DO_SPRING_SECURITY);
         return registro;
     }
 }

@@ -47,6 +47,17 @@ public class RefreshTokensJdbc {
              where familia_id = :familia and revogado_em is null
             """;
 
+    private static final String REVOGAR_DO_USUARIO = """
+            update refresh_token
+               set revogado_em = :agora, motivo_revogacao = :motivo
+             where usuario_id = :usuario and revogado_em is null
+            """;
+
+    private static final String PURGAR = """
+            delete from refresh_token
+             where expira_em < now() - cast(:retencao as interval)
+            """;
+
     private final ConexaoDeManutencao plataforma;
     private final JdbcClient aplicacao;
 
@@ -122,6 +133,29 @@ public class RefreshTokensJdbc {
                 .param("familia", familiaId)
                 .param("agora", java.sql.Timestamp.from(agora))
                 .param("motivo", motivo)
+                .update();
+    }
+
+    /** Encerra todas as sessões do usuário — o "sair de todos os dispositivos". */
+    @Transactional
+    public int revogarTodasDoUsuario(UUID usuarioId, Instant agora, String motivo) {
+        return aplicacao.sql(REVOGAR_DO_USUARIO)
+                .param("usuario", usuarioId)
+                .param("agora", java.sql.Timestamp.from(agora))
+                .param("motivo", motivo)
+                .update();
+    }
+
+    /**
+     * Expurgo, pela conexão de plataforma: alcança todos os estabelecimentos por natureza.
+     *
+     * <p>Guarda os vencidos por um tempo além do vencimento de propósito — é o que permite
+     * responder "esta sessão foi encerrada quando?" numa investigação. Depois disso não serve
+     * nem para auditoria, e a tabela cresce a cada login.
+     */
+    public int purgarVencidos(java.time.Duration retencaoAlemDoVencimento) {
+        return plataforma.jdbc().sql(PURGAR)
+                .param("retencao", retencaoAlemDoVencimento.toSeconds() + " seconds")
                 .update();
     }
 

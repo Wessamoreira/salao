@@ -93,6 +93,9 @@ public class SegurancaConfig {
                         // Aberto porque é usado exatamente quando o access token expirou.
                         // Quem autentica aqui é o cookie HttpOnly, não o Authorization.
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh").permitAll()
+                        // Sair não pode depender de um access token que talvez já tenha expirado.
+                        // O que autentica é o cookie; e sem cookie válido o logout é inofensivo.
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").permitAll()
                         // Tudo o mais fechado por padrão: endpoint novo nasce protegido, e é
                         // preciso um ato deliberado para abri-lo. O contrário — abrir por padrão
                         // e lembrar de fechar — falha na primeira distração.

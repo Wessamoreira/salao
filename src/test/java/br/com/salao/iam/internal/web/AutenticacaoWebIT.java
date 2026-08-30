@@ -97,6 +97,66 @@ class AutenticacaoWebIT extends AbstractPostgresIT {
         assertThat(resposta.statusCode()).isIn(401, 403);
     }
 
+    @Test
+    @DisplayName("o logout apaga o cookie e devolve 204, com ou sem sessão")
+    void logout_apaga_o_cookie() throws Exception {
+        var login = post("/api/v1/auth/login",
+                "{\"email\":\"ana@salao.test\",\"senha\":\"" + SENHA + "\"}", null);
+        String cookie = valorDoCookie(login);
+
+        var logout = post("/api/v1/auth/logout", "", cookie);
+
+        assertThat(logout.statusCode()).isEqualTo(204);
+        assertThat(cabecalhoDeCookie(logout))
+                .as("cookie zerado e vencido: o navegador o descarta na hora")
+                .contains("Max-Age=0");
+
+        // O refresh precisa ter deixado de valer, não só sumido do navegador.
+        var tentativa = post("/api/v1/auth/refresh", "", cookie);
+        assertThat(tentativa.statusCode()).isEqualTo(401);
+    }
+
+    @Test
+    @DisplayName("logout sem cookie também devolve 204")
+    void logout_sem_cookie() throws Exception {
+        // Responder diferente para sessão existente e inexistente faria do logout um oráculo.
+        var resposta = post("/api/v1/auth/logout", "", null);
+
+        assertThat(resposta.statusCode()).isEqualTo(204);
+    }
+
+    @Test
+    @DisplayName("sair de todos os dispositivos exige access token válido")
+    void logout_de_todos_exige_autenticacao() throws Exception {
+        // É a ação de quem suspeita que perdeu o dispositivo — não pode depender do cookie dele.
+        var semToken = post("/api/v1/auth/logout-all", "", null);
+        assertThat(semToken.statusCode()).isIn(401, 403);
+
+        var login = post("/api/v1/auth/login",
+                "{\"email\":\"ana@salao.test\",\"senha\":\"" + SENHA + "\"}", null);
+        String acesso = extrair(login.body(), "tokenDeAcesso");
+
+        var comToken = postComBearer("/api/v1/auth/logout-all", acesso);
+        assertThat(comToken.statusCode()).isEqualTo(204);
+    }
+
+    private String extrair(String json, String campo) {
+        var m = java.util.regex.Pattern.compile("\"" + campo + "\"\\s*:\\s*\"([^\"]+)\"")
+                .matcher(json);
+        assertThat(m.find()).as("campo %s presente na resposta", campo).isTrue();
+        return m.group(1);
+    }
+
+    private HttpResponse<String> postComBearer(String caminho, String token) throws Exception {
+        var requisicao = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + porta + caminho))
+                .header("Authorization", "Bearer " + token)
+                .timeout(Duration.ofSeconds(10))
+                .POST(HttpRequest.BodyPublishers.noBody())
+                .build();
+        return http.send(requisicao, HttpResponse.BodyHandlers.ofString());
+    }
+
     private String cabecalhoDeCookie(HttpResponse<String> resposta) {
         return resposta.headers().firstValue("set-cookie").orElseThrow();
     }

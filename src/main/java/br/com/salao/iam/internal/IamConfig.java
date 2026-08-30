@@ -2,11 +2,13 @@ package br.com.salao.iam.internal;
 
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.internal.application.AutenticarUseCase;
+import br.com.salao.iam.internal.application.EncerrarSessaoUseCase;
 import br.com.salao.iam.internal.application.RenovarAcessoUseCase;
 import br.com.salao.iam.internal.application.ProvisionarEstabelecimentoUseCase;
 import br.com.salao.iam.internal.infra.CredenciaisJdbc;
 import br.com.salao.iam.internal.infra.EmissorDeTokenJwt;
 import br.com.salao.iam.internal.infra.EstabelecimentoCacheado;
+import br.com.salao.iam.internal.infra.PurgadorDeRefreshTokens;
 import br.com.salao.iam.internal.infra.RefreshTokensJdbc;
 import br.com.salao.iam.internal.infra.EstabelecimentoJdbc;
 import br.com.salao.shared.manutencao.ConexaoDeManutencao;
@@ -70,6 +72,18 @@ public class IamConfig {
             @Value("${app.auth.refresh.validade:P30D}") Duration validadeDoRefresh) {
         return new AutenticarUseCase(credenciais, codificador, emissor, refreshTokens, relogio,
                 validadeDoRefresh);
+    }
+
+    @Bean
+    public EncerrarSessaoUseCase encerrarSessaoUseCase(RefreshTokensJdbc tokens, Relogio relogio) {
+        return new EncerrarSessaoUseCase(tokens, relogio);
+    }
+
+    @Bean
+    public PurgadorDeRefreshTokens purgadorDeRefreshTokens(
+            RefreshTokensJdbc tokens,
+            @Value("${app.auth.refresh.retencao-alem-do-vencimento:P30D}") Duration retencao) {
+        return new PurgadorDeRefreshTokens(tokens, retencao);
     }
 
     @Bean
