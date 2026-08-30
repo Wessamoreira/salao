@@ -6,9 +6,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * RT-INF-003 — tradução única de exceção para HTTP, no formato RFC 9457 (Problem Details),
@@ -47,6 +51,33 @@ public class ManipuladorGlobalDeErros {
                 .toList();
         return montar(ErrosDaInfra.DADOS_INVALIDOS, "Verifique os campos informados.",
                 campos, java.util.Map.of());
+    }
+
+    /**
+     * Erros do próprio Spring MVC: rota inexistente, método errado, corpo ilegível.
+     *
+     * <p>Sem estes tratadores, o {@code @ExceptionHandler(Exception.class)} abaixo os engoliria e
+     * <strong>toda URL digitada errada viraria 500</strong> — enchendo o log de erro interno por
+     * causa de um cliente que errou o caminho, e escondendo os 500 de verdade no meio do ruído.
+     * O tratador mais específico ganha, e é por isso que estes precisam existir explicitamente.
+     */
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    public ProblemDetail tratarRotaInexistente(Exception erro) {
+        return montar(ErrosDaInfra.NAO_ENCONTRADO, "Recurso não encontrado.",
+                List.of(), java.util.Map.of());
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ProblemDetail tratarMetodoNaoPermitido(HttpRequestMethodNotSupportedException erro) {
+        return montar(ErrosDaInfra.METODO_NAO_PERMITIDO,
+                "Método não permitido para este recurso.", List.of(), java.util.Map.of());
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ProblemDetail tratarCorpoIlegivel(HttpMessageNotReadableException erro) {
+        // Sem detalhe do parser: ele expõe nomes de classe e estrutura interna.
+        return montar(ErrosDaInfra.DADOS_INVALIDOS, "Corpo da requisição inválido.",
+                List.of(), java.util.Map.of());
     }
 
     @ExceptionHandler(Exception.class)

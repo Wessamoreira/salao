@@ -216,3 +216,39 @@ access token antigo ainda válido permitiria pular a senha.
 `SegundoFatorUseCase.decodificarDesafio`.
 **Rotinas.** RT-IAM-005 · **Teste.** `SegundoFatorIT.access_token_nao_serve_de_desafio`
 **Configurável?** Não · **Origem.** 2026-08-29
+
+---
+
+### RN-IAM-013 — Autorização olha permissão, nunca perfil
+
+**Enunciado.** Nenhum ponto do sistema decide por perfil. Todo controle usa permissão no formato
+`recurso:acao:escopo`, e o perfil é apenas um conjunto nomeado delas.
+
+**Motivo.** Um `if (perfil == ADMIN)` espalhado torna impossível atender "a recepção daqui também
+pode dar desconto até 5%" sem alterar e reimplantar o sistema — e esse pedido chega de todo salão.
+
+**Onde é garantida.** `MapaDePermissoes` + `ConversorDePermissoes` + `@PreAuthorize` sobre
+permissões. As flags de `/me/capabilities` descrevem efeito (`podeVerValorDeOutros`), não perfil.
+**Rotinas.** RT-IAM-006 e toda rotina com autorização
+**Testes.** `MapaDePermissoesTest`, `CapacidadesIT.flags_descrevem_efeito`
+**Configurável?** Hoje não; o mapa sai para o banco quando o primeiro salão pedir
+**Origem.** 2026-08-29
+
+---
+
+### RN-IAM-014 — A obrigatoriedade de MFA é imposta pelo backend
+
+**Enunciado.** Usuário de perfil que exige segundo fator e não o tem ativo é recusado em toda a
+API, exceto os endpoints de MFA, `/me/**` e `POST /auth/logout-all`.
+
+**Motivo.** Como flag em `/me/capabilities`, seria só uma instrução para o front respeitar — e
+quem chamasse a API diretamente entraria sem segundo fator. Esconder botão é UX, não segurança.
+
+As exceções têm cada uma o seu motivo: as duas primeiras são o caminho para sair do bloqueio; a
+terceira é ação de segurança, e bloqueá-la reduziria a segurança em nome de uma regra de segurança.
+
+**Onde é garantida.** `SegurancaConfig.segundoFatorEmDia` (`AuthorizationManager`).
+**Rotinas.** RT-IAM-005, RT-IAM-006
+**Testes.** `AutorizacaoWebIT.admin_sem_mfa_e_bloqueado`,
+`AutorizacaoWebIT.caminho_de_saida_permanece_aberto`
+**Erro.** 403 · **Configurável?** Via `MapaDePermissoes.exigeMfa` · **Origem.** 2026-08-29

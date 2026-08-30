@@ -15,7 +15,15 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import br.com.salao.iam.api.Perfil;
+import br.com.salao.iam.internal.domain.MapaDePermissoes;
+import br.com.salao.iam.internal.infra.ConversorDePermissoes;
 import br.com.salao.iam.internal.infra.EmissorDeTokenJwt;
+import java.util.function.Supplier;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
@@ -31,6 +39,8 @@ import org.springframework.security.web.SecurityFilterChain;
 
 /** RT-IAM-002 — autenticação e autorização. */
 @Configuration(proxyBeanMethods = false)
+// Liga @PreAuthorize nos casos de uso — é onde a autorização acontece, nunca no controller.
+@org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 public class SegurancaConfig {
 
     /**
@@ -126,6 +136,44 @@ public class SegurancaConfig {
     @Value("${app.jwt.segredo}")
     private String segredoDoJwt;
 
+    private JwtAuthenticationConverter conversorDeAutenticacao() {
+        var conversor = new JwtAuthenticationConverter();
+        conversor.setJwtGrantedAuthoritiesConverter(new ConversorDePermissoes());
+        return conversor;
+    }
+
+    /**
+     * RN-IAM-014 — imposição do segundo fator <strong>no backend</strong>.
+     *
+     * <p>Sem isto, "MFA obrigatório para ADMIN" seria só um campo em {@code /me/capabilities} para
+     * o front respeitar — e o próprio projeto diz que esconder botão é UX, não segurança. Quem
+     * chamasse a API diretamente entraria sem segundo fator nenhum.
+     *
+     * <p>A verificação é por permissão, e não por lista de perfis: continua valendo quando o mapa
+     * mudar.
+     */
+    private AuthorizationDecision segundoFatorEmDia(
+            Supplier<? extends Authentication> autenticacao,
+            RequestAuthorizationContext contexto) {
+        var atual = autenticacao.get();
+        if (atual == null || !atual.isAuthenticated()
+                || !(atual.getPrincipal() instanceof Jwt jwt)) {
+            return new AuthorizationDecision(false);
+        }
+        String perfil = jwt.getClaimAsString(EmissorDeTokenJwt.CLAIM_PERFIL);
+        if (perfil == null) {
+            return new AuthorizationDecision(false);
+        }
+        boolean exige;
+        try {
+            exige = MapaDePermissoes.exigeMfa(Perfil.valueOf(perfil));
+        } catch (IllegalArgumentException e) {
+            return new AuthorizationDecision(false);
+        }
+        boolean tem = Boolean.TRUE.equals(jwt.getClaim(EmissorDeTokenJwt.CLAIM_MFA));
+        return new AuthorizationDecision(!exige || tem);
+    }
+
     @Bean
     public SecurityFilterChain cadeiaDaApi(HttpSecurity http) throws Exception {
         return http
@@ -139,12 +187,25 @@ public class SegurancaConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").permitAll()
                         // Quem chega aqui tem só o desafio, que sozinho não abre nada.
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/mfa/verificar").permitAll()
+                        // Alcançáveis mesmo com MFA pendente. Os dois primeiros são o caminho
+                        // para sair do bloqueio: sem eles, quem precisa de segundo fator ficaria
+                        // trancado sem ter como se inscrever, e sem informação para a tela
+                        // explicar o motivo.
+                        //
+                        // logout-all está aqui por outro motivo: é ação de SEGURANÇA. Quem
+                        // suspeita que perdeu o dispositivo precisa poder encerrar as sessões
+                        // mesmo com MFA pendente — bloquear reduziria a segurança em nome de
+                        // uma regra de segurança.
+                        .requestMatchers("/api/v1/auth/mfa/**", "/api/v1/me/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout-all")
+                        .authenticated()
                         // Tudo o mais fechado por padrão: endpoint novo nasce protegido, e é
                         // preciso um ato deliberado para abri-lo. O contrário — abrir por padrão
                         // e lembrar de fechar — falha na primeira distração.
-                        .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth -> oauth.jwt(
-                        jwt -> jwt.decoder(jwtDecoderDoRecurso(segredoDoJwt))))
+                        .anyRequest().access(this::segundoFatorEmDia))
+                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt
+                        .decoder(jwtDecoderDoRecurso(segredoDoJwt))
+                        .jwtAuthenticationConverter(conversorDeAutenticacao())))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // Sem sessão e sem cookie, não há o que um site terceiro possa forjar: o token vai
                 // no cabeçalho Authorization, que ele não consegue definir. Isto muda em

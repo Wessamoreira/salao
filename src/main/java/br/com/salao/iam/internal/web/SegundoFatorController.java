@@ -44,7 +44,8 @@ public class SegundoFatorController {
     public record InscricaoResponse(String segredo, String uriOtpauth) {
     }
 
-    public record CodigosDeRecuperacaoResponse(List<String> codigos, String aviso) {
+    public record CodigosDeRecuperacaoResponse(List<String> codigos, String aviso,
+                                              LoginResponse sessao) {
     }
 
     @PostMapping("/inscrever")
@@ -54,13 +55,18 @@ public class SegundoFatorController {
     }
 
     @PostMapping("/confirmar")
-    public CodigosDeRecuperacaoResponse confirmar(@AuthenticationPrincipal Jwt jwt,
-                                                  @Valid @RequestBody CodigoRequest requisicao) {
-        var codigos = segundoFator.confirmar(TenantContext.obrigatorio(), usuarioDe(jwt),
+    public ResponseEntity<CodigosDeRecuperacaoResponse> confirmar(
+            @AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CodigoRequest requisicao) {
+        var confirmacao = segundoFator.confirmar(TenantContext.obrigatorio(), usuarioDe(jwt),
                 requisicao.codigo());
-        return new CodigosDeRecuperacaoResponse(codigos,
+        var corpo = new CodigosDeRecuperacaoResponse(confirmacao.codigos(),
                 "Guarde estes códigos agora: eles não serão exibidos de novo. "
-                        + "Cada um funciona uma única vez.");
+                        + "Cada um funciona uma única vez.",
+                LoginResponse.de(confirmacao.sessao().acesso()));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, CookieDeRefresh
+                        .de(confirmacao.sessao(), cookieSeguro, relogio.agora()).toString())
+                .body(corpo);
     }
 
     /**

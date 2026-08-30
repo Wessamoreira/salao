@@ -48,7 +48,7 @@ public class AbridorDeSessao {
                 UUID.randomUUID(), SegredoOpaco.hashDe(segredo), expiraEm, null, null);
 
         var acesso = emissor.emitir(credencial.usuarioId(), credencial.estabelecimentoId(),
-                credencial.perfil());
+                credencial.perfil(), credencial.mfaAtivo());
         return new SessaoIniciada(acesso, segredo, expiraEm);
     }
 }

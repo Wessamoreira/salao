@@ -26,6 +26,9 @@ public enum ErrosDaInfra implements CodigoDeErro {
     LIMITE_DE_REQUISICOES("ER-INF-LIMITE_DE_REQUISICOES", HttpStatus.TOO_MANY_REQUESTS,
             "Muitas requisições"),
 
+    METODO_NAO_PERMITIDO("ER-INF-METODO_NAO_PERMITIDO", HttpStatus.METHOD_NOT_ALLOWED,
+            "Método não permitido"),
+
     ERRO_INTERNO("ER-INF-ERRO_INTERNO", HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno");
 
     private final String codigo;

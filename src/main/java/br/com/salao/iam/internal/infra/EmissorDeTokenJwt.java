@@ -41,6 +41,15 @@ public class EmissorDeTokenJwt {
 
     public static final String ESCOPO_SEGUNDO_FATOR = "mfa-pendente";
 
+    /**
+     * Se o segundo fator estava ativo quando o token foi emitido.
+     *
+     * <p>Vai no token em vez de ser lido do banco a cada requisição: a alternativa custaria uma
+     * consulta por chamada para uma informação que muda uma vez na vida do usuário. O preço é a
+     * defasagem de até 15 minutos — resolvida porque confirmar o MFA já devolve tokens novos.
+     */
+    public static final String CLAIM_MFA = "mfa";
+
     private final JwtEncoder codificador;
     private final Relogio relogio;
     private final Duration validade;
@@ -83,7 +92,8 @@ public class EmissorDeTokenJwt {
         return new TokenDeAcesso(token, expiraEm, usuarioId, estabelecimentoId, null);
     }
 
-    public TokenDeAcesso emitir(UUID usuarioId, UUID estabelecimentoId, Perfil perfil) {
+    public TokenDeAcesso emitir(UUID usuarioId, UUID estabelecimentoId, Perfil perfil,
+                                boolean mfaAtivo) {
         Instant agora = relogio.agora();
         Instant expiraEm = agora.plus(validade);
 
@@ -97,6 +107,7 @@ public class EmissorDeTokenJwt {
                 .id(UUID.randomUUID().toString())
                 .claim(CLAIM_ESTABELECIMENTO, estabelecimentoId.toString())
                 .claim(CLAIM_PERFIL, perfil.name())
+                .claim(CLAIM_MFA, mfaAtivo)
                 .build();
 
         var cabecalho = JwsHeader.with(MacAlgorithm.HS256).build();

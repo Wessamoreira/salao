@@ -125,8 +125,10 @@ public class RenovarAcessoUseCase {
             throw refreshInvalido();
         }
 
-        var acesso = emitirAcesso(credencial.usuarioId(), atual.estabelecimentoId(),
-                credencial.perfil());
+        // Perfil e MFA são relidos do banco: mudanças feitas desde o login valem a partir da
+        // próxima renovação, sem exigir novo login.
+        var acesso = emissor.emitir(credencial.usuarioId(), atual.estabelecimentoId(),
+                credencial.perfil(), credencial.mfaAtivo());
         return new SessaoIniciada(acesso, novoSegredo, agora.plus(validade));
     }
 
@@ -147,11 +149,6 @@ public class RenovarAcessoUseCase {
         log.error("REUSO DE REFRESH detectado: usuário {}, família {} revogada ({} tokens). "
                         + "O token existia em dois lugares — trate como vazamento.",
                 atual.usuarioId(), atual.familiaId(), revogados);
-    }
-
-    private br.com.salao.iam.api.TokenDeAcesso emitirAcesso(java.util.UUID usuarioId,
-                                                            java.util.UUID tenant, Perfil perfil) {
-        return emissor.emitir(usuarioId, tenant, perfil);
     }
 
     private ErroDeDominio refreshInvalido() {

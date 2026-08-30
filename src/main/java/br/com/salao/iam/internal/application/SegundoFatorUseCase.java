@@ -76,7 +76,7 @@ public class SegundoFatorUseCase {
     }
 
     /** Confirma a inscrição e devolve os códigos de recuperação — mostrados uma única vez. */
-    public List<String> confirmar(UUID tenant, UUID usuarioId, String codigo) {
+    public Confirmacao confirmar(UUID tenant, UUID usuarioId, String codigo) {
         var credencial = mfa.porUsuario(usuarioId)
                 .orElseThrow(() -> new ErroDeDominio(ErrosDoIam.MFA_NAO_INSCRITO,
                         "Nenhuma inscrição de segundo fator em andamento."));
@@ -89,7 +89,12 @@ public class SegundoFatorUseCase {
                 codigos.stream().map(SegredoOpaco::hashDe).toList());
 
         log.info("Segundo fator ativado para o usuário {}", usuarioId);
-        return codigos;
+
+        // Sessão nova junto: o token em uso ainda diz mfa=false e, com a imposição ligada
+        // (RN-IAM-014), o usuário ficaria bloqueado logo depois de fazer exatamente o que se
+        // pediu dele. Devolver o par novo aqui evita esse beco.
+        var acesso = credenciais.porId(usuarioId).orElseThrow(this::codigoInvalido);
+        return new Confirmacao(codigos, abridor.abrir(acesso));
     }
 
     /** Conclui o login: confere o desafio e o código, e só então abre a sessão. */
@@ -191,5 +196,9 @@ public class SegundoFatorUseCase {
 
     /** O segredo é devolvido uma única vez, no momento da inscrição. */
     public record Inscricao(String segredo, String uriOtpauth) {
+    }
+
+    /** Códigos de recuperação (exibidos uma vez) e a sessão já renovada com {@code mfa=true}. */
+    public record Confirmacao(List<String> codigos, SessaoIniciada sessao) {
     }
 }

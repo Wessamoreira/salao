@@ -44,7 +44,7 @@ class SegundoFatorIT extends AbstractPostgresIT {
         var inscricao = TenantContext.obter(tenant,
                 () -> segundoFator.inscrever(tenant, usuarioId));
         TenantContext.executar(tenant, () ->
-                segundoFator.confirmar(tenant, usuarioId, codigoAgora(inscricao.segredo())));
+                segundoFator.confirmar(tenant, usuarioId, codigoAgora(inscricao.segredo())).codigos());
         return new Conta(tenant, usuarioId, inscricao.segredo());
     }
 
@@ -152,7 +152,7 @@ class SegundoFatorIT extends AbstractPostgresIT {
         var inscricao = TenantContext.obter(tenant,
                 () -> segundoFator.inscrever(tenant, usuarioId));
         List<String> recuperacao = TenantContext.obter(tenant, () ->
-                segundoFator.confirmar(tenant, usuarioId, codigoAgora(inscricao.segredo())));
+                segundoFator.confirmar(tenant, usuarioId, codigoAgora(inscricao.segredo())).codigos());
 
         assertThat(recuperacao).hasSize(10).doesNotHaveDuplicates();
 

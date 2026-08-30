@@ -3,6 +3,7 @@ package br.com.salao.iam.internal;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.internal.application.AutenticarUseCase;
 import br.com.salao.iam.internal.application.AbridorDeSessao;
+import br.com.salao.iam.internal.application.ConsultarCapacidadesUseCase;
 import br.com.salao.iam.internal.application.EncerrarSessaoUseCase;
 import br.com.salao.iam.internal.application.RenovarAcessoUseCase;
 import br.com.salao.iam.internal.application.SegundoFatorUseCase;
@@ -107,6 +108,12 @@ public class IamConfig {
                                                    Relogio relogio) {
         return new SegundoFatorUseCase(mfa, credenciais, estabelecimentos, abridor, decoder,
                 relogio);
+    }
+
+    @Bean
+    public ConsultarCapacidadesUseCase consultarCapacidadesUseCase(
+            CredenciaisJdbc credenciais, EstabelecimentoApi estabelecimentos) {
+        return new ConsultarCapacidadesUseCase(credenciais, estabelecimentos);
     }
 
     @Bean
