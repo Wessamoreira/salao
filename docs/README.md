@@ -30,6 +30,7 @@
 | `13-perguntas-em-aberto.md` | O que trava decisão, com prazo | Toda semana |
 | `14-checklist-de-execucao.md` | Como o plano é conferido contra a realidade | Raro |
 | `15-checklist-de-seguranca.md` | Auditoria de segurança, com onde verificar cada item | Por fase |
+| `16-design-system.md` | O padrão visual e o porquê; os valores estão em `design/tokens.css` | Raro |
 | `adr/` | Decisões com contexto e consequência | Por decisão |
 | `modulos/<mod>/_modulo.md` | Responsabilidade, agregados, API pública | Por fase |
 | `modulos/<mod>/regras.md` | **Catálogo de regras de negócio (RN)** | A cada regra |

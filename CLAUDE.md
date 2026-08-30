@@ -88,5 +88,6 @@ Monólito modular. Módulos: `shared`, `iam`, `equipe`, `cliente`, `catalogo`, `
 | Como documentar uma rotina | `docs/08-padrao-de-documentacao.md` |
 | O que fazer agora, em que ordem | `docs/09-plano-de-implementacao.md` |
 | Regras de UX que não são opinião | `docs/10-usabilidade.md` |
+| Padrão visual e tokens | `docs/16-design-system.md` · valores em `design/tokens.css` |
 | O que pode dar errado | `docs/11-fragilidades-e-riscos.md` |
 | O que ainda não foi decidido | `docs/13-perguntas-em-aberto.md` |

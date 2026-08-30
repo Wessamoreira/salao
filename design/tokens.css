@@ -1,0 +1,101 @@
+/*
+ * Sistema de design do salão — fonte única dos valores.
+ *
+ * Este arquivo é IMPORTADO pelo front (RT-INF-010) e referenciado pela documentação
+ * em docs/16-design-system.md. Não existe uma segunda cópia dos valores em lugar
+ * nenhum: uma tabela de cores num .md diverge do código na terceira semana, e a
+ * divergência é silenciosa.
+ *
+ * Alterar um valor aqui altera o produto. Toda alteração é decisão, não ajuste.
+ */
+
+:root {
+  /* ---------------------------------------------------------------------
+   * Papel e tinta — quente, nunca cinza de SaaS.
+   * Salão é ambiente quente; um neutro frio brigaria com o lugar.
+   * ------------------------------------------------------------------- */
+  --papel:            oklch(0.981 0.008 85);   /* superfície principal */
+  --papel-fundo:      oklch(0.955 0.010 85);   /* fundo atrás das superfícies */
+  --papel-afundado:   oklch(0.945 0.008 85);   /* campo, bloqueio, estado inerte */
+
+  --tinta:            oklch(0.235 0.012 60);   /* texto principal e ações */
+  --tinta-fraca:      oklch(0.545 0.012 60);   /* texto secundário */
+  --tinta-tenue:      oklch(0.700 0.010 60);   /* rótulo, metadado — ver nota de contraste */
+
+  --regua:            oklch(0.905 0.008 85);   /* divisória interna, linha de meia hora */
+  --regua-forte:      oklch(0.855 0.010 85);   /* borda de container, linha de hora cheia */
+
+  /* ---------------------------------------------------------------------
+   * Status — mesma chroma (0.115) e luminosidade (0.62), só a matiz muda.
+   * É isso que faz os quatro pesarem igual na tela: nenhum grita mais alto
+   * que o outro por acidente de saturação.
+   * ------------------------------------------------------------------- */
+  --status-confirmado:  oklch(0.62 0.115 158);
+  --status-solicitado:  oklch(0.62 0.115 78);
+  --status-atendendo:   oklch(0.62 0.115 252);
+  --status-falta:       oklch(0.62 0.115 28);
+
+  /* Fundos de status: mesma matiz, luminosidade alta. Nunca o accent em bloco cheio. */
+  --status-confirmado-fundo: oklch(0.975 0.014 158);
+  --status-solicitado-fundo: oklch(0.975 0.014 78);
+  --status-atendendo-fundo:  oklch(0.972 0.014 252);
+  --status-falta-fundo:      oklch(0.975 0.012 28);
+
+  /* ---------------------------------------------------------------------
+   * Espaçamento — escala fixa. Valor fora dela é bug de rigor, não licença
+   * criativa: foi exatamente o que fez a primeira versão do canvas ler como
+   * amadora, sem que ninguém soubesse nomear.
+   * ------------------------------------------------------------------- */
+  --e-1:  4px;
+  --e-2:  8px;
+  --e-3:  12px;
+  --e-4:  16px;
+  --e-5:  20px;
+  --e-6:  24px;
+  --e-8:  32px;
+  --e-10: 40px;
+
+  /* ---------------------------------------------------------------------
+   * Tipografia
+   * ------------------------------------------------------------------- */
+  --fonte-identidade: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --fonte:            "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+  --fonte-mono:       ui-monospace, "SF Mono", Menlo, monospace;
+
+  --t-10: 10px;    /* rótulo em caixa alta, metadado */
+  --t-11: 11px;
+  --t-12: 12.5px;  /* apoio */
+  --t-14: 14px;    /* corpo */
+  --t-16: 16px;    /* corpo destacado */
+  --t-20: 20px;
+  --t-25: 25px;    /* identidade */
+  --t-30: 30px;    /* total */
+
+  /* Grade densa exige número que alinha em coluna. */
+  --numerais: "tnum" 1;
+
+  /* ---------------------------------------------------------------------
+   * Borda e elevação
+   * ------------------------------------------------------------------- */
+  --raio-1: 2px;   /* bloco de agenda, chip, selo */
+  --raio-2: 3px;   /* container, botão, campo */
+  /* Não existe --raio-3. Canto muito arredondado lê como app de consumo,
+     não como ferramenta de trabalho. */
+
+  /* Sombra existe só para o que FLUTUA — menu, diálogo. Card não tem sombra:
+     é o traço mais reconhecível de tela gerada sem critério. */
+  --sombra-flutuante: 0 4px 16px oklch(0.235 0.012 60 / 0.10),
+                      0 1px 3px  oklch(0.235 0.012 60 / 0.08);
+
+  /* ---------------------------------------------------------------------
+   * Movimento — curto o bastante para não ser notado.
+   * A recepção clica com o telefone no ombro; animação é atraso.
+   * ------------------------------------------------------------------- */
+  --mov-imediato: 120ms;
+  --mov-curto:    180ms;
+  --mov-curva:    cubic-bezier(0.2, 0, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --mov-imediato: 0ms; --mov-curto: 0ms; }
+}
