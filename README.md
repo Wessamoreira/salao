@@ -44,7 +44,7 @@ Leia `CLAUDE.md`. Depois `docs/09-plano-de-implementacao.md` para saber qual rot
 
 ## Estado
 
-**Fase 0 em andamento.** 153 testes passando.
+**Fase 0 em andamento.** 153 no backend + 8 no front.
 
 | Rotina | Status |
 |---|---|
@@ -65,6 +65,7 @@ Leia `CLAUDE.md`. Depois `docs/09-plano-de-implementacao.md` para saber qual rot
 | RT-IAM-006 /me/capabilities e autorização | implementado |
 | RT-IAM-007 CRUD de usuário e perfil | implementado |
 | RT-IAM-008 Auditoria append-only | implementado |
-| RT-INF-010 Shell do front | aguarda Node |
+| RT-INF-010 Shell do front | implementado |
+| RT-INF-011 Rate limit por IP, CORS, cabeçalhos | próxima |
 
 Backlog completo em `docs/09-plano-de-implementacao.md`.

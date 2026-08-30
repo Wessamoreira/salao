@@ -1,0 +1,51 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+/*
+ * Tailwind lê os tokens POR REFERÊNCIA (@theme inline), nunca copiando valores.
+ * Duas fontes de verdade para a mesma cor é como a divergência começa — e ela é
+ * silenciosa: as telas ficam diferentes e ninguém sabe qual está certa.
+ */
+@theme inline {
+  --color-papel: var(--papel);
+  --color-papel-fundo: var(--papel-fundo);
+  --color-papel-afundado: var(--papel-afundado);
+  --color-tinta: var(--tinta);
+  --color-tinta-fraca: var(--tinta-fraca);
+  --color-tinta-tenue: var(--tinta-tenue);
+  --color-regua: var(--regua);
+  --color-regua-forte: var(--regua-forte);
+
+  --color-confirmado: var(--status-confirmado);
+  --color-solicitado: var(--status-solicitado);
+  --color-atendendo: var(--status-atendendo);
+  --color-falta: var(--status-falta);
+
+  --font-identidade: var(--fonte-identidade);
+  --font-sans: var(--fonte);
+  --font-mono: var(--fonte-mono);
+
+  --radius-1: var(--raio-1);
+  --radius-2: var(--raio-2);
+}
+
+@layer base {
+  html { background: var(--papel-fundo); }
+  body {
+    margin: 0;
+    color: var(--tinta);
+    font-family: var(--fonte);
+    /* Numeral tabular: numa grade de horários, número que não alinha em coluna
+       força o olho a reprocessar cada linha. */
+    font-feature-settings: var(--numerais);
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Foco sempre visível. Removê-lo é o atalho mais comum para quebrar navegação
+     por teclado — e a recepção trabalha com as mãos no teclado (R-UX-02). */
+  :focus-visible {
+    outline: 2px solid var(--status-atendendo);
+    outline-offset: 2px;
+  }
+  a { color: oklch(0.55 0.10 252); }
+  a:hover { color: oklch(0.45 0.10 252); }
+}

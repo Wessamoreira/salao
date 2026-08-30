@@ -24,7 +24,7 @@ módulo.
 | RT-INF-007 | Cache local com invalidação por LISTEN/NOTIFY | 0 | implementado |
 | RT-INF-008 | Observabilidade | 0 | implementado |
 | RT-INF-009 | CI/CD, imagem e deploy | 0 | implementado-parcial |
-| RT-INF-010 | Shell do front | 0 | rascunho |
+| RT-INF-010 | Shell do front | 0 | implementado |
 
 ## Invariantes que este transversal garante
 
@@ -36,7 +36,14 @@ módulo.
 | RN-INF-004 | A aplicação nunca conecta como dona das tabelas | Migration cria role separada; teste verifica |
 | RN-INF-005 | Dinheiro nunca é `double` ou `float` | Teste de arquitetura |
 | RN-INF-006 | Instante nunca vem de `Instant.now()` direto | Teste de arquitetura; usar o port `Relogio` |
+| RN-INF-011 | O front nunca dispara duas renovações de sessão ao mesmo tempo | `http.ts`; `http.test.ts` — paralelas revogariam a família (RN-IAM-007) |
 | RN-INF-007 | Operação cross-tenant usa a role `salao_manutencao`, nunca `salao_app` | Policy `manutencao` + [ADR-0010](../../adr/0010-role-de-manutencao.md) |
 | RN-INF-008 | Registro de idempotência commita na mesma transação do efeito de negócio | `IdempotenciaJdbc`; `IdempotenciaIT.falha_no_negocio_libera_a_chave` |
 | RN-INF-009 | Evento carrega ID, nunca PII — o outbox não tem RLS | `EventoDeDominio`; `ArquiteturaTest.listener_assincrono_so_recebe_evento_de_dominio` |
 | RN-INF-010 | Toda chave de cache começa pelo tenant | `GeradorDeChaveComTenant`; `CacheIT.chave_inclui_o_tenant` |
+
+## Nota sobre o front
+
+`RT-INF-010` vive em `frontend/`, fora da árvore Java. Os tokens de design são compartilhados por
+symlink com `design/tokens.css` — a mesma fonte que alimenta o canvas de design, para que produto
+e desenho não divirjam.
