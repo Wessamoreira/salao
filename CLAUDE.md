@@ -8,9 +8,12 @@ conversacional no WhatsApp. Um desenvolvedor. Documentação é parte do entreg�
 1. **Uma rotina por vez.** Toda tarefa começa por um arquivo `docs/modulos/<modulo>/RT-XXX-*.md`.
    Se a rotina não tem doc, o primeiro passo é escrever a doc — não o código.
 2. **Nunca implemente "o sistema".** Se o pedido for amplo, quebre em rotinas e confirme a ordem.
-3. **Se faltar regra de negócio, PERGUNTE.** Não assuma. Regra assumida errada custa reescrita
+3. **Antes de escolher a próxima rotina, rode `python3 ops/scripts/checklist.py`.** Ele diz o que
+   falta, em que ordem, e acusa salto de ordem. Não confie na memória nem no que "parece ser o
+   próximo" — já houve um bloco inteiro pulado assim (ver `docs/14-checklist-de-execucao.md`).
+4. **Se faltar regra de negócio, PERGUNTE.** Não assuma. Regra assumida errada custa reescrita
    de fechamento financeiro.
-4. **Toda regra descoberta vira registro** em `docs/modulos/<modulo>/regras.md` com ID `RN-XXX`,
+5. **Toda regra descoberta vira registro** em `docs/modulos/<modulo>/regras.md` com ID `RN-XXX`,
    antes ou junto com o código. Regra que só existe dentro de um `if` está perdida.
 
 ## Stack (não troque sem ADR)
@@ -69,6 +72,7 @@ Monólito modular. Módulos: `shared`, `iam`, `equipe`, `cliente`, `catalogo`, `
 
 | Preciso de | Vá para |
 |---|---|
+| **O que falta fazer, em ordem** | `python3 ops/scripts/checklist.py` |
 | Visão, personas, escopo | `docs/00-visao-e-escopo.md` |
 | Termo do negócio | `docs/01-glossario.md` |
 | Por que foi decidido assim | `docs/02-decisoes-estruturais.md`, `docs/adr/` |

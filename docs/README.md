@@ -8,6 +8,7 @@
 4. `03-arquitetura.md` — módulos, camadas, fronteiras
 5. `08-padrao-de-documentacao.md` — como documentar antes de implementar
 6. `09-plano-de-implementacao.md` — qual é a próxima rotina
+7. `14-checklist-de-execucao.md` — como saber, sem confiar na memória, o que falta
 
 ## Mapa
 
@@ -27,6 +28,7 @@
 | `11-fragilidades-e-riscos.md` | Riscos técnicos, de produto e de operação | Mensal |
 | `12-observabilidade-e-operacao.md` | Métrica, log, alerta, runbook | Por fase |
 | `13-perguntas-em-aberto.md` | O que trava decisão, com prazo | Toda semana |
+| `14-checklist-de-execucao.md` | Como o plano é conferido contra a realidade | Raro |
 | `adr/` | Decisões com contexto e consequência | Por decisão |
 | `modulos/<mod>/_modulo.md` | Responsabilidade, agregados, API pública | Por fase |
 | `modulos/<mod>/regras.md` | **Catálogo de regras de negócio (RN)** | A cada regra |

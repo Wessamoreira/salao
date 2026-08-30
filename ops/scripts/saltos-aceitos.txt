@@ -1,0 +1,11 @@
+# Saltos de ordem já cometidos e conscientemente aceitos.
+# Formato: <ID da rotina>  # motivo
+#
+# Acrescentar aqui é uma decisão, não um atalho: significa dizer por escrito por
+# que a ordem do plano não valeu neste caso. O script falha em qualquer salto que
+# NÃO esteja nesta lista.
+
+RT-INF-005  # 2026-08-29 — a fundação técnica (idempotência, outbox, cache, observabilidade)
+RT-INF-006  # foi construída antes do bloco RT-IAM-003..008 por engano meu, não por decisão.
+RT-INF-007  # Nada quebrou porque nenhuma delas depende de autorização, mas o risco era real:
+RT-INF-008  # caso de uso de negócio escrito antes da autorização precisa ser escrito duas vezes.

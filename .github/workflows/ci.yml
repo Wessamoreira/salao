@@ -36,6 +36,14 @@ jobs:
       - name: mvn verify
         run: ./mvnw -B verify
 
+      # Roda ANTES dos artefatos para aparecer no log mesmo quando os testes falham.
+      # Não substitui revisão humana: só torna visível o que ninguém olharia sozinho —
+      # rotina implementada fora da ordem, rotina documentada fora do plano, e o
+      # tamanho da dívida de pendências dentro do que já foi dado como pronto.
+      - name: Conferir plano contra realidade
+        if: always()
+        run: python3 ops/scripts/checklist.py --ci
+
       - name: Publicar relatórios de teste
         if: always()
         uses: actions/upload-artifact@v4
