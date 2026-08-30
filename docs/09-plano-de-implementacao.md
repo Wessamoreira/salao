@@ -33,6 +33,20 @@ automático, e criar uma migration sem `estabelecimento_id` quebra o build.
 | RT-INF-008 | Observabilidade: Sentry, Micrometer, log JSON com trace, `/actuator` | M | INF-001 |
 | RT-INF-009 | CI/CD: testes, ArchUnit, Trivy, imagem multi-arch, deploy hmg | G | INF-008 |
 | RT-INF-010 | Shell do front: rotas, auth, TanStack Query, tokens de design | G | IAM-006 |
+| RT-INF-011 | Rate limit por IP, CORS e cabeçalhos de segurança | M | INF-010 |
+| RT-INF-012 | Endurecimento: timeouts do banco, actuator restrito, senha da role fora do SQL | P | INF-009 |
+
+> **`RT-INF-011` e `RT-INF-012` nasceram da auditoria de segurança de 29/08/2026**
+> (`docs/15-checklist-de-seguranca.md`). Não são melhorias oportunistas: são as lacunas que a
+> auditoria encontrou entre o que `05-seguranca` promete e o que existe.
+>
+> A ordem tem motivo. `RT-INF-011` vem **depois** do front porque CORS e CSP só podem ser
+> configurados corretamente quando existe uma origem real para permitir — configurados no vácuo,
+> viram `*` ou viram bloqueio que alguém desliga na pressa. Já o rate limit por IP não depende do
+> front e é a parte mais urgente das três: sem ele, *password spraying* contra mil e-mails não
+> dispara bloqueio nenhum, porque cada conta acumula uma falha só.
+>
+> `RT-INF-012` pode ser feita a qualquer momento e é curta.
 
 > **Fora da fila, mas comece na semana 1:** abrir a conta Meta Business, verificar o negócio e
 > submeter os templates do WhatsApp. A aprovação leva dias e é assíncrona. Descobrir isso na

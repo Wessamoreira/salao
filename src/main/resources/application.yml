@@ -7,7 +7,13 @@ spring:
     # Sem isso, a RLS é ignorada em silêncio para o owner.
     url: ${DB_URL:jdbc:postgresql://localhost:5432/salao}
     username: ${DB_APP_USER:salao_app}
-    password: ${DB_APP_PASSWORD:salao_app_dev}
+    # Sem valor padrão, aqui e nas demais senhas. Um padrão neste arquivo — que é
+    # versionado — significa que subir em produção esquecendo a variável de
+    # ambiente faz a aplicação funcionar com uma senha publicada no repositório.
+    # Falhar na subida é barulhento e imediato; a alternativa é silenciosa e
+    # dura até alguém descobrir. Os valores de desenvolvimento vivem no perfil
+    # dev, onde é evidente que são de desenvolvimento.
+    password: ${DB_APP_PASSWORD}
     hikari:
       maximum-pool-size: ${DB_POOL_SIZE:20}
       # Curto de propósito: com virtual threads o gargalo passa a ser o pool (risco R-18).
@@ -19,10 +25,10 @@ spring:
     # Migration roda como OWNER: precisa criar tabela, role e política, e enxergar tudo.
     url: ${DB_URL:jdbc:postgresql://localhost:5432/salao}
     user: ${DB_OWNER_USER:salao_owner}
-    password: ${DB_OWNER_PASSWORD:salao_owner_dev}
+    password: ${DB_OWNER_PASSWORD}
     placeholders:
-      senha_app: ${DB_APP_PASSWORD:salao_app_dev}
-      senha_manutencao: ${DB_MANUTENCAO_PASSWORD:salao_manutencao_dev}
+      senha_app: ${DB_APP_PASSWORD}
+      senha_manutencao: ${DB_MANUTENCAO_PASSWORD}
 
   jpa:
     hibernate.ddl-auto: validate     # nunca 'update' — ver CLAUDE.md, inviolável nº 9
@@ -39,7 +45,7 @@ app:
   manutencao:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/salao}
     username: ${DB_MANUTENCAO_USER:salao_manutencao}
-    password: ${DB_MANUTENCAO_PASSWORD:salao_manutencao_dev}
+    password: ${DB_MANUTENCAO_PASSWORD}
   idempotencia:
     retencao: ${IDEMPOTENCIA_RETENCAO:P7D}
 

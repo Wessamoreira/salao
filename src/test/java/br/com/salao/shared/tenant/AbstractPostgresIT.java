@@ -65,6 +65,7 @@ public abstract class AbstractPostgresIT {
         registro.add("spring.flyway.user", () -> OWNER);
         registro.add("spring.flyway.password", () -> OWNER_SENHA);
         registro.add("spring.flyway.placeholders.senha_app", () -> APP_SENHA);
+        registro.add("spring.flyway.placeholders.senha_manutencao", () -> MANUTENCAO_SENHA);
 
         registro.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         registro.add("spring.datasource.username", () -> "salao_app");

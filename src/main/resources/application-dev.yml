@@ -1,4 +1,13 @@
+# Valores de desenvolvimento, e só de desenvolvimento. Ficam aqui, no perfil dev,
+# e não em application.yml: assim ninguém os herda por engano em produção — lá o
+# perfil é outro e a aplicação recusa subir sem as variáveis definidas.
 app.jwt.segredo: ${JWT_SEGREDO:segredo-de-desenvolvimento-nao-use-em-producao-1234}
+spring.datasource.password: ${DB_APP_PASSWORD:salao_app_dev}
+spring.flyway.password: ${DB_OWNER_PASSWORD:salao_owner_dev}
+spring.flyway.placeholders:
+  senha_app: ${DB_APP_PASSWORD:salao_app_dev}
+  senha_manutencao: ${DB_MANUTENCAO_PASSWORD:salao_manutencao_dev}
+app.manutencao.password: ${DB_MANUTENCAO_PASSWORD:salao_manutencao_dev}
 
 app.auth.cookie-seguro: false
 app.cripto.chave: ${CRIPTO_CHAVE:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
