@@ -1,6 +1,8 @@
 package br.com.salao.iam.internal.application;
 
+import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.Permissao;
+import br.com.salao.iam.api.RegistroDeAuditoria;
 import br.com.salao.iam.internal.infra.MfaJdbc;
 import br.com.salao.iam.internal.infra.RefreshTokensJdbc;
 import br.com.salao.shared.tempo.Relogio;
@@ -8,6 +10,8 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Map;
 
 /**
  * RT-IAM-007 — administrador remove o segundo fator de alguém.
@@ -30,17 +34,23 @@ public class ResetarSegundoFatorUseCase {
     private final MfaJdbc mfa;
     private final RefreshTokensJdbc tokens;
     private final Relogio relogio;
+    private final AuditoriaApi auditoria;
 
-    public ResetarSegundoFatorUseCase(MfaJdbc mfa, RefreshTokensJdbc tokens, Relogio relogio) {
+    public ResetarSegundoFatorUseCase(MfaJdbc mfa, RefreshTokensJdbc tokens, Relogio relogio,
+                                      AuditoriaApi auditoria) {
         this.mfa = mfa;
         this.tokens = tokens;
         this.relogio = relogio;
+        this.auditoria = auditoria;
     }
 
     @PreAuthorize("hasAuthority('" + Permissao.USUARIO_GERENCIAR + "')")
+    @Transactional
     public void executar(UUID usuarioId, UUID quemPede) {
         mfa.desativar(usuarioId);
         tokens.revogarTodasDoUsuario(usuarioId, relogio.agora(), "segundo fator resetado");
+        auditoria.registrar(RegistroDeAuditoria.alteracao("MFA_RESETADO", "usuario", usuarioId,
+                Map.of("mfaAtivo", true), Map.of("mfaAtivo", false)));
         log.warn("Segundo fator do usuário {} REMOVIDO pelo administrador {}. "
                 + "Se o pedido não partiu do próprio usuário, isto é um incidente.",
                 usuarioId, quemPede);

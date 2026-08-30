@@ -292,3 +292,34 @@ faz ao suspeitar de acesso alheio.
 **Testes.** `GestaoDeUsuariosIT.desativar_encerra_sessoes`, `.rebaixar_encerra_sessoes`,
 `.trocar_senha`
 **Configurável?** Não · **Origem.** 2026-08-29
+
+---
+
+### RN-IAM-017 — A trilha de auditoria é imutável por permissão
+
+**Enunciado.** A role da aplicação tem apenas `INSERT` e `SELECT` em `auditoria`. `UPDATE` e
+`DELETE` foram revogados.
+
+**Motivo.** Convenção depende de ninguém escrever o comando; permissão revogada faz o comando não
+funcionar. Uma trilha alterável não serve para o que ela existe.
+
+**Onde é garantida.** `revoke update, delete on auditoria from salao_app` (V3).
+**Rotinas.** RT-IAM-008 · **Teste.** `AuditoriaIT.trilha_e_imutavel`, que assere a razão
+(`permission denied`) e não apenas que houve exceção
+**Configurável?** Não · **Origem.** 2026-08-29
+
+---
+
+### RN-IAM-018 — Auditoria commita junto com o fato
+
+**Enunciado.** O registro é gravado na mesma transação da alteração que descreve
+(`propagation = MANDATORY`). Se o negócio falha, a auditoria some junto.
+
+**Motivo.** Registro de alteração que não commitou é uma mentira na trilha — e trilha que mente é
+pior que trilha ausente, porque alguém vai acreditar nela. `MANDATORY` em vez de `REQUIRED` faz
+quem esqueceu descobrir na hora.
+
+**Onde é garantida.** `AuditoriaJdbc.registrar`.
+**Rotinas.** RT-IAM-008 e toda rotina que audita
+**Testes.** `AuditoriaIT.rollback_nao_deixa_rastro`, `AuditoriaIT.exige_transacao`
+**Configurável?** Não · **Origem.** 2026-08-29

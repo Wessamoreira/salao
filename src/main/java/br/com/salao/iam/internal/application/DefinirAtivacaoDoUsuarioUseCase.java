@@ -1,6 +1,8 @@
 package br.com.salao.iam.internal.application;
 
+import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.Permissao;
+import br.com.salao.iam.api.RegistroDeAuditoria;
 import br.com.salao.iam.internal.infra.CredenciaisJdbc;
 import br.com.salao.iam.internal.infra.RefreshTokensJdbc;
 import br.com.salao.iam.internal.infra.UsuariosJdbc;
@@ -11,6 +13,8 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Map;
 
 /**
  * RT-IAM-007 — ativar ou desativar um usuário.
@@ -28,16 +32,20 @@ public class DefinirAtivacaoDoUsuarioUseCase {
     private final CredenciaisJdbc credenciais;
     private final RefreshTokensJdbc tokens;
     private final Relogio relogio;
+    private final AuditoriaApi auditoria;
 
     public DefinirAtivacaoDoUsuarioUseCase(UsuariosJdbc usuarios, CredenciaisJdbc credenciais,
-                                           RefreshTokensJdbc tokens, Relogio relogio) {
+                                           RefreshTokensJdbc tokens, Relogio relogio,
+                                           AuditoriaApi auditoria) {
         this.usuarios = usuarios;
         this.credenciais = credenciais;
         this.tokens = tokens;
         this.relogio = relogio;
+        this.auditoria = auditoria;
     }
 
     @PreAuthorize("hasAuthority('" + Permissao.USUARIO_GERENCIAR + "')")
+    @Transactional
     public void executar(UUID usuarioId, boolean ativo, UUID quemPede) {
         var atual = credenciais.porId(usuarioId).orElseThrow(() ->
                 new ErroDeDominio(ErrosDaInfra.NAO_ENCONTRADO, "Usuário não encontrado."));
@@ -51,6 +59,9 @@ public class DefinirAtivacaoDoUsuarioUseCase {
         if (!ativo) {
             tokens.revogarTodasDoUsuario(usuarioId, relogio.agora(), "usuário desativado");
         }
+        auditoria.registrar(RegistroDeAuditoria.alteracao(
+                ativo ? "USUARIO_REATIVADO" : "USUARIO_DESATIVADO", "usuario", usuarioId,
+                Map.of("ativo", atual.ativo()), Map.of("ativo", ativo)));
         log.info("Usuário {} {}", usuarioId, ativo ? "reativado" : "desativado");
     }
 }

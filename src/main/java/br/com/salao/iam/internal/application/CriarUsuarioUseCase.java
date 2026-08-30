@@ -1,6 +1,8 @@
 package br.com.salao.iam.internal.application;
 
+import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.ErrosDoIam;
+import br.com.salao.iam.api.RegistroDeAuditoria;
 import br.com.salao.iam.api.Perfil;
 import br.com.salao.iam.api.Permissao;
 import br.com.salao.iam.internal.domain.Emails;
@@ -13,6 +15,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Map;
 
 /** RT-IAM-007 — criar usuário. */
 public class CriarUsuarioUseCase {
@@ -23,17 +27,28 @@ public class CriarUsuarioUseCase {
 
     private final UsuariosJdbc usuarios;
     private final PasswordEncoder codificador;
+    private final AuditoriaApi auditoria;
 
-    public CriarUsuarioUseCase(UsuariosJdbc usuarios, PasswordEncoder codificador) {
+    public CriarUsuarioUseCase(UsuariosJdbc usuarios, PasswordEncoder codificador,
+                               AuditoriaApi auditoria) {
         this.usuarios = usuarios;
         this.codificador = codificador;
+        this.auditoria = auditoria;
     }
 
     /**
      * A autorização vive <strong>aqui</strong>, no caso de uso — não no controller. É o que faz a
      * regra valer também para o bot da Fase 4, que não passa por controller nenhum.
      */
+    /**
+     * {@code @PreAuthorize} e {@code @Transactional} juntos são seguros <strong>aqui</strong>: a
+     * advice de method security tem ordem definida (200) e a de transação usa
+     * {@code LOWEST_PRECEDENCE}, então a autorização roda por fora e nega antes de abrir
+     * transação. É o oposto do par {@code @Async}/{@code @Transactional} (RT-INF-006), em que as
+     * duas compartilham a mesma ordem e o resultado não é confiável.
+     */
     @PreAuthorize("hasAuthority('" + Permissao.USUARIO_GERENCIAR + "')")
+    @Transactional
     public UUID executar(String nome, String email, String senha, Perfil perfil) {
         if (nome == null || nome.isBlank() || email == null || email.isBlank()) {
             throw new ErroDeDominio(ErrosDoIam.DADOS_INVALIDOS,
@@ -55,6 +70,8 @@ public class CriarUsuarioUseCase {
         try {
             UUID id = usuarios.criar(TenantContext.obrigatorio(), nome.trim(), email.trim(),
                     Emails.normalizar(email), codificador.encode(senha), perfil);
+            auditoria.registrar(RegistroDeAuditoria.criacao("usuario", id,
+                    Map.of("nome", nome.trim(), "email", email.trim(), "perfil", perfil.name())));
             log.info("Usuário criado: {} com perfil {}", id, perfil);
             return id;
         } catch (DuplicateKeyException e) {

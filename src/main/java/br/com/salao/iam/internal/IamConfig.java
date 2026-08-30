@@ -17,7 +17,10 @@ import br.com.salao.iam.internal.application.ProvisionarEstabelecimentoUseCase;
 import br.com.salao.iam.internal.infra.CredenciaisJdbc;
 import br.com.salao.iam.internal.infra.EmissorDeTokenJwt;
 import br.com.salao.iam.internal.infra.EstabelecimentoCacheado;
+import br.com.salao.iam.api.AuditoriaApi;
+import br.com.salao.iam.internal.infra.AuditoriaJdbc;
 import br.com.salao.iam.internal.infra.MfaJdbc;
+import br.com.salao.iam.internal.infra.PurgadorDeAuditoria;
 import br.com.salao.iam.internal.infra.PurgadorDeRefreshTokens;
 import br.com.salao.iam.internal.infra.RefreshTokensJdbc;
 import br.com.salao.iam.internal.infra.UsuariosJdbc;
@@ -32,6 +35,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
 import io.micrometer.core.instrument.MeterRegistry;
 import br.com.salao.shared.cripto.CofreDeCampo;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -118,14 +122,28 @@ public class IamConfig {
     }
 
     @Bean
+    public AuditoriaApi auditoriaApi(DataSource dataSource, ObjectMapper json) {
+        return new AuditoriaJdbc(JdbcClient.create(dataSource), json);
+    }
+
+    @Bean
+    public PurgadorDeAuditoria purgadorDeAuditoria(
+            ConexaoDeManutencao manutencao,
+            @Value("${app.auditoria.retencao-critica:P1825D}") Duration retencaoCritica,
+            @Value("${app.auditoria.retencao-padrao:P365D}") Duration retencaoPadrao) {
+        return new PurgadorDeAuditoria(manutencao, retencaoCritica, retencaoPadrao);
+    }
+
+    @Bean
     public UsuariosJdbc usuariosJdbc(DataSource dataSource) {
         return new UsuariosJdbc(JdbcClient.create(dataSource));
     }
 
     @Bean
     public CriarUsuarioUseCase criarUsuarioUseCase(UsuariosJdbc usuarios,
-                                                   PasswordEncoder codificador) {
-        return new CriarUsuarioUseCase(usuarios, codificador);
+                                                   PasswordEncoder codificador,
+                                                   AuditoriaApi auditoria) {
+        return new CriarUsuarioUseCase(usuarios, codificador, auditoria);
     }
 
     @Bean
@@ -136,21 +154,23 @@ public class IamConfig {
     @Bean
     public AlterarPerfilDoUsuarioUseCase alterarPerfilDoUsuarioUseCase(
             UsuariosJdbc usuarios, CredenciaisJdbc credenciais, RefreshTokensJdbc tokens,
-            Relogio relogio) {
-        return new AlterarPerfilDoUsuarioUseCase(usuarios, credenciais, tokens, relogio);
+            Relogio relogio, AuditoriaApi auditoria) {
+        return new AlterarPerfilDoUsuarioUseCase(usuarios, credenciais, tokens, relogio,
+                auditoria);
     }
 
     @Bean
     public DefinirAtivacaoDoUsuarioUseCase definirAtivacaoDoUsuarioUseCase(
             UsuariosJdbc usuarios, CredenciaisJdbc credenciais, RefreshTokensJdbc tokens,
-            Relogio relogio) {
-        return new DefinirAtivacaoDoUsuarioUseCase(usuarios, credenciais, tokens, relogio);
+            Relogio relogio, AuditoriaApi auditoria) {
+        return new DefinirAtivacaoDoUsuarioUseCase(usuarios, credenciais, tokens, relogio,
+                auditoria);
     }
 
     @Bean
     public ResetarSegundoFatorUseCase resetarSegundoFatorUseCase(
-            MfaJdbc mfa, RefreshTokensJdbc tokens, Relogio relogio) {
-        return new ResetarSegundoFatorUseCase(mfa, tokens, relogio);
+            MfaJdbc mfa, RefreshTokensJdbc tokens, Relogio relogio, AuditoriaApi auditoria) {
+        return new ResetarSegundoFatorUseCase(mfa, tokens, relogio, auditoria);
     }
 
     @Bean

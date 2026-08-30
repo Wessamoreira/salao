@@ -109,6 +109,14 @@ app.auth:
   # Em dev o navegador descarta cookie Secure sobre http. Nunca false em produção.
   cookie-seguro: ${COOKIE_SEGURO:true}
 
+app.auditoria:
+  # 5 anos para agenda e financeiro: é o prazo em que ainda aparece disputa com
+  # cliente sobre horário ou com profissional sobre repasse.
+  retencao-critica: ${AUDITORIA_RETENCAO_CRITICA:P1825D}
+  # 1 ano para o resto: passado isso não responde mais nada, e guardar dado
+  # pessoal sem finalidade contraria a minimização da LGPD.
+  retencao-padrao: ${AUDITORIA_RETENCAO_PADRAO:P365D}
+
 app.observabilidade:
   # Acima disto o outbox é considerado parado, e o health passa a reportar
   # degradado. Casado com o alerta de 5 min do Prometheus.

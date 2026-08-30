@@ -24,6 +24,7 @@ Quem é o estabelecimento, quem são os usuários e o que cada um pode fazer.
 | Configuração do tenant | `EstabelecimentoApi.configuracao(UUID)` | todos |
 | Fuso do tenant | `EstabelecimentoApi.fusoDe(UUID)` | `agenda`, `financeiro`, `estoque` |
 | Catálogo de permissões | `Permissao.*` (constantes) | todos, no `@PreAuthorize` |
+| Trilha de auditoria | `AuditoriaApi.registrar(RegistroDeAuditoria)` | todos os módulos |
 | Perfil e token | `Perfil`, `TokenDeAcesso` | `web`, `conversacional` |
 
 `ConfiguracaoDoEstabelecimento`, `BaseDeComissao`, `PeriodicidadeDeFechamento` e `ErrosDoIam` são
@@ -38,6 +39,7 @@ parte do contrato. Nenhum módulo consulta a tabela `estabelecimento` diretament
 | `refresh_token` | Sessao | sim |
 | `mfa_credencial` | Usuario | sim |
 | `mfa_codigo_recuperacao` | Usuario | sim |
+| `auditoria` | — (append-only) | sim |
 
 ## Rotinas
 
@@ -50,7 +52,7 @@ parte do contrato. Nenhum módulo consulta a tabela `estabelecimento` diretament
 | RT-IAM-005 | MFA TOTP | 0 | implementado |
 | RT-IAM-006 | `/me/capabilities` e autorização por permissão | 0 | implementado |
 | RT-IAM-007 | CRUD de usuário e atribuição de perfil | 0 | implementado |
-| RT-IAM-008 | Auditoria append-only | 0 | rascunho |
+| RT-IAM-008 | Auditoria append-only | 0 | implementado |
 
 ## Dependências
 
