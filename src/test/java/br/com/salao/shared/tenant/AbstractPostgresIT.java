@@ -49,7 +49,13 @@ public abstract class AbstractPostgresIT {
         POSTGRES = new PostgreSQLContainer("postgres:18")
                 .withDatabaseName("salao")
                 .withUsername(OWNER)
-                .withPassword(OWNER_SENHA);
+                .withPassword(OWNER_SENHA)
+                // O padrão de 100 não basta: o Spring cria UM CONTEXTO POR CONJUNTO
+                // DISTINTO DE PROPRIEDADES, e cada contexto guarda os próprios pools
+                // (aplicação + manutenção) mais a conexão de LISTEN do cache. Com a suíte
+                // crescendo, o total passou de 100 e as classes começaram a falhar em
+                // conjunto enquanto passavam isoladas — sintoma que não aponta para a causa.
+                .withCommand("postgres", "-c", "max_connections=300");
         POSTGRES.start();
     }
 
@@ -68,6 +74,11 @@ public abstract class AbstractPostgresIT {
         registro.add("app.manutencao.username", () -> "salao_manutencao");
         registro.add("app.manutencao.password", () -> MANUTENCAO_SENHA);
         registro.add("app.jwt.segredo", () -> "segredo-de-teste-com-mais-de-trinta-e-dois-bytes");
+
+        // Pool pequeno por padrão em teste: nenhum teste precisa de 20 conexões, e o custo
+        // de manter pools grandes se multiplica por contexto. Classes que precisem de outro
+        // valor declaram o seu (TenantIsolamentoIT usa 1; IdempotenciaIT usa 4).
+        registro.add("spring.datasource.hikari.maximum-pool-size", () -> "5");
         registro.add("spring.flyway.placeholders.senha_manutencao", () -> MANUTENCAO_SENHA);
 
     }
@@ -101,7 +112,8 @@ public abstract class AbstractPostgresIT {
     @BeforeEach
     void limparDados() throws SQLException {
         try (var st = comoOwner().createStatement()) {
-            st.execute("truncate auditoria, usuario, estabelecimento restart identity cascade");
+            st.execute("truncate auditoria, refresh_token, usuario, estabelecimento "
+                    + "restart identity cascade");
         }
     }
 

@@ -1,5 +1,7 @@
 app.jwt.segredo: ${JWT_SEGREDO:segredo-de-desenvolvimento-nao-use-em-producao-1234}
 
+app.auth.cookie-seguro: false
+
 spring:
   jpa.properties.hibernate.generate_statistics: true
 logging.level:

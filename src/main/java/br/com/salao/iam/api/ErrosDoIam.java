@@ -20,7 +20,15 @@ public enum ErrosDoIam implements CodigoDeErro {
             "E-mail ou senha incorretos"),
 
     ACESSO_BLOQUEADO("ER-IAM-ACESSO_BLOQUEADO", HttpStatus.TOO_MANY_REQUESTS,
-            "Acesso temporariamente bloqueado");
+            "Acesso temporariamente bloqueado"),
+
+    /**
+     * Um código só para refresh desconhecido, expirado, revogado e reusado.
+     *
+     * <p>Distinguir diria a quem está testando tokens o que aconteceu com cada um — inclusive que
+     * um deles já existiu, o que confirma um vazamento para quem o obteve.
+     */
+    SESSAO_EXPIRADA("ER-IAM-SESSAO_EXPIRADA", HttpStatus.UNAUTHORIZED, "Sessão expirada");
 
     private final String codigo;
     private final HttpStatus status;

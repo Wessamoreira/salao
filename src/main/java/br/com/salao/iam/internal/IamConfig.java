@@ -2,10 +2,12 @@ package br.com.salao.iam.internal;
 
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.internal.application.AutenticarUseCase;
+import br.com.salao.iam.internal.application.RenovarAcessoUseCase;
 import br.com.salao.iam.internal.application.ProvisionarEstabelecimentoUseCase;
 import br.com.salao.iam.internal.infra.CredenciaisJdbc;
 import br.com.salao.iam.internal.infra.EmissorDeTokenJwt;
 import br.com.salao.iam.internal.infra.EstabelecimentoCacheado;
+import br.com.salao.iam.internal.infra.RefreshTokensJdbc;
 import br.com.salao.iam.internal.infra.EstabelecimentoJdbc;
 import br.com.salao.shared.manutencao.ConexaoDeManutencao;
 import br.com.salao.shared.tempo.Relogio;
@@ -15,6 +17,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Primary;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -55,9 +58,28 @@ public class IamConfig {
     }
 
     @Bean
-    public AutenticarUseCase autenticarUseCase(CredenciaisJdbc credenciais,
-                                               PasswordEncoder codificador,
-                                               EmissorDeTokenJwt emissor, Relogio relogio) {
-        return new AutenticarUseCase(credenciais, codificador, emissor, relogio);
+    public RefreshTokensJdbc refreshTokensJdbc(ConexaoDeManutencao plataforma,
+                                               DataSource dataSource) {
+        return new RefreshTokensJdbc(plataforma, JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public AutenticarUseCase autenticarUseCase(
+            CredenciaisJdbc credenciais, PasswordEncoder codificador, EmissorDeTokenJwt emissor,
+            RefreshTokensJdbc refreshTokens, Relogio relogio,
+            @Value("${app.auth.refresh.validade:P30D}") Duration validadeDoRefresh) {
+        return new AutenticarUseCase(credenciais, codificador, emissor, refreshTokens, relogio,
+                validadeDoRefresh);
+    }
+
+    @Bean
+    public RenovarAcessoUseCase renovarAcessoUseCase(
+            RefreshTokensJdbc tokens, CredenciaisJdbc credenciais, EmissorDeTokenJwt emissor,
+            Relogio relogio,
+            @Value("${app.auth.refresh.validade:P30D}") Duration validade,
+            @Value("${app.auth.refresh.tolerancia-de-reenvio:PT10S}") Duration tolerancia,
+            MeterRegistry registro) {
+        return new RenovarAcessoUseCase(tokens, credenciais, emissor, relogio, validade,
+                tolerancia, registro);
     }
 }

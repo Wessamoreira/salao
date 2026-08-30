@@ -29,6 +29,14 @@ public class CredenciaisJdbc {
              where email_normalizado = :email
             """;
 
+    /** Usado na renovação: o perfil pode ter mudado desde o login, e o token novo deve refleti-lo. */
+    private static final String POR_ID = """
+            select id, estabelecimento_id, senha_hash, perfil, ativo,
+                   falhas_consecutivas, bloqueado_ate
+              from usuario
+             where id = :id
+            """;
+
     private static final String REGISTRAR_FALHA = """
             update usuario
                set falhas_consecutivas = falhas_consecutivas + 1,
@@ -57,17 +65,30 @@ public class CredenciaisJdbc {
     public Optional<CredencialDeAcesso> porEmail(String emailNormalizado) {
         return plataforma.jdbc().sql(POR_EMAIL)
                 .param("email", emailNormalizado)
-                .query((rs, linha) -> new CredencialDeAcesso(
-                        rs.getObject("id", UUID.class),
-                        rs.getObject("estabelecimento_id", UUID.class),
-                        rs.getString("senha_hash"),
-                        Perfil.valueOf(rs.getString("perfil")),
-                        rs.getBoolean("ativo"),
-                        rs.getInt("falhas_consecutivas"),
-                        rs.getObject("bloqueado_ate", java.sql.Timestamp.class) == null
-                                ? null
-                                : rs.getTimestamp("bloqueado_ate").toInstant()))
+                .query(this::mapear)
                 .optional();
+    }
+
+    private CredencialDeAcesso mapear(java.sql.ResultSet rs, int linha)
+            throws java.sql.SQLException {
+        var bloqueado = rs.getTimestamp("bloqueado_ate");
+        return new CredencialDeAcesso(
+                rs.getObject("id", UUID.class),
+                rs.getObject("estabelecimento_id", UUID.class),
+                rs.getString("senha_hash"),
+                Perfil.valueOf(rs.getString("perfil")),
+                rs.getBoolean("ativo"),
+                rs.getInt("falhas_consecutivas"),
+                bloqueado == null ? null : bloqueado.toInstant());
+    }
+
+    /**
+     * Busca dentro do escopo do tenant — aqui não há alcance cross-tenant: quem chama já sabe de
+     * qual estabelecimento é, e a RLS confere.
+     */
+    @Transactional(readOnly = true)
+    public Optional<CredencialDeAcesso> porId(UUID usuarioId) {
+        return aplicacao.sql(POR_ID).param("id", usuarioId).query(this::mapear).optional();
     }
 
     /** Chamado dentro do escopo do tenant: a RLS confere que o usuário é mesmo dele. */

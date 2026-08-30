@@ -62,6 +62,7 @@ e o Modulith reprova o build se outro módulo alcançar o `internal`.
 | `ER-IAM-DADOS_INVALIDOS` | 422 | Nome vazio, fuso ou moeda inválidos | "Confira os dados do salão: {motivo}." |
 | `ER-IAM-CREDENCIAIS_INVALIDAS` | 401 | Senha errada, e-mail inexistente ou usuário inativo (RN-IAM-006) | "E-mail ou senha incorretos." |
 | `ER-IAM-ACESSO_BLOQUEADO` | 429 | Bloqueio progressivo ativo (RN-IAM-005) | "Muitas tentativas. Tente novamente em alguns minutos." |
+| `ER-IAM-SESSAO_EXPIRADA` | 401 | Refresh desconhecido, expirado, revogado ou reusado (RN-IAM-007) | "Sua sessão expirou. Entre novamente." |
 
 ---
 
@@ -119,3 +120,37 @@ voltaria em milissegundos contra centenas — e essa diferença é mensurável d
 `hashDeReferencia`.
 **Rotinas.** RT-IAM-002 · **Teste.** `AutenticacaoIT.nao_permite_enumerar_usuarios`
 **Configurável?** Não · **Origem.** 2026-08-29
+
+---
+
+### RN-IAM-007 — Refresh é de uso único, e reapresentá-lo revoga a família
+
+**Enunciado.** Cada renovação invalida o refresh usado e emite outro na mesma família. Um refresh
+já rotacionado que reapareça — fora da janela de tolerância — revoga **todos** os tokens da
+família.
+
+**Motivo.** Um token de uso único que volta só tem uma explicação: duas partes têm o mesmo token.
+Não há como saber qual é a legítima, então as duas perdem. Sem rotação, um refresh roubado
+funcionaria trinta dias em silêncio.
+
+**Onde é garantida.** `RenovarAcessoUseCase` + `UPDATE` condicional em `RefreshTokensJdbc`.
+**Rotinas.** RT-IAM-003 · **Testes.** `RenovacaoIT.reuso_revoga_a_familia`,
+`RenovacaoIT.corrida_e_arbitrada_pelo_banco`
+**Erro.** `ER-IAM-SESSAO_EXPIRADA` (401) · **Configurável?** Só a janela de tolerância
+**Origem.** 2026-08-29
+
+---
+
+### RN-IAM-008 — Corrida e reenvio não são vazamento
+
+**Enunciado.** Reapresentação dentro da janela de tolerância (10s), e perda da corrida no `UPDATE`
+condicional, são recusadas **sem** revogar a família.
+
+**Motivo.** Cliente com rede instável reenvia. Tratar isso como vazamento derrubaria a sessão de
+quem só teve internet ruim — um falso positivo caro, e frequente. Recusar já basta: quem fez a
+primeira requisição já recebeu o par novo.
+
+**Onde é garantida.** `RenovarAcessoUseCase.tratarReapresentacao`.
+**Rotinas.** RT-IAM-003 · **Teste.** `RenovacaoIT.corrida_e_arbitrada_pelo_banco`
+**Configurável?** Sim — `app.auth.refresh.tolerancia-de-reenvio`
+**Origem.** 2026-08-29

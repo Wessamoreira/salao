@@ -45,9 +45,10 @@ class AutenticacaoIT extends AbstractPostgresIT {
 
         var token = autenticar.executar(new AutenticarCommand("ana@salao.test", SENHA));
 
-        assertThat(token.estabelecimentoId()).isEqualTo(estabelecimento);
-        assertThat(token.perfil()).isEqualTo(Perfil.ADMIN);
-        assertThat(token.expiraEm()).isAfter(java.time.Instant.now());
+        assertThat(token.acesso().estabelecimentoId()).isEqualTo(estabelecimento);
+        assertThat(token.acesso().perfil()).isEqualTo(Perfil.ADMIN);
+        assertThat(token.acesso().expiraEm()).isAfter(java.time.Instant.now());
+        assertThat(token.refresh()).as("o login abre uma família de refresh").isNotBlank();
     }
 
     @Test
@@ -56,7 +57,7 @@ class AutenticacaoIT extends AbstractPostgresIT {
         UUID estabelecimento = provisionarCom("ana@salao.test");
 
         var token = autenticar.executar(new AutenticarCommand("ana@salao.test", SENHA));
-        var jwt = decodificador.decode(token.token());
+        var jwt = decodificador.decode(token.acesso().token());
 
         assertThat(jwt.getClaimAsString(EmissorDeTokenJwt.CLAIM_ESTABELECIMENTO))
                 .isEqualTo(estabelecimento.toString());
@@ -143,9 +144,9 @@ class AutenticacaoIT extends AbstractPostgresIT {
                 "Outro Salão", null, "Bia", "bia@salao.test", SENHA));
 
         assertThat(autenticar.executar(new AutenticarCommand("ana@salao.test", SENHA))
-                .estabelecimentoId()).isEqualTo(a);
+                .acesso().estabelecimentoId()).isEqualTo(a);
         assertThat(autenticar.executar(new AutenticarCommand("bia@salao.test", SENHA))
-                .estabelecimentoId()).isEqualTo(b);
+                .acesso().estabelecimentoId()).isEqualTo(b);
     }
 
     private int falhasDe(String email) throws SQLException {

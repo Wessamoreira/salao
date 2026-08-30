@@ -1,15 +1,18 @@
 package br.com.salao.iam.internal.application;
 
 import br.com.salao.iam.api.ErrosDoIam;
-import br.com.salao.iam.api.TokenDeAcesso;
+import br.com.salao.iam.api.SessaoIniciada;
 import br.com.salao.iam.internal.domain.CredencialDeAcesso;
 import br.com.salao.iam.internal.domain.Emails;
 import br.com.salao.iam.internal.domain.PoliticaDeBloqueio;
 import br.com.salao.iam.internal.infra.CredenciaisJdbc;
+import br.com.salao.iam.internal.domain.SegredoOpaco;
 import br.com.salao.iam.internal.infra.EmissorDeTokenJwt;
+import br.com.salao.iam.internal.infra.RefreshTokensJdbc;
 import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.shared.tempo.Relogio;
 import br.com.salao.shared.tenant.TenantContext;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -46,7 +49,9 @@ public class AutenticarUseCase {
     private final CredenciaisJdbc credenciais;
     private final PasswordEncoder codificador;
     private final EmissorDeTokenJwt emissor;
+    private final RefreshTokensJdbc refreshTokens;
     private final Relogio relogio;
+    private final Duration validadeDoRefresh;
 
     /**
      * Hash descartável, gerado uma vez na subida, para gastar o mesmo tempo quando o e-mail não
@@ -56,15 +61,18 @@ public class AutenticarUseCase {
     private final String hashDeReferencia;
 
     public AutenticarUseCase(CredenciaisJdbc credenciais, PasswordEncoder codificador,
-                             EmissorDeTokenJwt emissor, Relogio relogio) {
+                             EmissorDeTokenJwt emissor, RefreshTokensJdbc refreshTokens,
+                             Relogio relogio, Duration validadeDoRefresh) {
         this.credenciais = credenciais;
         this.codificador = codificador;
         this.emissor = emissor;
+        this.refreshTokens = refreshTokens;
         this.relogio = relogio;
+        this.validadeDoRefresh = validadeDoRefresh;
         this.hashDeReferencia = codificador.encode(UUID.randomUUID().toString());
     }
 
-    public TokenDeAcesso executar(AutenticarCommand comando) {
+    public SessaoIniciada executar(AutenticarCommand comando) {
         String email = Emails.normalizar(comando.email());
         if (email == null || email.isBlank() || comando.senha() == null) {
             throw credenciaisInvalidas();
@@ -82,7 +90,7 @@ public class AutenticarUseCase {
                 () -> concluir(credencial, comando.senha()));
     }
 
-    private TokenDeAcesso concluir(CredencialDeAcesso credencial, String senha) {
+    private SessaoIniciada concluir(CredencialDeAcesso credencial, String senha) {
         Instant agora = relogio.agora();
 
         if (PoliticaDeBloqueio.estaBloqueado(credencial.bloqueadoAte(), agora)) {
@@ -107,9 +115,18 @@ public class AutenticarUseCase {
         }
 
         credenciais.registrarSucesso(credencial.usuarioId());
+
+        // Cada login abre uma FAMÍLIA nova de refresh. Entrar de novo não derruba a sessão do
+        // celular: são cadeias independentes, e o reuso detectado numa não afeta a outra.
+        String segredo = SegredoOpaco.gerar();
+        Instant expiraEm = agora.plus(validadeDoRefresh);
+        refreshTokens.emitirNovaFamilia(credencial.estabelecimentoId(), credencial.usuarioId(),
+                UUID.randomUUID(), SegredoOpaco.hashDe(segredo), expiraEm, null, null);
+
         log.info("Login concluído para o usuário {}", credencial.usuarioId());
-        return emissor.emitir(credencial.usuarioId(), credencial.estabelecimentoId(),
+        var acesso = emissor.emitir(credencial.usuarioId(), credencial.estabelecimentoId(),
                 credencial.perfil());
+        return new SessaoIniciada(acesso, segredo, expiraEm);
     }
 
     private void registrarFalha(CredencialDeAcesso credencial, Instant agora) {

@@ -90,6 +90,16 @@ app.jwt:
   validade-do-acesso: ${JWT_VALIDADE:PT15M}
   emissor: ${JWT_EMISSOR:salao}
 
+app.auth:
+  refresh:
+    validade: ${REFRESH_VALIDADE:P30D}
+    # Reenvio do cliente por rede instável chega com o mesmo refresh. Dentro desta
+    # janela a segunda tentativa é recusada SEM revogar a família — derrubar a
+    # sessão de quem só teve internet ruim seria um falso positivo caro.
+    tolerancia-de-reenvio: ${REFRESH_TOLERANCIA:PT10S}
+  # Em dev o navegador descarta cookie Secure sobre http. Nunca false em produção.
+  cookie-seguro: ${COOKIE_SEGURO:true}
+
 app.observabilidade:
   # Acima disto o outbox é considerado parado, e o health passa a reportar
   # degradado. Casado com o alerta de 5 min do Prometheus.
