@@ -4,6 +4,8 @@ import br.com.salao.cliente.api.ClienteApi;
 import br.com.salao.cliente.internal.application.BuscarClientesUseCase;
 import br.com.salao.cliente.internal.application.CadastrarClienteUseCase;
 import br.com.salao.cliente.internal.application.ConsultarClienteUseCase;
+import br.com.salao.cliente.internal.application.ConsultarConsentimentosUseCase;
+import br.com.salao.cliente.internal.application.RegistrarConsentimentoUseCase;
 import br.com.salao.cliente.internal.application.DetectarDuplicadosUseCase;
 import br.com.salao.cliente.internal.application.MesclarClientesUseCase;
 import br.com.salao.cliente.internal.infra.ClientesJdbc;
@@ -44,6 +46,17 @@ public class ClienteConfig {
     @Bean
     public BuscarClientesUseCase buscarClientesUseCase(ClientesJdbc clientes) {
         return new BuscarClientesUseCase(clientes);
+    }
+
+    @Bean
+    public RegistrarConsentimentoUseCase registrarConsentimentoUseCase(
+            ClientesJdbc clientes, AuditoriaApi auditoria, Relogio relogio) {
+        return new RegistrarConsentimentoUseCase(clientes, auditoria, relogio);
+    }
+
+    @Bean
+    public ConsultarConsentimentosUseCase consultarConsentimentosUseCase(ClientesJdbc clientes) {
+        return new ConsultarConsentimentosUseCase(clientes);
     }
 
     @Bean

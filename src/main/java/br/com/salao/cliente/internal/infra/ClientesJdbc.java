@@ -1,10 +1,15 @@
 package br.com.salao.cliente.internal.infra;
 
+import br.com.salao.cliente.api.CanalDeConsentimento;
 import br.com.salao.cliente.api.ClienteApi;
 import br.com.salao.cliente.api.ClienteResumo;
+import br.com.salao.cliente.api.EstadoDoConsentimento;
+import br.com.salao.cliente.api.Finalidade;
 import br.com.salao.cliente.internal.domain.TermoDeBusca;
 import java.time.Instant;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.RowMapper;
@@ -286,6 +291,87 @@ public class ClientesJdbc implements ClienteApi {
                 .param("absorvida", absorvida)
                 .param("sobrevivente", sobrevivente)
                 .update();
+    }
+
+    // ------------------------------------------------------------------ RT-CLI-004
+
+    /**
+     * A decisão vigente de cada finalidade.
+     *
+     * <p>{@code distinct on} com a ordenação casada ao índice pega a linha mais recente por
+     * finalidade sem ler o histórico inteiro. O desempate por {@code id} importa: duas decisões
+     * na mesma transação compartilham o instante, e sem ele a "vigente" seria escolhida ao acaso.
+     *
+     * <p>A cláusula que também aceita fichas <strong>absorvidas</strong> (RT-CLI-003) é o que faz
+     * a mesclagem não precisar mexer em consentimento: se a pessoa revogou numa ficha e a outra
+     * ainda dizia "sim", a decisão mais recente vence — que é a única leitura defensável. Sem
+     * isso, mesclar poderia ressuscitar um consentimento revogado.
+     */
+    private static final String CONSENTIMENTOS_VIGENTES = """
+            select distinct on (finalidade)
+                   finalidade, concedido, canal, registrado_em
+              from cliente_consentimento
+             where cliente_id = :id
+                or cliente_id in (select id from cliente where mesclado_para = :id)
+             order by finalidade, registrado_em desc, id desc
+            """;
+
+    public void registrarConsentimento(UUID estabelecimentoId, UUID clienteId,
+                                       Finalidade finalidade, boolean concedido,
+                                       CanalDeConsentimento canal, String observacao,
+                                       Instant quando, UUID registradoPor) {
+        jdbc.sql("""
+                insert into cliente_consentimento
+                    (estabelecimento_id, cliente_id, finalidade, concedido, canal,
+                     observacao, registrado_em, registrado_por)
+                values (:estabelecimento, :cliente, :finalidade, :concedido, :canal,
+                        :observacao, :quando, :por)
+                """)
+                .param("estabelecimento", estabelecimentoId)
+                .param("cliente", clienteId)
+                .param("finalidade", finalidade.name())
+                .param("concedido", concedido)
+                .param("canal", canal.name())
+                .param("observacao", observacao)
+                .param("quando", java.sql.Timestamp.from(quando))
+                .param("por", registradoPor)
+                .update();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EstadoDoConsentimento> consentimentos(UUID clienteId) {
+        Map<Finalidade, EstadoDoConsentimento> registrados = new EnumMap<>(Finalidade.class);
+        jdbc.sql(CONSENTIMENTOS_VIGENTES)
+                .param("id", clienteId)
+                .query((rs, linha) -> EstadoDoConsentimento.registrado(
+                        Finalidade.valueOf(rs.getString("finalidade")),
+                        rs.getBoolean("concedido"),
+                        rs.getTimestamp("registrado_em").toInstant(),
+                        CanalDeConsentimento.valueOf(rs.getString("canal"))))
+                .list()
+                .forEach(estado -> registrados.put(estado.finalidade(), estado));
+
+        // Toda finalidade aparece, inclusive a que ninguém perguntou: uma lista que só mostra o
+        // que foi registrado esconde justamente o que falta perguntar.
+        return java.util.Arrays.stream(Finalidade.values())
+                .map(f -> registrados.getOrDefault(f, EstadoDoConsentimento.semRegistro(f)))
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean podeReceber(UUID clienteId, Finalidade finalidade) {
+        if (!existe(clienteId)) {
+            // Falha fechada: cliente que não existe (ou é de outro tenant, ou foi anonimizado)
+            // não recebe nada. O contrário mandaria mensagem para quem pediu para ser esquecido.
+            return false;
+        }
+        return consentimentos(clienteId).stream()
+                .filter(estado -> estado.finalidade() == finalidade)
+                .findFirst()
+                .map(EstadoDoConsentimento::podeReceber)
+                .orElse(finalidade.permitidoSemRegistro());
     }
 
     /**

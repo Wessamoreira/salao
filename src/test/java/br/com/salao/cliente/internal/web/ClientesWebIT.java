@@ -177,6 +177,49 @@ class ClientesWebIT extends AbstractPostgresIT {
     }
 
     @Test
+    @DisplayName("consentimento: conceder e revogar pela mesma rota")
+    void consentimento_pelo_http() throws Exception {
+        // A LGPD exige que revogar seja tão fácil quanto consentir (art. 8 §5). A forma confiável
+        // de cumprir isso não é lembrar de facilitar o "não" — é não ter dois caminhos.
+        String token = entrar();
+        String cliente = idDe(post("/api/v1/clientes", "{\"nome\":\"Maria Silva\"}", token));
+        String rota = "/api/v1/clientes/" + cliente + "/consentimentos";
+
+        var inicial = get(rota, token);
+        assertThat(inicial.statusCode()).isEqualTo(200);
+        assertThat(inicial.body()).contains("SEM_REGISTRO");
+
+        var concedeu = put(rota + "/MARKETING",
+                "{\"concedido\":true,\"canal\":\"BALCAO\"}", token);
+        assertThat(concedeu.statusCode()).isEqualTo(200);
+        assertThat(concedeu.body()).contains("CONCEDIDO");
+
+        var revogou = put(rota + "/MARKETING",
+                "{\"concedido\":false,\"canal\":\"WHATSAPP\"}", token);
+        assertThat(revogou.body()).contains("RECUSADO");
+    }
+
+    @Test
+    @DisplayName("parâmetro de tipo errado na URL vira 400, não 500")
+    void parametro_de_tipo_errado_nao_e_500() throws Exception {
+        // Encontrado ao escrever este teste, e não era só do consentimento: QUALQUER rota com
+        // parâmetro tipado devolvia 500, porque as rotas com id só eram exercitadas com ids
+        // válidos. 500 diz "algo quebrou aqui dentro" quando quem errou foi quem chamou — e
+        // enche o log de erro interno, escondendo os 500 de verdade.
+        String token = entrar();
+        String cliente = idDe(post("/api/v1/clientes", "{\"nome\":\"Maria Silva\"}", token));
+
+        var finalidadeInvalida = put(
+                "/api/v1/clientes/" + cliente + "/consentimentos/QUALQUER_COISA",
+                "{\"concedido\":true,\"canal\":\"BALCAO\"}", token);
+        assertThat(finalidadeInvalida.statusCode()).isEqualTo(400);
+        assertThat(finalidadeInvalida.body()).contains("ER-INF-DADOS_INVALIDOS");
+
+        var idInvalido = get("/api/v1/clientes/nao-e-uuid", token);
+        assertThat(idInvalido.statusCode()).isEqualTo(400);
+    }
+
+    @Test
     @DisplayName("sem token, o cadastro não abre")
     void sem_token_nao_cadastra() throws Exception {
         assertThat(post("/api/v1/clientes", "{\"nome\":\"Maria\"}", null).statusCode())
@@ -200,6 +243,16 @@ class ClientesWebIT extends AbstractPostgresIT {
         var b = HttpRequest.newBuilder(URI.create("http://localhost:" + porta + caminho))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(corpo));
+        if (token != null) {
+            b.header("Authorization", "Bearer " + token);
+        }
+        return http.send(b.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    private HttpResponse<String> put(String caminho, String corpo, String token) throws Exception {
+        var b = HttpRequest.newBuilder(URI.create("http://localhost:" + porta + caminho))
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(corpo));
         if (token != null) {
             b.header("Authorization", "Bearer " + token);
         }

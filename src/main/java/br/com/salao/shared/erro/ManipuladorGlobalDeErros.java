@@ -10,6 +10,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -71,6 +72,25 @@ public class ManipuladorGlobalDeErros {
     public ProblemDetail tratarMetodoNaoPermitido(HttpRequestMethodNotSupportedException erro) {
         return montar(ErrosDaInfra.METODO_NAO_PERMITIDO,
                 "Método não permitido para este recurso.", List.of(), java.util.Map.of());
+    }
+
+    /**
+     * Parâmetro que não converte para o tipo esperado: {@code /clientes/nao-e-uuid},
+     * {@code /consentimentos/FINALIDADE_QUE_NAO_EXISTE}, {@code ?limite=muitos}.
+     *
+     * <p>Faltava, e o sintoma era <strong>500 em qualquer URL com id malformado</strong> — o
+     * mesmo defeito que os tratadores acima corrigiram para rota inexistente, num caso que passou
+     * despercebido porque as rotas com id só eram exercitadas com ids válidos.
+     *
+     * <p>O nome do parâmetro vai no campo, para a tela apontar onde está o erro; o valor
+     * <strong>não</strong> vai — ele veio de fora e atravessaria log e telemetria.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ProblemDetail tratarParametroDeTipoErrado(MethodArgumentTypeMismatchException erro) {
+        return montar(ErrosDaInfra.DADOS_INVALIDOS, "Parâmetro inválido.",
+                List.of(new CampoInvalido(erro.getName(), "TIPO_INVALIDO",
+                        "Valor inválido para este parâmetro")),
+                java.util.Map.of());
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)

@@ -1,9 +1,14 @@
 package br.com.salao.cliente.internal.web;
 
+import br.com.salao.cliente.api.CanalDeConsentimento;
 import br.com.salao.cliente.api.ClienteResumo;
+import br.com.salao.cliente.api.EstadoDoConsentimento;
+import br.com.salao.cliente.api.Finalidade;
 import br.com.salao.cliente.internal.application.CadastrarClienteUseCase;
 import br.com.salao.cliente.internal.application.BuscarClientesUseCase;
 import br.com.salao.cliente.internal.application.ConsultarClienteUseCase;
+import br.com.salao.cliente.internal.application.ConsultarConsentimentosUseCase;
+import br.com.salao.cliente.internal.application.RegistrarConsentimentoUseCase;
 import br.com.salao.cliente.internal.application.DadosDoCliente;
 import br.com.salao.cliente.internal.application.DetectarDuplicadosUseCase;
 import br.com.salao.cliente.internal.application.MesclarClientesUseCase;
@@ -20,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -43,12 +49,18 @@ public class ClientesController {
     private final BuscarClientesUseCase buscar;
     private final DetectarDuplicadosUseCase duplicados;
     private final MesclarClientesUseCase mesclar;
+    private final RegistrarConsentimentoUseCase registrarConsentimento;
+    private final ConsultarConsentimentosUseCase consultarConsentimentos;
 
     public ClientesController(CadastrarClienteUseCase cadastrar,
                               ConsultarClienteUseCase consultar,
                               BuscarClientesUseCase buscar,
                               DetectarDuplicadosUseCase duplicados,
-                              MesclarClientesUseCase mesclar) {
+                              MesclarClientesUseCase mesclar,
+                              RegistrarConsentimentoUseCase registrarConsentimento,
+                              ConsultarConsentimentosUseCase consultarConsentimentos) {
+        this.registrarConsentimento = registrarConsentimento;
+        this.consultarConsentimentos = consultarConsentimentos;
         this.cadastrar = cadastrar;
         this.consultar = consultar;
         this.buscar = buscar;
@@ -125,5 +137,39 @@ public class ClientesController {
     @GetMapping("/{id}")
     public ClienteResumo porId(@PathVariable UUID id) {
         return consultar.executar(id);
+    }
+
+    /** RT-CLI-004 — o que vale hoje, inclusive as finalidades que ninguém perguntou ainda. */
+    @GetMapping("/{id}/consentimentos")
+    public List<EstadoDoConsentimento> consentimentos(@PathVariable UUID id) {
+        return consultarConsentimentos.executar(id);
+    }
+
+    public record ConsentimentoRequest(
+            @NotNull Boolean concedido,
+            @NotNull CanalDeConsentimento canal,
+            @Size(max = 500) String observacao) {
+    }
+
+    /**
+     * RT-CLI-004 — registra a decisão da cliente sobre uma finalidade.
+     *
+     * <p>Conceder e revogar são <strong>a mesma rota</strong>, mudando só {@code concedido}. A
+     * LGPD exige que revogar seja tão fácil quanto consentir (art. 8 §5), e a forma confiável de
+     * cumprir isso não é lembrar de facilitar o "não" — é não ter dois caminhos, porque o segundo
+     * caminho seria sempre o mais estreito.
+     *
+     * <p>{@code PUT} e não {@code POST}: do ponto de vista de quem chama, a operação define o
+     * estado atual daquela finalidade. Que por baixo isso vire uma linha nova no histórico é
+     * assunto do servidor.
+     */
+    @PutMapping("/{id}/consentimentos/{finalidade}")
+    public List<EstadoDoConsentimento> registrarConsentimento(
+            @PathVariable UUID id,
+            @PathVariable Finalidade finalidade,
+            @Valid @RequestBody ConsentimentoRequest corpo) {
+        registrarConsentimento.executar(id, finalidade, corpo.concedido(), corpo.canal(),
+                corpo.observacao());
+        return consultarConsentimentos.executar(id);
     }
 }

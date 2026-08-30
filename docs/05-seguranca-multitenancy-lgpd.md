@@ -123,7 +123,8 @@ O salão guarda dado de cliente. Isso não é opcional.
 
 | Exigência | Como é atendida |
 |---|---|
-| Base legal e finalidade | Documentadas por tipo de dado; coleta mínima |
+| Base legal e finalidade | **No código, não só no papel** (`RT-CLI-004`): cada `Finalidade` carrega sua `BaseLegal`, e ela define o padrão sem registro. Atender é execução de contrato; marketing exige consentimento |
+| Consentimento e revogação | Histórico append-only por finalidade, com canal e data. Revogar usa a mesma rota que consentir (art. 8 §5). Oposição é honrada mesmo onde a base é contrato (art. 18 §2) |
 | Dado sensível | Foto e ficha de química indicam alergia/condição de saúde. Acesso por permissão própria (`cliente:ficha:read`) + criptografia de campo (AES-GCM, chave fora do banco) |
 | Direito de exclusão | **Anonimização**, não delete: `cliente_anonimizado`, preservando o histórico financeiro que a legislação fiscal exige |
 | Transparência sobre IA | Aviso ao cliente na primeira interação com o agente |

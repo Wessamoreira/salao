@@ -1,5 +1,6 @@
 package br.com.salao.cliente.api;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,4 +22,19 @@ public interface ClienteApi {
      * dado pessoal que não vai usar — e o que não é carregado não vaza em log.
      */
     boolean existe(UUID clienteId);
+
+    /**
+     * RT-CLI-004 — se o salão pode falar com esta pessoa para esta finalidade.
+     *
+     * <p>É a pergunta que o módulo {@code notificacao} faz antes de qualquer envio, e a única que
+     * ele deve fazer: quem conhece base legal, consentimento e revogação é este módulo. Um
+     * {@code if} sobre um campo booleano do outro lado seria a regra da LGPD escrita duas vezes,
+     * e a segunda cópia é a que continuaria mandando promoção depois da revogação.
+     *
+     * <p>Falha fechada: cliente inexistente devolve {@code false}.
+     */
+    boolean podeReceber(UUID clienteId, Finalidade finalidade);
+
+    /** O que vale hoje para cada finalidade — inclusive as que nunca foram perguntadas. */
+    List<EstadoDoConsentimento> consentimentos(UUID clienteId);
 }

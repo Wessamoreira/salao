@@ -293,3 +293,78 @@ ninguém percebesse.
 **Rotinas.** RT-CLI-003, RT-CLI-005 · **Teste.** — (completo em RT-CLI-005, que cria o estado)
 **Erro.** `ER-CLI-MESCLAGEM_INVALIDA` (422) · **Configurável?** Não
 **Origem.** 2026-08-30
+
+---
+
+### RN-CLI-018 — A base legal é da finalidade, e define o padrão sem registro
+
+**Enunciado.** Cada finalidade carrega sua base legal. `LEMBRETE_DE_AGENDAMENTO` é execução de
+contrato e o padrão é **pode**; `MARKETING` e `PESQUISA_DE_SATISFACAO` exigem consentimento e o
+padrão é **não pode**. "Sem registro" é um estado próprio, distinto de "recusado".
+
+**Motivo.** Atender a cliente não depende de consentimento, depende de contrato (art. 7, V): pedir
+consentimento para avisar sobre um horário que ela mesma marcou sugeriria que ela pode recusar e
+ser atendida igual, e criaria uma revogação que o salão não poderia honrar. Guardar a base legal
+por linha permitiria que duas linhas discordassem sobre um fato que é o mesmo para todo mundo. E
+tratar "sem registro" como "recusado" faria o lembrete parar de sair para toda cliente nunca
+perguntada — que são todas, no primeiro dia.
+
+**Onde é garantida.** Domínio: `Finalidade` e `BaseLegal` · Sem coluna `base_legal` no banco (V15).
+**Rotinas.** RT-CLI-004 · **Teste.** `ConsentimentoIT.padrao_depende_da_base_legal`
+**Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-019 — Revogar usa exatamente o mesmo caminho que consentir
+
+**Enunciado.** Conceder e revogar são a mesma rota, o mesmo caso de uso e a mesma permissão,
+mudando só o campo `concedido`.
+
+**Motivo.** A LGPD exige que revogar seja tão fácil quanto consentir (art. 8 §5). A forma confiável
+de cumprir isso não é lembrar de facilitar o "não": é não ter dois caminhos. Um endpoint separado
+para revogação seria inevitavelmente o mais estreito dos dois — menos usado, menos testado, e o
+primeiro a quebrar sem ninguém perceber.
+
+**Onde é garantida.** `RegistrarConsentimentoUseCase`, uma operação só ·
+`PUT /clientes/{id}/consentimentos/{finalidade}`.
+**Rotinas.** RT-CLI-004 · **Teste.** `ConsentimentoIT.consentir_e_revogar`,
+`ClientesWebIT.consentimento_pelo_http`
+**Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-020 — O histórico de consentimento é append-only
+
+**Enunciado.** Cada decisão é uma linha nova; nada é alterado ou removido. A decisão vigente é a
+mais recente por finalidade.
+
+**Motivo.** A pergunta a responder não é "o que vale hoje", é "o que valia no dia em que a mensagem
+foi enviada?". Uma linha editável só sabe responder a primeira — a resposta inútil num
+questionamento. Como na auditoria, a garantia é permissão de banco e não convenção: convenção
+depende de ninguém escrever o `UPDATE`.
+
+**Onde é garantida.** Banco: `revoke update, delete on cliente_consentimento from salao_app` (V15).
+**Rotinas.** RT-CLI-004 · **Teste.** `ConsentimentoIT.historico_e_append_only`
+**Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-021 — A mesclagem não ressuscita consentimento revogado
+
+**Enunciado.** A decisão vigente considera também as fichas absorvidas pela sobrevivente; vence a
+mais recente, venha de qual ficha vier.
+
+**Motivo.** Se a pessoa revogou numa ficha e a outra ainda dizia "sim", mesclar não pode fazer o
+salão voltar a mandar promoção. É a única leitura defensável — e sai de graça porque RT-CLI-003
+mantém as cadeias de mesclagem com um salto só, então a mesclagem não precisa saber que
+consentimento existe.
+
+**Onde é garantida.** Infra: `ClientesJdbc.CONSENTIMENTOS_VIGENTES` aceita
+`cliente_id in (select id from cliente where mesclado_para = :id)`.
+**Rotinas.** RT-CLI-004, RT-CLI-003 · **Teste.**
+`ConsentimentoIT.revogacao_sobrevive_a_mesclagem`
+**Configurável?** Não
+**Origem.** 2026-08-30
