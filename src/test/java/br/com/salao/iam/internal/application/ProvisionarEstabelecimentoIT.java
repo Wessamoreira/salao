@@ -115,7 +115,7 @@ class ProvisionarEstabelecimentoIT extends AbstractPostgresIT {
     @DisplayName("fuso inválido vira erro de domínio com código do catálogo")
     void fuso_invalido_e_erro_de_dominio() {
         var comando = new ProvisionarEstabelecimentoCommand(
-                "Salão", null, "-03:00", "BRL", null, null, null,
+                "Salão", null, "-03:00", "BRL", null, null, null, null,
                 "Ana", "d@salao.test", "senha-bem-comprida-1");
 
         assertThatThrownBy(() -> provisionar.executar(comando))

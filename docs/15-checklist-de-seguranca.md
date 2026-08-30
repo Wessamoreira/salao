@@ -80,9 +80,17 @@ e ordenação por índice, e a chave fica no mesmo processo que lê os dados, en
 quem já executa código na aplicação. Cifragem de campo protege contra quem obtém **os dados** —
 dump, backup, `SELECT` indevido —, não contra quem obtém **o processo**.
 
+**Não cifrado, e é uma decisão consciente:** nome, telefone e e-mail do **cliente** (RT-CLI-001,
+2026-08-30). Cifrar o telefone inviabilizaria a busca pelos quatro últimos dígitos (R-UX-03), que é
+como a recepção identifica quem está ligando — a alternativa seria cifragem determinística, que
+vaza igualdade e permite justamente as consultas que se queria impedir. Fica protegido pelo mesmo
+que protege o resto: RLS, TLS e cifragem em repouso do disco/backup.
+
 **Ainda não existe, e vai precisar:** a ficha técnica do cliente (histórico de química indica
-alergia — dado de saúde pela LGPD). O mecanismo está pronto e testado; falta o módulo `cliente`
-(Fase 1, `RT-CLI-001`).
+alergia — dado de saúde pela LGPD). O mecanismo está pronto e testado; falta a rotina, que ainda
+não está no plano. **Enquanto ela não existe, o campo `observacao` de `cliente` está em claro e não
+deve receber informação clínica** — e nada no sistema impede que alguém digite ali. É a fraqueza
+conhecida mais relevante do módulo `cliente` hoje.
 
 **Onde verificar:** `SegundoFatorIT.segredo_nao_fica_em_claro` lê a coluna direto e confirma.
 

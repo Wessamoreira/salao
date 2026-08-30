@@ -63,6 +63,10 @@ automático, e criar uma migration sem `estabelecimento_id` quebra o build.
 | RT-CLI-001 | Cadastro de cliente (nome + telefone E.164, resto opcional) | M | INF-002 |
 | RT-CLI-002 | Busca de cliente por nome, apelido e **4 últimos dígitos** (trigram) | M | CLI-001 |
 | RT-CLI-003 | Detecção de duplicado no cadastro + mesclagem | M | CLI-002 |
+| RT-CLI-004 | Consentimento LGPD: base legal, data e canal | P | CLI-001 |
+| RT-CLI-005 | Anonimização a pedido do titular, preservando o histórico | M | CLI-004 |
+| RT-CLI-006 | Tela de clientes: busca, ficha e edição | M | CLI-002, INF-010 |
+| RT-CFG-001 | Tela de configuração do salão: DDD padrão, fuso, comissão | M | IAM-007, INF-010 |
 | RT-EQP-001 | Cadastro de profissional PJ (documento, contrato, comissão padrão) | M | IAM-007 |
 | RT-EQP-002 | Jornada semanal por profissional | M | EQP-001 |
 | RT-EQP-003 | Exceção de jornada: feriado, férias, curso, atestado | M | EQP-002 |

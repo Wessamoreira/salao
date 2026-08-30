@@ -56,8 +56,9 @@ public class ProvisionarEstabelecimentoUseCase {
             with novo as (
               insert into estabelecimento
                   (nome, documento, timezone, moeda, base_comissao,
-                   desconto_afeta_comissao, periodicidade_fechamento)
-              values (:nome, :documento, :fuso, :moeda, :base, :descontoAfeta, :periodicidade)
+                   desconto_afeta_comissao, periodicidade_fechamento, ddd_padrao)
+              values (:nome, :documento, :fuso, :moeda, :base, :descontoAfeta, :periodicidade,
+                      :dddPadrao)
               returning id
             )
             insert into usuario
@@ -89,6 +90,7 @@ public class ProvisionarEstabelecimentoUseCase {
                 .param("base", novo.baseComissao().name())
                 .param("descontoAfeta", novo.descontoAfetaComissao())
                 .param("periodicidade", novo.periodicidadeDeFechamento().name())
+                .param("dddPadrao", novo.dddPadrao())
                 .param("adminNome", comando.adminNome())
                 .param("adminEmail", comando.adminEmail().trim())
                 .param("adminEmailNormalizado", Emails.normalizar(comando.adminEmail()))
@@ -125,7 +127,7 @@ public class ProvisionarEstabelecimentoUseCase {
             return NovoEstabelecimento.comFuso(
                     comando.nome(), comando.documento(), comando.fusoIana(), comando.moeda(),
                     comando.baseComissao(), comando.descontoAfetaComissao(),
-                    comando.periodicidadeDeFechamento());
+                    comando.periodicidadeDeFechamento(), comando.dddPadrao());
         } catch (DadosDoEstabelecimentoInvalidosException e) {
             throw new ErroDeDominio(ErrosDoIam.DADOS_INVALIDOS, e.getMessage());
         }

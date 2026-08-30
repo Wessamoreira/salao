@@ -43,20 +43,29 @@ catraca, o passado fica registrado e o futuro fica protegido.
 **Acrescentar um ID ali é uma decisão, não um atalho:** obriga a escrever por que a ordem do plano
 não valeu naquele caso.
 
-## Situação em 29/08/2026
+## Situação — um marco por fechamento de fase
 
-| | |
-|---|---|
-| Rotinas no plano | **84** |
-| Concluídas | **10** |
-| Pendências abertas dentro do que já foi entregue | **67** |
-| Saltos de ordem | 4, todos registrados na catraca |
+O número corrente sai de `python3 ops/scripts/checklist.py`. A tabela abaixo existe para mostrar a
+**tendência**, que é o que um número isolado esconde.
 
-**Os 67 merecem atenção.** Não são tarefas esquecidas: são o que cada rotina deixou explicitamente
-anotado ao ser fechada — bloqueio por IP no login, DLQ no outbox, `lock_timeout` na idempotência,
-máquina de homologação, `traceId`. É dívida declarada, o que é muito melhor que dívida invisível,
-mas continua sendo dívida. Rever a lista ao fim de cada fase, e promover a rotina o que tiver
-crescido.
+| Data | Rotinas no plano | Concluídas | Pendências abertas | Saltos de ordem |
+|---|---|---|---|---|
+| 29/08/2026 (criação) | 84 | 10 | 67 | 4, na catraca |
+| 30/08/2026 (fim da Fase 0) | 90 | 20 | 111 | 4, na catraca |
+
+**A dívida cresce mais rápido que a entrega, e isso é esperado nesta fase — mas não para sempre.**
+Dez rotinas a mais trouxeram 44 pendências: cada uma que fecha enxerga o que a próxima vai precisar.
+É dívida *declarada*, muito melhor que dívida invisível, e boa parte se resolve sozinha quando a
+rotina dependente chega.
+
+O que vigiar é a proporção. Se ao fim da Fase 1 as pendências continuarem subindo na mesma
+velocidade, o sinal deixa de ser "estamos descobrindo o sistema" e passa a ser "estamos declarando
+pronto o que não está". A revisão da lista inteira ao fim de cada fase é obrigatória, e o que
+tiver crescido vira rotina no plano.
+
+O plano subiu de 84 para 90 porque quatro rotinas foram **descobertas escrevendo outras**
+(consentimento LGPD, anonimização, tela de clientes, tela de configuração do salão) — três delas
+já eram citadas pela documentação como se existissem.
 
 ## O que ele não confere
 

@@ -11,6 +11,9 @@ import br.com.salao.iam.api.PeriodicidadeDeFechamento;
  * visto uma única tela — e essas respostas mudam depois, o que é justamente por que viraram
  * configuração e não código.
  *
+ * <p>{@code dddPadrao} é anulável mas vale a pena preencher: sem ele, o cadastro de cliente
+ * (RT-CLI-001) recusa telefone digitado sem DDD, que é como quem atende anota o número.
+ *
  * <p>Os dados do administrador são obrigatórios: um estabelecimento sem ninguém que possa entrar
  * nele não serve para nada, e criá-lo depois deixaria uma janela em que o tenant existe e está
  * inacessível.
@@ -23,6 +26,7 @@ public record ProvisionarEstabelecimentoCommand(
         BaseDeComissao baseComissao,
         Boolean descontoAfetaComissao,
         PeriodicidadeDeFechamento periodicidadeDeFechamento,
+        String dddPadrao,
         String adminNome,
         String adminEmail,
         String adminSenha) {
@@ -35,11 +39,14 @@ public record ProvisionarEstabelecimentoCommand(
         periodicidadeDeFechamento = periodicidadeDeFechamento == null
                 ? PeriodicidadeDeFechamento.MENSAL
                 : periodicidadeDeFechamento;
+        // Só dígitos: quem preenche costuma escrever "(11)" ou "011".
+        dddPadrao = dddPadrao == null ? null : dddPadrao.replaceAll("\\D", "");
+        dddPadrao = dddPadrao == null || dddPadrao.isEmpty() ? null : dddPadrao;
     }
 
     public static ProvisionarEstabelecimentoCommand comPadroes(
             String nome, String documento, String adminNome, String adminEmail, String adminSenha) {
         return new ProvisionarEstabelecimentoCommand(nome, documento, null, null, null, null, null,
-                adminNome, adminEmail, adminSenha);
+                null, adminNome, adminEmail, adminSenha);
     }
 }

@@ -2,6 +2,7 @@ package br.com.salao.iam.internal.infra;
 
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.RegistroDeAuditoria;
+import br.com.salao.shared.seguranca.UsuarioAtual;
 import br.com.salao.shared.tenant.TenantContext;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.LinkedHashMap;
@@ -10,8 +11,6 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.MDC;
 import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -89,15 +88,7 @@ public class AuditoriaJdbc implements AuditoriaApi {
     }
 
     private UUID usuarioAtual() {
-        var autenticacao = SecurityContextHolder.getContext().getAuthentication();
-        if (autenticacao != null && autenticacao.getPrincipal() instanceof Jwt jwt) {
-            try {
-                return UUID.fromString(jwt.getSubject());
-            } catch (IllegalArgumentException e) {
-                return null;
-            }
-        }
-        return null;
+        return UsuarioAtual.idOuNulo();
     }
 
     /**

@@ -32,7 +32,9 @@ Monólito modular. Módulos: `shared`, `iam`, `equipe`, `cliente`, `catalogo`, `
 `atendimento`, `financeiro`, `estoque`, `conversacional`, `notificacao`, `arquivos`.
 
 - Módulo só acessa outro pela **API pública** (`<modulo>/api`) ou por **evento**. Zero join
-  entre tabelas de módulos diferentes. Exceção única e documentada: o schema `relatorio`
+  entre tabelas de módulos diferentes. O pacote `api` só é de fato público se tiver
+  `package-info.java` com `@NamedInterface("api")` — sem isso o Spring Modulith expõe apenas o
+  pacote-raiz, e a fronteira existe na documentação e não no build. Exceção única e documentada: o schema `relatorio`
   (ver `docs/03-arquitetura.md`).
 - Dentro do módulo: `web → application (caso de uso) → domain → port` / `infra` implementa port.
 - **Um caso de uso por classe**, verbo no nome: `CriarAgendamentoUseCase.executar(cmd)`.

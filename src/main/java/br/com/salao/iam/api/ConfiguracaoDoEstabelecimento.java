@@ -10,6 +10,10 @@ import java.util.UUID;
  * usar o fuso da JVM, que roda em UTC (ADR-0009). "Agenda de hoje" calculada em UTC mostra o dia
  * errado depois das 21h no horário de Brasília.
  *
+ * <p>{@code paisPadrao} e {@code dddPadrao} existem para o cadastro de cliente (R-UX-15): quem
+ * atende o telefone anota "98765-4321" e não o DDD, porque ele é óbvio para quem está ali.
+ * Obrigar a digitá-lo é fricção que faz a recepção inventar dado.
+ *
  * <p>{@code baseComissao} e {@code descontoAfetaComissao} respondem, por configuração, às
  * perguntas 1 e 2 de {@code 13-perguntas-em-aberto} — foi assim que elas deixaram de bloquear a
  * Fase 2.
@@ -22,5 +26,7 @@ public record ConfiguracaoDoEstabelecimento(
         BaseDeComissao baseComissao,
         boolean descontoAfetaComissao,
         PeriodicidadeDeFechamento periodicidadeDeFechamento,
+        String paisPadrao,
+        String dddPadrao,
         boolean ativo) {
 }

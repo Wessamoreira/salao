@@ -23,7 +23,8 @@ public record NovoEstabelecimento(
         String moeda,
         BaseDeComissao baseComissao,
         boolean descontoAfetaComissao,
-        PeriodicidadeDeFechamento periodicidadeDeFechamento) {
+        PeriodicidadeDeFechamento periodicidadeDeFechamento,
+        String dddPadrao) {
 
     public NovoEstabelecimento {
         if (nome == null || nome.isBlank()) {
@@ -43,6 +44,12 @@ public record NovoEstabelecimento(
         } catch (IllegalArgumentException e) {
             throw new DadosDoEstabelecimentoInvalidosException("moeda desconhecida: " + moeda);
         }
+        if (dddPadrao != null && !dddPadrao.matches("\\d{2}")) {
+            // DDD brasileiro tem exatamente dois dígitos. Guardar "011" faria o telefone
+            // normalizado nascer com um zero a mais e nunca completar a chamada.
+            throw new DadosDoEstabelecimentoInvalidosException(
+                    "DDD padrão deve ter 2 dígitos: " + dddPadrao);
+        }
         if (baseComissao == null || periodicidadeDeFechamento == null) {
             throw new DadosDoEstabelecimentoInvalidosException(
                     "base de comissão e periodicidade são obrigatórias");
@@ -59,9 +66,10 @@ public record NovoEstabelecimento(
     public static NovoEstabelecimento comFuso(String nome, String documento, String fusoIana,
                                               String moeda, BaseDeComissao baseComissao,
                                               boolean descontoAfetaComissao,
-                                              PeriodicidadeDeFechamento periodicidade) {
+                                              PeriodicidadeDeFechamento periodicidade,
+                                              String dddPadrao) {
         return new NovoEstabelecimento(nome, documento, interpretarFuso(fusoIana), moeda,
-                baseComissao, descontoAfetaComissao, periodicidade);
+                baseComissao, descontoAfetaComissao, periodicidade, dddPadrao);
     }
 
     private static ZoneId interpretarFuso(String fusoIana) {
