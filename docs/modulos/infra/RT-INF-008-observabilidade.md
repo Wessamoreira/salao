@@ -117,12 +117,23 @@ assíncrono — que nunca passam por um controller.
 
 ## 10. O que ficou incompleto, e por quê
 
-**`traceId` ainda não aparece nos logs.** `micrometer-tracing-bridge-otel` está no classpath e o
-padrão de correlação está configurado, mas **verifiquei o arquivo de log gerado pelos testes e
-nenhum `traceId` foi emitido** — não há controller produzindo observação HTTP de servidor, então
-não existe span para correlacionar. A fiação está pronta; a verificação ponta a ponta só é
-possível com o primeiro endpoint real. Até lá, o campo `traceId` do Problem Details continua indo
-nulo, como já estava documentado em RT-INF-003.
+**`traceId` não funciona, e as dependências foram removidas.** Em RT-IAM-002, com o primeiro
+controller no ar, investiguei a fundo. O diagnóstico: o contexto sobe com um **`noopTracer`** — a
+autoconfiguração do Micrometer Tracing roda, mas nenhum `Tracer` real é criado, então não há span
+e o MDC nunca recebe `traceId`.
+
+Tentei, nesta ordem: amostragem em 100% (não era isso), `spring-boot-micrometer-tracing` e
+`spring-boot-opentelemetry` (o SDK completo passou a estar presente, e ainda assim `noopTracer`).
+Inspecionando o `AutoConfiguration.imports` dos dois módulos, `spring-boot-opentelemetry` entrega
+`OpenTelemetrySdkAutoConfiguration`, `OpenTelemetryLoggingAutoConfiguration` e
+`OtlpLoggingAutoConfiguration` — **nenhuma autoconfiguração de tracing**. Procurei os artefatos
+que fariam essa ponte (`spring-boot-opentelemetry-tracing`, `spring-boot-otlp-tracing`,
+`spring-boot-tracing`) e nenhum existe para 4.1.1; só `spring-boot-zipkin`.
+
+**Removi as três dependências.** Elas produziam a aparência de tracing sem tracing, que é pior que
+não ter — e continuar adicionando artefatos no chute não é engenharia. É a mesma régua aplicada ao
+Sentry. O campo `traceId` do Problem Details continua presente no contrato e indo nulo, o que está
+documentado onde alguém vá procurar.
 
 **Sentry não entrou.** O SDK atual (8.54.0) tem como alvo o Spring Boot 3.x, e o Boot 4
 reorganizou os módulos de autoconfiguração — o mesmo tipo de incompatibilidade que já apareceu com
@@ -132,7 +143,9 @@ entrar quando houver versão declarando suporte a Boot 4, **e** um DSN para vali
 
 ## 11. Pendências
 
-- [ ] Verificar `traceId` ponta a ponta com o primeiro controller (RT-IAM-002/006)
+- [ ] **`traceId`**: descobrir qual artefato faz a ponte OpenTelemetry→tracing no Boot 4.1, ou
+      avaliar `spring-boot-zipkin`, que é o único módulo de tracing publicado para 4.1.1. Ver a
+      investigação na seção 10 antes de tentar de novo — três caminhos já foram descartados
 - [ ] Sentry, quando houver suporte a Boot 4 e um DSN (ver acima)
 - [ ] Autenticar o `/actuator` — hoje só está em outra porta (RT-IAM-002)
 - [ ] `backup_ultimo_restore_testado_timestamp_seconds`: a regra de alerta existe, falta quem

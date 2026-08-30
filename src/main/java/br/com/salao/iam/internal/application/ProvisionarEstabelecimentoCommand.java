@@ -10,6 +10,10 @@ import br.com.salao.iam.api.PeriodicidadeDeFechamento;
  * provisionamento seria pedir ao dono do salão uma decisão sobre base de comissão antes de ele ter
  * visto uma única tela — e essas respostas mudam depois, o que é justamente por que viraram
  * configuração e não código.
+ *
+ * <p>Os dados do administrador são obrigatórios: um estabelecimento sem ninguém que possa entrar
+ * nele não serve para nada, e criá-lo depois deixaria uma janela em que o tenant existe e está
+ * inacessível.
  */
 public record ProvisionarEstabelecimentoCommand(
         String nome,
@@ -18,7 +22,10 @@ public record ProvisionarEstabelecimentoCommand(
         String moeda,
         BaseDeComissao baseComissao,
         Boolean descontoAfetaComissao,
-        PeriodicidadeDeFechamento periodicidadeDeFechamento) {
+        PeriodicidadeDeFechamento periodicidadeDeFechamento,
+        String adminNome,
+        String adminEmail,
+        String adminSenha) {
 
     public ProvisionarEstabelecimentoCommand {
         fusoIana = fusoIana == null || fusoIana.isBlank() ? "America/Sao_Paulo" : fusoIana;
@@ -30,7 +37,9 @@ public record ProvisionarEstabelecimentoCommand(
                 : periodicidadeDeFechamento;
     }
 
-    public static ProvisionarEstabelecimentoCommand comPadroes(String nome, String documento) {
-        return new ProvisionarEstabelecimentoCommand(nome, documento, null, null, null, null, null);
+    public static ProvisionarEstabelecimentoCommand comPadroes(
+            String nome, String documento, String adminNome, String adminEmail, String adminSenha) {
+        return new ProvisionarEstabelecimentoCommand(nome, documento, null, null, null, null, null,
+                adminNome, adminEmail, adminSenha);
     }
 }

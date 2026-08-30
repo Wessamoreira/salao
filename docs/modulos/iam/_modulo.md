@@ -14,7 +14,7 @@ Quem é o estabelecimento, quem são os usuários e o que cada um pode fazer.
 | Agregado | Invariantes que protege |
 |---|---|
 | `Estabelecimento` | Fuso é IANA válido · moeda é ISO 4217 · nome não vazio |
-| `Usuario` | (RT-IAM-002) |
+| `Usuario` | E-mail único globalmente · senha em Argon2id · bloqueio progressivo por falhas |
 | `Perfil` | (RT-IAM-007) |
 
 ## API pública (`iam/api`)
@@ -23,6 +23,7 @@ Quem é o estabelecimento, quem são os usuários e o que cada um pode fazer.
 |---|---|---|
 | Configuração do tenant | `EstabelecimentoApi.configuracao(UUID)` | todos |
 | Fuso do tenant | `EstabelecimentoApi.fusoDe(UUID)` | `agenda`, `financeiro`, `estoque` |
+| Perfil e token | `Perfil`, `TokenDeAcesso` | `web`, `conversacional` |
 
 `ConfiguracaoDoEstabelecimento`, `BaseDeComissao`, `PeriodicidadeDeFechamento` e `ErrosDoIam` são
 parte do contrato. Nenhum módulo consulta a tabela `estabelecimento` diretamente.
@@ -32,13 +33,14 @@ parte do contrato. Nenhum módulo consulta a tabela `estabelecimento` diretament
 | Tabela | Agregado | RLS |
 |---|---|---|
 | `estabelecimento` | Estabelecimento | sim — policy pelo próprio `id` |
+| `usuario` | Usuario | sim |
 
 ## Rotinas
 
 | ID | Título | Fase | Status |
 |---|---|---|---|
 | RT-IAM-001 | Provisionar estabelecimento | 0 | implementado |
-| RT-IAM-002 | Login com Argon2id e lockout | 0 | rascunho |
+| RT-IAM-002 | Login com Argon2id e bloqueio progressivo | 0 | implementado |
 | RT-IAM-003 | Refresh rotativo com detecção de reuso | 0 | rascunho |
 | RT-IAM-004 | Logout e revogação | 0 | rascunho |
 | RT-IAM-005 | MFA TOTP | 0 | rascunho |

@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.MDC;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -12,9 +13,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 /**
  * RT-INF-002 — abre o escopo de {@link TenantContext} para a requisição.
  *
- * <p>Delega a identificação do tenant a um {@link ResolvedorDeTenant}. Hoje existe apenas o
- * resolvedor de desenvolvimento (cabeçalho HTTP); em {@code RT-IAM-002} entra o resolvedor
- * baseado no JWT, e o de cabeçalho deixa de ser registrado fora de dev/test.
+ * <p>Delega a identificação a uma lista ordenada de {@link ResolvedorDeTenant}: o do JWT primeiro
+ * (RT-IAM-002) e, só em dev e test, o de cabeçalho como atalho.
+ *
+ * <p><strong>Roda depois da cadeia do Spring Security</strong>, e a ordem importa: o resolvedor do
+ * JWT lê o {@code SecurityContext}, que só existe depois da autenticação. Antes dela, ele
+ * encontraria sempre {@code null} e toda requisição autenticada cairia em
+ * {@link TenantNaoDefinidoException}.
  *
  * <p>Requisição sem tenant resolvido não é rejeitada aqui — segue sem escopo, e qualquer
  * transação que toque tabela de negócio falha com {@link TenantNaoDefinidoException}. Rejeitar
@@ -24,16 +29,16 @@ public class TenantFilter extends OncePerRequestFilter {
 
     public static final String CAMPO_DE_LOG = "tenantId";
 
-    private final ResolvedorDeTenant resolvedor;
+    private final List<ResolvedorDeTenant> resolvedores;
 
-    public TenantFilter(ResolvedorDeTenant resolvedor) {
-        this.resolvedor = resolvedor;
+    public TenantFilter(List<ResolvedorDeTenant> resolvedores) {
+        this.resolvedores = List.copyOf(resolvedores);
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest requisicao, HttpServletResponse resposta,
                                     FilterChain cadeia) throws ServletException, IOException {
-        UUID tenant = resolvedor.resolver(requisicao);
+        UUID tenant = resolver(requisicao);
         if (tenant == null) {
             cadeia.doFilter(requisicao, resposta);
             return;
@@ -59,6 +64,20 @@ public class TenantFilter extends OncePerRequestFilter {
         } finally {
             MDC.remove(CAMPO_DE_LOG);
         }
+    }
+
+    /**
+     * Primeiro resolvedor que souber responder ganha. Em produção há só o do JWT; em dev o de
+     * cabeçalho entra depois dele, como atalho — nunca no lugar de um login real.
+     */
+    private UUID resolver(HttpServletRequest requisicao) {
+        for (ResolvedorDeTenant resolvedor : resolvedores) {
+            UUID tenant = resolvedor.resolver(requisicao);
+            if (tenant != null) {
+                return tenant;
+            }
+        }
+        return null;
     }
 
     private static final class FalhaNaCadeiaDeFiltros extends RuntimeException {

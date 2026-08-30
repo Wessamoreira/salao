@@ -4,10 +4,12 @@ import br.com.salao.iam.api.ErrosDoIam;
 import br.com.salao.iam.internal.domain.DadosDoEstabelecimentoInvalidosException;
 import br.com.salao.iam.internal.domain.NovoEstabelecimento;
 import br.com.salao.shared.erro.ErroDeDominio;
+import br.com.salao.iam.internal.domain.Emails;
 import br.com.salao.shared.manutencao.ConexaoDeManutencao;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
  * RT-IAM-001 — cria um estabelecimento novo.
@@ -42,24 +44,44 @@ public class ProvisionarEstabelecimentoUseCase {
     private static final Logger log =
             LoggerFactory.getLogger(ProvisionarEstabelecimentoUseCase.class);
 
-    private static final String INSERIR = """
-            insert into estabelecimento
-                (nome, documento, timezone, moeda, base_comissao,
-                 desconto_afeta_comissao, periodicidade_fechamento)
-            values (:nome, :documento, :fuso, :moeda, :base, :descontoAfeta, :periodicidade)
-            returning id
+    /**
+     * Estabelecimento e primeiro administrador numa <strong>única instrução</strong>.
+     *
+     * <p>Um comando só é atômico sem precisar de gerenciador de transação na conexão de
+     * plataforma — que, aliás, não poderia usar o da aplicação, porque ele exige um tenant que
+     * ainda não existe. Duas instruções separadas abririam uma janela em que o estabelecimento
+     * existe e ninguém consegue entrar nele.
+     */
+    private static final String PROVISIONAR = """
+            with novo as (
+              insert into estabelecimento
+                  (nome, documento, timezone, moeda, base_comissao,
+                   desconto_afeta_comissao, periodicidade_fechamento)
+              values (:nome, :documento, :fuso, :moeda, :base, :descontoAfeta, :periodicidade)
+              returning id
+            )
+            insert into usuario
+                (estabelecimento_id, nome, email, email_normalizado, senha_hash, perfil)
+            select novo.id, :adminNome, :adminEmail, :adminEmailNormalizado, :senhaHash, 'ADMIN'
+              from novo
+            returning estabelecimento_id
             """;
 
     private final ConexaoDeManutencao plataforma;
+    private final PasswordEncoder codificadorDeSenha;
 
-    public ProvisionarEstabelecimentoUseCase(ConexaoDeManutencao plataforma) {
+    public ProvisionarEstabelecimentoUseCase(ConexaoDeManutencao plataforma,
+                                             PasswordEncoder codificadorDeSenha) {
         this.plataforma = plataforma;
+        this.codificadorDeSenha = codificadorDeSenha;
     }
 
     public UUID executar(ProvisionarEstabelecimentoCommand comando) {
         NovoEstabelecimento novo = validar(comando);
 
-        UUID id = plataforma.jdbc().sql(INSERIR)
+        exigirDadosDoAdministrador(comando);
+
+        UUID id = plataforma.jdbc().sql(PROVISIONAR)
                 .param("nome", novo.nome())
                 .param("documento", novo.documento())
                 .param("fuso", novo.fuso().getId())
@@ -67,6 +89,10 @@ public class ProvisionarEstabelecimentoUseCase {
                 .param("base", novo.baseComissao().name())
                 .param("descontoAfeta", novo.descontoAfetaComissao())
                 .param("periodicidade", novo.periodicidadeDeFechamento().name())
+                .param("adminNome", comando.adminNome())
+                .param("adminEmail", comando.adminEmail().trim())
+                .param("adminEmailNormalizado", Emails.normalizar(comando.adminEmail()))
+                .param("senhaHash", codificadorDeSenha.encode(comando.adminSenha()))
                 .query(UUID.class)
                 .single();
 
@@ -74,6 +100,20 @@ public class ProvisionarEstabelecimentoUseCase {
         // pessoa jurídica e, no caso de MEI, de uma pessoa física.
         log.info("Estabelecimento provisionado: {} (fuso {})", id, novo.fuso());
         return id;
+    }
+
+    private void exigirDadosDoAdministrador(ProvisionarEstabelecimentoCommand comando) {
+        if (comando.adminNome() == null || comando.adminNome().isBlank()
+                || comando.adminEmail() == null || comando.adminEmail().isBlank()) {
+            throw new ErroDeDominio(ErrosDoIam.DADOS_INVALIDOS,
+                    "nome e e-mail do administrador são obrigatórios");
+        }
+        if (comando.adminSenha() == null || comando.adminSenha().length() < 12) {
+            // 12 caracteres, sem exigência de símbolo: comprimento vale mais que composição,
+            // e regra de composição empurra a pessoa para "Salao@2026", que é pior.
+            throw new ErroDeDominio(ErrosDoIam.DADOS_INVALIDOS,
+                    "a senha do administrador precisa de ao menos 12 caracteres");
+        }
     }
 
     /**

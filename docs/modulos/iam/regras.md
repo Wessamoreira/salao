@@ -60,3 +60,62 @@ e o Modulith reprova o build se outro módulo alcançar o `internal`.
 | Código | HTTP | Quando | Texto sugerido |
 |---|---|---|---|
 | `ER-IAM-DADOS_INVALIDOS` | 422 | Nome vazio, fuso ou moeda inválidos | "Confira os dados do salão: {motivo}." |
+| `ER-IAM-CREDENCIAIS_INVALIDAS` | 401 | Senha errada, e-mail inexistente ou usuário inativo (RN-IAM-006) | "E-mail ou senha incorretos." |
+| `ER-IAM-ACESSO_BLOQUEADO` | 429 | Bloqueio progressivo ativo (RN-IAM-005) | "Muitas tentativas. Tente novamente em alguns minutos." |
+
+---
+
+### RN-IAM-004 — E-mail identifica o usuário globalmente, não por estabelecimento
+
+**Enunciado.** `usuario.email_normalizado` tem índice único **global**. Duas pessoas em
+estabelecimentos diferentes não podem compartilhar e-mail.
+
+**Motivo.** O login é só e-mail e senha — a pessoa não escolhe o salão numa lista antes de entrar.
+Para isso funcionar, o e-mail precisa determinar o estabelecimento sozinho.
+
+**Preço assumido.** Quem trabalhe em dois salões do mesmo sistema precisa de dois e-mails. A
+alternativa seria identificar o estabelecimento por subdomínio ou por um campo a mais na tela —
+mais infraestrutura e mais fricção para um caso raro. **Se ele deixar de ser raro, é esta a
+decisão a revisitar.**
+
+**Onde é garantida.** Índice `usuario_email_unico` (V7).
+**Rotinas.** RT-IAM-002, RT-IAM-007 · **Teste.** `AutenticacaoIT.logins_nao_se_misturam`
+**Configurável?** Não · **Origem.** 2026-08-29
+
+---
+
+### RN-IAM-005 — Bloqueio progressivo, com teto
+
+**Enunciado.** Até 4 falhas consecutivas não bloqueiam. A partir da 5ª, o bloqueio começa em 30s e
+dobra a cada falha, limitado a 15 minutos. Um login bem-sucedido zera o contador.
+
+**Motivo.** Bloqueio fixo tem os dois defeitos ao mesmo tempo: curto demais não atrapalha um ataque
+automatizado; longo demais transforma a recepcionista que errou a senha duas vezes num chamado de
+suporte no meio do expediente. **O teto existe para o bloqueio não virar negação de serviço**
+contra um usuário legítimo cujo e-mail alguém resolveu atacar — sem ele, o ataque falharia em
+entrar e teria sucesso em derrubar.
+
+**Onde é garantida.** Domínio: `PoliticaDeBloqueio`. Contagem no **banco**, não em memória: em
+memória, duas instâncias contariam metade cada, e subir uma terceira afrouxaria a proteção.
+
+**Rotinas.** RT-IAM-002 · **Testes.** `PoliticaDeBloqueioTest` (4) e
+`AutenticacaoIT.bloqueia_apos_falhas_consecutivas`
+**Erro.** `ER-IAM-ACESSO_BLOQUEADO` (429) · **Configurável?** Ainda não — ver pendências
+**Origem.** 2026-08-29
+
+---
+
+### RN-IAM-006 — Falha de login nunca revela se o e-mail existe
+
+**Enunciado.** Senha errada, e-mail inexistente e usuário inativo devolvem o mesmo código, a mesma
+mensagem e custam o mesmo tempo.
+
+**Motivo.** Distinguir entrega de graça a resposta para "este e-mail existe aqui?", que é o
+primeiro passo de qualquer ataque de credenciais. O custo de tempo importa tanto quanto a
+mensagem: sem conferir a senha contra um hash descartável quando o e-mail não existe, a resposta
+voltaria em milissegundos contra centenas — e essa diferença é mensurável de fora.
+
+**Onde é garantida.** `AutenticarUseCase` — código único `ER-IAM-CREDENCIAIS_INVALIDAS` e
+`hashDeReferencia`.
+**Rotinas.** RT-IAM-002 · **Teste.** `AutenticacaoIT.nao_permite_enumerar_usuarios`
+**Configurável?** Não · **Origem.** 2026-08-29

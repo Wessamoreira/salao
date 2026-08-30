@@ -65,6 +65,25 @@
       <artifactId>spring-boot-starter-cache</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+    <!-- Traz NimbusJwtEncoder/JwtDecoder. Emitir e validar JWT com a biblioteca do
+         Spring Security evita escrever validação de token à mão, que é onde esse
+         tipo de código costuma errar (alg=none, exp não conferido, clock skew). -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+    </dependency>
+    <!-- Argon2PasswordEncoder do Spring Security NÃO funciona sem isto: ele delega
+         ao BouncyCastle. Sem a dependência, a falha só aparece em runtime, na
+         primeira tentativa de hash. -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk18on</artifactId>
+      <version>1.85.2</version>
+    </dependency>
+    <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>
     </dependency>
@@ -73,12 +92,6 @@
     <dependency>
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-registry-prometheus</artifactId>
-    </dependency>
-    <!-- Gera traceId/spanId e os publica no MDC. É o que preenche o campo traceId
-         do Problem Details (RT-INF-003), que até agora ia nulo. -->
-    <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-tracing-bridge-otel</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.modulith</groupId>

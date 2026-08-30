@@ -7,6 +7,8 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
+import java.util.List;
 import org.springframework.core.Ordered;
 import org.springframework.transaction.PlatformTransactionManager;
 
@@ -29,30 +31,30 @@ public class TenantConfig {
         return tm;
     }
 
-    /** Só em dev e test: ver o aviso em {@link ResolvedorDeTenantPorCabecalho}. */
+    /**
+     * Só em dev e test, e agora como <em>último</em> recurso: o resolvedor do JWT tem
+     * {@code @Order(0)} e ganha sempre que houver login de verdade. Ver o aviso em
+     * {@link ResolvedorDeTenantPorCabecalho}.
+     */
     @Bean
+    @Order(100)
     @Profile({"dev", "test"})
     public ResolvedorDeTenant resolvedorDeTenantPorCabecalho() {
         return new ResolvedorDeTenantPorCabecalho();
     }
 
+
+
     /**
-     * Fora de dev e test não há, ainda, forma legítima de resolver o tenant — o JWT só chega em
-     * RT-IAM-002. Este resolvedor devolve sempre {@code null}, de modo que toda transação falhe
-     * com {@link TenantNaoDefinidoException}. Falha barulhenta é o comportamento certo aqui:
-     * a alternativa seria aceitar o cabeçalho em produção, que é troca de identidade por HTTP.
+     * Depois do Spring Security (cuja cadeia fica em {@code -100}), porque o resolvedor do JWT lê o
+     * {@code SecurityContext} — que só existe depois da autenticação. E antes de qualquer coisa
+     * que abra transação, porque a transação exige o escopo já aberto.
      */
     @Bean
-    @Profile("!dev & !test")
-    public ResolvedorDeTenant resolvedorDeTenantIndisponivel() {
-        return requisicao -> null;
-    }
-
-    @Bean
-    public FilterRegistrationBean<TenantFilter> tenantFilter(ResolvedorDeTenant resolvedor) {
-        var registro = new FilterRegistrationBean<>(new TenantFilter(resolvedor));
-        // Antes de tudo: qualquer coisa que abra transação já precisa do escopo aberto.
-        registro.setOrder(Ordered.HIGHEST_PRECEDENCE + 10);
+    public FilterRegistrationBean<TenantFilter> tenantFilter(
+            List<ResolvedorDeTenant> resolvedores) {
+        var registro = new FilterRegistrationBean<>(new TenantFilter(resolvedores));
+        registro.setOrder(Ordered.HIGHEST_PRECEDENCE + 90);
         return registro;
     }
 }

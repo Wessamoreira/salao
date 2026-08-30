@@ -78,9 +78,10 @@ alguém achar que é comportamento esperado e conviver com ele.
 
 ## 7. Pendências
 
-- [ ] `traceId` continua indo nulo. `RT-INF-008` colocou `micrometer-tracing-bridge-otel` no
-      classpath, mas sem controller não há span de servidor para correlacionar — verificado no
-      arquivo de log dos testes. Fecha com o primeiro endpoint real (RT-IAM-002/006)
+- [ ] `traceId` continua indo nulo — e agora se sabe por quê: o Boot 4.1 sobe um `noopTracer` e a
+      autoconfiguração que criaria um `Tracer` real do OpenTelemetry não foi localizada. Três
+      caminhos já foram descartados; ver RT-INF-008 seção 10 antes de tentar de novo. O campo
+      permanece no contrato, verificado por `ObservabilidadeIT.erro_traz_codigo_e_traceid`
 - [ ] Teste de contrato com MockMvc quando existir o primeiro controller
 - [ ] Handler de `OptimisticLockingFailureException` → `VERSAO_DESATUALIZADA` quando houver a
       primeira entidade com `@Version`

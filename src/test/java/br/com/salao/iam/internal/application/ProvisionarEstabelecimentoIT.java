@@ -51,7 +51,8 @@ class ProvisionarEstabelecimentoIT extends AbstractPostgresIT {
     @DisplayName("provisiona e o tenant fica imediatamente utilizável pela aplicação")
     void provisiona_e_o_tenant_fica_utilizavel() {
         UUID id = provisionar.executar(
-                ProvisionarEstabelecimentoCommand.comPadroes("Salão da Ana", "12345678000199"));
+                ProvisionarEstabelecimentoCommand.comPadroes("Salão da Ana", "12345678000199",
+                        "Ana", "ana@salao.test", "senha-bem-comprida-1"));
 
         var configuracao = TenantContext.obter(id, () -> estabelecimentos.configuracao(id));
 
@@ -83,8 +84,8 @@ class ProvisionarEstabelecimentoIT extends AbstractPostgresIT {
     @Test
     @DisplayName("configuração de outro estabelecimento não é visível")
     void configuracao_e_isolada_por_tenant() {
-        UUID a = provisionar.executar(ProvisionarEstabelecimentoCommand.comPadroes("Salão A", null));
-        UUID b = provisionar.executar(ProvisionarEstabelecimentoCommand.comPadroes("Salão B", null));
+        UUID a = provisionar.executar(ProvisionarEstabelecimentoCommand.comPadroes("Salão A", null, "Ana", "a@salao.test", "senha-bem-comprida-1"));
+        UUID b = provisionar.executar(ProvisionarEstabelecimentoCommand.comPadroes("Salão B", null, "Bia", "b@salao.test", "senha-bem-comprida-1"));
 
         var vistoPorA = TenantContext.obter(a, () -> estabelecimentos.configuracao(b));
 
@@ -97,7 +98,7 @@ class ProvisionarEstabelecimentoIT extends AbstractPostgresIT {
     @DisplayName("a segunda leitura vem do cache")
     void configuracao_e_cacheada() {
         UUID id = provisionar.executar(
-                ProvisionarEstabelecimentoCommand.comPadroes("Nome Original", null));
+                ProvisionarEstabelecimentoCommand.comPadroes("Nome Original", null, "Ana", "c@salao.test", "senha-bem-comprida-1"));
 
         TenantContext.obter(id, () -> estabelecimentos.configuracao(id));
         alterarNomeDireto(id, "Nome Alterado Por Fora");
@@ -114,7 +115,8 @@ class ProvisionarEstabelecimentoIT extends AbstractPostgresIT {
     @DisplayName("fuso inválido vira erro de domínio com código do catálogo")
     void fuso_invalido_e_erro_de_dominio() {
         var comando = new ProvisionarEstabelecimentoCommand(
-                "Salão", null, "-03:00", "BRL", null, null, null);
+                "Salão", null, "-03:00", "BRL", null, null, null,
+                "Ana", "d@salao.test", "senha-bem-comprida-1");
 
         assertThatThrownBy(() -> provisionar.executar(comando))
                 .isInstanceOf(ErroDeDominio.class)

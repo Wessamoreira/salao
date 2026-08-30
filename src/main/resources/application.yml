@@ -70,7 +70,9 @@ management:
     show-details: always
   observations.annotations.enabled: true
 
-  tracing.sampling.probability: ${TRACE_SAMPLE:0.1}
+  # tracing: ver docs/modulos/infra/RT-INF-008 — a fiação do OpenTelemetry no Boot 4.1
+  # não foi resolvida, e manter a dependência produzia um noopTracer, que é a
+  # aparência de tracing sem tracing.
 
 logging:
   level.br.com.salao: ${LOG_LEVEL:INFO}
@@ -80,6 +82,13 @@ logging:
     json.context.include: true
   file.name: ${LOG_FILE:logs/salao.log}
   pattern.correlation: "[${spring.application.name:salao},%X{traceId:-},%X{spanId:-}] "
+
+app.jwt:
+  # Sem valor padrão de propósito: a aplicação não sobe sem um segredo definido.
+  # Um padrão em código vira o segredo de produção de alguém.
+  segredo: ${JWT_SEGREDO}
+  validade-do-acesso: ${JWT_VALIDADE:PT15M}
+  emissor: ${JWT_EMISSOR:salao}
 
 app.observabilidade:
   # Acima disto o outbox é considerado parado, e o health passa a reportar

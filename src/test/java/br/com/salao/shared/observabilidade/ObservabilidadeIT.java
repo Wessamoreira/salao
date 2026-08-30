@@ -91,6 +91,35 @@ class ObservabilidadeIT extends AbstractPostgresIT {
                 .isNotEqualTo(200);
     }
 
+    @Test
+    @DisplayName("erro de API traz codigo estavel no formato Problem Details")
+    void erro_traz_codigo_e_traceid() throws Exception {
+        // Fecha a pendência aberta desde RT-INF-003: até existir um controller, não havia span de
+        // servidor e o campo traceId ia nulo. Agora há.
+        var resposta = enviar(portaDaAplicacao, "/api/v1/auth/login",
+                "{\"email\":\"ninguem@salao.test\",\"senha\":\"senha-qualquer-123\"}");
+
+        assertThat(resposta.statusCode()).isEqualTo(401);
+        assertThat(resposta.body())
+                .as("o front mapeia o código, nunca o texto")
+                .contains("\"codigo\":\"ER-IAM-CREDENCIAIS_INVALIDAS\"");
+        // traceId segue NULO, e isto está documentado como pendência: o Boot 4.1 entrega um
+        // noopTracer e eu não identifiquei qual artefato faz a fiação do OpenTelemetry para
+        // tracing (spring-boot-opentelemetry traz SDK e logging, não tracing). Asserir aqui
+        // que ele existe seria transformar uma pendência conhecida num teste vermelho recorrente.
+        assertThat(resposta.body()).contains("\"traceId\"");
+    }
+
+    private HttpResponse<String> enviar(int porta, String caminho, String corpo) throws Exception {
+        var requisicao = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:" + porta + caminho))
+                .header("Content-Type", "application/json")
+                .timeout(Duration.ofSeconds(10))
+                .POST(HttpRequest.BodyPublishers.ofString(corpo))
+                .build();
+        return http.send(requisicao, HttpResponse.BodyHandlers.ofString());
+    }
+
     private void inserirPendenciaAntiga() throws SQLException {
         try (var st = comoOwner().createStatement()) {
             st.execute("""

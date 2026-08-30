@@ -67,6 +67,7 @@ public abstract class AbstractPostgresIT {
         registro.add("app.manutencao.url", POSTGRES::getJdbcUrl);
         registro.add("app.manutencao.username", () -> "salao_manutencao");
         registro.add("app.manutencao.password", () -> MANUTENCAO_SENHA);
+        registro.add("app.jwt.segredo", () -> "segredo-de-teste-com-mais-de-trinta-e-dois-bytes");
         registro.add("spring.flyway.placeholders.senha_manutencao", () -> MANUTENCAO_SENHA);
 
     }
@@ -100,7 +101,7 @@ public abstract class AbstractPostgresIT {
     @BeforeEach
     void limparDados() throws SQLException {
         try (var st = comoOwner().createStatement()) {
-            st.execute("truncate auditoria, estabelecimento restart identity cascade");
+            st.execute("truncate auditoria, usuario, estabelecimento restart identity cascade");
         }
     }
 
