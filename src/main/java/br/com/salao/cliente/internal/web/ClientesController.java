@@ -2,6 +2,7 @@ package br.com.salao.cliente.internal.web;
 
 import br.com.salao.cliente.api.ClienteResumo;
 import br.com.salao.cliente.internal.application.CadastrarClienteUseCase;
+import br.com.salao.cliente.internal.application.BuscarClientesUseCase;
 import br.com.salao.cliente.internal.application.ConsultarClienteUseCase;
 import br.com.salao.cliente.internal.application.DadosDoCliente;
 import jakarta.validation.Valid;
@@ -9,6 +10,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -33,11 +36,14 @@ public class ClientesController {
 
     private final CadastrarClienteUseCase cadastrar;
     private final ConsultarClienteUseCase consultar;
+    private final BuscarClientesUseCase buscar;
 
     public ClientesController(CadastrarClienteUseCase cadastrar,
-                              ConsultarClienteUseCase consultar) {
+                              ConsultarClienteUseCase consultar,
+                              BuscarClientesUseCase buscar) {
         this.cadastrar = cadastrar;
         this.consultar = consultar;
+        this.buscar = buscar;
     }
 
     /**
@@ -60,6 +66,21 @@ public class ClientesController {
         UUID id = cadastrar.executar(new DadosDoCliente(requisicao.nome(), requisicao.apelido(),
                 requisicao.telefone(), requisicao.email(), requisicao.observacao()));
         return ResponseEntity.created(URI.create("/api/v1/clientes/" + id)).build();
+    }
+
+    /**
+     * RT-CLI-002 — busca por nome, apelido ou dígitos do telefone.
+     *
+     * <p>Um parâmetro só. Obrigar a escolher "buscar por nome" ou "buscar por telefone" seria
+     * pedir uma decisão a quem está com o telefone tocando na outra mão — o domínio entende
+     * sozinho pelo que foi digitado.
+     *
+     * <p>Termo curto devolve lista vazia, nunca erro: 422 a cada tecla faria a tela piscar.
+     */
+    @GetMapping
+    public List<ClienteResumo> buscar(@RequestParam(name = "q", required = false) String termo,
+                                      @RequestParam(required = false) Integer limite) {
+        return buscar.executar(termo, limite);
     }
 
     @GetMapping("/{id}")

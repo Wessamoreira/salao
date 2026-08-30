@@ -136,3 +136,70 @@ o dado pessoal, não sobre o registro contábil do salão.
 **Rotinas.** RT-CLI-001 (estrutura), RT-CLI-005 (operação) · **Teste.** — (RT-CLI-005)
 **Configurável?** Não
 **Origem.** 2026-08-30
+
+---
+
+### RN-CLI-009 — Dígito no termo significa busca por telefone
+
+**Enunciado.** Um único campo atende à busca. Se o termo digitado contém qualquer dígito, é busca
+por telefone (pelos dígitos, sufixo); caso contrário, é busca por nome e apelido.
+
+**Motivo.** O caso mais comum do balcão é o telefone tocando, e os quatro últimos dígitos resolvem
+onde o nome falha (oito Marias, apelidos, grafia). Mas obrigar a pessoa a escolher num seletor
+entre "por nome" e "por telefone" é pedir uma decisão a quem está com o telefone na outra mão.
+Nome não tem dígito — a regra não tem exceção prática.
+
+**Onde é garantida.** Domínio: `TermoDeBusca.de`.
+**Rotinas.** RT-CLI-002 · **Teste.** `TermoDeBuscaTest.digito_significa_telefone`
+**Configurável?** Não · **UX.** R-UX-03
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-010 — Termo curto devolve lista vazia, nunca erro
+
+**Enunciado.** Menos de 2 letras (nome) ou 3 dígitos (telefone) devolve lista vazia com HTTP 200.
+
+**Motivo.** É o estado normal enquanto alguém digita a primeira letra. Um 422 por tecla faria a
+tela piscar um erro durante a digitação inteira. O limite por tipo é diferente porque dois dígitos
+casariam com metade do salão, enquanto duas letras já estreitam bastante.
+
+**Onde é garantida.** Domínio: `TermoDeBusca.Insuficiente` · Caso de uso: `BuscarClientesUseCase`.
+**Rotinas.** RT-CLI-002 · **Teste.** `TermoDeBuscaTest.curto_demais_nao_e_erro`,
+`ClientesWebIT.termo_curto_devolve_vazio`
+**Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-011 — A normalização da busca existe em um único lugar
+
+**Enunciado.** A coluna `busca` é gerada pelo banco (minúsculas, sem acento) e o termo digitado
+passa pela mesma função `imutavel_unaccent(lower(...))` na consulta.
+
+**Motivo.** A normalização do que está guardado e a do que foi digitado precisam ser idênticas.
+Mantê-las em dois lugares — uma em Java, outra em SQL — garante que um dia divirjam, e no dia em
+que divergirem a busca para de achar gente **sem erro nenhum**: silencioso e plausível, o pior tipo
+de defeito. Foi por isso que normalizar em Java foi recusado, mesmo sendo mais testável em unidade.
+
+**Onde é garantida.** Banco: coluna gerada + `imutavel_unaccent` (V13).
+**Rotinas.** RT-CLI-002 · **Teste.** `BuscaIndexadaIT.busca_e_coluna_gerada`,
+`BuscaDeClienteIT.busca_ignora_acento`
+**Configurável?** Não · **Runbook.** [reindexar-busca](../../runbook/reindexar-busca.md)
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-012 — Curinga de `LIKE` é neutralizado no termo
+
+**Enunciado.** `%`, `_` e `\` são escapados antes de compor o padrão da busca.
+
+**Motivo.** Não é injeção — o valor viaja como parâmetro — é resultado errado: quem digitasse `%`
+veria o salão inteiro, e `_` casaria com qualquer letra. É o tipo de falha que ninguém reporta e
+todo mundo acaba usando.
+
+**Onde é garantida.** Infra: `ClientesJdbc.comoPadrao` (fica ali, e não no domínio, porque `LIKE`
+é detalhe de como este repositório consulta).
+**Rotinas.** RT-CLI-002 · **Teste.** `BuscaDeClienteIT.curinga_nao_lista_todo_mundo`
+**Configurável?** Não
+**Origem.** 2026-08-30

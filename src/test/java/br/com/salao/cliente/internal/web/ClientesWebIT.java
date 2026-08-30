@@ -95,6 +95,44 @@ class ClientesWebIT extends AbstractPostgresIT {
     }
 
     @Test
+    @DisplayName("busca por 4 dígitos acha quem está ligando, num parâmetro só")
+    void busca_pelos_quatro_digitos() throws Exception {
+        // Um parâmetro, não dois. Obrigar a escolher "por nome" ou "por telefone" seria pedir uma
+        // decisão a quem está com o telefone tocando na outra mão.
+        String token = entrar();
+        post("/api/v1/clientes", "{\"nome\":\"Maria Silva\",\"telefone\":\"11987654321\"}", token);
+
+        var resposta = get("/api/v1/clientes?q=4321", token);
+
+        assertThat(resposta.statusCode()).isEqualTo(200);
+        assertThat(resposta.body()).contains("Maria Silva");
+    }
+
+    @Test
+    @DisplayName("termo curto devolve lista vazia com 200, não erro")
+    void termo_curto_devolve_vazio() throws Exception {
+        // 422 a cada tecla faria a tela piscar um erro enquanto a pessoa ainda digita a primeira
+        // letra. Vazio é a resposta certa, e a tela explica o que falta.
+        String token = entrar();
+
+        var resposta = get("/api/v1/clientes?q=j", token);
+
+        assertThat(resposta.statusCode()).isEqualTo(200);
+        assertThat(resposta.body()).isEqualTo("[]");
+    }
+
+    @Test
+    @DisplayName("sem q nenhum, não despeja a base inteira")
+    void sem_termo_nao_lista_tudo() throws Exception {
+        // O endpoint de busca não é o de listagem (RT-CLI-006). Devolver todo mundo aqui seria
+        // entregar a base de clientes a quem só sabe chamar a rota sem parâmetro.
+        String token = entrar();
+        post("/api/v1/clientes", "{\"nome\":\"Maria Silva\"}", token);
+
+        assertThat(get("/api/v1/clientes", token).body()).isEqualTo("[]");
+    }
+
+    @Test
     @DisplayName("sem token, o cadastro não abre")
     void sem_token_nao_cadastra() throws Exception {
         assertThat(post("/api/v1/clientes", "{\"nome\":\"Maria\"}", null).statusCode())

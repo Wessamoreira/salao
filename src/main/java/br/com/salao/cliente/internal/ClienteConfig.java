@@ -1,6 +1,7 @@
 package br.com.salao.cliente.internal;
 
 import br.com.salao.cliente.api.ClienteApi;
+import br.com.salao.cliente.internal.application.BuscarClientesUseCase;
 import br.com.salao.cliente.internal.application.CadastrarClienteUseCase;
 import br.com.salao.cliente.internal.application.ConsultarClienteUseCase;
 import br.com.salao.cliente.internal.infra.ClientesJdbc;
@@ -35,5 +36,10 @@ public class ClienteConfig {
     @Bean
     public ConsultarClienteUseCase consultarClienteUseCase(ClientesJdbc clientes) {
         return new ConsultarClienteUseCase(clientes);
+    }
+
+    @Bean
+    public BuscarClientesUseCase buscarClientesUseCase(ClientesJdbc clientes) {
+        return new BuscarClientesUseCase(clientes);
     }
 }

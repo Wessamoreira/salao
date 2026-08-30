@@ -31,11 +31,12 @@ e que ninguém saberia invalidar.
 | Rotina | Situação |
 |---|---|
 | [RT-CLI-001](RT-CLI-001-cadastro-de-cliente.md) — cadastro | implementada |
-| RT-CLI-002 — busca por nome, apelido e 4 últimos dígitos | próxima |
-| RT-CLI-003 — detecção de duplicado e mesclagem | planejada |
+| [RT-CLI-002](RT-CLI-002-busca-de-cliente.md) — busca por nome, apelido e 4 últimos dígitos | implementada |
+| RT-CLI-003 — detecção de duplicado e mesclagem | próxima |
 | RT-CLI-004 — consentimento LGPD | planejada |
 | RT-CLI-005 — anonimização | planejada |
+| RT-CLI-006 — tela de clientes | planejada |
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-CLI-001 a RN-CLI-008.
+Ver [regras.md](regras.md) — RN-CLI-001 a RN-CLI-012.
