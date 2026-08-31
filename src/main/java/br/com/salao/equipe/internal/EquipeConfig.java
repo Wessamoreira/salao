@@ -5,6 +5,8 @@ import br.com.salao.equipe.internal.application.CadastrarProfissionalUseCase;
 import br.com.salao.equipe.internal.application.DefinirAtivacaoDoProfissionalUseCase;
 import br.com.salao.equipe.internal.application.DefinirJornadaUseCase;
 import br.com.salao.equipe.internal.application.ListarProfissionaisUseCase;
+import br.com.salao.equipe.internal.application.RegistrarBloqueioUseCase;
+import br.com.salao.equipe.internal.application.RemoverBloqueioUseCase;
 import br.com.salao.equipe.internal.infra.ProfissionaisJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
 import javax.sql.DataSource;
@@ -49,6 +51,18 @@ public class EquipeConfig {
     @Bean
     public ListarProfissionaisUseCase listarProfissionaisUseCase(ProfissionaisJdbc profissionais) {
         return new ListarProfissionaisUseCase(profissionais);
+    }
+
+    @Bean
+    public RegistrarBloqueioUseCase registrarBloqueioUseCase(ProfissionaisJdbc profissionais,
+                                                             AuditoriaApi auditoria) {
+        return new RegistrarBloqueioUseCase(profissionais, auditoria);
+    }
+
+    @Bean
+    public RemoverBloqueioUseCase removerBloqueioUseCase(ProfissionaisJdbc profissionais,
+                                                         AuditoriaApi auditoria) {
+        return new RemoverBloqueioUseCase(profissionais, auditoria);
     }
 
     @Bean

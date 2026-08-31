@@ -6,15 +6,17 @@
 
 ## Fronteira
 
-Expõe `ProfissionalApi` (`porId`, `ativos`, `estaAtivo`), `ProfissionalResumo` e o vocabulário de
-vínculo. `agenda` descobre por aqui quem pode atender; `financeiro`, qual a comissão. Nenhum deles
+Expõe `ProfissionalApi` (`porId`, `ativos`, `estaAtivo`, `jornadaDe`, `intervalosEm`,
+`bloqueiosEntre`), `ProfissionalResumo` e o vocabulário de vínculo e de jornada.
+
+`intervalosEm(profissional, data)` é o método que importa para a agenda: jornada daquele dia da
+semana **menos** os bloqueios que alcançam a data. A jornada crua diz "terça das 9h às 19h"; no dia
+14 a pessoa está em curso das 14h às 16h. `agenda` descobre por aqui quem pode atender; `financeiro`, qual a comissão. Nenhum deles
 consulta a tabela.
 
 ## O que ele **não** guarda
 
-**Exceções de jornada.** Feriado, férias, curso e atestado são `RT-EQP-003`, em tabela própria:
-misturá-las com a jornada semanal faria esta crescer com datas e deixar de responder à pergunta
-simples que o salão faz — "que dias você trabalha?".
+**Agendamentos.** A equipe diz quando se pode atender; quem está marcado é `agenda`.
 
 **Habilidades.** Quais serviços cada um executa depende do catálogo existir (`RT-EQP-004`).
 
@@ -30,9 +32,9 @@ simples que o salão faz — "que dias você trabalha?".
 |---|---|
 | [RT-EQP-001](RT-EQP-001-cadastro-de-profissional.md) — cadastro | implementada |
 | [RT-EQP-002](RT-EQP-002-jornada-semanal.md) — jornada semanal | implementada |
-| RT-EQP-003 — exceção de jornada | próxima |
-| RT-EQP-004 — habilidades | planejada |
+| [RT-EQP-003](RT-EQP-003-bloqueio-de-jornada.md) — exceção de jornada | implementada |
+| RT-EQP-004 — habilidades | próxima |
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-EQP-001 a RN-EQP-008.
+Ver [regras.md](regras.md) — RN-EQP-001 a RN-EQP-012.

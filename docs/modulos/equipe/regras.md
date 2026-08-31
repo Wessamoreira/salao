@@ -143,3 +143,75 @@ devolve `JornadaSemanal.vazia()`.
 **Rotinas.** RT-EQP-002, RT-AGD-001 · **Teste.** `JornadaIT.sem_jornada_e_vazia`
 **Configurável?** Não
 **Origem.** 2026-08-30
+
+---
+
+### RN-EQP-009 — Bloqueio sem profissional vale para o salão inteiro
+
+**Enunciado.** `profissional_id` nulo significa que ninguém atende no período. É como o feriado é
+registrado.
+
+**Motivo.** Feriado não é exceção de uma pessoa. Modelá-lo por profissional obrigaria a criar uma
+linha para cada um — e a esquecer de criar para quem fosse contratado depois, fazendo o salão
+aparecer aberto no Natal para a profissional nova, sem que ninguém descobrisse até uma cliente
+marcar.
+
+**Onde é garantida.** Coluna anulável (V19) · `ProfissionaisJdbc.BLOQUEIOS` inclui
+`profissional_id is null`.
+**Rotinas.** RT-EQP-003 · **Teste.** `BloqueioDeJornadaIT.feriado_fecha_o_salao`
+**Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-EQP-010 — Bloqueios podem se sobrepor; jornadas não
+
+**Enunciado.** Dois bloqueios do mesmo profissional podem cobrir o mesmo período. Não há `EXCLUDE`
+nesta tabela.
+
+**Motivo.** É o contrário de RN-EQP-007, e de propósito. Na jornada, sobreposição é erro de dado —
+ninguém está em dois turnos ao mesmo tempo. Aqui é banal: férias que englobam um feriado, atestado
+dentro de uma folga. Os dois removem disponibilidade e a soma dá o mesmo resultado; proibir
+obrigaria a recepção a apagar o feriado para lançar as férias.
+
+**Onde é garantida.** Ausência deliberada de `EXCLUDE` (V19) ·
+`SubtracaoDeIntervalos.subtrair` aplica em sequência.
+**Rotinas.** RT-EQP-003 · **Teste.**
+`BloqueioDeJornadaIT.bloqueios_sobrepostos_sao_normais`,
+`SubtracaoDeIntervalosTest.bloqueios_sobrepostos`
+**Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-EQP-011 — Bloqueio é dia inteiro, ou um pedaço de um único dia
+
+**Enunciado.** Hora nula em ambas as pontas significa dia inteiro, e o período pode ter vários
+dias. Com hora, `data_inicio` e `data_fim` precisam ser iguais.
+
+**Motivo.** Férias são dias cheios; curso é um pedaço de um dia. "Das 14h às 18h todos os dias de
+uma quinzena" ninguém pede, e aceitar obrigaria toda consulta de disponibilidade a tratar um caso
+que não existe — complexidade permanente por um cenário imaginário.
+
+**Onde é garantida.** Banco: `bloqueio_horas_juntas` e `bloqueio_por_hora_em_um_dia` (V19) ·
+`RegistrarBloqueioUseCase` para a mensagem.
+**Rotinas.** RT-EQP-003 · **Teste.**
+`BloqueioDeJornadaIT.bloqueio_por_hora_em_um_dia_so`, `BloqueioDeJornadaIT.horas_vao_juntas`
+**Erro.** `ER-EQP-DADOS_INVALIDOS` (422) · **Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-EQP-012 — A observação do bloqueio não vai para a auditoria
+
+**Enunciado.** A trilha registra motivo, período e se é do salão inteiro. A observação não entra.
+
+**Motivo.** `ATESTADO` com observação é dado de saúde. "Cirurgia no joelho" digitado no campo livre
+acabaria numa tabela append-only, fora do alcance de qualquer expurgo. Mesma razão de RN-CLI-007 —
+e a terceira vez que ela decide um detalhe de implementação, o que a torna padrão do projeto e não
+caso isolado.
+
+**Onde é garantida.** `RegistrarBloqueioUseCase` — o mapa da trilha não inclui `observacao`.
+**Rotinas.** RT-EQP-003 · **Teste.** `BloqueioDeJornadaIT.observacao_nao_vai_para_a_trilha`
+**Configurável?** Não
+**Origem.** 2026-08-30

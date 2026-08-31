@@ -1,11 +1,14 @@
 package br.com.salao.equipe.internal.infra;
 
+import br.com.salao.equipe.api.BloqueioDeJornada;
 import br.com.salao.equipe.api.IntervaloDeTrabalho;
+import br.com.salao.equipe.api.MotivoDoBloqueio;
 import br.com.salao.equipe.api.JornadaSemanal;
 import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.equipe.api.ProfissionalResumo;
 import br.com.salao.equipe.api.TipoDeVinculo;
 import br.com.salao.equipe.internal.domain.Documento;
+import br.com.salao.equipe.internal.domain.SubtracaoDeIntervalos;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.DayOfWeek;
@@ -182,6 +185,97 @@ public class ProfissionaisJdbc implements ProfissionalApi {
                         .param("inicio", LocalTime.from(intervalo.inicio()))
                         .param("fim", LocalTime.from(intervalo.fim()))
                         .update()));
+    }
+
+    // ------------------------------------------------------------------ RT-EQP-003
+
+    /**
+     * Traz os bloqueios do profissional <strong>e os do salão inteiro</strong>.
+     *
+     * <p>O {@code profissional_id is null} não é caso especial esquecido: é o feriado. Deixá-lo
+     * de fora faria o salão aparecer aberto no Natal para todo mundo.
+     */
+    private static final String BLOQUEIOS = """
+            select id, profissional_id, motivo, observacao,
+                   data_inicio, data_fim, hora_inicio, hora_fim
+              from bloqueio_de_jornada
+             where (profissional_id = :profissional or profissional_id is null)
+               and data_inicio <= :fim
+               and data_fim >= :inicio
+             order by data_inicio, hora_inicio nulls first
+            """;
+
+    private static final RowMapper<BloqueioDeJornada> BLOQUEIO = (rs, linha) ->
+            new BloqueioDeJornada(
+                    rs.getObject("id", UUID.class),
+                    rs.getObject("profissional_id", UUID.class),
+                    MotivoDoBloqueio.valueOf(rs.getString("motivo")),
+                    rs.getString("observacao"),
+                    rs.getDate("data_inicio").toLocalDate(),
+                    rs.getDate("data_fim").toLocalDate(),
+                    hora(rs.getTime("hora_inicio")),
+                    hora(rs.getTime("hora_fim")));
+
+    private static LocalTime hora(java.sql.Time valor) {
+        return valor == null ? null : valor.toLocalTime();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BloqueioDeJornada> bloqueiosEntre(UUID profissionalId, LocalDate inicio,
+                                                  LocalDate fim) {
+        return jdbc.sql(BLOQUEIOS)
+                .param("profissional", profissionalId)
+                .param("inicio", inicio)
+                .param("fim", fim)
+                .query(BLOQUEIO)
+                .list();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<IntervaloDeTrabalho> intervalosEm(UUID profissionalId, LocalDate data) {
+        List<IntervaloDeTrabalho> doDia = jornadaDe(profissionalId).em(data.getDayOfWeek());
+        if (doDia.isEmpty()) {
+            // Sem jornada não há o que subtrair, e a consulta de bloqueios seria desperdício.
+            return List.of();
+        }
+        List<IntervaloDeTrabalho> removidos = bloqueiosEntre(profissionalId, data, data).stream()
+                .map(bloqueio -> bloqueio.faixaEm(data))
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        return SubtracaoDeIntervalos.subtrair(doDia, removidos);
+    }
+
+    public UUID inserirBloqueio(UUID estabelecimentoId, UUID profissionalId,
+                                MotivoDoBloqueio motivo, String observacao, LocalDate dataInicio,
+                                LocalDate dataFim, LocalTime horaInicio, LocalTime horaFim,
+                                UUID criadoPor) {
+        return jdbc.sql("""
+                insert into bloqueio_de_jornada
+                    (estabelecimento_id, profissional_id, motivo, observacao,
+                     data_inicio, data_fim, hora_inicio, hora_fim, criado_por)
+                values (:estabelecimento, :profissional, :motivo, :observacao,
+                        :dataInicio, :dataFim, :horaInicio, :horaFim, :criadoPor)
+                returning id
+                """)
+                .param("estabelecimento", estabelecimentoId)
+                .param("profissional", profissionalId)
+                .param("motivo", motivo.name())
+                .param("observacao", observacao)
+                .param("dataInicio", dataInicio)
+                .param("dataFim", dataFim)
+                .param("horaInicio", horaInicio)
+                .param("horaFim", horaFim)
+                .param("criadoPor", criadoPor)
+                .query(UUID.class)
+                .single();
+    }
+
+    public int removerBloqueio(UUID id) {
+        return jdbc.sql("delete from bloqueio_de_jornada where id = :id")
+                .param("id", id)
+                .update();
     }
 
     public int definirAtivacao(UUID id, boolean ativo) {

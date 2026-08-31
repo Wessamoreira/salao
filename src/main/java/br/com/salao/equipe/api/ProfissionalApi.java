@@ -1,5 +1,6 @@
 package br.com.salao.equipe.api;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,4 +35,19 @@ public interface ProfissionalApi {
      * que não marca horário para alguém que não trabalha.
      */
     JornadaSemanal jornadaDe(UUID profissionalId);
+
+    /**
+     * RT-EQP-003 — o que o profissional atende <strong>numa data concreta</strong>.
+     *
+     * <p>É a jornada daquele dia da semana menos os bloqueios que alcançam a data: férias,
+     * feriado do salão, curso da tarde. É esta a resposta que a agenda usa (RT-AGD-001), e não a
+     * jornada crua — a jornada diz "terça das 9h às 19h", e no dia 14 a pessoa está em curso das
+     * 14h às 16h.
+     *
+     * <p>Devolve os intervalos em ordem, já partidos: um curso no meio do expediente produz dois.
+     */
+    List<IntervaloDeTrabalho> intervalosEm(UUID profissionalId, LocalDate data);
+
+    /** Os bloqueios de um período, do profissional e do salão inteiro. */
+    List<BloqueioDeJornada> bloqueiosEntre(UUID profissionalId, LocalDate inicio, LocalDate fim);
 }

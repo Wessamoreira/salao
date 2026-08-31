@@ -35,7 +35,10 @@ public enum ErrosDaEquipe implements CodigoDeErro {
      * tela não teria o que destacar.
      */
     JORNADA_SOBREPOSTA("ER-EQP-JORNADA_SOBREPOSTA", HttpStatus.UNPROCESSABLE_ENTITY,
-            "Horários se sobrepõem");
+            "Horários se sobrepõem"),
+
+    BLOQUEIO_NAO_ENCONTRADO("ER-EQP-BLOQUEIO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
+            "Bloqueio não encontrado");
 
     private final String codigo;
     private final HttpStatus status;
