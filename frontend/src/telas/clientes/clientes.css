@@ -223,19 +223,6 @@ kbd {
 .cli-dados dd { margin: 0; font-variant-numeric: tabular-nums; }
 .cli-dados dd:empty::after { content: '—'; color: var(--tinta-fraca); }
 
-.cli-secao {
-  margin-top: var(--e-8);
-  padding-top: var(--e-5);
-  border-top: 1px solid var(--regua);
-}
-.cli-secao-titulo {
-  font-size: var(--t-10);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--tinta-fraca);
-  margin-bottom: var(--e-4);
-}
 
 /* ---------------------------------------------------------------------------
  * Consentimento — três estados, e por isso NÃO é um interruptor.
@@ -326,78 +313,13 @@ kbd {
 .cli-aviso li { display: flex; align-items: baseline; gap: var(--e-3); padding: 2px 0; }
 .cli-aviso-fone { color: var(--tinta-fraca); font-variant-numeric: tabular-nums; }
 
-/* ---------------------------------------------------------------------------
- * Formulário e ações
- * ------------------------------------------------------------------------- */
-.cli-campo { display: block; margin-bottom: var(--e-4); }
-.cli-campo span {
-  display: block;
-  margin-bottom: var(--e-1);
-  font-size: var(--t-10);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--tinta-fraca);
-}
-.cli-campo input {
-  display: block;
-  width: 100%;
-  padding: var(--e-2) var(--e-3);
-  font: inherit;
-  font-size: var(--t-14);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-2);
-}
+/* Os primitivos de formulário e ação vivem em estilo/componentes.css: a tela de
+   configuração precisou dos mesmos, e duas cópias divergiriam. Aqui fica só o que é
+   desta tela. */
 
-.cli-acao {
-  padding: var(--e-2) var(--e-4);
-  font: inherit;
-  font-size: var(--t-14);
-  font-weight: 600;
-  color: var(--papel);
-  background: var(--tinta);
-  border: 1px solid var(--tinta);
-  border-radius: var(--raio-2);
-  cursor: pointer;
-}
-.cli-acao:disabled { opacity: 0.45; cursor: default; }
-
-.cli-acao-discreta {
-  padding: var(--e-1) 0;
-  font: inherit;
-  font-size: var(--t-12);
-  color: var(--tinta-fraca);
-  background: none;
-  border: 0;
-  border-bottom: 1px solid var(--regua-forte);
-  cursor: pointer;
-}
-.cli-acao-discreta:hover { color: var(--tinta); border-bottom-color: var(--tinta); }
-/*
- * A ação irreversível NÃO é vermelha.
- *
- * Duas razões, e a segunda só apareceu na medição. Primeira: o argumento desta tela
- * é que ela deve sumir no meio das outras até ser procurada — pintá-la de vermelho
- * contradiz isso e ainda chama atenção para o que não se quer que seja clicado por
- * impulso. Segunda: --status-falta sobre --papel mede 3.62 e reprova AA em corpo de
- * texto. O peso vem da confirmação, que explica o que some para sempre.
- *
- * A classe permanece, sem cor, porque o que ela marca é o lugar — se um dia houver
- * um tratamento para ação grave, é aqui.
- */
+/* Irreversível: sem cor de alarme até ser procurada — ver a nota em componentes. */
 .cli-acao-grave { color: var(--tinta-fraca); }
 
-.cli-erro {
-  margin-top: var(--e-3);
-  padding: var(--e-2) var(--e-3);
-  font-size: var(--t-12);
-  color: var(--tinta);
-  background: var(--status-falta-fundo);
-  border-left: 3px solid var(--status-falta);
-  border-radius: var(--raio-2);
-}
 
 @media (max-width: 900px) {
   .cli-tela { grid-template-columns: 1fr; gap: var(--e-6) 0; }

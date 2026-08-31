@@ -56,8 +56,9 @@ public class CacheConfig {
     }
 
     @Bean
-    public InvalidadorDeCache invalidadorDeCache(DataSource dataSource, ObjectMapper json) {
-        return new InvalidadorDeCache(JdbcClient.create(dataSource), json);
+    public InvalidadorDeCache invalidadorDeCache(DataSource dataSource, ObjectMapper json,
+                                                 CacheManager caches) {
+        return new InvalidadorDeCache(JdbcClient.create(dataSource), json, caches);
     }
 
     /**

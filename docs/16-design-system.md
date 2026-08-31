@@ -100,6 +100,10 @@ só considerava `--papel` como fundo.
 superfície com fundo `--papel` em vez de ficar solta sobre o fundo da página — o telefone da
 cliente é a informação mais essencial daquela tela e estava no par que reprova.
 
+Aconteceu de novo em `RT-CFG-001`, com o formulário de configuração, e virou **regra do produto**:
+*texto secundário mora sobre papel*. Bloco que contenha rótulo, legenda ou explicação recebe
+superfície própria; sobre o fundo da página só vai texto em `--tinta`.
+
 **Os status não servem para texto.** Nenhum passa em corpo de texto sobre papel, e é consequência
 direta de eles compartilharem luminosidade 0.62 para pesarem igual. Continuam certos como borda,
 barra e fundo claro; texto colorido em cima de papel, não. A ação de apagar dados perdeu o

@@ -7,7 +7,11 @@ import java.time.ZoneId;
 import java.util.Currency;
 
 /**
- * RT-IAM-001 — os dados de um estabelecimento a provisionar, já validados.
+ * RT-IAM-001 / RT-CFG-001 — os dados de um estabelecimento, já validados.
+ *
+ * <p>Chamava-se {@code NovoEstabelecimento} enquanto só existia provisionamento. Passou a servir
+ * também a edição da configuração, e um nome que diz "novo" num objeto usado para alterar é a
+ * espécie de mentira que faz alguém duplicar a validação em vez de reaproveitá-la.
  *
  * <p>Sem dependência de framework: é domínio puro, e {@code ArquiteturaTest} reprova o build se
  * alguém importar Spring aqui.
@@ -16,7 +20,7 @@ import java.util.Currency;
  * inválido não deve existir nem por um instante — e a validação de borda protege só a borda,
  * enquanto o provisionamento também é chamado por script de operação e por teste.
  */
-public record NovoEstabelecimento(
+public record DadosDoEstabelecimento(
         String nome,
         String documento,
         ZoneId fuso,
@@ -26,7 +30,7 @@ public record NovoEstabelecimento(
         PeriodicidadeDeFechamento periodicidadeDeFechamento,
         String dddPadrao) {
 
-    public NovoEstabelecimento {
+    public DadosDoEstabelecimento {
         if (nome == null || nome.isBlank()) {
             throw new DadosDoEstabelecimentoInvalidosException("nome é obrigatório");
         }
@@ -44,6 +48,11 @@ public record NovoEstabelecimento(
         } catch (IllegalArgumentException e) {
             throw new DadosDoEstabelecimentoInvalidosException("moeda desconhecida: " + moeda);
         }
+        // Normalizar ANTES de validar, e aqui: quem preenche escreve "(11)" ou "011", e a
+        // limpeza morava no command do provisionamento — então a edição (RT-CFG-001), que
+        // constrói este objeto direto, recusava "(11)". Regra de domínio no objeto de domínio.
+        dddPadrao = dddPadrao == null ? null : dddPadrao.replaceAll("\\D", "");
+        dddPadrao = dddPadrao == null || dddPadrao.isEmpty() ? null : dddPadrao;
         if (dddPadrao != null && !dddPadrao.matches("\\d{2}")) {
             // DDD brasileiro tem exatamente dois dígitos. Guardar "011" faria o telefone
             // normalizado nascer com um zero a mais e nunca completar a chamada.
@@ -63,12 +72,12 @@ public record NovoEstabelecimento(
      * ({@code -03:00}): offset não conhece horário de verão, e se o Brasil voltar a adotá-lo toda
      * a agenda desloca uma hora sem ninguém perceber.
      */
-    public static NovoEstabelecimento comFuso(String nome, String documento, String fusoIana,
+    public static DadosDoEstabelecimento comFuso(String nome, String documento, String fusoIana,
                                               String moeda, BaseDeComissao baseComissao,
                                               boolean descontoAfetaComissao,
                                               PeriodicidadeDeFechamento periodicidade,
                                               String dddPadrao) {
-        return new NovoEstabelecimento(nome, documento, interpretarFuso(fusoIana), moeda,
+        return new DadosDoEstabelecimento(nome, documento, interpretarFuso(fusoIana), moeda,
                 baseComissao, descontoAfetaComissao, periodicidade, dddPadrao);
     }
 

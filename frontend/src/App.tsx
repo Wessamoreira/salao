@@ -7,6 +7,7 @@ import { Protegida } from './layout/Protegida';
 import { Login } from './telas/Login';
 import { SegundoFator } from './telas/SegundoFator';
 import { Clientes } from './telas/clientes/Clientes';
+import { Configuracao } from './telas/config/Configuracao';
 import { EmBreve } from './telas/EmBreve';
 
 const cliente = new QueryClient({
@@ -51,7 +52,7 @@ export function App() {
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/estoque" element={<EmBreve titulo="Estoque" rotina="RT-EST-001" />} />
             <Route path="/financeiro" element={<EmBreve titulo="Financeiro" rotina="RT-FIN-004" />} />
-            <Route path="/config" element={<EmBreve titulo="Configurações" rotina="RT-IAM-007" />} />
+            <Route path="/config" element={<Configuracao />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

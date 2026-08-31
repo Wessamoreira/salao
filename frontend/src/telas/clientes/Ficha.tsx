@@ -48,7 +48,7 @@ export function Ficha({ cliente, aoSair }: { cliente: Cliente; aoSair: () => voi
 
       {/* Discreta: corrigir é frequente, mas não é o que se veio fazer nesta tela. */}
       <p style={{ marginTop: 'var(--e-4)' }}>
-        <button type="button" className="cli-acao-discreta" onClick={() => setEmEdicao(true)}>
+        <button type="button" className="acao-discreta" onClick={() => setEmEdicao(true)}>
           Corrigir ficha
         </button>
       </p>
@@ -79,8 +79,8 @@ function FichasParecidas({ cliente }: { cliente: Cliente }) {
   const alvo = outros.find((d) => d.cliente.id === confirmando);
 
   return (
-    <section className="cli-secao">
-      <h3 className="cli-secao-titulo">Fichas parecidas</h3>
+    <section className="secao">
+      <h3 className="secao-titulo">Fichas parecidas</h3>
 
       {alvo ? (
         <div className="cli-aviso cli-aviso-forte">
@@ -93,7 +93,7 @@ function FichasParecidas({ cliente }: { cliente: Cliente }) {
           </p>
           <button
             type="button"
-            className="cli-acao"
+            className="acao"
             disabled={mesclar.isPending}
             onClick={() =>
               mesclar.mutate(alvo.cliente.id, { onSuccess: () => setConfirmando(null) })
@@ -101,7 +101,7 @@ function FichasParecidas({ cliente }: { cliente: Cliente }) {
           >
             {mesclar.isPending ? 'Juntando…' : 'Juntar fichas'}
           </button>{' '}
-          <button type="button" className="cli-acao-discreta" onClick={() => setConfirmando(null)}>
+          <button type="button" className="acao-discreta" onClick={() => setConfirmando(null)}>
             Cancelar
           </button>
         </div>
@@ -116,7 +116,7 @@ function FichasParecidas({ cliente }: { cliente: Cliente }) {
         </>
       )}
 
-      {mesclar.isError && <p className="cli-erro">Não foi possível juntar as fichas.</p>}
+      {mesclar.isError && <p className="erro">Não foi possível juntar as fichas.</p>}
     </section>
   );
 }
@@ -134,7 +134,7 @@ function Anonimizar({ cliente, aoConcluir }: { cliente: Cliente; aoConcluir: () 
   const anonimizar = useAnonimizar();
 
   return (
-    <section className="cli-secao">
+    <section className="secao">
       {confirmando ? (
         <div className="cli-aviso">
           <p>
@@ -144,7 +144,7 @@ function Anonimizar({ cliente, aoConcluir }: { cliente: Cliente; aoConcluir: () 
           </p>
           <button
             type="button"
-            className="cli-acao"
+            className="acao"
             disabled={anonimizar.isPending}
             onClick={() => anonimizar.mutate(cliente.id, { onSuccess: aoConcluir })}
           >
@@ -152,19 +152,19 @@ function Anonimizar({ cliente, aoConcluir }: { cliente: Cliente; aoConcluir: () 
           </button>{' '}
           <button
             type="button"
-            className="cli-acao-discreta"
+            className="acao-discreta"
             onClick={() => setConfirmando(false)}
           >
             Cancelar
           </button>
           {anonimizar.isError && (
-            <p className="cli-erro">Não foi possível apagar. Tente de novo.</p>
+            <p className="erro">Não foi possível apagar. Tente de novo.</p>
           )}
         </div>
       ) : (
         <button
           type="button"
-          className="cli-acao-discreta cli-acao-grave"
+          className="acao-discreta cli-acao-grave"
           onClick={() => setConfirmando(true)}
         >
           Apagar os dados a pedido dela

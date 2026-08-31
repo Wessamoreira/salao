@@ -122,9 +122,8 @@ a linha**, porque o histórico financeiro precisa continuar apontando para algu�
 
 ## 10. Pendências
 
-- [ ] **Tela de configuração do DDD padrão.** Hoje ele só entra no provisionamento. Um salão
-      provisionado sem DDD recusa telefone digitado sem DDD, e não há como corrigir pela
-      interface — é a pendência mais urgente desta rotina
+- [x] ~~Tela de configuração do DDD padrão~~ — entregue em RT-CFG-001, que também revelou que a
+      normalização do DDD estava no command de provisionamento e não no domínio
 - [ ] **Ficha técnica de química** (dado de saúde, LGPD): exige `cliente:ficha:read` e cifragem de
       campo via `CofreDeCampo`. Rotina própria, ainda não planejada — hoje `observacao` é texto
       livre e **não deve** receber informação clínica

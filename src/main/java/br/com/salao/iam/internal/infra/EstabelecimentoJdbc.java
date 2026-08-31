@@ -5,6 +5,7 @@ import br.com.salao.iam.api.ConfiguracaoDoEstabelecimento;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.api.EstabelecimentoNaoEncontradoException;
 import br.com.salao.iam.api.PeriodicidadeDeFechamento;
+import br.com.salao.iam.internal.domain.DadosDoEstabelecimento;
 import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
@@ -54,6 +55,37 @@ public class EstabelecimentoJdbc implements EstabelecimentoApi {
                         rs.getString("ddd_padrao"),
                         rs.getBoolean("ativo")))
                 .optional();
+    }
+
+    /**
+     * RT-CFG-001 — grava a configuração alterada.
+     *
+     * <p>Não recebe {@code id}: a RLS já limita a linha visível ao tenant da transação, e passar o
+     * id daria a impressão de que um estabelecimento pode alterar outro. O {@code where} sem
+     * filtro parece ousado e é o contrário — é a política do banco fazendo o trabalho.
+     */
+    @Transactional
+    public void atualizar(DadosDoEstabelecimento dados) {
+        jdbc.sql("""
+                update estabelecimento
+                   set nome = :nome,
+                       documento = :documento,
+                       timezone = :fuso,
+                       moeda = :moeda,
+                       base_comissao = :base,
+                       desconto_afeta_comissao = :descontoAfeta,
+                       periodicidade_fechamento = :periodicidade,
+                       ddd_padrao = :dddPadrao
+                """)
+                .param("nome", dados.nome())
+                .param("documento", dados.documento())
+                .param("fuso", dados.fuso().getId())
+                .param("moeda", dados.moeda())
+                .param("base", dados.baseComissao().name())
+                .param("descontoAfeta", dados.descontoAfetaComissao())
+                .param("periodicidade", dados.periodicidadeDeFechamento().name())
+                .param("dddPadrao", dados.dddPadrao())
+                .update();
     }
 
     @Override

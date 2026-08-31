@@ -42,36 +42,36 @@ export function EditarFicha({
         );
       }}
     >
-      <h3 className="cli-secao-titulo">Corrigir ficha</h3>
+      <h3 className="secao-titulo">Corrigir ficha</h3>
 
-      <label className="cli-campo">
+      <label className="campo">
         <span>Nome</span>
         <input value={nome} onChange={(e) => setNome(e.target.value)} autoFocus required />
       </label>
 
-      <label className="cli-campo">
+      <label className="campo">
         <span>Como é chamada (opcional)</span>
         <input value={apelido} onChange={(e) => setApelido(e.target.value)} />
       </label>
 
-      <label className="cli-campo">
+      <label className="campo">
         <span>Telefone (opcional)</span>
         <input value={telefone} onChange={(e) => setTelefone(e.target.value)} inputMode="tel" />
       </label>
 
-      <label className="cli-campo">
+      <label className="campo">
         <span>E-mail (opcional)</span>
         <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
       </label>
 
-      <button type="submit" className="cli-acao" disabled={atualizar.isPending || !nome.trim()}>
+      <button type="submit" className="acao" disabled={atualizar.isPending || !nome.trim()}>
         {atualizar.isPending ? 'Salvando…' : 'Salvar'}
       </button>{' '}
-      <button type="button" className="cli-acao-discreta" onClick={aoCancelar}>
+      <button type="button" className="acao-discreta" onClick={aoCancelar}>
         Cancelar
       </button>
 
-      {atualizar.isError && <p className="cli-erro">{mensagem(atualizar.error)}</p>}
+      {atualizar.isError && <p className="erro">{mensagem(atualizar.error)}</p>}
     </form>
   );
 }

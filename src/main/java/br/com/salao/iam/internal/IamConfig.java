@@ -1,6 +1,7 @@
 package br.com.salao.iam.internal;
 
 import br.com.salao.iam.api.EstabelecimentoApi;
+import br.com.salao.iam.internal.application.AtualizarConfiguracaoUseCase;
 import br.com.salao.iam.internal.application.AutenticarUseCase;
 import br.com.salao.iam.internal.application.AbridorDeSessao;
 import br.com.salao.iam.internal.application.AlterarPerfilDoUsuarioUseCase;
@@ -25,6 +26,7 @@ import br.com.salao.iam.internal.infra.PurgadorDeRefreshTokens;
 import br.com.salao.iam.internal.infra.RefreshTokensJdbc;
 import br.com.salao.iam.internal.infra.UsuariosJdbc;
 import br.com.salao.iam.internal.infra.EstabelecimentoJdbc;
+import br.com.salao.shared.cache.InvalidadorDeCache;
 import br.com.salao.shared.manutencao.ConexaoDeManutencao;
 import br.com.salao.shared.tempo.Relogio;
 import java.time.Duration;
@@ -55,6 +57,13 @@ public class IamConfig {
     @Primary
     public EstabelecimentoApi estabelecimentoApi(EstabelecimentoJdbc jdbc) {
         return new EstabelecimentoCacheado(jdbc);
+    }
+
+    @Bean
+    public AtualizarConfiguracaoUseCase atualizarConfiguracaoUseCase(
+            EstabelecimentoJdbc estabelecimentos, InvalidadorDeCache invalidador,
+            AuditoriaApi auditoria) {
+        return new AtualizarConfiguracaoUseCase(estabelecimentos, invalidador, auditoria);
     }
 
     @Bean

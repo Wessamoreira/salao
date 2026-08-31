@@ -2,7 +2,7 @@ package br.com.salao.iam.internal.application;
 
 import br.com.salao.iam.api.ErrosDoIam;
 import br.com.salao.iam.internal.domain.DadosDoEstabelecimentoInvalidosException;
-import br.com.salao.iam.internal.domain.NovoEstabelecimento;
+import br.com.salao.iam.internal.domain.DadosDoEstabelecimento;
 import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.iam.internal.domain.Emails;
 import br.com.salao.shared.manutencao.ConexaoDeManutencao;
@@ -78,7 +78,7 @@ public class ProvisionarEstabelecimentoUseCase {
     }
 
     public UUID executar(ProvisionarEstabelecimentoCommand comando) {
-        NovoEstabelecimento novo = validar(comando);
+        DadosDoEstabelecimento novo = validar(comando);
 
         exigirDadosDoAdministrador(comando);
 
@@ -122,9 +122,9 @@ public class ProvisionarEstabelecimentoUseCase {
      * Traduz o erro do domínio para o catálogo do módulo. O domínio não conhece código de erro nem
      * status HTTP — é o que permite testá-lo sem subir contexto.
      */
-    private NovoEstabelecimento validar(ProvisionarEstabelecimentoCommand comando) {
+    private DadosDoEstabelecimento validar(ProvisionarEstabelecimentoCommand comando) {
         try {
-            return NovoEstabelecimento.comFuso(
+            return DadosDoEstabelecimento.comFuso(
                     comando.nome(), comando.documento(), comando.fusoIana(), comando.moeda(),
                     comando.baseComissao(), comando.descontoAfetaComissao(),
                     comando.periodicidadeDeFechamento(), comando.dddPadrao());

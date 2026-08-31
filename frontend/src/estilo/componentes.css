@@ -1,0 +1,113 @@
+/*
+ * Primitivos de formulário e ação, compartilhados entre telas.
+ *
+ * Nasceram dentro da tela de clientes com prefixo `cli-`. A segunda tela (configuração)
+ * precisou dos mesmos, e é aí que se descobre o que era compartilhado: manter a cópia
+ * teria criado dois campos de texto que divergem no dia em que alguém ajustar um.
+ *
+ * Só entra aqui o que DUAS telas usam. Promover na primeira suspeita produz uma
+ * biblioteca de coisas que ninguém usa.
+ */
+
+.campo { display: block; margin-bottom: var(--e-4); }
+/*
+ * `:first-child` é o rótulo, e a restrição é necessária.
+ *
+ * Sem ela, `.campo > span` também acertava o texto de ajuda, que saía em caixa alta e
+ * em corpo de rótulo — um parágrafo inteiro gritando. Passou nos testes de
+ * comportamento e apareceu na primeira olhada no navegador.
+ */
+.campo > span:first-child {
+  display: block;
+  margin-bottom: var(--e-1);
+  font-size: var(--t-10);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+}
+.campo input,
+.campo select {
+  display: block;
+  width: 100%;
+  padding: var(--e-2) var(--e-3);
+  font: inherit;
+  font-size: var(--t-14);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+/* Explicação do campo, quando o rótulo não basta. Fica ABAIXO do controle: acima, ela
+   separaria o rótulo do que ele nomeia. */
+.campo-ajuda {
+  display: block;
+  margin: var(--e-1) 0 0;
+  /* Explícito, e não herdado: o dia em que alguém mexer na regra do rótulo, este texto
+     não vai junto. */
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 400;
+  font-size: var(--t-12);
+  color: var(--tinta-fraca);
+  line-height: 1.5;
+}
+
+.acao {
+  padding: var(--e-2) var(--e-4);
+  font: inherit;
+  font-size: var(--t-14);
+  font-weight: 600;
+  color: var(--papel);
+  background: var(--tinta);
+  border: 1px solid var(--tinta);
+  border-radius: var(--raio-2);
+  cursor: pointer;
+}
+.acao:disabled { opacity: 0.45; cursor: default; }
+
+.acao-discreta {
+  padding: var(--e-1) 0;
+  font: inherit;
+  font-size: var(--t-12);
+  color: var(--tinta-fraca);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--regua-forte);
+  cursor: pointer;
+}
+.acao-discreta:hover { color: var(--tinta); border-bottom-color: var(--tinta); }
+
+.secao {
+  margin-top: var(--e-8);
+  padding-top: var(--e-5);
+  border-top: 1px solid var(--regua);
+}
+.secao-titulo {
+  font-size: var(--t-10);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+  margin-bottom: var(--e-4);
+}
+
+.erro {
+  margin-top: var(--e-3);
+  padding: var(--e-2) var(--e-3);
+  font-size: var(--t-12);
+  color: var(--tinta);
+  background: var(--status-falta-fundo);
+  border-left: 3px solid var(--status-falta);
+  border-radius: var(--raio-2);
+}
+
+.aviso-salvo {
+  margin-top: var(--e-3);
+  padding: var(--e-2) var(--e-3);
+  font-size: var(--t-12);
+  color: var(--tinta);
+  background: var(--status-confirmado-fundo);
+  border-left: 3px solid var(--status-confirmado);
+  border-radius: var(--raio-2);
+}

@@ -3,7 +3,9 @@ package br.com.salao.shared.tenant;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.util.UUID;
+import java.util.function.BooleanSupplier;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -159,6 +161,30 @@ public abstract class AbstractPostgresIT {
                 return rs.getObject(1, UUID.class);
             }
         }
+    }
+
+    /**
+     * Espera uma condição virar verdadeira, ou falha.
+     *
+     * <p>Vive aqui, e não em cada teste, porque o que se espera é sempre a mesma coisa: um
+     * {@code NOTIFY} do Postgres atravessando a conexão do ouvinte. Uma cópia por classe de teste
+     * divergiria no tempo-limite, e a que ficasse curta viraria falha intermitente — o tipo de
+     * teste que as pessoas aprendem a rodar de novo em vez de investigar.
+     */
+    protected static void aguardar(BooleanSupplier condicao, String descricao, long segundos) {
+        long limite = System.nanoTime() + Duration.ofSeconds(segundos).toNanos();
+        while (System.nanoTime() < limite) {
+            if (condicao.getAsBoolean()) {
+                return;
+            }
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(e);
+            }
+        }
+        throw new AssertionError(descricao);
     }
 
     protected void criarAuditorias(UUID estabelecimentoId, int quantidade) throws SQLException {

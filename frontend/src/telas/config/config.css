@@ -1,0 +1,33 @@
+/* RT-CFG-001 — só o que é desta tela; o resto vem de estilo/componentes.css. */
+
+.cfg-tela {
+  /* Formulário é leitura em coluna: linha longa obriga o olho a voltar ao começo, e
+     aqui cada campo tem uma explicação embaixo que precisa ser lida. */
+  max-width: 560px;
+  /*
+   * Superfície, não trecho do fundo.
+   *
+   * Medido: --tinta-fraca sobre --papel-fundo dá 4.34 e reprova AA; sobre --papel dá
+   * 4.67 e passa. Vale para os rótulos, os títulos de seção e o texto de ajuda — que é
+   * onde estão as consequências que a pessoa precisa ler antes de mexer.
+   *
+   * É a mesma correção da lista de clientes, pela mesma causa. Está virando padrão do
+   * produto: texto secundário mora sobre papel.
+   */
+  padding: var(--e-6);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+
+.cfg-titulo {
+  margin: 0 0 var(--e-6);
+  font-size: var(--t-20);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.cfg-carregando { font-size: var(--t-14); color: var(--tinta-fraca); }
+
+/* A primeira seção não leva a linha de separação: ela vem logo abaixo do título. */
+.cfg-tela > section:first-of-type { margin-top: 0; }

@@ -1,7 +1,11 @@
 package br.com.salao.shared.cache;
 
 import br.com.salao.shared.tenant.TenantContext;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -29,10 +33,12 @@ public class InvalidadorDeCache {
 
     private final JdbcClient jdbc;
     private final ObjectMapper json;
+    private final CacheManager caches;
 
-    public InvalidadorDeCache(JdbcClient jdbc, ObjectMapper json) {
+    public InvalidadorDeCache(JdbcClient jdbc, ObjectMapper json, CacheManager caches) {
         this.jdbc = jdbc;
         this.json = json;
+        this.caches = caches;
     }
 
     /** Invalida uma entrada em todas as instâncias, ao commitar. */
@@ -52,5 +58,54 @@ public class InvalidadorDeCache {
                 .param(2, json.writeValueAsString(invalidacao))
                 .query(String.class)
                 .optional();
+        limparLocalAoCommitar(invalidacao);
+    }
+
+    /**
+     * Limpa também o cache DESTA instância, assim que a transação commitar.
+     *
+     * <h2>Por que o NOTIFY sozinho não bastava</h2>
+     *
+     * <p>O ouvinte recebe o aviso pela própria conexão dedicada, de forma assíncrona — inclusive
+     * o aviso que esta instância acabou de mandar. Existe, portanto, uma janela curta em que quem
+     * escreveu continua lendo o valor velho.
+     *
+     * <p>Parece detalhe e não é: em RT-CFG-001 significa o salão salvar o DDD padrão e o cadastro
+     * de cliente seguinte ainda recusar o telefone — a pessoa conclui que "não salvou" e tenta de
+     * novo. Quem clicou em salvar precisa ver o efeito.
+     *
+     * <p>Faltava, e só apareceu quando a invalidação ganhou o primeiro uso real. As outras
+     * instâncias continuam dependendo do {@code NOTIFY}, e o TTL segue como rede de segurança se
+     * ele se perder.
+     *
+     * <h2>Depois do commit, nunca antes</h2>
+     *
+     * <p>Limpar antes abriria a pior janela possível: uma leitura concorrente repovoaria o cache
+     * com o valor <em>antigo</em>, ainda não sobrescrito, e ele ficaria lá até o TTL — o oposto do
+     * que se queria.
+     */
+    private void limparLocalAoCommitar(Invalidacao invalidacao) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            aplicarLocalmente(invalidacao);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                aplicarLocalmente(invalidacao);
+            }
+        });
+    }
+
+    private void aplicarLocalmente(Invalidacao invalidacao) {
+        Cache cache = caches.getCache(invalidacao.cache());
+        if (cache == null) {
+            return;
+        }
+        if (invalidacao.chave() == null) {
+            cache.clear();
+        } else {
+            cache.evict(ChaveDeCache.de(invalidacao.estabelecimentoId(), invalidacao.chave()));
+        }
     }
 }

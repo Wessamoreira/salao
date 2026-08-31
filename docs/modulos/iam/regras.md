@@ -323,3 +323,48 @@ quem esqueceu descobrir na hora.
 **Rotinas.** RT-IAM-008 e toda rotina que audita
 **Testes.** `AuditoriaIT.rollback_nao_deixa_rastro`, `AuditoriaIT.exige_transacao`
 **Configurável?** Não · **Origem.** 2026-08-29
+
+---
+
+### RN-IAM-017 — A regra de comissão vale a partir da alteração, nunca para trás
+
+**Enunciado.** Alterar `base_comissao` ou `desconto_afeta_comissao` afeta os atendimentos daí em
+diante. Fechamentos já realizados não são recalculados.
+
+**Motivo.** A configuração é lida ao vivo no cálculo. Se um fechamento consultasse a regra atual em
+vez da vigente na época, trocar a base recalcularia comissões já pagas — e o profissional veria o
+extrato de março mudar em maio, sem que nada tivesse acontecido em março.
+
+**Obrigação para a Fase 2, registrada aqui porque o módulo ainda não existe:** o fechamento
+(`RT-FIN-*`) precisa **gravar a regra vigente no próprio lançamento**, e o cálculo precisa ler dali,
+não da configuração. Enquanto isso não existir, a trilha de auditoria de
+`CONFIGURACAO_ALTERADA` é a única resposta para "qual base valia em março?" — pergunta que aparece
+na primeira vez que alguém contesta o extrato.
+
+**Onde é garantida.** Hoje: auditoria com antes/depois da regra. Na Fase 2: cópia da regra no
+lançamento.
+**Rotinas.** RT-CFG-001, RT-FIN-* · **Teste.**
+`ConfiguracaoIT.trilha_guarda_a_regra_de_comissao`
+**Configurável?** É a própria configuração
+**Origem.** 2026-08-30
+
+---
+
+### RN-IAM-018 — Alterar a configuração invalida o cache em todas as instâncias e nesta
+
+**Enunciado.** Salvar a configuração publica um `NOTIFY` para as demais instâncias **e** limpa o
+cache local ao commitar.
+
+**Motivo.** O ouvinte recebe o aviso de forma assíncrona, inclusive o que a própria instância
+mandou — e existe uma janela em que quem escreveu continua lendo o valor velho. Em RT-CFG-001 isso
+significa salvar o DDD padrão e o cadastro seguinte ainda recusar o telefone: a pessoa conclui que
+não salvou. Quem clicou em salvar precisa ver o efeito.
+
+A limpeza local é **depois do commit**: antes, uma leitura concorrente repovoaria o cache com o
+valor antigo e ele ficaria até o TTL — o oposto do pretendido.
+
+**Onde é garantida.** `InvalidadorDeCache.limparLocalAoCommitar`.
+**Rotinas.** RT-CFG-001, RT-INF-007 · **Teste.**
+`ConfiguracaoIT.define_o_ddd_e_destrava_o_cadastro` (só passa com a limpeza síncrona no commit)
+**Configurável?** Não
+**Origem.** 2026-08-30

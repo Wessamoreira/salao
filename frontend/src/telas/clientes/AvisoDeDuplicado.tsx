@@ -44,7 +44,7 @@ export function AvisoDeDuplicado({
               {podeJuntar ? (
                 <button
                   type="button"
-                  className="cli-acao-discreta"
+                  className="acao-discreta"
                   onClick={() => aoEscolher(cliente.id)}
                 >
                   {comoChamar(cliente)}

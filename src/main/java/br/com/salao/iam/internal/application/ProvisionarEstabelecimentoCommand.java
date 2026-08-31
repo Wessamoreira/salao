@@ -39,9 +39,8 @@ public record ProvisionarEstabelecimentoCommand(
         periodicidadeDeFechamento = periodicidadeDeFechamento == null
                 ? PeriodicidadeDeFechamento.MENSAL
                 : periodicidadeDeFechamento;
-        // Só dígitos: quem preenche costuma escrever "(11)" ou "011".
-        dddPadrao = dddPadrao == null ? null : dddPadrao.replaceAll("\\D", "");
-        dddPadrao = dddPadrao == null || dddPadrao.isEmpty() ? null : dddPadrao;
+        // A limpeza do DDD vive em DadosDoEstabelecimento, junto da validação: mantê-la aqui
+        // deixava a edição (RT-CFG-001) sem ela, e "(11)" era recusado só naquele caminho.
     }
 
     public static ProvisionarEstabelecimentoCommand comPadroes(

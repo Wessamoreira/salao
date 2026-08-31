@@ -17,6 +17,7 @@ import br.com.salao.shared.tempo.Relogio;
 import javax.sql.DataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /** RT-CLI-001 — fiação do módulo cliente. */
@@ -28,8 +29,18 @@ public class ClienteConfig {
         return new ClientesJdbc(JdbcClient.create(dataSource));
     }
 
-    /** O que os outros módulos recebem ao injetar {@link ClienteApi}. */
+    /**
+     * O que os outros módulos recebem ao injetar {@link ClienteApi}.
+     *
+     * <p>{@code @Primary} é necessário porque {@code ClientesJdbc} também é um bean e também
+     * implementa {@code ClienteApi} — sem ele há dois candidatos do mesmo tipo. Faltava, e a
+     * injeção só funcionava por acidente: o Spring desempata pelo NOME do campo quando há mais de
+     * um candidato, e todos os testes existentes chamavam o campo de {@code clienteApi}. O
+     * primeiro que usou outro nome quebrou. {@code IamConfig} já resolvia assim para
+     * {@code EstabelecimentoApi}.
+     */
     @Bean
+    @Primary
     public ClienteApi clienteApi(ClientesJdbc jdbc) {
         return jdbc;
     }

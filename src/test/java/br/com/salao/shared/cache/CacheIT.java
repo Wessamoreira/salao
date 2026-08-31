@@ -198,19 +198,4 @@ class CacheIT extends AbstractPostgresIT {
         }
     }
 
-    private static void aguardar(BooleanSupplier condicao, String descricao, long segundos) {
-        long limite = System.nanoTime() + Duration.ofSeconds(segundos).toNanos();
-        while (System.nanoTime() < limite) {
-            if (condicao.getAsBoolean()) {
-                return;
-            }
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IllegalStateException(e);
-            }
-        }
-        throw new AssertionError(descricao);
-    }
 }

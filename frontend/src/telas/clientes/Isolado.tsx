@@ -27,7 +27,7 @@ export class Isolado extends Component<{ children: ReactNode }, { quebrou: boole
     if (this.state.quebrou) {
       return (
         <div className="cli-ficha">
-          <p className="cli-erro">
+          <p className="erro">
             Não foi possível abrir esta ficha. A busca continua funcionando — escolha de novo,
             ou recarregue a página.
           </p>

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./tokens.css";
+@import "./componentes.css";
 
 /*
  * Tailwind lê os tokens POR REFERÊNCIA (@theme inline), nunca copiando valores.

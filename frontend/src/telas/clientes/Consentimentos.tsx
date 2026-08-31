@@ -31,8 +31,8 @@ export function Consentimentos({ clienteId }: { clienteId: string }) {
   if (!consentimentos) return null;
 
   return (
-    <section className="cli-secao">
-      <h3 className="cli-secao-titulo">Contato</h3>
+    <section className="secao">
+      <h3 className="secao-titulo">Contato</h3>
 
       {/*
         O canal vem ANTES das decisões, não depois.
@@ -69,7 +69,7 @@ export function Consentimentos({ clienteId }: { clienteId: string }) {
       ))}
 
       {registrar.isError && (
-        <p className="cli-erro">Não foi possível registrar. Tente de novo.</p>
+        <p className="erro">Não foi possível registrar. Tente de novo.</p>
       )}
     </section>
   );

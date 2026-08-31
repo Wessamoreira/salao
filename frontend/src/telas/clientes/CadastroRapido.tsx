@@ -40,9 +40,9 @@ export function CadastroRapido({
         );
       }}
     >
-      <h3 className="cli-secao-titulo">Cadastrar</h3>
+      <h3 className="secao-titulo">Cadastrar</h3>
 
-      <label className="cli-campo">
+      <label className="campo">
         <span>Nome</span>
         <input
           value={nome}
@@ -52,7 +52,7 @@ export function CadastroRapido({
         />
       </label>
 
-      <label className="cli-campo">
+      <label className="campo">
         {/* O rótulo diz que é opcional. Cliente que passa e pergunta o preço, criança
             que vem com a mãe, a senhora sem celular: existem e precisam de ficha. */}
         <span>Telefone (opcional)</span>
@@ -67,12 +67,12 @@ export function CadastroRapido({
 
       {duplicados && <AvisoDeDuplicado duplicados={duplicados} />}
 
-      <button type="submit" className="cli-acao" disabled={cadastrar.isPending || !nome.trim()}>
+      <button type="submit" className="acao" disabled={cadastrar.isPending || !nome.trim()}>
         {cadastrar.isPending ? 'Cadastrando…' : 'Cadastrar'}
       </button>
 
       {cadastrar.isError && (
-        <p className="cli-erro">
+        <p className="erro">
           {mensagem(cadastrar.error)}
         </p>
       )}

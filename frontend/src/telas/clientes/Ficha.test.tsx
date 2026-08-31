@@ -84,8 +84,14 @@ describe('ficha do cliente', () => {
     servidor({ consentimentos: SEM_REGISTRO });
     montar();
 
+    // findAllBy resolve com o PRIMEIRO que aparece. Esperar pela contagem esperada torna
+    // o teste determinístico — a versão sem isso falhou uma vez com a máquina carregada, e
+    // teste que falha sob carga ensina a rodar de novo em vez de investigar.
+    const esperados = SEM_REGISTRO.length;
     const aceitou = await screen.findAllByRole('button', { name: 'Aceitou' });
-    const recusou = screen.getAllByRole('button', { name: 'Recusou' });
+    const recusou = await screen.findAllByRole('button', { name: 'Recusou' });
+    expect(aceitou).toHaveLength(esperados);
+    expect(recusou).toHaveLength(esperados);
     expect(aceitou.every((b) => b.getAttribute('aria-pressed') === 'false')).toBe(true);
     expect(recusou.every((b) => b.getAttribute('aria-pressed') === 'false')).toBe(true);
   });
