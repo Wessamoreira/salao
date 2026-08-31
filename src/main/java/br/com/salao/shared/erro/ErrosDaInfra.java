@@ -37,6 +37,15 @@ public enum ErrosDaInfra implements CodigoDeErro {
     METODO_NAO_PERMITIDO("ER-INF-METODO_NAO_PERMITIDO", HttpStatus.METHOD_NOT_ALLOWED,
             "Método não permitido"),
 
+    /**
+     * Permissão insuficiente para a operação.
+     *
+     * <p>Sem detalhe de qual permissão falta: dizer isso a quem não a tem descreve o modelo de
+     * autorização para quem está sondando. O front sabe o que esconder por
+     * {@code /me/capabilities}; quem chega aqui contornou a tela.
+     */
+    ACESSO_NEGADO("ER-INF-ACESSO_NEGADO", HttpStatus.FORBIDDEN, "Acesso negado"),
+
     ERRO_INTERNO("ER-INF-ERRO_INTERNO", HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno");
 
     private final String codigo;

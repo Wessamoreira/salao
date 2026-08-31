@@ -1,6 +1,7 @@
 package br.com.salao.cliente.internal;
 
 import br.com.salao.cliente.api.ClienteApi;
+import br.com.salao.cliente.internal.application.AnonimizarClienteUseCase;
 import br.com.salao.cliente.internal.application.BuscarClientesUseCase;
 import br.com.salao.cliente.internal.application.CadastrarClienteUseCase;
 import br.com.salao.cliente.internal.application.ConsultarClienteUseCase;
@@ -46,6 +47,12 @@ public class ClienteConfig {
     @Bean
     public BuscarClientesUseCase buscarClientesUseCase(ClientesJdbc clientes) {
         return new BuscarClientesUseCase(clientes);
+    }
+
+    @Bean
+    public AnonimizarClienteUseCase anonimizarClienteUseCase(
+            ClientesJdbc clientes, AuditoriaApi auditoria, Relogio relogio) {
+        return new AnonimizarClienteUseCase(clientes, auditoria, relogio);
     }
 
     @Bean

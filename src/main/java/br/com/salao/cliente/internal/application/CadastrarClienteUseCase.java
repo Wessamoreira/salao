@@ -14,7 +14,6 @@ import br.com.salao.shared.erro.CampoInvalido;
 import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.shared.seguranca.UsuarioAtual;
 import br.com.salao.shared.tenant.TenantContext;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -72,7 +71,9 @@ public class CadastrarClienteUseCase {
                 Nomes.opcional(dados.email()), Nomes.opcional(dados.observacao()),
                 UsuarioAtual.idOuNulo());
 
-        auditoria.registrar(RegistroDeAuditoria.criacao("cliente", id, resumoParaAuditoria(nome)));
+        // Sem nenhum dado pessoal: `entidade_id` já diz de quem se trata, e a trilha responde
+        // "quem fez o quê". Ver RN-CLI-007.
+        auditoria.registrar(RegistroDeAuditoria.criacao("cliente", id, Map.of()));
         log.info("Cliente cadastrado: {}", id);
         return id;
     }
@@ -98,16 +99,4 @@ public class CadastrarClienteUseCase {
         }
     }
 
-    /**
-     * Só o nome vai para a trilha.
-     *
-     * <p>Auditoria é retida por prazo longo e consultada por muita gente: copiar telefone e
-     * e-mail para dentro dela criaria uma segunda base de dados pessoais fora do alcance da
-     * anonimização da LGPD (RT-CLI-005), que só sabe limpar a tabela {@code cliente}.
-     */
-    private Map<String, Object> resumoParaAuditoria(String nome) {
-        Map<String, Object> resumo = new HashMap<>();
-        resumo.put("nome", nome);
-        return resumo;
-    }
 }

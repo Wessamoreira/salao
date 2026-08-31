@@ -42,6 +42,15 @@ public final class Permissao {
     /** Separada porque ficha de química indica alergia — dado de saúde (LGPD). */
     public static final String CLIENTE_FICHA_LER = "cliente:ficha:read";
 
+    /**
+     * Anonimizar a pedido do titular (RT-CLI-005).
+     *
+     * <p>Separada de {@code cliente:write} porque é <strong>irreversível</strong> e rara. A
+     * recepção cadastra e corrige o dia inteiro; apagar o dado de alguém para sempre é outro tipo
+     * de ato, e não deve estar a um clique de distância de quem está atendendo o balcão.
+     */
+    public static final String CLIENTE_ANONIMIZAR = "cliente:anonymize";
+
     public static final String USUARIO_GERENCIAR = "usuario:manage";
     public static final String CONFIG_GERENCIAR = "config:manage";
     public static final String RELATORIO_LER = "relatorio:read";

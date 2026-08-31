@@ -5,6 +5,7 @@ import br.com.salao.cliente.api.ClienteResumo;
 import br.com.salao.cliente.api.EstadoDoConsentimento;
 import br.com.salao.cliente.api.Finalidade;
 import br.com.salao.cliente.internal.application.CadastrarClienteUseCase;
+import br.com.salao.cliente.internal.application.AnonimizarClienteUseCase;
 import br.com.salao.cliente.internal.application.BuscarClientesUseCase;
 import br.com.salao.cliente.internal.application.ConsultarClienteUseCase;
 import br.com.salao.cliente.internal.application.ConsultarConsentimentosUseCase;
@@ -21,14 +22,17 @@ import jakarta.validation.constraints.Size;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -51,6 +55,7 @@ public class ClientesController {
     private final MesclarClientesUseCase mesclar;
     private final RegistrarConsentimentoUseCase registrarConsentimento;
     private final ConsultarConsentimentosUseCase consultarConsentimentos;
+    private final AnonimizarClienteUseCase anonimizar;
 
     public ClientesController(CadastrarClienteUseCase cadastrar,
                               ConsultarClienteUseCase consultar,
@@ -58,9 +63,11 @@ public class ClientesController {
                               DetectarDuplicadosUseCase duplicados,
                               MesclarClientesUseCase mesclar,
                               RegistrarConsentimentoUseCase registrarConsentimento,
-                              ConsultarConsentimentosUseCase consultarConsentimentos) {
+                              ConsultarConsentimentosUseCase consultarConsentimentos,
+                              AnonimizarClienteUseCase anonimizar) {
         this.registrarConsentimento = registrarConsentimento;
         this.consultarConsentimentos = consultarConsentimentos;
+        this.anonimizar = anonimizar;
         this.cadastrar = cadastrar;
         this.consultar = consultar;
         this.buscar = buscar;
@@ -139,6 +146,22 @@ public class ClientesController {
         return consultar.executar(id);
     }
 
+    /**
+     * RT-CLI-005 — apaga o dado pessoal a pedido do titular (LGPD art. 18, VI).
+     *
+     * <p>{@code DELETE} é o verbo certo do ponto de vista de quem chama: para o mundo lá fora, a
+     * pessoa deixa de existir no sistema. Que a linha permaneça, sem dado pessoal, para sustentar
+     * o histórico financeiro que a legislação fiscal exige, é assunto do servidor.
+     *
+     * <p>204 e não 200: não há o que devolver, e devolver a ficha vazia seria estranho logo depois
+     * de apagá-la.
+     */
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void anonimizar(@PathVariable UUID id) {
+        anonimizar.executar(id);
+    }
+
     /** RT-CLI-004 — o que vale hoje, inclusive as finalidades que ninguém perguntou ainda. */
     @GetMapping("/{id}/consentimentos")
     public List<EstadoDoConsentimento> consentimentos(@PathVariable UUID id) {
@@ -147,8 +170,7 @@ public class ClientesController {
 
     public record ConsentimentoRequest(
             @NotNull Boolean concedido,
-            @NotNull CanalDeConsentimento canal,
-            @Size(max = 500) String observacao) {
+            @NotNull CanalDeConsentimento canal) {
     }
 
     /**
@@ -168,8 +190,7 @@ public class ClientesController {
             @PathVariable UUID id,
             @PathVariable Finalidade finalidade,
             @Valid @RequestBody ConsentimentoRequest corpo) {
-        registrarConsentimento.executar(id, finalidade, corpo.concedido(), corpo.canal(),
-                corpo.observacao());
+        registrarConsentimento.executar(id, finalidade, corpo.concedido(), corpo.canal());
         return consultarConsentimentos.executar(id);
     }
 }

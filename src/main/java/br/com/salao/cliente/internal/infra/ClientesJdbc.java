@@ -318,21 +318,20 @@ public class ClientesJdbc implements ClienteApi {
 
     public void registrarConsentimento(UUID estabelecimentoId, UUID clienteId,
                                        Finalidade finalidade, boolean concedido,
-                                       CanalDeConsentimento canal, String observacao,
+                                       CanalDeConsentimento canal,
                                        Instant quando, UUID registradoPor) {
         jdbc.sql("""
                 insert into cliente_consentimento
                     (estabelecimento_id, cliente_id, finalidade, concedido, canal,
-                     observacao, registrado_em, registrado_por)
+                     registrado_em, registrado_por)
                 values (:estabelecimento, :cliente, :finalidade, :concedido, :canal,
-                        :observacao, :quando, :por)
+                        :quando, :por)
                 """)
                 .param("estabelecimento", estabelecimentoId)
                 .param("cliente", clienteId)
                 .param("finalidade", finalidade.name())
                 .param("concedido", concedido)
                 .param("canal", canal.name())
-                .param("observacao", observacao)
                 .param("quando", java.sql.Timestamp.from(quando))
                 .param("por", registradoPor)
                 .update();
@@ -372,6 +371,41 @@ public class ClientesJdbc implements ClienteApi {
                 .findFirst()
                 .map(EstadoDoConsentimento::podeReceber)
                 .orElse(finalidade.permitidoSemRegistro());
+    }
+
+    // ------------------------------------------------------------------ RT-CLI-005
+
+    /**
+     * RT-CLI-005 — apaga o dado pessoal e mantém a linha.
+     *
+     * <p>Alcança <strong>também as fichas absorvidas</strong> por esta (RT-CLI-003). Elas
+     * continuam guardando o nome e o telefone com que foram cadastradas, e são a mesma pessoa:
+     * anonimizar só a sobrevivente deixaria o dado intacto na ficha ao lado, exatamente onde
+     * ninguém pensaria em olhar.
+     *
+     * <p>{@code nome} recebe um rótulo em vez de ficar vazio porque a coluna é {@code not null} e
+     * relatório financeiro precisa de algo para mostrar. Ele não identifica ninguém — e a coluna
+     * {@code busca}, sendo gerada, se recalcula sozinha a partir dele.
+     *
+     * @return quantas linhas foram anonimizadas
+     */
+    public int anonimizar(UUID clienteId, String rotulo, Instant quando) {
+        return jdbc.sql("""
+                update cliente
+                   set nome = :rotulo,
+                       apelido = null,
+                       telefone = null,
+                       email = null,
+                       observacao = null,
+                       anonimizado_em = :quando,
+                       versao = versao + 1
+                 where (id = :id or mesclado_para = :id)
+                   and anonimizado_em is null
+                """)
+                .param("id", clienteId)
+                .param("rotulo", rotulo)
+                .param("quando", java.sql.Timestamp.from(quando))
+                .update();
     }
 
     /**

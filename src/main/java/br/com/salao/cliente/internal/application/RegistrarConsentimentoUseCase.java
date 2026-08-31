@@ -3,7 +3,6 @@ package br.com.salao.cliente.internal.application;
 import br.com.salao.cliente.api.CanalDeConsentimento;
 import br.com.salao.cliente.api.ErrosDoCliente;
 import br.com.salao.cliente.api.Finalidade;
-import br.com.salao.cliente.internal.domain.Nomes;
 import br.com.salao.cliente.internal.infra.ClientesJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.Permissao;
@@ -37,6 +36,14 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>A garantia é permissão de banco, não convenção: {@code salao_app} não tem {@code UPDATE} nem
  * {@code DELETE} nesta tabela.
+ *
+ * <h2>Sem campo de observação</h2>
+ *
+ * <p>Havia um, e saiu em V16. Campo livre digitado pela recepção recebe dado pessoal mais cedo ou
+ * mais tarde — e como a tabela é append-only, a anonimização (RT-CLI-005) <strong>não conseguiria
+ * limpá-lo</strong>. Conceder {@code UPDATE} para resolver desfaria a garantia que faz o registro
+ * valer como prova. Canal, data, decisão e autor já respondem "onde está a prova de que ela
+ * aceitou?".
  */
 public class RegistrarConsentimentoUseCase {
 
@@ -56,15 +63,14 @@ public class RegistrarConsentimentoUseCase {
     @PreAuthorize("hasAuthority('" + Permissao.CLIENTE_ESCREVER + "')")
     @Transactional
     public void executar(UUID clienteId, Finalidade finalidade, boolean concedido,
-                         CanalDeConsentimento canal, String observacao) {
+                         CanalDeConsentimento canal) {
         if (!clientes.existe(clienteId)) {
             throw new ErroDeDominio(ErrosDoCliente.CLIENTE_NAO_ENCONTRADO,
                     "cliente " + clienteId + " não encontrado");
         }
 
         clientes.registrarConsentimento(TenantContext.obrigatorio(), clienteId, finalidade,
-                concedido, canal, Nomes.opcional(observacao), relogio.agora(),
-                UsuarioAtual.idOuNulo());
+                concedido, canal, relogio.agora(), UsuarioAtual.idOuNulo());
 
         // A trilha registra a decisão porque é ela que se apresenta num questionamento — e aqui,
         // ao contrário do cadastro (RN-CLI-007), não há PII a proteger: só id, finalidade e canal.

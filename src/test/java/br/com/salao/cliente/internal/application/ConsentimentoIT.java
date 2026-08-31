@@ -102,7 +102,7 @@ class ConsentimentoIT extends AbstractPostgresIT {
                 () -> cadastrar.executar(DadosDoCliente.rapido("Maria Silva", null)));
 
         TenantContext.executar(tenant, () -> registrar.executar(cliente, Finalidade.MARKETING,
-                true, CanalDeConsentimento.BALCAO, "perguntado no balcão"));
+                true, CanalDeConsentimento.BALCAO));
         assertThat(estado(tenant, cliente, Finalidade.MARKETING))
                 .satisfies(e -> {
                     assertThat(e.decisao()).isEqualTo(Decisao.CONCEDIDO);
@@ -112,7 +112,7 @@ class ConsentimentoIT extends AbstractPostgresIT {
                 });
 
         TenantContext.executar(tenant, () -> registrar.executar(cliente, Finalidade.MARKETING,
-                false, CanalDeConsentimento.WHATSAPP, "pediu para parar"));
+                false, CanalDeConsentimento.WHATSAPP));
         assertThat(estado(tenant, cliente, Finalidade.MARKETING).podeReceber()).isFalse();
     }
 
@@ -126,7 +126,7 @@ class ConsentimentoIT extends AbstractPostgresIT {
                 () -> cadastrar.executar(DadosDoCliente.rapido("Maria Silva", null)));
 
         TenantContext.executar(tenant, () -> registrar.executar(cliente,
-                Finalidade.LEMBRETE_DE_AGENDAMENTO, false, CanalDeConsentimento.TELEFONE, null));
+                Finalidade.LEMBRETE_DE_AGENDAMENTO, false, CanalDeConsentimento.TELEFONE));
 
         assertThat(TenantContext.obter(tenant,
                 () -> clienteApi.podeReceber(cliente, Finalidade.LEMBRETE_DE_AGENDAMENTO)))
@@ -141,7 +141,7 @@ class ConsentimentoIT extends AbstractPostgresIT {
                 () -> cadastrar.executar(DadosDoCliente.rapido("Maria Silva", null)));
 
         TenantContext.executar(tenant, () -> registrar.executar(cliente, Finalidade.MARKETING,
-                true, CanalDeConsentimento.BALCAO, null));
+                true, CanalDeConsentimento.BALCAO));
 
         assertThat(estado(tenant, cliente, Finalidade.MARKETING).podeReceber()).isTrue();
         assertThat(estado(tenant, cliente, Finalidade.PESQUISA_DE_SATISFACAO).decisao())
@@ -161,9 +161,9 @@ class ConsentimentoIT extends AbstractPostgresIT {
                 () -> cadastrar.executar(DadosDoCliente.rapido("Maria Silva", null)));
 
         TenantContext.executar(tenant, () -> registrar.executar(cliente, Finalidade.MARKETING,
-                true, CanalDeConsentimento.BALCAO, null));
+                true, CanalDeConsentimento.BALCAO));
         TenantContext.executar(tenant, () -> registrar.executar(cliente, Finalidade.MARKETING,
-                false, CanalDeConsentimento.BALCAO, null));
+                false, CanalDeConsentimento.BALCAO));
 
         assertThatThrownBy(() -> comoAplicacao(tenant,
                 "update cliente_consentimento set concedido = true"))
@@ -201,9 +201,9 @@ class ConsentimentoIT extends AbstractPostgresIT {
                 cadastrar.executar(DadosDoCliente.rapido("Maria da Silva", null)) });
 
         TenantContext.executar(tenant, () -> registrar.executar(ids[0], Finalidade.MARKETING,
-                true, CanalDeConsentimento.BALCAO, null));
+                true, CanalDeConsentimento.BALCAO));
         TenantContext.executar(tenant, () -> registrar.executar(ids[1], Finalidade.MARKETING,
-                false, CanalDeConsentimento.WHATSAPP, "pediu para parar"));
+                false, CanalDeConsentimento.WHATSAPP));
 
         TenantContext.executar(tenant, () -> mesclar.executar(ids[0], ids[1]));
 
@@ -233,7 +233,7 @@ class ConsentimentoIT extends AbstractPostgresIT {
 
         assertThatThrownBy(() -> TenantContext.executar(tenant,
                 () -> registrar.executar(UUID.randomUUID(), Finalidade.MARKETING, true,
-                        CanalDeConsentimento.BALCAO, null)))
+                        CanalDeConsentimento.BALCAO)))
                 .isInstanceOf(AccessDeniedException.class);
     }
 
@@ -249,7 +249,7 @@ class ConsentimentoIT extends AbstractPostgresIT {
         for (Finalidade finalidade : Finalidade.values()) {
             for (CanalDeConsentimento canal : CanalDeConsentimento.values()) {
                 TenantContext.executar(tenant, () ->
-                        registrar.executar(cliente, finalidade, true, canal, null));
+                        registrar.executar(cliente, finalidade, true, canal));
             }
         }
 

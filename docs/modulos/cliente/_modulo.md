@@ -41,9 +41,9 @@ e que ninguém saberia invalidar.
 | [RT-CLI-002](RT-CLI-002-busca-de-cliente.md) — busca por nome, apelido e 4 últimos dígitos | implementada |
 | [RT-CLI-003](RT-CLI-003-duplicados-e-mesclagem.md) — detecção de duplicado e mesclagem | implementada |
 | [RT-CLI-004](RT-CLI-004-consentimento.md) — consentimento LGPD | implementada |
-| RT-CLI-005 — anonimização | próxima |
-| RT-CLI-006 — tela de clientes | planejada |
+| [RT-CLI-005](RT-CLI-005-anonimizacao.md) — anonimização | implementada |
+| RT-CLI-006 — tela de clientes | próxima |
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-CLI-001 a RN-CLI-021.
+Ver [regras.md](regras.md) — RN-CLI-001 a RN-CLI-025.

@@ -104,19 +104,26 @@ como duas.
 
 ---
 
-### RN-CLI-007 — Auditoria de cliente registra apenas o nome
+### RN-CLI-007 — A auditoria de cliente não registra dado pessoal nenhum
 
-**Enunciado.** A trilha de auditoria do cadastro grava o nome. Telefone, e-mail e observação não
-entram.
+**Enunciado.** A trilha do cadastro grava apenas o `entidade_id`. Nome, apelido, telefone, e-mail
+e observação não entram.
 
-**Motivo.** Auditoria é retida por prazo longo e consultada por muita gente. Copiar dado pessoal
-para dentro dela criaria uma segunda base fora do alcance da anonimização da LGPD (RT-CLI-005), que
-só sabe limpar a tabela `cliente` — e o titular que pedisse exclusão continuaria com o telefone
-gravado num lugar que ninguém lembraria de olhar.
+**Motivo.** Auditoria é retida por prazo longo, consultada por muita gente e **a aplicação não
+pode alterá-la** (append-only por permissão). Qualquer dado pessoal ali é uma segunda base fora do
+alcance da anonimização (RT-CLI-005), que só sabe limpar a tabela `cliente` — o titular pediria
+exclusão e continuaria nomeado num lugar que ninguém lembraria de olhar. E `entidade_id` já
+responde de quem se trata: a trilha existe para dizer *quem fez o quê*, não para descrever a
+pessoa.
 
-**Onde é garantida.** Caso de uso: `CadastrarClienteUseCase.resumoParaAuditoria`.
-**Rotinas.** RT-CLI-001, RT-CLI-005 · **Teste.** — (coberto por revisão; ver pendência de
-RT-CLI-005)
+**Corrigida em 30/08/2026, e vale registrar o erro.** A primeira versão desta regra proibia
+telefone e e-mail com este mesmo argumento e **deixava o nome passar** — a mesma falha, com a
+mesma razão contra, aplicada pela metade. Só apareceu ao escrever RT-CLI-005, quando ficou
+impossível chamar de anonimizada uma ficha que a auditoria sabia nomear. As linhas já gravadas
+foram redigidas em V16.
+
+**Onde é garantida.** Caso de uso: `CadastrarClienteUseCase` registra `Map.of()`.
+**Rotinas.** RT-CLI-001, RT-CLI-005 · **Teste.** `AnonimizacaoIT.trilha_nao_guarda_nome`
 **Configurável?** Não
 **Origem.** 2026-08-30
 
@@ -366,5 +373,75 @@ consentimento existe.
 `cliente_id in (select id from cliente where mesclado_para = :id)`.
 **Rotinas.** RT-CLI-004, RT-CLI-003 · **Teste.**
 `ConsentimentoIT.revogacao_sobrevive_a_mesclagem`
+**Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-022 — Anonimizar apaga o dado pessoal e preserva a linha
+
+**Enunciado.** Nome vira um rótulo fixo; apelido, telefone, e-mail e observação são apagados;
+`anonimizado_em` é preenchido. A linha e o `id` permanecem.
+
+**Motivo.** O histórico financeiro aponta para o cliente e a legislação fiscal exige guardá-lo.
+Apagar a linha quebraria o extrato de comissão de quem trabalhou — o direito do titular é sobre o
+dado pessoal, não sobre o registro contábil do salão. O rótulo é fixo e sem número: "Cliente 7"
+convidaria alguém a descobrir quem era o sétimo.
+
+**Nota de honestidade.** Como o `id` permanece, isto é pseudonimização no sentido estrito do art.
+12. O que torna a operação defensável é que todo dado que permitiria voltar à pessoa é destruído —
+inclusive na auditoria (RN-CLI-007).
+
+**Onde é garantida.** Infra: `ClientesJdbc.anonimizar`.
+**Rotinas.** RT-CLI-005 · **Teste.** `AnonimizacaoIT.apaga_o_dado_e_mantem_a_linha`
+**Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-023 — A anonimização alcança as fichas absorvidas
+
+**Enunciado.** Anonimizar uma ficha anonimiza também todas as que foram mescladas nela.
+
+**Motivo.** A ficha absorvida continua guardando o nome e o telefone com que foi cadastrada, e é a
+mesma pessoa. Anonimizar só a sobrevivente deixaria o dado intacto na ficha ao lado — exatamente
+onde ninguém pensaria em olhar.
+
+**Onde é garantida.** Infra: `where (id = :id or mesclado_para = :id)`, correto porque RT-CLI-003
+mantém as cadeias planas.
+**Rotinas.** RT-CLI-005, RT-CLI-003 · **Teste.**
+`AnonimizacaoIT.alcanca_as_fichas_absorvidas`
+**Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-024 — Cliente anonimizada não recebe mensagem nenhuma
+
+**Enunciado.** `podeReceber` devolve `false` para toda finalidade, inclusive as permitidas por
+padrão pela base legal.
+
+**Motivo.** Mandar lembrete para quem pediu para ser esquecida seria o pedido atendido no banco e
+ignorado na prática — a pior combinação possível, porque o sistema pareceria conforme.
+
+**Onde é garantida.** `ClientesJdbc.podeReceber` falha fechada quando `existe` é falso, e `existe`
+exclui anonimizadas.
+**Rotinas.** RT-CLI-005, RT-CLI-004 · **Teste.** `AnonimizacaoIT.nao_recebe_mais_mensagem`
+**Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-025 — Anonimizar exige permissão própria, separada de `cliente:write`
+
+**Enunciado.** `cliente:anonymize`, concedida apenas ao `ADMIN` — nem o `GERENTE` a tem.
+
+**Motivo.** A operação é irreversível. A recepção cadastra e corrige o dia inteiro; apagar o dado
+de alguém para sempre é outro tipo de ato, e o pedido do titular chega a quem responde pelo salão,
+não a quem está atendendo o balcão.
+
+**Onde é garantida.** `AnonimizarClienteUseCase` com `@PreAuthorize` · `MapaDePermissoes`.
+**Rotinas.** RT-CLI-005 · **Teste.** `AnonimizacaoIT.exige_permissao_propria`,
+`ClientesWebIT.recepcao_nao_anonimiza`
 **Configurável?** Não
 **Origem.** 2026-08-30

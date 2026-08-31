@@ -130,10 +130,21 @@ O salão guarda dado de cliente. Isso não é opcional.
 | Transparência sobre IA | Aviso ao cliente na primeira interação com o agente |
 | Retenção | Definida por tipo (tabela em `04-modelo-de-dados.md`), com job diário |
 | Log sem PII | Nunca telefone completo, nome ou conteúdo de mensagem em log |
+| Auditoria sem PII | A trilha guarda `entidade_id` e o verbo, nunca o dado da pessoa. Ela é append-only e a anonimização não a alcança — dado pessoal ali seria uma segunda base fora de alcance (RN-CLI-007, corrigida em 30/08) |
 
 Anonimizar é a operação mais delicada do sistema: precisa apagar nome, telefone, e-mail, foto e
 ficha, e **manter** os lançamentos financeiros com a referência ao cliente anonimizado. Tem rotina
-própria e teste próprio (`RT-CLI-005`).
+própria e teste próprio ([`RT-CLI-005`](modulos/cliente/RT-CLI-005-anonimizacao.md)).
+
+Entregue em 30/08/2026 para nome, telefone, e-mail e observação — inclusive nas fichas absorvidas
+por mesclagem, e com a trilha de auditoria corrigida junto. Foto e ficha de química **ainda não**,
+porque ainda não existem; quando existirem, esta rotina precisa apagá-las, e a omissão seria grave
+por serem dado de saúde.
+
+**Uma honestidade sobre a palavra:** o `id` permanece, porque é ele que o histórico financeiro
+referencia. No sentido estrito do art. 12 isso é pseudonimização. O que torna a operação
+defensável é que todo dado que permitiria voltar à pessoa é destruído — foi essa exigência que
+revelou o nome esquecido na auditoria.
 
 ## Backup
 

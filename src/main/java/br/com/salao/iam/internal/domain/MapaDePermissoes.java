@@ -27,7 +27,7 @@ public final class MapaDePermissoes {
             COMANDA_ABRIR, COMANDA_FECHAR, COMANDA_DESCONTO, COMANDA_REABRIR,
             FINANCEIRO_LER_PROPRIO, FINANCEIRO_LER_TODOS, FINANCEIRO_FECHAR, FINANCEIRO_CONCILIAR,
             ESTOQUE_LER, ESTOQUE_ESCREVER, PRODUTO_PRECO_ESCREVER,
-            CLIENTE_LER, CLIENTE_ESCREVER, CLIENTE_FICHA_LER,
+            CLIENTE_LER, CLIENTE_ESCREVER, CLIENTE_FICHA_LER, CLIENTE_ANONIMIZAR,
             USUARIO_GERENCIAR, CONFIG_GERENCIAR, RELATORIO_LER);
 
     private static final Map<Perfil, Set<String>> POR_PERFIL = Map.of(
@@ -35,7 +35,9 @@ public final class MapaDePermissoes {
 
             // Opera o dia e vê o financeiro do salão, mas não mexe na estrutura: quem cria
             // usuário e muda configuração é o dono.
-            Perfil.GERENTE, menos(TUDO, USUARIO_GERENCIAR, CONFIG_GERENCIAR),
+            // Anonimizar fica de fora: é irreversível e o pedido do titular chega ao
+            // responsável pelo salão, não a quem opera o dia.
+            Perfil.GERENTE, menos(TUDO, USUARIO_GERENCIAR, CONFIG_GERENCIAR, CLIENTE_ANONIMIZAR),
 
             // Só a própria agenda e o próprio extrato. Vê cliente porque precisa saber quem vai
             // atender; não vê a ficha, que é dado de saúde.

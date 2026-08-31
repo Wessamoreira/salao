@@ -85,6 +85,34 @@ public class ManipuladorGlobalDeErros {
      * <p>O nome do parâmetro vai no campo, para a tela apontar onde está o erro; o valor
      * <strong>não</strong> vai — ele veio de fora e atravessaria log e telemetria.
      */
+    /**
+     * Negação de {@code @PreAuthorize} dentro de um caso de uso.
+     *
+     * <p>Sem este tratador, o {@code @ExceptionHandler(Exception.class)} engolia a
+     * {@code AccessDeniedException} e <strong>toda negação de permissão virava 500</strong> —
+     * em todos os endpoints do sistema, não só nos de cliente.
+     *
+     * <p>Passou despercebido porque a negação que os testes exercitavam era a da cadeia de
+     * filtros (segundo fator, token ausente), que o Spring Security responde antes de chegar ao
+     * controller. A do caso de uso acontece depois, já dentro do {@code DispatcherServlet}, e
+     * caía aqui.
+     *
+     * <p>Não é só cosmético: 500 diz "algo quebrou aqui dentro" sobre o que é um desfecho
+     * normal de autorização, e enche o log de erro interno — escondendo os 500 de verdade, que é
+     * exatamente o que se quer enxergar.
+     *
+     * <p>O 401 de quem não está autenticado continua vindo da cadeia de filtros: nenhuma rota de
+     * {@code /api} é anônima, então quem chega até aqui já se identificou e o que falta é
+     * permissão.
+     */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ProblemDetail tratarAcessoNegado(
+            org.springframework.security.access.AccessDeniedException erro) {
+        log.info("Acesso negado por falta de permissão");
+        return montar(ErrosDaInfra.ACESSO_NEGADO,
+                "Você não tem permissão para esta operação.", List.of(), java.util.Map.of());
+    }
+
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ProblemDetail tratarParametroDeTipoErrado(MethodArgumentTypeMismatchException erro) {
         return montar(ErrosDaInfra.DADOS_INVALIDOS, "Parâmetro inválido.",

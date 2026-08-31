@@ -220,6 +220,23 @@ class ClientesWebIT extends AbstractPostgresIT {
     }
 
     @Test
+    @DisplayName("a recepção não anonimiza: DELETE exige permissão própria")
+    void recepcao_nao_anonimiza() throws Exception {
+        // A recepção tem cliente:write e cadastra o dia inteiro. Apagar o dado de alguém para
+        // sempre é outro tipo de ato, e não deve estar a um clique de quem atende o balcão.
+        String token = entrar();
+        String cliente = idDe(post("/api/v1/clientes", "{\"nome\":\"Maria Silva\"}", token));
+
+        var recusa = delete("/api/v1/clientes/" + cliente, token);
+        assertThat(recusa.statusCode())
+                .as("403, e não 500: negar permissão é desfecho normal, não falha do servidor")
+                .isEqualTo(403);
+        assertThat(recusa.body()).contains("ER-INF-ACESSO_NEGADO");
+        assertThat(get("/api/v1/clientes/" + cliente, token).statusCode())
+                .as("e a ficha continua lá").isEqualTo(200);
+    }
+
+    @Test
     @DisplayName("sem token, o cadastro não abre")
     void sem_token_nao_cadastra() throws Exception {
         assertThat(post("/api/v1/clientes", "{\"nome\":\"Maria\"}", null).statusCode())
@@ -253,6 +270,14 @@ class ClientesWebIT extends AbstractPostgresIT {
         var b = HttpRequest.newBuilder(URI.create("http://localhost:" + porta + caminho))
                 .header("Content-Type", "application/json")
                 .PUT(HttpRequest.BodyPublishers.ofString(corpo));
+        if (token != null) {
+            b.header("Authorization", "Bearer " + token);
+        }
+        return http.send(b.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    private HttpResponse<String> delete(String caminho, String token) throws Exception {
+        var b = HttpRequest.newBuilder(URI.create("http://localhost:" + porta + caminho)).DELETE();
         if (token != null) {
             b.header("Authorization", "Bearer " + token);
         }
