@@ -118,7 +118,7 @@ class ClientesWebIT extends AbstractPostgresIT {
         var resposta = get("/api/v1/clientes?q=j", token);
 
         assertThat(resposta.statusCode()).isEqualTo(200);
-        assertThat(resposta.body()).isEqualTo("[]");
+        assertThat(resposta.body()).contains("INSUFICIENTE").contains("\"itens\":[]");
     }
 
     @Test
@@ -129,7 +129,7 @@ class ClientesWebIT extends AbstractPostgresIT {
         String token = entrar();
         post("/api/v1/clientes", "{\"nome\":\"Maria Silva\"}", token);
 
-        assertThat(get("/api/v1/clientes", token).body()).isEqualTo("[]");
+        assertThat(get("/api/v1/clientes", token).body()).contains("\"itens\":[]");
     }
 
     @Test

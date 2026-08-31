@@ -42,8 +42,8 @@ e que ninguém saberia invalidar.
 | [RT-CLI-003](RT-CLI-003-duplicados-e-mesclagem.md) — detecção de duplicado e mesclagem | implementada |
 | [RT-CLI-004](RT-CLI-004-consentimento.md) — consentimento LGPD | implementada |
 | [RT-CLI-005](RT-CLI-005-anonimizacao.md) — anonimização | implementada |
-| RT-CLI-006 — tela de clientes | próxima |
+| [RT-CLI-006](RT-CLI-006-tela-de-clientes.md) — tela de clientes | implementada |
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-CLI-001 a RN-CLI-025.
+Ver [regras.md](regras.md) — RN-CLI-001 a RN-CLI-028.

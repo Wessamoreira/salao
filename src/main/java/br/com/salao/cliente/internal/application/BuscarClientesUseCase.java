@@ -1,10 +1,9 @@
 package br.com.salao.cliente.internal.application;
 
-import br.com.salao.cliente.api.ClienteResumo;
+import br.com.salao.cliente.api.ResultadoDaBusca;
 import br.com.salao.cliente.internal.domain.TermoDeBusca;
 import br.com.salao.cliente.internal.infra.ClientesJdbc;
 import br.com.salao.iam.api.Permissao;
-import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,10 +34,19 @@ public class BuscarClientesUseCase {
 
     @PreAuthorize("hasAuthority('" + Permissao.CLIENTE_LER + "')")
     @Transactional(readOnly = true)
-    public List<ClienteResumo> executar(String digitado, Integer limite) {
+    public ResultadoDaBusca executar(String digitado, Integer limite) {
         // Termo curto devolve lista vazia, não erro: é o estado normal enquanto alguém digita a
-        // primeira letra, e um 422 por tecla faria a tela piscar.
-        return clientes.buscar(TermoDeBusca.de(digitado), limiteValido(limite));
+        // primeira letra, e um 422 por tecla faria a tela piscar. O motivo vai junto, para a tela
+        // dizer o que falta sem reescrever a regra.
+        TermoDeBusca termo = TermoDeBusca.de(digitado);
+        if (termo instanceof TermoDeBusca.Insuficiente(String motivo)) {
+            return ResultadoDaBusca.insuficiente(motivo);
+        }
+        var interpretacao = termo instanceof TermoDeBusca.PorTelefone
+                ? ResultadoDaBusca.Interpretacao.TELEFONE
+                : ResultadoDaBusca.Interpretacao.NOME;
+        return new ResultadoDaBusca(interpretacao, null,
+                clientes.buscar(termo, limiteValido(limite)));
     }
 
     private int limiteValido(Integer pedido) {

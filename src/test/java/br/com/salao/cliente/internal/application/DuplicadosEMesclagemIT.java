@@ -194,7 +194,7 @@ class DuplicadosEMesclagemIT extends AbstractPostgresIT {
 
         TenantContext.executar(tenant, () -> mesclar.executar(ids[0], ids[1]));
 
-        assertThat(TenantContext.obter(tenant, () -> buscar.executar("maria", null)))
+        assertThat(TenantContext.obter(tenant, () -> buscar.executar("maria", null)).itens())
                 .extracting(ClienteResumo::id)
                 .containsExactly(ids[0]);
     }

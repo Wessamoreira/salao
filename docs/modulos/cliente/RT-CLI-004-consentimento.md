@@ -145,8 +145,8 @@ atravessaria log e telemetria.
 - [ ] **Nada consulta `podeReceber` ainda**, porque o módulo `notificacao` não existe. A regra está
       pronta e sem uso — e um envio construído sem chamá-la passaria no build. Amarrar quando
       `notificacao` chegar
-- [ ] **Não há tela de consentimento.** Hoje só existe a API; a recepção não tem onde marcar.
-      Entra em RT-CLI-006
+- [x] ~~Não há tela de consentimento~~ — entregue em RT-CLI-006, com efeito e registro
+      separados (RN-CLI-028)
 - [ ] **A pergunta não aparece no cadastro.** O momento natural de perguntar sobre marketing é o
       balcão, ao cadastrar — e hoje isso depende de alguém lembrar de chamar outra rota
 - [ ] **Histórico completo não é exposto.** A API devolve só a decisão vigente; a trilha existe no

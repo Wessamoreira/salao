@@ -4,6 +4,7 @@ import br.com.salao.cliente.api.CanalDeConsentimento;
 import br.com.salao.cliente.api.ClienteResumo;
 import br.com.salao.cliente.api.EstadoDoConsentimento;
 import br.com.salao.cliente.api.Finalidade;
+import br.com.salao.cliente.api.ResultadoDaBusca;
 import br.com.salao.cliente.internal.application.CadastrarClienteUseCase;
 import br.com.salao.cliente.internal.application.AnonimizarClienteUseCase;
 import br.com.salao.cliente.internal.application.BuscarClientesUseCase;
@@ -105,10 +106,13 @@ public class ClientesController {
      * sozinho pelo que foi digitado.
      *
      * <p>Termo curto devolve lista vazia, nunca erro: 422 a cada tecla faria a tela piscar.
+     *
+     * <p>A resposta carrega <strong>o que o servidor entendeu</strong> do termo, para a tela poder
+     * dizer "buscando pelos 4 últimos dígitos" sem reimplementar a regra em TypeScript.
      */
     @GetMapping
-    public List<ClienteResumo> buscar(@RequestParam(name = "q", required = false) String termo,
-                                      @RequestParam(required = false) Integer limite) {
+    public ResultadoDaBusca buscar(@RequestParam(name = "q", required = false) String termo,
+                                   @RequestParam(required = false) Integer limite) {
         return buscar.executar(termo, limite);
     }
 

@@ -127,8 +127,8 @@ tem tratador próprio**, e cada caso só aparece quando alguém escreve o teste 
 
 ## 11. Pendências
 
-- [ ] **Não há como pedir a anonimização pela tela.** Só existe a API; o pedido do titular chega
-      por WhatsApp ou pessoalmente e hoje depende de alguém com acesso técnico. Entra em RT-CLI-006
+- [x] ~~Não há como pedir a anonimização pela tela~~ — entregue em RT-CLI-006, discreta e com
+      confirmação que explica o que sobra
 - [ ] **A ficha técnica de química não é alcançada** — porque ainda não existe. Quando existir,
       esta rotina precisa apagá-la junto, e é dado de saúde: a omissão seria grave
 - [ ] **Foto do cliente** idem, quando o módulo `arquivos` entrar

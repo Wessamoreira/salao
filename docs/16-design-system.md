@@ -33,6 +33,9 @@ pixel que não informa.
 
 Status de agendamento, alerta de validade, divergência financeira. **O resto do produto é neutro.**
 
+E cor **nunca em texto**: a medição de contraste mostrou que nenhum dos status passa em AA sobre
+papel. Eles são borda, barra e fundo claro — o que já era a regra, agora com o motivo medido.
+
 Os quatro status compartilham chroma (0.115) e luminosidade (0.62) em oklch, variando só a matiz —
 é isso que faz os quatro pesarem igual na tela, em vez de um gritar mais alto por acidente de
 saturação. Um accent nunca aparece em bloco cheio: entra como borda, barra lateral de 3px, ou fundo
@@ -71,19 +74,44 @@ o produto perde identidade por omissão.
 Foi exatamente o que fez a primeira versão do canvas ler como amadora: 18 aqui, 22 ali, 9 no
 rodapé. Ninguém consegue nomear o problema, mas todo mundo sente.
 
-## Contraste — uma ressalva honesta
+## Contraste — medido, não estimado
 
-| Par | Uso | AA |
-|---|---|---|
-| `--tinta` sobre `--papel` | Texto principal | ✅ folgado |
-| `--tinta-fraca` sobre `--papel` | Texto secundário | ✅ |
-| `--tinta-tenue` sobre `--papel` | Rótulo, metadado | ⚠️ **não passa em corpo de texto** |
+Medido no navegador em 30/08/2026 (`RT-CLI-006`), convertendo os oklch para sRGB e aplicando a
+fórmula da WCAG. **Substitui a tabela estimada anterior**, que errava por um motivo específico:
+só considerava `--papel` como fundo.
 
-`--tinta-tenue` só pode ser usada em texto **não essencial**: rótulo em caixa alta, metadado,
-placeholder, legenda. Nunca em informação que o usuário precise ler para decidir algo.
+| Par | Razão | AA (corpo) | Uso permitido |
+|---|---|---:|---|
+| `--tinta` sobre `--papel` | **15.77** | ✅ | qualquer |
+| `--tinta` sobre `--papel-fundo` | **14.68** | ✅ | qualquer |
+| `--papel` sobre `--tinta` | **15.77** | ✅ | botão escolhido |
+| `--tinta` sobre `--status-*-fundo` | **15.5** | ✅ | texto dentro de aviso |
+| `--tinta-fraca` sobre `--papel` | **4.67** | ✅ | texto secundário |
+| `--tinta-fraca` sobre `--papel-fundo` | **4.34** | ❌ | só título grande |
+| `--tinta-fraca` sobre `--papel-afundado` | **4.20** | ❌ | só título grande |
+| `--status-falta` sobre `--papel` | **3.62** | ❌ | borda e ícone, nunca texto |
+| `--status-confirmado` sobre `--papel` | **3.25** | ❌ | borda e ícone, nunca texto |
+| `--tinta-tenue` sobre `--papel` | **2.53** | ❌ | nada, na prática |
 
-Isto será verificado de verdade no `RT-INF-010` com a skill `design:accessibility-review` — a
-tabela acima é estimativa a partir da luminosidade, não medição.
+### O que a medição mudou
+
+**`--tinta-fraca` depende do fundo.** Sobre `--papel` passa; sobre `--papel-fundo` e
+`--papel-afundado`, não. Foi por isso que a lista de resultados de `RT-CLI-006` virou uma
+superfície com fundo `--papel` em vez de ficar solta sobre o fundo da página — o telefone da
+cliente é a informação mais essencial daquela tela e estava no par que reprova.
+
+**Os status não servem para texto.** Nenhum passa em corpo de texto sobre papel, e é consequência
+direta de eles compartilharem luminosidade 0.62 para pesarem igual. Continuam certos como borda,
+barra e fundo claro; texto colorido em cima de papel, não. A ação de apagar dados perdeu o
+vermelho por isso — e por já contradizer o próprio argumento de ser discreta.
+
+**`--tinta-tenue` não sobrevive a nenhum uso de texto**, nem como placeholder: 2.53 é ilegível de
+fato, não no papel. Ele fica reservado a traço e separador.
+
+### Como verificar de novo
+
+A prévia (`frontend/preview/`) roda a tela real sem backend; o console do navegador mede em
+segundos. Estimar a partir da luminosidade foi o que produziu a tabela errada da primeira vez.
 
 ## Sombra e canto
 

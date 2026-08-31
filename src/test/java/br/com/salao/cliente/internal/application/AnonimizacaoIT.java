@@ -99,8 +99,10 @@ class AnonimizacaoIT extends AbstractPostgresIT {
 
         assertThat(TenantContext.obter(tenant, () -> clienteApi.existe(cliente))).isFalse();
         assertThat(TenantContext.obter(tenant, () -> clienteApi.porId(cliente))).isEmpty();
-        assertThat(TenantContext.obter(tenant, () -> buscar.executar("maria", null))).isEmpty();
-        assertThat(TenantContext.obter(tenant, () -> buscar.executar("4321", null))).isEmpty();
+        assertThat(TenantContext.obter(tenant, () -> buscar.executar("maria", null)).itens())
+                .isEmpty();
+        assertThat(TenantContext.obter(tenant, () -> buscar.executar("4321", null)).itens())
+                .isEmpty();
     }
 
     @Test

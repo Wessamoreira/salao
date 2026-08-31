@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.salao.cliente.api.ClienteResumo;
+import br.com.salao.cliente.api.ResultadoDaBusca.Interpretacao;
 import br.com.salao.iam.api.Permissao;
 import br.com.salao.iam.internal.application.ProvisionarEstabelecimentoCommand;
 import br.com.salao.iam.internal.application.ProvisionarEstabelecimentoUseCase;
@@ -55,7 +56,7 @@ class BuscaDeClienteIT extends AbstractPostgresIT {
 
     private List<String> nomes(UUID tenant, String termo) {
         return TenantContext.obter(tenant, () -> buscar.executar(termo, null))
-                .stream().map(ClienteResumo::nome).toList();
+                .itens().stream().map(ClienteResumo::nome).toList();
     }
 
     @Test
@@ -126,6 +127,29 @@ class BuscaDeClienteIT extends AbstractPostgresIT {
     }
 
     @Test
+    @DisplayName("a resposta diz o que o servidor entendeu do termo")
+    void resposta_diz_o_que_entendeu() {
+        // É isso que permite à tela escrever "buscando pelos 4 últimos dígitos" sem reimplementar
+        // RN-CLI-009 em TypeScript — onde a cópia divergiria em silêncio.
+        UUID tenant = salaoPovoado();
+
+        assertThat(TenantContext.obter(tenant, () -> buscar.executar("4321", null)))
+                .satisfies(r -> {
+                    assertThat(r.interpretacao()).isEqualTo(Interpretacao.TELEFONE);
+                    assertThat(r.aviso()).isNull();
+                });
+        assertThat(TenantContext.obter(tenant, () -> buscar.executar("maria", null))
+                .interpretacao()).isEqualTo(Interpretacao.NOME);
+
+        // O que falta também vem do domínio: a tela não reescreve "informe ao menos 2 letras".
+        assertThat(TenantContext.obter(tenant, () -> buscar.executar("j", null)))
+                .satisfies(r -> {
+                    assertThat(r.interpretacao()).isEqualTo(Interpretacao.INSUFICIENTE);
+                    assertThat(r.aviso()).contains("2 letras");
+                });
+    }
+
+    @Test
     @DisplayName("termo curto devolve lista vazia, não erro")
     void termo_curto_nao_e_erro() {
         UUID tenant = salaoPovoado();
@@ -157,10 +181,11 @@ class BuscaDeClienteIT extends AbstractPostgresIT {
             }
         });
 
-        assertThat(TenantContext.obter(tenant, () -> buscar.executar("maria", null)))
+        assertThat(TenantContext.obter(tenant, () -> buscar.executar("maria", null)).itens())
                 .hasSize(BuscarClientesUseCase.LIMITE_PADRAO);
-        assertThat(TenantContext.obter(tenant, () -> buscar.executar("maria", 5))).hasSize(5);
-        assertThat(TenantContext.obter(tenant, () -> buscar.executar("maria", 999)))
+        assertThat(TenantContext.obter(tenant, () -> buscar.executar("maria", 5)).itens())
+                .hasSize(5);
+        assertThat(TenantContext.obter(tenant, () -> buscar.executar("maria", 999)).itens())
                 .hasSizeLessThanOrEqualTo(BuscarClientesUseCase.LIMITE_MAXIMO);
     }
 

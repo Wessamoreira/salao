@@ -445,3 +445,58 @@ não a quem está atendendo o balcão.
 `ClientesWebIT.recepcao_nao_anonimiza`
 **Configurável?** Não
 **Origem.** 2026-08-30
+
+---
+
+### RN-CLI-026 — A tela mostra a interpretação do SERVIDOR, nunca um palpite próprio
+
+**Enunciado.** A resposta da busca carrega o que o servidor entendeu do termo (`TELEFONE`, `NOME`
+ou `INSUFICIENTE`) e o texto do que falta. A tela exibe isso; não reimplementa a regra.
+
+**Motivo.** É a mesma armadilha que RN-CLI-011 recusou no banco. Uma cópia de "dígito significa
+telefone" em TypeScript divergiria em silêncio, e a tela passaria a dizer uma coisa enquanto a
+consulta fazia outra — o pior tipo de erro, porque parece funcionar. Pelo mesmo motivo "informe ao
+menos 2 letras" vem do domínio: reescrevê-lo no front criaria dois textos para uma regra só.
+
+**Onde é garantida.** `ResultadoDaBusca` (api) · `Clientes.tsx` só desenha o que recebeu.
+**Rotinas.** RT-CLI-006, RT-CLI-002 · **Teste.**
+`BuscaDeClienteIT.resposta_diz_o_que_entendeu`, `Clientes.test.tsx` ("mostra o que o SERVIDOR
+entendeu")
+**Configurável?** Não · **UX.** R-UX-03
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-027 — A tela só oferece juntar fichas que podem ser a mesma pessoa
+
+**Enunciado.** `PROVAVEL` e `POSSIVEL` são acionáveis para mesclagem. `MESMO_TELEFONE` aparece
+como contexto, sem botão e sem destaque de alerta.
+
+**Motivo.** Todo o RT-CLI-003 existe para distinguir a mesma pessoa cadastrada duas vezes de mãe e
+filha dividindo o número. Oferecer "juntar" no segundo caso desfaz essa distinção na interface e
+convida a fundir duas pessoas diferentes — o estrago que o domínio evita, entregue em um clique.
+
+**Onde é garantida.** `AvisoDeDuplicado` só torna clicável quem não é `MESMO_TELEFONE`.
+**Rotinas.** RT-CLI-006, RT-CLI-003 · **Teste.** `Ficha.test.tsx` ("mesmo telefone com nome
+diferente NÃO é apresentado como duplicidade")
+**Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-028 — A tela separa o efeito do registro no consentimento
+
+**Enunciado.** Cada finalidade mostra duas coisas distintas: o que vale hoje ("pode receber" /
+"não recebe") e o que a pessoa disse ("Sem registro", "Aceitou em 12/03/2026"). Aceitar e recusar
+têm o mesmo peso visual.
+
+**Motivo.** "Sem registro" não é "não pode" (RN-CLI-018). Um interruptor tem dois estados e
+mostraria "desligado" para uma cliente que o salão pode e deve avisar sobre o horário dela. E o
+peso igual entre aceitar e recusar é o que cumpre o espírito do art. 8 §5, não só a letra — um
+botão menor para revogar seria a lei atendida no papel.
+
+**Onde é garantida.** `Consentimentos.tsx`.
+**Rotinas.** RT-CLI-006, RT-CLI-004 · **Teste.** `Ficha.test.tsx` ("separa o EFEITO do REGISTRO",
+"recusar tem o mesmo peso visual que aceitar")
+**Configurável?** Não
+**Origem.** 2026-08-30

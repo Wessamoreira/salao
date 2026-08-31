@@ -6,6 +6,7 @@ import { Casca } from './layout/Casca';
 import { Protegida } from './layout/Protegida';
 import { Login } from './telas/Login';
 import { SegundoFator } from './telas/SegundoFator';
+import { Clientes } from './telas/clientes/Clientes';
 import { EmBreve } from './telas/EmBreve';
 
 const cliente = new QueryClient({
@@ -47,7 +48,7 @@ export function App() {
                 para que cada uma entre sem mexer em rota, sessão ou permissão. */}
             <Route path="/agenda" element={<EmBreve titulo="Agenda" rotina="RT-AGD-011" />} />
             <Route path="/comandas" element={<EmBreve titulo="Atendimento" rotina="RT-ATD-008" />} />
-            <Route path="/clientes" element={<EmBreve titulo="Clientes" rotina="RT-CLI-001" />} />
+            <Route path="/clientes" element={<Clientes />} />
             <Route path="/estoque" element={<EmBreve titulo="Estoque" rotina="RT-EST-001" />} />
             <Route path="/financeiro" element={<EmBreve titulo="Financeiro" rotina="RT-FIN-004" />} />
             <Route path="/config" element={<EmBreve titulo="Configurações" rotina="RT-IAM-007" />} />

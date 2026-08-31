@@ -1,0 +1,404 @@
+/*
+ * RT-CLI-006 — tela de clientes.
+ *
+ * Arquivo de estilo em vez de `style={{}}` como no resto do front: esta tela tem
+ * estado (foco, hover, seleção, teclado) e estado inline não existe. Escrever
+ * :focus-visible aqui é o que mantém a promessa de navegação por teclado.
+ *
+ * Todo valor vem dos tokens. Número solto aqui é bug de rigor.
+ */
+
+.cli-tela {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 0 var(--e-8);
+  height: 100%;
+  align-content: start;
+}
+
+/*
+ * Enquanto ninguém buscou nada, a tela não se divide.
+ *
+ * Duas colunas antes de existir conteúdo para a segunda espremem o convite num
+ * terço e deixam o resto vazio — e este é o primeiro estado que a recepção vê
+ * toda vez que abre a tela. Ele tem um trabalho só: fazer ela digitar.
+ */
+.cli-tela.esperando { grid-template-columns: 1fr; }
+.cli-tela.esperando .cli-vazio { max-width: 460px; padding-top: var(--e-6); }
+.cli-tela.esperando .cli-vazio-titulo { font-size: var(--t-16); }
+
+.cli-cabecalho {
+  grid-column: 1 / -1;
+  padding-bottom: var(--e-6);
+}
+
+/* ---------------------------------------------------------------------------
+ * A busca é a tela, não um acessório de canto.
+ *
+ * Esta rotina existe porque o telefone está tocando (R-UX-03). Um campo pequeno
+ * no alto à direita seria o layout de um CRUD — e diria que o assunto da tela é
+ * a lista, quando não existe nem endpoint para listar todo mundo.
+ * ------------------------------------------------------------------------- */
+.cli-busca {
+  display: block;
+  width: 100%;
+  max-width: 520px;
+  padding: var(--e-3) var(--e-4);
+  font-family: inherit;
+  font-size: var(--t-20);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+/* Medido: --tinta-tenue dá 2.36 e é ilegível de fato. O texto do placeholder aqui
+   é orientação, não enfeite — ele diz o que se pode digitar. */
+.cli-busca::placeholder { color: var(--tinta-fraca); }
+.cli-busca:focus-visible { border-color: var(--status-atendendo); }
+
+/* O que o servidor entendeu do termo. Vem da resposta, nunca de um palpite do
+   front — ver ResultadoDaBusca. */
+.cli-leitura {
+  display: flex;
+  align-items: baseline;
+  gap: var(--e-2);
+  min-height: var(--e-5);
+  margin-top: var(--e-3);
+  font-size: var(--t-12);
+  /* Medido: --tinta-fraca sobre --papel-fundo dá 4.34 e reprova AA em corpo de
+     texto. Esta linha é o que explica a busca à recepção — não é decoração, e a
+     subordinação dela vem do corpo pequeno, não de cor apagada. */
+  color: var(--tinta);
+}
+.cli-leitura-chave {
+  font-size: var(--t-10);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta);
+}
+.cli-leitura-sep { color: var(--tinta-fraca); }
+
+/* ---------------------------------------------------------------------------
+ * Resultados
+ * ------------------------------------------------------------------------- */
+/*
+ * A lista é uma superfície, não um trecho do fundo.
+ *
+ * Medido: --tinta-fraca sobre --papel-fundo dá 4.34 e reprova AA para corpo de
+ * texto; sobre --papel dá 4.67 e passa. O telefone da lista é a informação mais
+ * essencial da tela, e não pode ficar no par que reprova.
+ */
+.cli-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  overflow: hidden;
+}
+
+.cli-item {
+  display: block;
+  width: 100%;
+  padding: var(--e-3) var(--e-3);
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--regua);
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  cursor: pointer;
+  transition: background var(--mov-imediato) var(--mov-curva);
+}
+/*
+ * Hover e seleção mudam a BARRA, não o fundo.
+ *
+ * Trocar o fundo mudaria o contraste do texto a cada estado — e o estado de hover
+ * cairia num par pior que o de repouso. Forma em vez de preenchimento também é o
+ * que o sistema pede: cor só onde carrega informação.
+ */
+.cli-item:hover { border-left-color: var(--regua-forte); }
+.cli-item[aria-current='true'] { border-left-color: var(--tinta); }
+.cli-item[aria-current='true'] .cli-item-nome { text-decoration: underline;
+  text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.cli-item:last-child { border-bottom: 0; }
+
+.cli-item-nome { font-size: var(--t-14); font-weight: 600; }
+/* O nome de documento, quando difere de como a pessoa é chamada. */
+.cli-item-formal { font-size: var(--t-12); color: var(--tinta-fraca); }
+/*
+ * --tinta-fraca, e NÃO --tinta-tenue.
+ *
+ * O sistema permite o tênue só em texto não essencial, "nunca em informação que o
+ * usuário precise ler para decidir algo" — e este número é exatamente o que a
+ * recepção confere contra o identificador de chamadas. É a informação mais
+ * essencial da tela, e a primeira versão a pintou com a cor reservada a metadado.
+ */
+.cli-item-fone {
+  margin-top: var(--e-1);
+  font-size: var(--t-12);
+  color: var(--tinta-fraca);
+  font-variant-numeric: tabular-nums;
+}
+/* Os dígitos que casaram com o que foi digitado: é neles que o olho confere
+   contra o identificador de chamadas. Peso, não cor — o sistema reserva cor
+   para status. */
+.cli-item-fone b { font-weight: 700; color: var(--tinta); }
+
+/* ---------------------------------------------------------------------------
+ * Vazio — o estado PADRÃO desta tela, não uma exceção.
+ * Não existe endpoint que liste todo mundo (RT-CLI-002), então a tela abre assim.
+ * ------------------------------------------------------------------------- */
+.cli-vazio {
+  padding: var(--e-8) var(--e-3);
+  font-size: var(--t-14);
+  color: var(--tinta-fraca);
+  line-height: 1.55;
+}
+.cli-vazio-titulo { color: var(--tinta); font-weight: 600; margin-bottom: var(--e-2); }
+kbd {
+  padding: 1px var(--e-1);
+  font-family: var(--fonte-mono);
+  font-size: var(--t-11);
+  color: var(--tinta-fraca);
+  background: var(--papel-afundado);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-1);
+}
+
+/* ---------------------------------------------------------------------------
+ * Ficha
+ * ------------------------------------------------------------------------- */
+.cli-ficha {
+  padding: var(--e-6);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+/* Linha longa cansa mesmo quando há espaço sobrando: o par nome-à-esquerda /
+   estado-à-direita do consentimento obrigava o olho a atravessar a tela inteira. */
+.cli-ficha > * { max-width: 620px; }
+
+/*
+ * Instrument Sans, e não a serifada de identidade.
+ *
+ * O sistema declara que a serifada aparece em exatamente dois lugares — nome do
+ * estabelecimento e totais — e nunca em texto operacional. A primeira versão desta
+ * tela usou a serifada aqui, e ficou boa; era violação do mesmo jeito, e alargar a
+ * regra na primeira vez em que ela incomoda é como ela deixa de restringir.
+ *
+ * A presença vem de corpo e peso, que é o que uma ferramenta de trabalho usa.
+ */
+.cli-ficha-nome {
+  font-size: var(--t-20);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+}
+.cli-ficha-formal { margin-top: var(--e-1); font-size: var(--t-12); color: var(--tinta-fraca); }
+
+.cli-dados {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--e-2) var(--e-6);
+  margin: var(--e-6) 0 0;
+  font-size: var(--t-14);
+}
+.cli-dados dt {
+  font-size: var(--t-10);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  /* --tinta-fraca, não --tinta-tenue: o sistema declara que o tênue não passa em
+     AA no tamanho de rótulo, e foi esse exato erro que a revisão pegou antes. */
+  color: var(--tinta-fraca);
+  align-self: baseline;
+  padding-top: 2px;
+}
+.cli-dados dd { margin: 0; font-variant-numeric: tabular-nums; }
+.cli-dados dd:empty::after { content: '—'; color: var(--tinta-fraca); }
+
+.cli-secao {
+  margin-top: var(--e-8);
+  padding-top: var(--e-5);
+  border-top: 1px solid var(--regua);
+}
+.cli-secao-titulo {
+  font-size: var(--t-10);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+  margin-bottom: var(--e-4);
+}
+
+/* ---------------------------------------------------------------------------
+ * Consentimento — três estados, e por isso NÃO é um interruptor.
+ *
+ * "Sem registro" não é "não pode" (RN-CLI-018): para o lembrete de horário, sem
+ * registro significa PODE, porque a base é contrato. Um interruptor tem dois
+ * estados e mentiria sobre o terceiro.
+ * ------------------------------------------------------------------------- */
+.cli-consentimento + .cli-consentimento {
+  margin-top: var(--e-4);
+  padding-top: var(--e-4);
+  border-top: 1px solid var(--regua);
+}
+.cli-consentimento-cabeca {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e-4);
+}
+.cli-consentimento-nome { font-size: var(--t-14); font-weight: 600; }
+.cli-consentimento-estado { font-size: var(--t-12); color: var(--tinta-fraca); }
+.cli-consentimento-base {
+  margin-top: 2px;
+  font-size: var(--t-11);
+  color: var(--tinta-fraca);
+}
+
+.cli-escolha { display: flex; gap: var(--e-1); margin-top: var(--e-3); }
+.cli-escolha button {
+  padding: var(--e-1) var(--e-3);
+  font: inherit;
+  font-size: var(--t-12);
+  color: var(--tinta-fraca);
+  /* --papel, não --papel-afundado: sobre o afundado o rótulo mede 4.20 e reprova.
+     A borda já delimita o botão sem precisar de preenchimento. */
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  cursor: pointer;
+}
+.cli-escolha button[aria-pressed='true'] {
+  color: var(--papel);
+  background: var(--tinta);
+  border-color: var(--tinta);
+  font-weight: 600;
+}
+.cli-escolha button:disabled { opacity: 0.5; cursor: default; }
+
+.cli-canal-topo {
+  margin: calc(-1 * var(--e-2)) 0 var(--e-4);
+  padding-bottom: var(--e-3);
+  border-bottom: 1px solid var(--regua);
+}
+.cli-canal {
+  margin-top: var(--e-3);
+  font-size: var(--t-11);
+  color: var(--tinta-fraca);
+}
+.cli-canal select {
+  font: inherit;
+  font-size: var(--t-11);
+  color: var(--tinta);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--regua-forte);
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------------------
+ * Avisos de duplicado — o grau muda o PESO, não a cor de alarme.
+ * "Mesmo telefone" é quase sempre mãe e filha (RN-CLI-005) e não pode parecer
+ * erro: tratar família como problema treina a recepção a ignorar o aviso.
+ * ------------------------------------------------------------------------- */
+.cli-aviso {
+  padding: var(--e-3);
+  margin-top: var(--e-3);
+  font-size: var(--t-12);
+  border-radius: var(--raio-2);
+  border-left: 3px solid var(--regua-forte);
+  background: var(--papel-afundado);
+}
+.cli-aviso-forte {
+  border-left-color: var(--status-solicitado);
+  background: var(--status-solicitado-fundo);
+}
+.cli-aviso p { margin: 0 0 var(--e-2); }
+.cli-aviso ul { list-style: none; margin: 0; padding: 0; }
+.cli-aviso li { display: flex; align-items: baseline; gap: var(--e-3); padding: 2px 0; }
+.cli-aviso-fone { color: var(--tinta-fraca); font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------------------
+ * Formulário e ações
+ * ------------------------------------------------------------------------- */
+.cli-campo { display: block; margin-bottom: var(--e-4); }
+.cli-campo span {
+  display: block;
+  margin-bottom: var(--e-1);
+  font-size: var(--t-10);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+}
+.cli-campo input {
+  display: block;
+  width: 100%;
+  padding: var(--e-2) var(--e-3);
+  font: inherit;
+  font-size: var(--t-14);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+
+.cli-acao {
+  padding: var(--e-2) var(--e-4);
+  font: inherit;
+  font-size: var(--t-14);
+  font-weight: 600;
+  color: var(--papel);
+  background: var(--tinta);
+  border: 1px solid var(--tinta);
+  border-radius: var(--raio-2);
+  cursor: pointer;
+}
+.cli-acao:disabled { opacity: 0.45; cursor: default; }
+
+.cli-acao-discreta {
+  padding: var(--e-1) 0;
+  font: inherit;
+  font-size: var(--t-12);
+  color: var(--tinta-fraca);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--regua-forte);
+  cursor: pointer;
+}
+.cli-acao-discreta:hover { color: var(--tinta); border-bottom-color: var(--tinta); }
+/*
+ * A ação irreversível NÃO é vermelha.
+ *
+ * Duas razões, e a segunda só apareceu na medição. Primeira: o argumento desta tela
+ * é que ela deve sumir no meio das outras até ser procurada — pintá-la de vermelho
+ * contradiz isso e ainda chama atenção para o que não se quer que seja clicado por
+ * impulso. Segunda: --status-falta sobre --papel mede 3.62 e reprova AA em corpo de
+ * texto. O peso vem da confirmação, que explica o que some para sempre.
+ *
+ * A classe permanece, sem cor, porque o que ela marca é o lugar — se um dia houver
+ * um tratamento para ação grave, é aqui.
+ */
+.cli-acao-grave { color: var(--tinta-fraca); }
+
+.cli-erro {
+  margin-top: var(--e-3);
+  padding: var(--e-2) var(--e-3);
+  font-size: var(--t-12);
+  color: var(--tinta);
+  background: var(--status-falta-fundo);
+  border-left: 3px solid var(--status-falta);
+  border-radius: var(--raio-2);
+}
+
+@media (max-width: 900px) {
+  .cli-tela { grid-template-columns: 1fr; gap: var(--e-6) 0; }
+}
