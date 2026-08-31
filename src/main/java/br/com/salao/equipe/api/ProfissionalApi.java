@@ -24,4 +24,14 @@ public interface ProfissionalApi {
 
     /** Confirma que o profissional existe e está ativo no tenant atual. */
     boolean estaAtivo(UUID profissionalId);
+
+    /**
+     * RT-EQP-002 — a jornada de uma semana comum.
+     *
+     * <p>Primeiro insumo da disponibilidade (RT-AGD-001), que é esta jornada menos os bloqueios
+     * (RT-EQP-003) e menos os horários já ocupados. Profissional sem jornada cadastrada devolve
+     * jornada vazia — e vazia significa "não atende", não "atende sempre": o padrão precisa ser o
+     * que não marca horário para alguém que não trabalha.
+     */
+    JornadaSemanal jornadaDe(UUID profissionalId);
 }

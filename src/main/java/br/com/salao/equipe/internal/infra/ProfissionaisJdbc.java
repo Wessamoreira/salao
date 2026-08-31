@@ -1,13 +1,20 @@
 package br.com.salao.equipe.internal.infra;
 
+import br.com.salao.equipe.api.IntervaloDeTrabalho;
+import br.com.salao.equipe.api.JornadaSemanal;
 import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.equipe.api.ProfissionalResumo;
 import br.com.salao.equipe.api.TipoDeVinculo;
 import br.com.salao.equipe.internal.domain.Documento;
 import java.math.BigDecimal;
 import java.sql.Date;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.RowMapper;
@@ -121,6 +128,60 @@ public class ProfissionaisJdbc implements ProfissionalApi {
                 .query(Integer.class)
                 .list()
                 .isEmpty();
+    }
+
+    // ------------------------------------------------------------------ RT-EQP-002
+
+    @Override
+    @Transactional(readOnly = true)
+    public JornadaSemanal jornadaDe(UUID profissionalId) {
+        Map<DayOfWeek, List<IntervaloDeTrabalho>> porDia = new EnumMap<>(DayOfWeek.class);
+        jdbc.sql("""
+                select dia_semana, inicio, fim
+                  from jornada_profissional
+                 where profissional_id = :id
+                 order by dia_semana, inicio
+                """)
+                .param("id", profissionalId)
+                .query((rs, linha) -> Map.entry(
+                        DayOfWeek.of(rs.getInt("dia_semana")),
+                        new IntervaloDeTrabalho(rs.getTime("inicio").toLocalTime(),
+                                rs.getTime("fim").toLocalTime())))
+                .list()
+                .forEach(entrada -> porDia
+                        .computeIfAbsent(entrada.getKey(), d -> new ArrayList<>())
+                        .add(entrada.getValue()));
+        return new JornadaSemanal(porDia);
+    }
+
+    /**
+     * Apaga a semana e regrava.
+     *
+     * <p>Substituir em vez de reconciliar: descobrir quais intervalos mudaram para aplicar
+     * inserções e remoções é código que existe só para economizar duas escritas por semana — e
+     * que erra na primeira jornada com dois intervalos no mesmo dia. A semana inteira são
+     * dez linhas.
+     *
+     * <p>Na mesma transação, então não há instante em que o profissional apareça sem jornada.
+     */
+    public void substituirJornada(UUID estabelecimentoId, UUID profissionalId,
+                                  JornadaSemanal jornada) {
+        jdbc.sql("delete from jornada_profissional where profissional_id = :id")
+                .param("id", profissionalId)
+                .update();
+
+        jornada.porDia().forEach((dia, intervalos) -> intervalos.forEach(intervalo ->
+                jdbc.sql("""
+                        insert into jornada_profissional
+                            (estabelecimento_id, profissional_id, dia_semana, inicio, fim)
+                        values (:estabelecimento, :profissional, :dia, :inicio, :fim)
+                        """)
+                        .param("estabelecimento", estabelecimentoId)
+                        .param("profissional", profissionalId)
+                        .param("dia", dia.getValue())
+                        .param("inicio", LocalTime.from(intervalo.inicio()))
+                        .param("fim", LocalTime.from(intervalo.fim()))
+                        .update()));
     }
 
     public int definirAtivacao(UUID id, boolean ativo) {

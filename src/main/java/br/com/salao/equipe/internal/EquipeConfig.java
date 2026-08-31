@@ -3,6 +3,7 @@ package br.com.salao.equipe.internal;
 import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.equipe.internal.application.CadastrarProfissionalUseCase;
 import br.com.salao.equipe.internal.application.DefinirAtivacaoDoProfissionalUseCase;
+import br.com.salao.equipe.internal.application.DefinirJornadaUseCase;
 import br.com.salao.equipe.internal.application.ListarProfissionaisUseCase;
 import br.com.salao.equipe.internal.infra.ProfissionaisJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
@@ -37,6 +38,12 @@ public class EquipeConfig {
     public CadastrarProfissionalUseCase cadastrarProfissionalUseCase(
             ProfissionaisJdbc profissionais, AuditoriaApi auditoria) {
         return new CadastrarProfissionalUseCase(profissionais, auditoria);
+    }
+
+    @Bean
+    public DefinirJornadaUseCase definirJornadaUseCase(ProfissionaisJdbc profissionais,
+                                                       AuditoriaApi auditoria) {
+        return new DefinirJornadaUseCase(profissionais, auditoria);
     }
 
     @Bean

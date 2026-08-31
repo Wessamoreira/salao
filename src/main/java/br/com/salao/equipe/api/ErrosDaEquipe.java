@@ -25,7 +25,17 @@ public enum ErrosDaEquipe implements CodigoDeErro {
             "Já existe um profissional com este documento"),
 
     PROFISSIONAL_NAO_ENCONTRADO("ER-EQP-PROFISSIONAL_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
-            "Profissional não encontrado");
+            "Profissional não encontrado"),
+
+    /**
+     * Dois intervalos do mesmo dia se cruzam.
+     *
+     * <p>O banco também impede, por {@code EXCLUDE}. Este código existe para a mensagem dizer
+     * <em>quais</em> horários colidem — um erro de constraint diria apenas que algo colidiu, e a
+     * tela não teria o que destacar.
+     */
+    JORNADA_SOBREPOSTA("ER-EQP-JORNADA_SOBREPOSTA", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Horários se sobrepõem");
 
     private final String codigo;
     private final HttpStatus status;

@@ -12,8 +12,9 @@ consulta a tabela.
 
 ## O que ele **não** guarda
 
-**Jornada e exceções.** Quem trabalha quando é `RT-EQP-002` e `RT-EQP-003`, em tabelas próprias:
-misturar horário com cadastro faria a ficha do profissional crescer sem limite.
+**Exceções de jornada.** Feriado, férias, curso e atestado são `RT-EQP-003`, em tabela própria:
+misturá-las com a jornada semanal faria esta crescer com datas e deixar de responder à pergunta
+simples que o salão faz — "que dias você trabalha?".
 
 **Habilidades.** Quais serviços cada um executa depende do catálogo existir (`RT-EQP-004`).
 
@@ -28,10 +29,10 @@ misturar horário com cadastro faria a ficha do profissional crescer sem limite.
 | Rotina | Situação |
 |---|---|
 | [RT-EQP-001](RT-EQP-001-cadastro-de-profissional.md) — cadastro | implementada |
-| RT-EQP-002 — jornada semanal | próxima |
-| RT-EQP-003 — exceção de jornada | planejada |
+| [RT-EQP-002](RT-EQP-002-jornada-semanal.md) — jornada semanal | implementada |
+| RT-EQP-003 — exceção de jornada | próxima |
 | RT-EQP-004 — habilidades | planejada |
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-EQP-001 a RN-EQP-005.
+Ver [regras.md](regras.md) — RN-EQP-001 a RN-EQP-008.

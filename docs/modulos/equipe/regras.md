@@ -89,3 +89,57 @@ conferir quando houver dúvida. Mesma decisão de RT-IAM-007 para usuários.
 `CadastroDeProfissionalIT.desativar_e_idempotente`
 **Configurável?** Não
 **Origem.** 2026-08-30
+
+---
+
+### RN-EQP-006 — Jornada é uma lista de intervalos por dia; almoço é ausência de intervalo
+
+**Enunciado.** Cada dia da semana tem zero ou mais intervalos de trabalho. Não existe campo de
+almoço, de pausa ou de turno.
+
+**Motivo.** O modelo `inicio, fim, almoco_inicio, almoco_fim` quebra na primeira profissional com
+três blocos, com dois intervalos, ou que trabalha só de manhã num dia — e a saída de sempre é
+acrescentar `almoco2_inicio`, que transforma o modelo em folclore. Tratando o almoço como a
+ausência de intervalo, "9h-13h e 14h-19h" é o caso normal e não uma exceção nomeada.
+
+**Onde é garantida.** Uma linha por intervalo em `jornada_profissional` (V18) ·
+`JornadaSemanal` / `IntervaloDeTrabalho`.
+**Rotinas.** RT-EQP-002 · **Teste.** `JornadaSemanalTest.almoco_e_ausencia_de_intervalo`,
+`JornadaSemanalTest.tres_blocos_cabem`
+**Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-EQP-007 — Intervalos do mesmo dia não se sobrepõem, e o banco é quem garante
+
+**Enunciado.** Dois intervalos do mesmo profissional no mesmo dia não podem se cruzar. Encostar
+não é sobrepor: 13h fecha um e abre o outro.
+
+**Motivo.** Duas instâncias salvando ao mesmo tempo passam por qualquer verificação em Java — as
+duas leem, nenhuma vê conflito, as duas gravam. O `EXCLUDE` do Postgres não tem esse buraco
+(inviolável nº 8). A verificação no caso de uso existe para a mensagem dizer **quais** horários
+colidem, que é o que a tela precisa destacar; um erro de constraint diria só que algo colidiu.
+
+**Onde é garantida.** Banco: `jornada_sem_sobreposicao` (`EXCLUDE USING gist`, V18) ·
+`DefinirJornadaUseCase.exigirSemSobreposicao` para a mensagem.
+**Rotinas.** RT-EQP-002 · **Teste.** `JornadaIT.banco_impede_sobreposicao`,
+`JornadaIT.encostar_nao_e_sobrepor`
+**Erro.** `ER-EQP-JORNADA_SOBREPOSTA` (422) · **Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-EQP-008 — Sem jornada cadastrada, o profissional não atende
+
+**Enunciado.** Jornada vazia significa indisponível, nunca disponibilidade total.
+
+**Motivo.** O padrão precisa ser o que não marca horário para quem não trabalha. Assumir
+disponibilidade na ausência de dado encheria a agenda de horários que ninguém vai cumprir, e o erro
+só apareceria com a cliente na porta.
+
+**Onde é garantida.** `JornadaSemanal.trabalhaEm` sobre mapa vazio · `ProfissionalApi.jornadaDe`
+devolve `JornadaSemanal.vazia()`.
+**Rotinas.** RT-EQP-002, RT-AGD-001 · **Teste.** `JornadaIT.sem_jornada_e_vazia`
+**Configurável?** Não
+**Origem.** 2026-08-30
