@@ -3,6 +3,7 @@ import type { Cliente } from '../../api/clientes';
 import { useBusca } from '../../api/clientes';
 import { CadastroRapido } from './CadastroRapido';
 import { Ficha } from './Ficha';
+import { Isolado } from './Isolado';
 import { Resultados } from './Resultados';
 import './clientes.css';
 
@@ -70,11 +71,9 @@ export function Clientes() {
             />
           </div>
         ) : selecionado ? (
-          <Ficha
-            key={selecionado.id}
-            cliente={selecionado}
-            aoSair={() => setSelecionado(null)}
-          />
+          <Isolado key={selecionado.id}>
+            <Ficha cliente={selecionado} aoSair={() => setSelecionado(null)} />
+          </Isolado>
         ) : null}
       </div>
     </div>

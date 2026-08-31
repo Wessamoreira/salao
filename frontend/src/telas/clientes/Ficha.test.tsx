@@ -5,13 +5,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Ficha } from './Ficha';
 
 const chamar = vi.fn();
+// vi.hoisted porque vi.mock sobe para o topo do módulo: uma classe declarada aqui embaixo
+// ainda não existiria quando a fábrica do mock roda.
+const { ErroFalso } = vi.hoisted(() => ({
+  // Campo declarado, não parâmetro de construtor: `erasableSyntaxOnly` proíbe a forma
+  // curta, e `tsc --noEmit` não reprova — só `tsc -b` reprova.
+  ErroFalso: class extends Error {
+    codigo: string;
+    constructor(codigo: string, mensagem: string) { super(mensagem); this.codigo = codigo; }
+  },
+}));
 vi.mock('../../api/http', () => ({
   api: (caminho: string, init?: RequestInit) => chamar(caminho, init),
-  ErroDaApi: class extends Error {},
+  ErroDaApi: ErroFalso,
 }));
 
 const MARIA = {
-  id: 'c1', nome: 'Maria Silva', apelido: null, telefone: '5511987654321', email: null,
+  id: 'c1', nome: 'Maria Silva', apelido: null, telefone: '5511987654321', email: null, versao: 7,
 };
 
 const SEM_REGISTRO = [
@@ -28,6 +38,7 @@ const SEM_REGISTRO = [
 function servidor(opcoes: { consentimentos?: unknown; duplicados?: unknown; permissoes?: string[] }) {
   chamar.mockImplementation(async (caminho: string) => {
     if (caminho.includes('/consentimentos')) return opcoes.consentimentos ?? [];
+    if (caminho === '/v1/clientes/c1') return MARIA;
     if (caminho.includes('possiveis-duplicados')) return opcoes.duplicados ?? [];
     if (caminho.startsWith('/v1/me/capabilities')) {
       return {
@@ -116,7 +127,7 @@ describe('ficha do cliente', () => {
       duplicados: [{
         grau: 'MESMO_TELEFONE',
         cliente: { id: 'c2', nome: 'Júlia Silva', apelido: null,
-          telefone: '5511987654321', email: null },
+          telefone: '5511987654321', email: null, versao: 0 },
       }],
     });
     const { container } = montar();
@@ -137,7 +148,7 @@ describe('ficha do cliente', () => {
       duplicados: [{
         grau: 'PROVAVEL',
         cliente: { id: 'c2', nome: 'Maria da Silva', apelido: null,
-          telefone: '5511987654321', email: null },
+          telefone: '5511987654321', email: null, versao: 0 },
       }],
     });
     const { container } = montar();
@@ -151,6 +162,45 @@ describe('ficha do cliente', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Juntar fichas' }));
     expect(chamar).toHaveBeenCalledWith('/v1/clientes/c1/mesclar',
       expect.objectContaining({ method: 'POST' }));
+  });
+
+  it('corrigir a ficha reapresenta a versão, para não apagar a correção alheia', async () => {
+    // Sem a versão, duas recepções corrigindo a mesma ficha fariam a segunda desfazer o
+    // trabalho da primeira em silêncio.
+    servidor({ consentimentos: SEM_REGISTRO });
+    montar();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Corrigir ficha' }));
+    // O telefone abre formatado: mostrar 5511987654321 para quem vai trocar um dígito
+    // obrigaria a decifrar o número antes de editá-lo.
+    expect(screen.getByLabelText(/Telefone/)).toHaveValue('(11) 98765-4321');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(chamar).toHaveBeenCalledWith('/v1/clientes/c1', expect.objectContaining({
+      method: 'PUT',
+      body: expect.stringContaining('"versao":7'),
+    }));
+  });
+
+  it('conflito de versão explica o que fazer, não só o que houve', async () => {
+    servidor({ consentimentos: SEM_REGISTRO });
+    chamar.mockImplementation(async (caminho: string, init?: RequestInit) => {
+      if (init?.method === 'PUT') {
+        throw new ErroFalso('ER-INF-VERSAO_DESATUALIZADA', 'conflito');
+      }
+      if (caminho.includes('/consentimentos')) return SEM_REGISTRO;
+      if (caminho.includes('possiveis-duplicados')) return [];
+      if (caminho === '/v1/clientes/c1') return MARIA;
+      return { permissoes: [], menus: [], flags: {}, limites: {},
+        estabelecimento: { id: 'e1', nome: 'S', timezone: 'America/Sao_Paulo', moeda: 'BRL' } };
+    });
+    montar();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Corrigir ficha' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(await screen.findByText(/Feche e abra de novo/)).toBeInTheDocument();
   });
 
   it('sem cliente:anonymize, apagar dados não aparece', async () => {

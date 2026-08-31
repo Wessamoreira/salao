@@ -11,13 +11,17 @@ import java.util.UUID;
  * seria vazamento por conveniência.
  *
  * @param telefone em E.164 sem {@code +}, só dígitos. Formatar é trabalho do front.
+ * @param versao   contador de alterações, devolvido para ser reapresentado na edição
+ *                 (RT-CLI-007). Sem ele, duas pessoas corrigindo a mesma ficha ao mesmo
+ *                 tempo fariam a segunda apagar a correção da primeira, em silêncio.
  */
 public record ClienteResumo(
         UUID id,
         String nome,
         String apelido,
         String telefone,
-        String email) {
+        String email,
+        int versao) {
 
     /** Como chamar a pessoa na tela: o apelido é o que a recepção usa de fato. */
     public String comoChamar() {

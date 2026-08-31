@@ -7,6 +7,12 @@ export interface Cliente {
   apelido: string | null;
   telefone: string | null;
   email: string | null;
+  /**
+   * Contador de alterações, reapresentado ao salvar (RT-CLI-007). Sem ele, duas
+   * pessoas corrigindo a mesma ficha ao mesmo tempo fariam a segunda apagar a
+   * correção da primeira, em silêncio.
+   */
+  versao: number;
 }
 
 /**
@@ -56,11 +62,20 @@ export function useBusca(termo: string) {
   });
 }
 
-export function useCliente(id: string | null) {
+/**
+ * A ficha vem SEMPRE do servidor, mesmo já tendo chegado no resultado da busca.
+ *
+ * O resultado da busca é um retrato do momento da consulta. Guardá-lo como fonte da
+ * ficha criaria uma segunda cópia do mesmo cliente: depois de corrigir o telefone, a
+ * tela mostraria o valor antigo até alguém buscar de novo. Com `initialData`, a ficha
+ * abre instantânea e se corrige sozinha quando a invalidação chega.
+ */
+export function useCliente(id: string | null, inicial?: Cliente) {
   return useQuery({
     queryKey: ['clientes', id],
     queryFn: () => api<Cliente>(`/v1/clientes/${id}`),
     enabled: id !== null,
+    initialData: inicial,
   });
 }
 
@@ -104,6 +119,17 @@ export function useRegistrarConsentimento(clienteId: string) {
         body: JSON.stringify({ concedido: dados.concedido, canal: dados.canal }),
       }),
     onSuccess: () => fila.invalidateQueries({ queryKey: ['clientes', clienteId] }),
+  });
+}
+
+export function useAtualizar(id: string) {
+  const fila = useQueryClient();
+  return useMutation({
+    mutationFn: (dados: {
+      nome: string; apelido: string | null; telefone: string | null;
+      email: string | null; versao: number;
+    }) => api<Cliente>(`/v1/clientes/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
+    onSuccess: () => fila.invalidateQueries({ queryKey: ['clientes'] }),
   });
 }
 

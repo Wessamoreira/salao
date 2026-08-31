@@ -43,7 +43,8 @@ e que ninguém saberia invalidar.
 | [RT-CLI-004](RT-CLI-004-consentimento.md) — consentimento LGPD | implementada |
 | [RT-CLI-005](RT-CLI-005-anonimizacao.md) — anonimização | implementada |
 | [RT-CLI-006](RT-CLI-006-tela-de-clientes.md) — tela de clientes | implementada |
+| [RT-CLI-007](RT-CLI-007-editar-cliente.md) — editar cliente | implementada |
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-CLI-001 a RN-CLI-028.
+Ver [regras.md](regras.md) — RN-CLI-001 a RN-CLI-030.

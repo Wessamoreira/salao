@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { pode, useCapacidades } from '../../api/capacidades';
 import type { Cliente } from '../../api/clientes';
-import { comoChamar, useAnonimizar, useDuplicados, useMesclar } from '../../api/clientes';
+import { comoChamar, useAnonimizar, useCliente, useDuplicados, useMesclar } from '../../api/clientes';
 import { AvisoDeDuplicado } from './AvisoDeDuplicado';
+import { EditarFicha } from './EditarFicha';
 import { Consentimentos } from './Consentimentos';
 import { Telefone } from './Telefone';
 
@@ -14,26 +15,50 @@ import { Telefone } from './Telefone';
  */
 export function Ficha({ cliente, aoSair }: { cliente: Cliente; aoSair: () => void }) {
   const { data: capacidades } = useCapacidades();
-  const chamado = comoChamar(cliente);
+  const [emEdicao, setEmEdicao] = useState(false);
+  // O cliente que chega da busca serve como dado inicial, não como fonte: guardá-lo em
+  // estado local criaria uma segunda cópia, e depois de corrigir o telefone a tela
+  // mostraria o valor antigo até alguém buscar de novo.
+  const { data: atual = cliente } = useCliente(cliente.id, cliente);
+  const chamado = comoChamar(atual);
+
+  if (emEdicao) {
+    return (
+      <div className="cli-ficha">
+        <EditarFicha
+          cliente={atual}
+          aoSalvar={() => setEmEdicao(false)}
+          aoCancelar={() => setEmEdicao(false)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="cli-ficha">
       <h2 className="cli-ficha-nome">{chamado}</h2>
-      {chamado !== cliente.nome && <p className="cli-ficha-formal">{cliente.nome}</p>}
+      {chamado !== atual.nome && <p className="cli-ficha-formal">{atual.nome}</p>}
 
       <dl className="cli-dados">
         <dt>Telefone</dt>
-        <dd><Telefone e164={cliente.telefone} /></dd>
+        <dd><Telefone e164={atual.telefone} /></dd>
         <dt>E-mail</dt>
-        <dd>{cliente.email}</dd>
+        <dd>{atual.email}</dd>
       </dl>
 
-      <Consentimentos clienteId={cliente.id} />
+      {/* Discreta: corrigir é frequente, mas não é o que se veio fazer nesta tela. */}
+      <p style={{ marginTop: 'var(--e-4)' }}>
+        <button type="button" className="cli-acao-discreta" onClick={() => setEmEdicao(true)}>
+          Corrigir ficha
+        </button>
+      </p>
 
-      <FichasParecidas cliente={cliente} />
+      <Consentimentos clienteId={atual.id} />
+
+      <FichasParecidas cliente={atual} />
 
       {pode(capacidades, 'cliente:anonymize') && (
-        <Anonimizar cliente={cliente} aoConcluir={aoSair} />
+        <Anonimizar cliente={atual} aoConcluir={aoSair} />
       )}
     </div>
   );

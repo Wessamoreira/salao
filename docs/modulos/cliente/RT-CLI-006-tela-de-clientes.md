@@ -173,9 +173,7 @@ perguntar antes é o que sobra.
 
 ## 12. Pendências
 
-- [ ] **Editar a ficha não existe.** A tela lê, cadastra, junta e anonimiza — mas não corrige um
-      telefone digitado errado. Falta o endpoint de edição no backend, que nenhuma rotina do plano
-      cobre: é uma segunda lacuna do mesmo tipo que RT-CLI-006 já foi
+- [x] ~~Editar a ficha não existe~~ — RT-CLI-007, acrescentada ao plano e entregue em seguida
 - [ ] **Sem navegação por setas na lista.** `Tab` funciona, mas a recepção espera ↑↓ numa lista de
       resultados. Vale junto de RT-AGD-011, que traz a grade
 - [ ] **A prévia usa dados fixos.** Ela mostra a tela, não o sistema — um erro de integração entre

@@ -500,3 +500,37 @@ botão menor para revogar seria a lei atendida no papel.
 "recusar tem o mesmo peso visual que aceitar")
 **Configurável?** Não
 **Origem.** 2026-08-30
+
+---
+
+### RN-CLI-029 — Corrigir a ficha exige reapresentar a versão
+
+**Enunciado.** O `PUT` carrega a `versao` lida na abertura. Se ela não bate, a gravação é recusada
+com `ER-INF-VERSAO_DESATUALIZADA` e nada é alterado.
+
+**Motivo.** Duas recepções abrem a mesma ficha; uma corrige o telefone, a outra corrige o nome e
+salva depois. Sem a trava, a segunda gravação devolve o telefone antigo — e ninguém descobre até a
+cliente não atender. Trava otimista e não bloqueio: o caso é raro, e segurar linha por um caso raro
+custa em todos os outros.
+
+**Onde é garantida.** Infra: `where versao = :versao` no `update`.
+**Rotinas.** RT-CLI-007 · **Teste.** `EdicaoDeClienteIT.versao_vencida_e_recusada`
+**Erro.** `ER-INF-VERSAO_DESATUALIZADA` (409) · **Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-CLI-030 — A trilha de alteração registra quais campos mudaram, nunca os valores
+
+**Enunciado.** A auditoria de `CLIENTE_ALTERADO` grava a lista de campos alterados. Valores antigos
+e novos não entram.
+
+**Motivo.** Consequência direta de RN-CLI-007: a auditoria é append-only e a anonimização não a
+alcança. Guardar ali o telefone antigo criaria a segunda base de dado pessoal que RT-CLI-005 teve
+de sair caçando. O custo é declarado — a trilha responde "quem alterou o telefone e quando", não
+"qual era" — e é a perda que a LGPD impõe.
+
+**Onde é garantida.** `AtualizarClienteUseCase.camposAlterados`.
+**Rotinas.** RT-CLI-007, RT-CLI-005 · **Teste.** `EdicaoDeClienteIT.trilha_sem_dado_pessoal`
+**Configurável?** Não
+**Origem.** 2026-08-30

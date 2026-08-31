@@ -2,11 +2,8 @@ package br.com.salao.cliente.internal.application;
 
 import br.com.salao.cliente.api.ErrosDoCliente;
 import br.com.salao.cliente.internal.domain.Nomes;
-import br.com.salao.cliente.internal.domain.Telefone;
-import br.com.salao.cliente.internal.domain.TelefoneInvalidoException;
 import br.com.salao.cliente.internal.infra.ClientesJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
-import br.com.salao.iam.api.ConfiguracaoDoEstabelecimento;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.api.Permissao;
 import br.com.salao.iam.api.RegistroDeAuditoria;
@@ -43,14 +40,14 @@ public class CadastrarClienteUseCase {
     private static final Logger log = LoggerFactory.getLogger(CadastrarClienteUseCase.class);
 
     private final ClientesJdbc clientes;
-    private final EstabelecimentoApi estabelecimentos;
     private final AuditoriaApi auditoria;
+    private final NormalizadorDeTelefone telefones;
 
     public CadastrarClienteUseCase(ClientesJdbc clientes, EstabelecimentoApi estabelecimentos,
                                    AuditoriaApi auditoria) {
         this.clientes = clientes;
-        this.estabelecimentos = estabelecimentos;
         this.auditoria = auditoria;
+        this.telefones = new NormalizadorDeTelefone(estabelecimentos);
     }
 
     @PreAuthorize("hasAuthority('" + Permissao.CLIENTE_ESCREVER + "')")
@@ -65,7 +62,7 @@ public class CadastrarClienteUseCase {
                     List.of(new CampoInvalido("nome", "OBRIGATORIO", "Informe o nome")));
         }
 
-        String telefone = normalizarTelefone(dados.telefone(), tenant);
+        String telefone = telefones.normalizar(dados.telefone(), tenant);
 
         UUID id = clientes.inserir(tenant, nome, Nomes.opcional(dados.apelido()), telefone,
                 Nomes.opcional(dados.email()), Nomes.opcional(dados.observacao()),
@@ -76,27 +73,6 @@ public class CadastrarClienteUseCase {
         auditoria.registrar(RegistroDeAuditoria.criacao("cliente", id, Map.of()));
         log.info("Cliente cadastrado: {}", id);
         return id;
-    }
-
-    /**
-     * O telefone é normalizado com o DDD do estabelecimento — ver {@link Telefone}.
-     *
-     * <p>A configuração vem por {@link EstabelecimentoApi}, nunca por join: é a fronteira de
-     * módulo que torna a extração futura barata.
-     */
-    private String normalizarTelefone(String informado, UUID tenant) {
-        if (informado == null || informado.isBlank()) {
-            return null;
-        }
-        ConfiguracaoDoEstabelecimento config = estabelecimentos.configuracao(tenant).orElseThrow();
-        try {
-            return Telefone.de(informado, config.paisPadrao(), config.dddPadrao()).e164();
-        } catch (TelefoneInvalidoException e) {
-            // O detalhe do domínio explica o caso concreto e vai para o campo, que é onde o front
-            // consegue apontar o erro sem adivinhar.
-            throw new ErroDeDominio(ErrosDoCliente.TELEFONE_INVALIDO, e.getMessage(), Map.of(),
-                    List.of(new CampoInvalido("telefone", "INVALIDO", e.getMessage())));
-        }
     }
 
 }

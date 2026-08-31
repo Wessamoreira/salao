@@ -51,7 +51,8 @@ public class ClientesJdbc implements ClienteApi {
                    coalesce(destino.nome, c.nome)         as nome,
                    coalesce(destino.apelido, c.apelido)   as apelido,
                    coalesce(destino.telefone, c.telefone) as telefone,
-                   coalesce(destino.email, c.email)       as email
+                   coalesce(destino.email, c.email)       as email,
+                   coalesce(destino.versao, c.versao)     as versao
               from cliente c
               left join cliente destino on destino.id = c.mesclado_para
              where c.id = :id
@@ -86,7 +87,7 @@ public class ClientesJdbc implements ClienteApi {
               select imutavel_unaccent(lower(:termo))  as termo,
                      imutavel_unaccent(lower(:padrao)) as padrao
             )
-            select c.id, c.nome, c.apelido, c.telefone, c.email
+            select c.id, c.nome, c.apelido, c.telefone, c.email, c.versao
               from cliente c, t
              where c.anonimizado_em is null
                and c.mesclado_para is null
@@ -110,7 +111,7 @@ public class ClientesJdbc implements ClienteApi {
      * dezenas de milhares de fichas, e some do radar até lá.
      */
     static final String BUSCAR_POR_TELEFONE = """
-            select id, nome, apelido, telefone, email
+            select id, nome, apelido, telefone, email, versao
               from cliente
              where telefone is not null
                and anonimizado_em is null
@@ -132,7 +133,7 @@ public class ClientesJdbc implements ClienteApi {
      */
     private static final String CANDIDATOS = """
             with t as (select imutavel_unaccent(lower(:nome)) as nome_norm)
-            select c.id, c.nome, c.apelido, c.telefone, c.email,
+            select c.id, c.nome, c.apelido, c.telefone, c.email, c.versao,
                    similarity(imutavel_unaccent(lower(c.nome)), t.nome_norm) as escore,
                    (c.telefone is not null and c.telefone = cast(:telefone as text))
                        as mesmo_telefone
@@ -151,7 +152,8 @@ public class ClientesJdbc implements ClienteApi {
             rs.getString("nome"),
             rs.getString("apelido"),
             rs.getString("telefone"),
-            rs.getString("email"));
+            rs.getString("email"),
+            rs.getInt("versao"));
 
     private final JdbcClient jdbc;
 
@@ -405,6 +407,45 @@ public class ClientesJdbc implements ClienteApi {
                 .param("id", clienteId)
                 .param("rotulo", rotulo)
                 .param("quando", java.sql.Timestamp.from(quando))
+                .update();
+    }
+
+    // ------------------------------------------------------------------ RT-CLI-007
+
+    /**
+     * RT-CLI-007 — corrigir os dados da ficha, com trava otimista.
+     *
+     * <p>O {@code where versao = :versao} é o que impede a segunda pessoa a salvar de apagar a
+     * correção da primeira sem ninguém perceber. Zero linhas afetadas quer dizer uma de duas
+     * coisas — ficha inexistente ou versão vencida —, e quem chama distingue consultando depois.
+     *
+     * <p>Trava otimista e não bloqueio: duas recepções corrigindo a mesma ficha no mesmo segundo é
+     * raro, e segurar linha por um caso raro custa em todos os outros.
+     *
+     * @return quantas linhas foram alteradas: 1 ou 0
+     */
+    public int atualizar(UUID id, int versao, String nome, String apelido, String telefone,
+                         String email, String observacao) {
+        return jdbc.sql("""
+                update cliente
+                   set nome = :nome,
+                       apelido = :apelido,
+                       telefone = :telefone,
+                       email = :email,
+                       observacao = :observacao,
+                       versao = versao + 1
+                 where id = :id
+                   and versao = :versao
+                   and anonimizado_em is null
+                   and mesclado_para is null
+                """)
+                .param("id", id)
+                .param("versao", versao)
+                .param("nome", nome)
+                .param("apelido", apelido)
+                .param("telefone", telefone)
+                .param("email", email)
+                .param("observacao", observacao)
                 .update();
     }
 

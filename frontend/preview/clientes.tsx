@@ -19,12 +19,12 @@ import '../src/estilo/global.css';
 
 const CLIENTES = [
   { id: 'c1', nome: 'Maria Silva', apelido: null,
-    telefone: '5511987654321', email: 'maria.silva@exemplo.com' },
-  { id: 'c2', nome: 'Júlia Silva', apelido: 'Ju', telefone: '5511987654321', email: null },
+    telefone: '5511987654321', email: 'maria.silva@exemplo.com', versao: 0 },
+  { id: 'c2', nome: 'Júlia Silva', apelido: 'Ju', telefone: '5511987654321', email: null, versao: 0 },
   { id: 'c3', nome: 'Maria Silvana Souza', apelido: null,
-    telefone: '5511933334444', email: null },
+    telefone: '5511933334444', email: null, versao: 0 },
   { id: 'c4', nome: 'Josefa Antônia de Andrade', apelido: 'Dona Zilda',
-    telefone: '5511955550001', email: null },
+    telefone: '5511955550001', email: null, versao: 0 },
 ];
 
 const CONSENTIMENTOS = [
@@ -36,7 +36,7 @@ const CONSENTIMENTOS = [
     decisao: 'RECUSADO', podeReceber: false, desde: '2026-05-02T10:05:00Z', canal: 'WHATSAPP' },
 ];
 
-function responder(url: string): unknown {
+function responder(url: string, metodo: string): unknown {
   if (url.includes('/me/capabilities')) {
     return {
       usuarioId: 'u1', nome: 'Joana', email: 'joana@salao.test', perfil: 'ADMIN',
@@ -50,6 +50,15 @@ function responder(url: string): unknown {
     return [{ grau: 'MESMO_TELEFONE', cliente: CLIENTES[1] }];
   }
   if (url.includes('/consentimentos')) return CONSENTIMENTOS;
+
+  // PUT devolve a ficha salva, como o servidor faz.
+  if (metodo === 'PUT') return CLIENTES[0];
+
+  // A ficha por id, ANTES do ramo de busca. A primeira versão caía na busca para
+  // qualquer caminho sem `q` e devolvia a forma errada, e a tela quebrava. Uma prévia
+  // que responde diferente do servidor ensina a coisa errada.
+  const porId = /\/v1\/clientes\/([\w-]+)$/.exec(url);
+  if (porId) return CLIENTES.find((c) => c.id === porId[1]);
 
   const termo = new URL(url, 'http://x').searchParams.get('q') ?? '';
   const digitos = termo.replace(/\D/g, '');
@@ -69,8 +78,8 @@ function responder(url: string): unknown {
   };
 }
 
-window.fetch = async (entrada: RequestInfo | URL) =>
-  new Response(JSON.stringify(responder(String(entrada))), {
+window.fetch = async (entrada: RequestInfo | URL, init?: RequestInit) =>
+  new Response(JSON.stringify(responder(String(entrada), init?.method ?? 'GET')), {
     status: 200, headers: { 'Content-Type': 'application/json' },
   });
 

@@ -66,6 +66,7 @@ automático, e criar uma migration sem `estabelecimento_id` quebra o build.
 | RT-CLI-004 | Consentimento LGPD: base legal, data e canal | P | CLI-001 |
 | RT-CLI-005 | Anonimização a pedido do titular, preservando o histórico | M | CLI-004 |
 | RT-CLI-006 | Tela de clientes: busca, ficha e edição | M | CLI-002, INF-010 |
+| RT-CLI-007 | Editar cliente (corrigir telefone, nome, apelido) | P | CLI-001 |
 | RT-CFG-001 | Tela de configuração do salão: DDD padrão, fuso, comissão | M | IAM-007, INF-010 |
 | RT-EQP-001 | Cadastro de profissional PJ (documento, contrato, comissão padrão) | M | IAM-007 |
 | RT-EQP-002 | Jornada semanal por profissional | M | EQP-001 |

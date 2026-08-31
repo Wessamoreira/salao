@@ -5,6 +5,7 @@ import br.com.salao.cliente.api.ClienteResumo;
 import br.com.salao.cliente.api.EstadoDoConsentimento;
 import br.com.salao.cliente.api.Finalidade;
 import br.com.salao.cliente.api.ResultadoDaBusca;
+import br.com.salao.cliente.internal.application.AtualizarClienteUseCase;
 import br.com.salao.cliente.internal.application.CadastrarClienteUseCase;
 import br.com.salao.cliente.internal.application.AnonimizarClienteUseCase;
 import br.com.salao.cliente.internal.application.BuscarClientesUseCase;
@@ -57,6 +58,7 @@ public class ClientesController {
     private final RegistrarConsentimentoUseCase registrarConsentimento;
     private final ConsultarConsentimentosUseCase consultarConsentimentos;
     private final AnonimizarClienteUseCase anonimizar;
+    private final AtualizarClienteUseCase atualizar;
 
     public ClientesController(CadastrarClienteUseCase cadastrar,
                               ConsultarClienteUseCase consultar,
@@ -65,10 +67,12 @@ public class ClientesController {
                               MesclarClientesUseCase mesclar,
                               RegistrarConsentimentoUseCase registrarConsentimento,
                               ConsultarConsentimentosUseCase consultarConsentimentos,
-                              AnonimizarClienteUseCase anonimizar) {
+                              AnonimizarClienteUseCase anonimizar,
+                              AtualizarClienteUseCase atualizar) {
         this.registrarConsentimento = registrarConsentimento;
         this.consultarConsentimentos = consultarConsentimentos;
         this.anonimizar = anonimizar;
+        this.atualizar = atualizar;
         this.cadastrar = cadastrar;
         this.consultar = consultar;
         this.buscar = buscar;
@@ -148,6 +152,33 @@ public class ClientesController {
     @GetMapping("/{id}")
     public ClienteResumo porId(@PathVariable UUID id) {
         return consultar.executar(id);
+    }
+
+    public record AtualizarClienteRequest(
+            @NotBlank @Size(max = 200) String nome,
+            @Size(max = 60) String apelido,
+            @Size(max = 30) String telefone,
+            @Email @Size(max = 320) String email,
+            @Size(max = 2000) String observacao,
+            @NotNull Integer versao) {
+    }
+
+    /**
+     * RT-CLI-007 — corrige a ficha.
+     *
+     * <p>{@code PUT} e não {@code PATCH}: substitui todos os campos editáveis. Distinguir "veio
+     * nulo" de "não veio" em JSON exige envelope e é fonte conhecida de bug — e a tela manda o
+     * formulário inteiro de qualquer jeito.
+     *
+     * <p>A {@code versao} vem no corpo e é obrigatória. Sem ela, duas pessoas corrigindo a mesma
+     * ficha ao mesmo tempo fariam a segunda apagar a correção da primeira em silêncio.
+     */
+    @PutMapping("/{id}")
+    public ClienteResumo atualizar(@PathVariable UUID id,
+                                   @Valid @RequestBody AtualizarClienteRequest requisicao) {
+        return atualizar.executar(id, requisicao.versao(),
+                new DadosDoCliente(requisicao.nome(), requisicao.apelido(), requisicao.telefone(),
+                        requisicao.email(), requisicao.observacao()));
     }
 
     /**

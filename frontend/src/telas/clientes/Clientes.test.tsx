@@ -12,11 +12,11 @@ vi.mock('../../api/http', () => ({
 
 const MARIA = {
   id: 'c1', nome: 'Maria Silva', apelido: null,
-  telefone: '5511987654321', email: null,
+  telefone: '5511987654321', email: null, versao: 0,
 };
 const JULIA = {
   id: 'c2', nome: 'Júlia Silva', apelido: 'Ju',
-  telefone: '5511987654321', email: null,
+  telefone: '5511987654321', email: null, versao: 0,
 };
 
 const CAPACIDADES = {
