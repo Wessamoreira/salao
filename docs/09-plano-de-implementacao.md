@@ -71,11 +71,11 @@ automático, e criar uma migration sem `estabelecimento_id` quebra o build.
 | RT-EQP-001 | Cadastro de profissional PJ (documento, contrato, comissão padrão) | M | IAM-007 |
 | RT-EQP-002 | Jornada semanal por profissional | M | EQP-001 |
 | RT-EQP-003 | Exceção de jornada: feriado, férias, curso, atestado | M | EQP-002 |
-| RT-EQP-004 | Habilidades: quais serviços cada profissional executa | P | EQP-001, CAT-001 |
 | RT-CAT-001 | Serviço com **blocos** ATIVO/PAUSA, duração e recursos exigidos | G | INF-002 |
 | RT-CAT-002 | Preço com vigência + histórico | M | CAT-001 |
 | RT-CAT-003 | Recurso (lavatório, cadeira, sala) | P | INF-002 |
 | RT-CAT-004 | Override de duração por profissional | P | CAT-001, EQP-001 |
+| RT-EQP-004 | Habilidades: quais serviços cada profissional executa | P | EQP-001, CAT-001 |
 | RT-AGD-001 | **Consultar disponibilidade** (jornada − bloqueios − blocos ocupados) | G | CAT-001, EQP-002 |
 | RT-AGD-002 | **Criar agendamento** com blocos e exclusion constraint | G | AGD-001, CLI-001 |
 | RT-AGD-003 | Reagendar / mover (drag & drop) | M | AGD-002 |
