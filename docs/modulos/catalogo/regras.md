@@ -65,3 +65,78 @@ ver o cardápio para marcar, e esconder isso impediria o trabalho.
 **Rotinas.** RT-CAT-001 · **Teste.** `CatalogoDeServicosIT.recepcao_le_mas_nao_altera`
 **Configurável?** Não
 **Origem.** 2026-08-30
+
+---
+
+### RN-CAT-005 — Preço tem data de início e nunca data de fim
+
+**Enunciado.** Cada preço é uma linha com `vigente_de`. O preço numa data é o de maior `vigente_de`
+que já começou. Duas linhas com a mesma data são recusadas.
+
+**Motivo.** O modelo com `vigente_ate` obriga a manter duas linhas coerentes a cada alteração: uma
+falha no meio disso deixa dois preços vigentes ou nenhum, e a consulta passa a depender de qual
+linha o banco devolve primeiro. Sem data de fim, a coerência é consequência da consulta e não de
+disciplina de escrita — e preço futuro funciona sem tratamento especial.
+
+**Onde é garantida.** Tabela `preco_do_servico` sem `vigente_ate`, com
+`unique (servico_id, vigente_de)` (V21) · `ServicosJdbc.precoEm`.
+**Rotinas.** RT-CAT-002 · **Teste.** `PrecoDoServicoIT.aumento_nao_reescreve_o_passado`,
+`PrecoDoServicoIT.mesma_data_e_ambiguidade`
+**Erro.** `ER-CAT-DADOS_INVALIDOS` (422) · **Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-CAT-006 — O atendimento guarda o preço que usou
+
+**Enunciado.** Ao registrar um serviço numa comanda, `atendimento` grava o valor **no item**, e o
+cálculo lê dali — nunca da tabela de preços.
+
+**Motivo.** Sem essa cópia, qualquer alteração de preço alcança o passado: um preço retroativo, ou
+mesmo uma correção legítima, muda o que um atendimento de dois meses atrás custou, e a comissão já
+paga deixa de bater. O preço com vigência protege a *leitura por data*; só a cópia protege o
+registro do que de fato foi cobrado.
+
+**Obrigação da Fase 2**, registrada aqui porque o módulo ainda não existe. Enquanto ela não existir,
+a marcação de retroativo na trilha (RN-CAT-008) é a única defesa.
+
+**Onde é garantida.** Hoje: em lugar nenhum — é uma promessa. Na Fase 2: coluna de valor no item da
+comanda (`RT-ATD-*`).
+**Rotinas.** RT-CAT-002, RT-ATD-* · **Teste.** — (Fase 2)
+**Configurável?** Não · **Ver também.** RN-IAM-017, que tem a mesma forma para a base de comissão
+**Origem.** 2026-08-30
+
+---
+
+### RN-CAT-007 — Serviço sem preço devolve vazio, nunca zero
+
+**Enunciado.** `precoEm` devolve `Optional.empty()` quando não há preço definido até a data.
+
+**Motivo.** Zero é um preço. Um serviço sem preço num relatório financeiro precisa aparecer como
+pendência de cadastro, não como brinde — devolver zero faria a soma fechar com o número errado, que
+é pior do que não fechar. Pelo mesmo motivo a consulta sempre exige a data: pedir "o preço" sem
+dizer quando é a pergunta que produz o relatório errado.
+
+**Onde é garantida.** `ServicoApi.precoEm` devolve `Optional<Money>`.
+**Rotinas.** RT-CAT-002 · **Teste.** `PrecoDoServicoIT.sem_preco_e_vazio`
+**Configurável?** Não
+**Origem.** 2026-08-30
+
+---
+
+### RN-CAT-008 — Preço retroativo é permitido e marcado; preço vigente não se apaga
+
+**Enunciado.** Definir preço com `vigente_de` no passado é aceito e registrado na trilha com
+`retroativo: true`. Remover só é possível enquanto o preço não começou a valer.
+
+**Motivo.** Recusar retroativo obrigaria o salão a conviver com um erro de digitação. Mas apagar um
+preço já vigente faria o serviço voltar ao valor anterior retroativamente, e o relatório do mês
+passado mudaria sozinho — quem errou corrige cadastrando outro, o que deixa rastro. É a mesma
+distinção de RT-EQP-003: apaga-se o que não sustenta nada.
+
+**Onde é garantida.** `DefinirPrecoUseCase.trilha` marca retroativo ·
+`ServicosJdbc.removerPrecoFuturo` filtra por `vigente_de > hoje`.
+**Rotinas.** RT-CAT-002 · **Teste.** `PrecoDoServicoIT.retroativo_e_marcado`,
+`PrecoDoServicoIT.nao_apaga_preco_vigente`
+**Erro.** `ER-CAT-PRECO_JA_VIGENTE` (422) · **Configurável?** Não
+**Origem.** 2026-08-30

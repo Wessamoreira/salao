@@ -21,7 +21,16 @@ public enum ErrosDoCatalogo implements CodigoDeErro {
             "Já existe um serviço com este nome"),
 
     SERVICO_NAO_ENCONTRADO("ER-CAT-SERVICO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
-            "Serviço não encontrado");
+            "Serviço não encontrado"),
+
+    /**
+     * Tentou cancelar um preço que já entrou em vigor.
+     *
+     * <p>Apagá-lo faria o serviço voltar ao valor anterior retroativamente, e o relatório do mês
+     * passado mudaria sozinho. Corrige-se cadastrando outro preço, que deixa rastro.
+     */
+    PRECO_JA_VIGENTE("ER-CAT-PRECO_JA_VIGENTE", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Este preço já está valendo");
 
     private final String codigo;
     private final HttpStatus status;

@@ -3,8 +3,11 @@ package br.com.salao.catalogo.internal.infra;
 import br.com.salao.catalogo.api.BlocoDoServico;
 import br.com.salao.catalogo.api.SequenciaDeBlocos;
 import br.com.salao.catalogo.api.ServicoApi;
+import br.com.salao.catalogo.api.PrecoVigente;
 import br.com.salao.catalogo.api.ServicoResumo;
 import br.com.salao.catalogo.api.TipoDeBloco;
+import br.com.salao.shared.dinheiro.Money;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -154,6 +157,76 @@ public class ServicosJdbc implements ServicoApi {
         var saida = new LinkedHashMap<UUID, SequenciaDeBlocos>();
         porServico.forEach((id, lista) -> saida.put(id, new SequenciaDeBlocos(lista)));
         return saida;
+    }
+
+    // ------------------------------------------------------------------ RT-CAT-002
+
+    /**
+     * O preço vigente numa data: o de maior {@code vigente_de} que já começou.
+     *
+     * <p>Uma linha, lida descendo pelo índice. Sem {@code vigente_ate} não há intervalo para
+     * conferir nem duas linhas para manter coerentes — a coerência é consequência da consulta.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Money> precoEm(UUID servicoId, LocalDate data) {
+        return jdbc.sql("""
+                select valor
+                  from preco_do_servico
+                 where servico_id = :servico
+                   and vigente_de <= :data
+                 order by vigente_de desc
+                 limit 1
+                """)
+                .param("servico", servicoId)
+                .param("data", data)
+                .query((rs, linha) -> new Money(rs.getBigDecimal("valor")))
+                .optional();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PrecoVigente> historicoDePrecos(UUID servicoId) {
+        return jdbc.sql("""
+                select id, valor, vigente_de
+                  from preco_do_servico
+                 where servico_id = :servico
+                 order by vigente_de desc
+                """)
+                .param("servico", servicoId)
+                .query((rs, linha) -> new PrecoVigente(
+                        rs.getObject("id", UUID.class),
+                        new Money(rs.getBigDecimal("valor")),
+                        rs.getDate("vigente_de").toLocalDate()))
+                .list();
+    }
+
+    public UUID inserirPreco(UUID estabelecimentoId, UUID servicoId, Money valor,
+                             LocalDate vigenteDe, UUID criadoPor) {
+        return jdbc.sql("""
+                insert into preco_do_servico
+                    (estabelecimento_id, servico_id, valor, vigente_de, criado_por)
+                values (:estabelecimento, :servico, :valor, :vigenteDe, :criadoPor)
+                returning id
+                """)
+                .param("estabelecimento", estabelecimentoId)
+                .param("servico", servicoId)
+                .param("valor", valor.valor())
+                .param("vigenteDe", vigenteDe)
+                .param("criadoPor", criadoPor)
+                .query(UUID.class)
+                .single();
+    }
+
+    /** Só remove o que ainda não começou a valer — ver {@code RemoverPrecoFuturoUseCase}. */
+    public int removerPrecoFuturo(UUID precoId, LocalDate hoje) {
+        return jdbc.sql("""
+                delete from preco_do_servico
+                 where id = :id and vigente_de > :hoje
+                """)
+                .param("id", precoId)
+                .param("hoje", hoje)
+                .update();
     }
 
     public int definirAtivacao(UUID id, boolean ativo) {
