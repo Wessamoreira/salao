@@ -140,3 +140,88 @@ distinção de RT-EQP-003: apaga-se o que não sustenta nada.
 `PrecoDoServicoIT.nao_apaga_preco_vigente`
 **Erro.** `ER-CAT-PRECO_JA_VIGENTE` (422) · **Configurável?** Não
 **Origem.** 2026-08-30
+
+---
+
+### RN-CAT-009 — Recurso é contável, e a contagem nunca é zero
+
+**Enunciado.** Cada recurso tem `quantidade` de unidades intercambiáveis, sempre ≥ 1. Um recurso
+que o salão não tem mais é **inativo**, não é quantidade zero.
+
+**Motivo.** O salão tem "três lavatórios", não "Lavatório A, B e C" — nomear as unidades criaria
+uma escolha que a recepção não sabe fazer e um dado que ninguém consulta. E zero unidades diria a
+mesma coisa que `ativo = false`: duas formas de dizer a mesma coisa é o começo de um relatório que
+não fecha, exatamente como em RN-CAT-003.
+
+**Onde é garantida.** `check (quantidade between 1 and 99)` (V22) · construtor de `Recurso`.
+**Rotinas.** RT-CAT-003 · **Teste.** `RecursoTest.quantidade_zero_nao_existe`,
+`RecursosDoSalaoIT.quantidade_zero_e_422`, `RecursosDoSalaoIT.edicao_para_zero_e_422`
+**Erro.** `ER-CAT-DADOS_INVALIDOS` (422) · **Configurável?** A quantidade, por recurso
+**Origem.** 2026-09-01
+
+---
+
+### RN-CAT-010 — O recurso é exigido pelo bloco, não pelo serviço
+
+**Enunciado.** A exigência de recurso é gravada por bloco. Um bloco `PAUSA` pode exigir recurso.
+
+**Motivo.** A coloração ocupa o lavatório só na lavagem — 30 de 100 minutos. Pendurar a exigência
+no serviço reservaria o equipamento pelos 100, que é o mesmo desperdício que os blocos ATIVO/PAUSA
+existem para eliminar, movido para a outra coisa escassa. E o inverso importa tanto quanto: durante
+os 40 minutos da química a profissional está livre e a **cadeira não** — um modelo que não saiba
+dizer isso vende a mesma cadeira duas vezes.
+
+**Onde é garantida.** Tabela `bloco_exige_recurso`, com chave em `bloco_id` (V22) ·
+`BlocoDoServico.recursosExigidos`. A gravação acontece dentro de `ServicosJdbc.gravarBlocos`, junto
+com os blocos: numa tabela escrita à parte, o "apaga e regrava" da receita destruiria as exigências
+em silêncio a cada edição do serviço.
+**Rotinas.** RT-CAT-003, RT-AGD-001 · **Teste.** `SequenciaDeBlocosTest.recurso_mora_no_bloco`,
+`SequenciaDeBlocosTest.pausa_tambem_ocupa`, `RecursosDoSalaoIT.exigencia_mora_no_bloco`,
+`RecursosDoSalaoIT.pausa_tambem_ocupa`
+**Configurável?** Por serviço, é a própria receita
+**Origem.** 2026-09-01
+
+---
+
+### RN-CAT-011 — Recurso exigido é conferido pelo caso de uso, porque a chave estrangeira não separa salões
+
+**Enunciado.** Antes de gravar a receita, o caso de uso confere que todo recurso exigido existe,
+está ativo e pertence a este salão — com uma consulta comum, sujeita à política de tenant.
+
+**Motivo.** No PostgreSQL as checagens de integridade referencial rodam como dono da tabela e
+**não passam pela RLS**. A chave estrangeira de `bloco_exige_recurso` aceita, sem reclamar, um
+recurso de outro salão. É contraintuitivo o bastante para merecer um teste que demonstre o
+comportamento, e não só um que teste a defesa.
+
+Vale para **toda** FK entre tabelas de negócio, não só esta — ver a quinta armadilha em
+[05-seguranca-multitenancy-lgpd.md](../../05-seguranca-multitenancy-lgpd.md).
+
+**Onde é garantida.** `CadastrarServicoUseCase.conferirRecursos` · `RecursosJdbc.idsAtivos`.
+**Rotinas.** RT-CAT-003 · **Teste.** `RecursosDoSalaoIT.recurso_de_outro_salao_nao_serve`,
+`RecursosDoSalaoIT.a_fk_sozinha_nao_e_barreira_de_tenant` (documenta a armadilha),
+`RecursosDoSalaoIT.recurso_inativo_nao_serve`
+**Erro.** `ER-CAT-RECURSO_NAO_ENCONTRADO` (422) · **Configurável?** Não
+**Origem.** 2026-09-01
+
+---
+
+### RN-CAT-012 — Não se desativa recurso que uma receita ativa exige
+
+**Enunciado.** Desativar um recurso é recusado enquanto algum serviço **ativo** o exigir, e o erro
+lista os serviços. Diminuir a quantidade é sempre permitido.
+
+**Motivo.** Se passasse, todo serviço que depende dele ficaria impossível de marcar: a agenda
+procuraria um lavatório livre, não acharia nenhum, e deixaria de oferecer horário — sem erro, sem
+aviso, e sem ninguém conseguindo explicar por que a coloração sumiu da agenda. Listar os serviços é
+a diferença entre "não pode" e "não pode; conserte estes três".
+
+Só os ativos contam: serviço fora do cardápio não pode ser marcado, e a ordem "tira o serviço,
+depois o equipamento" é a ordem em que as coisas acontecem na vida.
+
+É a mesma família de RN-CAT-008 e RT-EQP-003 — *apaga-se, ou aposenta-se, o que não sustenta nada*.
+
+**Onde é garantida.** `DefinirAtivacaoDoRecursoUseCase` · `RecursosJdbc.servicosAtivosQueExigem`.
+**Rotinas.** RT-CAT-003 · **Teste.** `RecursosDoSalaoIT.nao_desativa_recurso_em_uso`,
+`RecursosDoSalaoIT.desativa_quando_ninguem_mais_exige`
+**Erro.** `ER-CAT-RECURSO_EM_USO` (422) · **Configurável?** Não
+**Origem.** 2026-09-01

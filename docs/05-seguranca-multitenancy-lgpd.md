@@ -18,7 +18,8 @@ create policy tenant_isolado on agendamento
   using (estabelecimento_id = current_setting('app.tenant_id', true)::uuid);
 ```
 
-Quatro armadilhas que fazem RLS não proteger nada, todas já vistas em produção alheia:
+Cinco armadilhas que fazem RLS não proteger nada ou proteger menos do que parece — as quatro
+primeiras já vistas em produção alheia, a quinta medida neste projeto:
 
 | Armadilha | Efeito | Correção |
 |---|---|---|
@@ -26,6 +27,25 @@ Quatro armadilhas que fazem RLS não proteger nada, todas já vistas em produç�
 | `current_setting('app.tenant_id')` sem o 2º argumento | Estoura `42704` em toda conexão que não fez `SET` (Flyway, healthcheck, job) | `current_setting('app.tenant_id', true)` e política que trata NULL |
 | `SET` em vez de `SET LOCAL` | Conexão volta ao pool com o tenant grudado e vaza para o próximo | `SET LOCAL`, sempre, dentro da transação |
 | Nenhum teste | Ninguém percebe até o segundo cliente | Ver abaixo |
+| **Confiar na chave estrangeira para separar salões** | Uma FK entre tabelas de negócio aceita id de **outro** tenant sem reclamar | Ler o pai por consulta normal (sujeita à política) antes de gravar o filho |
+
+A quinta merece o parágrafo que as outras não precisam, porque é contraintuitiva: no PostgreSQL as
+checagens de integridade referencial rodam como dono da tabela e **passam por cima da RLS** — é
+assim de propósito, para que a integridade não dependa de quem está olhando. O efeito colateral é
+que `insert into bloco_exige_recurso (bloco_id, recurso_id)` com um `recurso_id` de outro salão
+**funciona**: a política protege a linha que está sendo inserida, não o alvo da FK.
+
+Quem separa, então, é sempre a aplicação: **ler o pai antes de gravar o filho**, com uma consulta
+comum que a política filtra.
+
+A armadilha só morde onde o id **vem da requisição**. `refresh_token.usuario_id` e
+`mfa_credencial.usuario_id` apontam para o usuário da sessão autenticada, que ninguém escolhe pelo
+corpo do pedido — ali não há id atravessado a inventar. A regra vale para as FKs que recebem id de
+fora, e essas todas já seguem o padrão hoje: `DefinirPrecoUseCase`, `DefinirJornadaUseCase`,
+`RegistrarBloqueioUseCase`, `RegistrarConsentimentoUseCase`, `MesclarClientesUseCase` e
+`CadastrarServicoUseCase`. O que faltava era o motivo escrito e a demonstração. `RecursosDoSalaoIT.a_fk_sozinha_nao_e_barreira_de_tenant` insere a linha
+atravessada de propósito e **prova que o banco aceita**; se um dia falhar, a notícia é boa e a
+checagem da aplicação virou redundância. Ver RN-CAT-011.
 
 O `SET LOCAL app.tenant_id` sai em um aspecto/`TransactionSynchronization` no início de **toda**
 transação. Se o contexto estiver vazio e a transação tocar tabela de negócio, **falhe** — não

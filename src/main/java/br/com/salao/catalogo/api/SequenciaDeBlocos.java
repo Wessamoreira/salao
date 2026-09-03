@@ -1,6 +1,9 @@
 package br.com.salao.catalogo.api;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * RT-CAT-001 — a receita do serviço, em blocos.
@@ -71,5 +74,18 @@ public record SequenciaDeBlocos(List<BlocoDoServico> blocos) {
     /** Se o serviço tem pausa — o que muda como a agenda o encaixa. */
     public boolean temPausa() {
         return blocos.stream().anyMatch(bloco -> bloco.tipo() == TipoDeBloco.PAUSA);
+    }
+
+    /**
+     * RT-CAT-003 — todos os recursos que a receita toca, em qualquer bloco.
+     *
+     * <p>Serve para a pergunta grossa ("este serviço depende do lavatório?"). A agenda não usa
+     * esta: para saber <em>quando</em> o lavatório fica ocupado ela precisa do bloco, porque a
+     * coloração o ocupa em 30 dos 100 minutos.
+     */
+    public Set<UUID> recursosExigidos() {
+        var uniao = new LinkedHashSet<UUID>();
+        blocos.forEach(bloco -> uniao.addAll(bloco.recursosExigidos()));
+        return Set.copyOf(uniao);
     }
 }

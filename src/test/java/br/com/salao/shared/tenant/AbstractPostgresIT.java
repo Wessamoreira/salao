@@ -135,11 +135,46 @@ public abstract class AbstractPostgresIT {
 
     private static Connection conexaoDeOwner;
 
+    /**
+     * Conexão como a aplicação (<em>{@code salao_app}</em>), <strong>sujeita à RLS</strong>, já com
+     * o tenant posto e uma transação aberta.
+     *
+     * <p>É o complemento de {@link #comoOwner()}: aquela ignora a política para preparar cenário,
+     * esta vê o banco exatamente como a aplicação o vê. Serve para provar o que só é verdade sob a
+     * política — e, principalmente, para provar o que a política <em>não</em> cobre: as checagens
+     * de integridade referencial do PostgreSQL rodam como dono da tabela e passam por cima dela.
+     *
+     * <p>A transação fica aberta de propósito: o {@code set_config} do tenant é local a ela, e
+     * quem chama decide entre {@code commit} e {@code rollback}. Chamar de novo descarta a
+     * transação anterior — assim um teste nunca herda o tenant do teste passado.
+     */
+    protected static Connection comoApp(UUID tenant) throws SQLException {
+        if (conexaoDeApp == null || conexaoDeApp.isClosed()) {
+            conexaoDeApp = DriverManager.getConnection(
+                    POSTGRES.getJdbcUrl(), "salao_app", APP_SENHA);
+            conexaoDeApp.setAutoCommit(false);
+        }
+        conexaoDeApp.rollback();
+        try (var ps = conexaoDeApp.prepareStatement(
+                "select set_config('app.tenant_id', ?, true)")) {
+            ps.setString(1, tenant.toString());
+            ps.executeQuery().close();
+        }
+        return conexaoDeApp;
+    }
+
+    private static Connection conexaoDeApp;
+
     @AfterAll
     static void fecharConexaoDeOwner() throws SQLException {
         if (conexaoDeOwner != null && !conexaoDeOwner.isClosed()) {
             conexaoDeOwner.close();
             conexaoDeOwner = null;
+        }
+        if (conexaoDeApp != null && !conexaoDeApp.isClosed()) {
+            conexaoDeApp.rollback();
+            conexaoDeApp.close();
+            conexaoDeApp = null;
         }
     }
 

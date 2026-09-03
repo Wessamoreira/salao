@@ -58,10 +58,12 @@ falha — por isso R-UX-01 e R-UX-02 são requisitos e não sugestões.
 4. Carrega o serviço via `CatalogoApi` (blocos, duração, recursos exigidos) — cacheado.
 5. Valida **RN-AGD-001** (habilidade) e **RN-AGD-008** (não retroativo).
 6. Domínio materializa os blocos a partir do serviço e do instante inicial (**RN-AGD-003**),
-   atribuindo `profissional_id` aos blocos `ATIVO` e `recurso_id` aos que exigem recurso.
+   atribuindo `profissional_id` aos blocos `ATIVO` e `recurso_id` + `unidade` aos que exigem
+   recurso.
 7. Valida **RN-AGD-002** (jornada) contra `EquipeApi`.
 8. Pré-checagem de conflito (**RN-AGD-004/005**) — apenas para erro amigável.
-9. Aloca os recursos exigidos: escolhe o primeiro livre da categoria no período.
+9. Aloca os recursos exigidos: escolhe a **primeira unidade livre** (`1..quantidade`) de cada
+   recurso no período — ver "Alocação por unidade", abaixo.
 10. Persiste a cabeça em `agendamento` e os blocos em `agendamento_bloco`, em lote.
 11. **O banco decide.** Violação de exclusion constraint → `ER-AGD-CONFLITO_HORARIO` (409).
 12. Registra `AgendamentoCriado` no outbox (mesmo commit).
@@ -83,8 +85,26 @@ distribuída proporcionalmente entre os blocos `ATIVO`. Registrado para auditori
 **A4 — Fora da jornada, com permissão.** `agenda:write:all` + `forcarForaJornada: true` +
 `justificativa` obrigatória, registrada em `auditoria`.
 
-**A5 — Sem recurso disponível.** Se o serviço exige recurso e nenhum da categoria está livre no
-período → `ER-AGD-RECURSO_OCUPADO` (409), sugerindo o próximo horário com recurso livre.
+**A5 — Sem recurso disponível.** Se o serviço exige recurso e nenhuma unidade dele está livre no
+período → `ER-AGD-RECURSO_OCUPADO` (409), sugerindo o próximo horário com unidade livre.
+
+## 6-bis. Alocação por unidade — o que RT-CAT-003 deixou para cá
+
+`recurso` é **contável**: "Lavatório, quantidade 3", e não três linhas nomeadas (RN-CAT-009). A
+consequência recai nesta rotina, e é a maior dívida herdada dela.
+
+`EXCLUDE USING gist` garante *no máximo um*, não *no máximo três*. Uma contagem feita pela
+aplicação ("três lavatórios, dois ocupados, ainda cabe") é verificação sob concorrência sem trava —
+duas marcações simultâneas passam pela mesma contagem e estouram a capacidade. Este projeto não
+aceita esse tipo de garantia em nenhum outro lugar, e não deve aceitar aqui.
+
+A saída prevista: o bloco do agendamento guarda `recurso_id` **e** `unidade` (1..quantidade), e a
+exclusion constraint passa a valer sobre `(recurso_id, unidade, faixa)`. Aí a capacidade volta a
+ser garantida pelo banco, com o mesmo mecanismo que protege a jornada — e o salão continua sem
+precisar nomear lavatório nenhum.
+
+Falta amarrar `unidade <= quantidade` do recurso, que é uma checagem entre tabelas: ou gatilho, ou
+uma tabela de unidades gerada. Decidir na implementação.
 
 ## 7. Regras de negócio aplicadas
 
@@ -94,7 +114,7 @@ período → `ER-AGD-RECURSO_OCUPADO` (409), sugerindo o próximo horário com r
 | RN-AGD-002 | Dentro da jornada, menos exceções | Aplicação (forçável por admin) |
 | RN-AGD-003 | Blocos materializados do serviço | Domínio |
 | RN-AGD-004 | Blocos do profissional não se sobrepõem | **Banco** |
-| RN-AGD-005 | Blocos do recurso não se sobrepõem | **Banco** |
+| RN-AGD-005 | Blocos da mesma **unidade** de um recurso não se sobrepõem | **Banco** |
 | RN-AGD-007 | Nasce em `SOLICITADO` ou `CONFIRMADO` | Domínio |
 | RN-AGD-008 | Não agenda no passado (exceto admin) | Aplicação |
 
@@ -129,9 +149,9 @@ Content-Type: application/json
   "profissional": { "id": "7b21...", "nome": "Ana" },
   "servico": { "id": "3c55...", "nome": "Mechas" },
   "blocos": [
-    { "ordem": 1, "tipo": "ATIVO", "inicio": "...T13:00:00Z", "fim": "...T13:30:00Z", "recursoId": "lav-1" },
-    { "ordem": 2, "tipo": "PAUSA", "inicio": "...T13:30:00Z", "fim": "...T14:10:00Z", "recursoId": "cad-3" },
-    { "ordem": 3, "tipo": "ATIVO", "inicio": "...T14:10:00Z", "fim": "...T14:40:00Z", "recursoId": "cad-3" }
+    { "ordem": 1, "tipo": "ATIVO", "inicio": "...T13:00:00Z", "fim": "...T13:30:00Z", "recursoId": "3f1c...", "unidade": 1 },
+    { "ordem": 2, "tipo": "PAUSA", "inicio": "...T13:30:00Z", "fim": "...T14:10:00Z", "recursoId": "8a04...", "unidade": 3 },
+    { "ordem": 3, "tipo": "ATIVO", "inicio": "...T14:10:00Z", "fim": "...T14:40:00Z", "recursoId": "8a04...", "unidade": 3 }
   ],
   "versao": 0
 }
@@ -261,4 +281,9 @@ Nenhum efeito em estoque ou financeiro. Agendamento não movimenta dinheiro — 
 - [ ] Confirmar com o dono se encaixe na pausa é liberado automaticamente ou exige clique
       (pergunta 7 de `13-perguntas-em-aberto.md`) — hoje o default é **manual**
 - [ ] Definir se recurso é escolhido pelo usuário ou alocado automaticamente (hoje: automático,
-      primeiro livre da categoria)
+      primeira unidade livre)
+- [ ] **A unidade pode criar conflito falso.** Alocar a unidade na hora da marcação é o que
+      permite ao banco garantir a capacidade, mas a alocação gulosa por ordem de *marcação* (e não
+      de horário) pode recusar um encaixe que caberia com um rearranjo. Em grafos de intervalo a
+      alocação por ordem de início é ótima; as marcações não chegam nessa ordem. Medir antes de
+      complicar — com dois ou três lavatórios pode nunca aparecer

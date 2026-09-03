@@ -5,7 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.salao.catalogo.api.BlocoDoServico;
 import br.com.salao.catalogo.api.SequenciaDeBlocos;
+import br.com.salao.catalogo.api.TipoDeBloco;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -120,5 +123,62 @@ class SequenciaDeBlocosTest {
 
         assertThatThrownBy(() -> coloracao.blocos().add(BlocoDoServico.ativo(10)))
                 .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    // ------------------------------------------------------------------ RT-CAT-003
+
+    @Test
+    @DisplayName("o recurso é exigido pelo BLOCO, não pelo serviço inteiro")
+    void recurso_mora_no_bloco() {
+        // A coloração ocupa o lavatório só na lavagem: 30 minutos de 100. Exigi-lo no serviço
+        // reservaria o equipamento pelos 100 — o mesmo desperdício que os blocos existem para
+        // eliminar, movido para outra coisa escassa.
+        UUID lavatorio = UUID.randomUUID();
+        var coloracao = new SequenciaDeBlocos(List.of(
+                BlocoDoServico.ativo(30),
+                BlocoDoServico.pausa(40),
+                BlocoDoServico.ativo(30).exigindo(lavatorio)));
+
+        assertThat(coloracao.blocos().get(0).recursosExigidos())
+                .as("aplicar a tinta não usa o lavatório").isEmpty();
+        assertThat(coloracao.blocos().get(2).recursosExigidos()).containsExactly(lavatorio);
+        assertThat(coloracao.recursosExigidos())
+                .as("a pergunta grossa: este serviço depende do lavatório?")
+                .containsExactly(lavatorio);
+    }
+
+    @Test
+    @DisplayName("um bloco PAUSA pode exigir recurso: a cliente segue na cadeira")
+    void pausa_tambem_ocupa() {
+        // O caso que um modelo ingênuo erra. Durante os 40 minutos da química a profissional está
+        // livre — e a cadeira não. Não saber dizer isso é vender a mesma cadeira duas vezes.
+        UUID cadeira = UUID.randomUUID();
+        var coloracao = new SequenciaDeBlocos(List.of(
+                BlocoDoServico.ativo(30).exigindo(cadeira),
+                BlocoDoServico.pausa(40).exigindo(cadeira),
+                BlocoDoServico.ativo(30).exigindo(cadeira)));
+
+        assertThat(coloracao.minutosDoProfissional()).as("a profissional continua livre na pausa")
+                .isEqualTo(60);
+        assertThat(coloracao.blocos().get(1).recursosExigidos())
+                .as("a cadeira, não").containsExactly(cadeira);
+    }
+
+    @Test
+    @DisplayName("os recursos de um bloco não podem ser alterados por quem os recebeu")
+    void recursos_sao_imutaveis() {
+        var bloco = BlocoDoServico.ativo(30).exigindo(UUID.randomUUID());
+
+        assertThatThrownBy(() -> bloco.recursosExigidos().add(UUID.randomUUID()))
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    @Test
+    @DisplayName("bloco sem recurso é o caso comum, e não precisa dizer nada")
+    void sem_recurso_e_conjunto_vazio() {
+        assertThat(BlocoDoServico.ativo(30).recursosExigidos()).isEmpty();
+        assertThat(new BlocoDoServico(TipoDeBloco.ATIVO, 30, null).recursosExigidos())
+                .as("null e vazio significam a mesma coisa: nenhum equipamento disputado")
+                .isEqualTo(Set.of());
     }
 }

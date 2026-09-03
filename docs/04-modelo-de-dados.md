@@ -72,6 +72,7 @@ create table agendamento_bloco (
   tipo                text not null check (tipo in ('ATIVO','PAUSA')),
   profissional_id     uuid,        -- null = não ocupa o profissional (pausa de química)
   recurso_id          uuid,        -- null = não ocupa recurso
+  unidade             smallint,    -- qual das `quantidade` unidades; ver RT-CAT-003
   periodo             tstzrange not null,
   status              text not null,   -- desnormalizado da cabeça; ver nota abaixo
   constraint bloco_periodo_nao_vazio check (not isempty(periodo))
@@ -83,9 +84,15 @@ alter table agendamento_bloco
   where (profissional_id is not null
          and status in ('SOLICITADO','CONFIRMADO','EM_ATENDIMENTO'));
 
+-- A unidade entra na exclusão, e é ela que faz a CAPACIDADE ser garantida pelo
+-- banco. `recurso` é contável ("Lavatório, quantidade 3", RN-CAT-009), e EXCLUDE
+-- garante "no máximo um", não "no máximo três": sem a unidade, a capacidade
+-- dependeria de uma contagem da aplicação — verificação sob concorrência sem
+-- trava, que este projeto não aceita em nenhum outro lugar.
 alter table agendamento_bloco
   add constraint bloco_sem_sobreposicao_recurso
-  exclude using gist (estabelecimento_id with =, recurso_id with =, periodo with &&)
+  exclude using gist (estabelecimento_id with =, recurso_id with =, unidade with =,
+                      periodo with &&)
   where (recurso_id is not null
          and status in ('SOLICITADO','CONFIRMADO','EM_ATENDIMENTO'));
 ```
@@ -94,6 +101,10 @@ alter table agendamento_bloco
 pausa o profissional está livre para um encaixe, mas o cliente continua ocupando a cadeira. Com um
 único `tstzrange` por agendamento, o encaixe seria rejeitado pelo banco e a cadeira ficaria livre —
 os dois errados. Blocos com `profissional_id` e `recurso_id` anuláveis expressam exatamente isso.
+
+**Onde o recurso é declarado:** em `bloco_do_servico` ↔ `bloco_exige_recurso` (V22, RT-CAT-003). A
+exigência mora no bloco da *receita* e não no serviço, porque a coloração ocupa o lavatório em 30
+dos seus 100 minutos — e um bloco `PAUSA` pode exigir recurso, que é o caso da cadeira acima.
 
 **Trade-off assumido — `status` desnormalizado no bloco.** A constraint parcial precisa do status na
 mesma linha; Postgres não permite subquery em `EXCLUDE`. Consequência: cancelar um agendamento

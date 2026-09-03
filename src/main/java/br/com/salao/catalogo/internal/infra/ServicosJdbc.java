@@ -11,8 +11,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,17 +69,34 @@ public class ServicosJdbc implements ServicoApi {
         List<BlocoDoServico> lista = blocos.blocos();
         for (int ordem = 0; ordem < lista.size(); ordem++) {
             BlocoDoServico bloco = lista.get(ordem);
-            jdbc.sql("""
+            UUID blocoId = jdbc.sql("""
                     insert into bloco_do_servico
                         (estabelecimento_id, servico_id, ordem, tipo, duracao_minutos)
                     values (:estabelecimento, :servico, :ordem, :tipo, :duracao)
+                    returning id
                     """)
                     .param("estabelecimento", estabelecimentoId)
                     .param("servico", servicoId)
                     .param("ordem", ordem)
                     .param("tipo", bloco.tipo().name())
                     .param("duracao", bloco.duracaoMinutos())
-                    .update();
+                    .query(UUID.class)
+                    .single();
+
+            // RT-CAT-003 — a exigência de recurso é parte da receita e é regravada junto. Se
+            // morasse numa tabela à parte, o "apaga e regrava" acima a destruiria a cada edição
+            // do serviço, em silêncio.
+            for (UUID recursoId : bloco.recursosExigidos()) {
+                jdbc.sql("""
+                        insert into bloco_exige_recurso
+                            (estabelecimento_id, bloco_id, recurso_id)
+                        values (:estabelecimento, :bloco, :recurso)
+                        """)
+                        .param("estabelecimento", estabelecimentoId)
+                        .param("bloco", blocoId)
+                        .param("recurso", recursoId)
+                        .update();
+            }
         }
     }
 
@@ -133,30 +152,65 @@ public class ServicosJdbc implements ServicoApi {
                 .toList();
     }
 
-    /** Uma consulta para todos os serviços da lista — nunca uma por serviço. */
+    /**
+     * Uma consulta para todos os serviços da lista — nunca uma por serviço.
+     *
+     * <p>Com RT-CAT-003 são duas: blocos e exigências de recurso. Continuam sendo duas para
+     * trinta serviços como para um. Juntá-las num join devolveria o bloco repetido uma vez por
+     * recurso, que é o mesmo problema que já fez serviço e bloco serem lidos separados.
+     */
     private Map<UUID, SequenciaDeBlocos> blocosDe(List<UUID> servicoIds) {
         if (servicoIds.isEmpty()) {
             return Map.of();
         }
-        var porServico = new LinkedHashMap<UUID, List<BlocoDoServico>>();
-        jdbc.sql("""
-                select servico_id, tipo, duracao_minutos
+        record Linha(UUID id, UUID servicoId, TipoDeBloco tipo, int duracao) {
+        }
+        List<Linha> linhas = jdbc.sql("""
+                select id, servico_id, tipo, duracao_minutos
                   from bloco_do_servico
                  where servico_id in (:ids)
                  order by servico_id, ordem
                 """)
                 .param("ids", servicoIds)
-                .query((rs, linha) -> Map.entry(rs.getObject("servico_id", UUID.class),
-                        new BlocoDoServico(TipoDeBloco.valueOf(rs.getString("tipo")),
-                                rs.getInt("duracao_minutos"))))
-                .list()
-                .forEach(entrada -> porServico
-                        .computeIfAbsent(entrada.getKey(), id -> new ArrayList<>())
-                        .add(entrada.getValue()));
+                .query((rs, n) -> new Linha(rs.getObject("id", UUID.class),
+                        rs.getObject("servico_id", UUID.class),
+                        TipoDeBloco.valueOf(rs.getString("tipo")),
+                        rs.getInt("duracao_minutos")))
+                .list();
+
+        Map<UUID, Set<UUID>> recursos = recursosDe(linhas.stream().map(Linha::id).toList());
+
+        var porServico = new LinkedHashMap<UUID, List<BlocoDoServico>>();
+        linhas.forEach(linha -> porServico
+                .computeIfAbsent(linha.servicoId(), id -> new ArrayList<>())
+                .add(new BlocoDoServico(linha.tipo(), linha.duracao(),
+                        recursos.getOrDefault(linha.id(), Set.of()))));
 
         var saida = new LinkedHashMap<UUID, SequenciaDeBlocos>();
         porServico.forEach((id, lista) -> saida.put(id, new SequenciaDeBlocos(lista)));
         return saida;
+    }
+
+    /** RT-CAT-003 — os recursos de todos os blocos da lista, numa consulta. */
+    private Map<UUID, Set<UUID>> recursosDe(List<UUID> blocoIds) {
+        if (blocoIds.isEmpty()) {
+            return Map.of();
+        }
+        var porBloco = new LinkedHashMap<UUID, Set<UUID>>();
+        jdbc.sql("""
+                select bloco_id, recurso_id
+                  from bloco_exige_recurso
+                 where bloco_id in (:ids)
+                 order by bloco_id
+                """)
+                .param("ids", blocoIds)
+                .query((rs, n) -> Map.entry(rs.getObject("bloco_id", UUID.class),
+                        rs.getObject("recurso_id", UUID.class)))
+                .list()
+                .forEach(entrada -> porBloco
+                        .computeIfAbsent(entrada.getKey(), id -> new LinkedHashSet<>())
+                        .add(entrada.getValue()));
+        return porBloco;
     }
 
     // ------------------------------------------------------------------ RT-CAT-002

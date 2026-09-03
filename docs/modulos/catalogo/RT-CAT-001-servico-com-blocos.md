@@ -8,8 +8,8 @@ status: implementado
 depende_de: [RT-INF-002]
 permissoes: [config:manage, agenda:read:all]
 eventos: []
-regras: [RN-CAT-001, RN-CAT-002, RN-CAT-003, RN-CAT-004]
-atualizado_em: 2026-08-30
+regras: [RN-CAT-001, RN-CAT-002, RN-CAT-003, RN-CAT-004, RN-CAT-010, RN-CAT-011]
+atualizado_em: 2026-09-01
 ---
 
 # RT-CAT-001 — Serviço com blocos
@@ -104,23 +104,27 @@ bloqueio é apagado de verdade, **porque nada aponta para ele**. A regra não é
       mantém o serviço · listagem traz os blocos · isolamento entre salões · **a recepção lê mas
       não altera**
 
-## 9. O que o plano pediu e não foi entregue
+## 9. O que o plano pediu e não foi entregue — **fechado em RT-CAT-003**
 
 O título da rotina diz "duração e **recursos exigidos**". Os recursos não entraram, e não por
 esquecimento: `RT-CAT-003` é a rotina que cria a entidade `Recurso` (lavatório, cadeira, sala).
 
-Não dá para exigir um recurso que ainda não existe. O vínculo bloco↔recurso pertence a CAT-003, e
-está registrado como pendência lá e aqui. É um defeito de recorte do plano, do mesmo tipo que a
-ordenação de `RT-EQP-004` — que também foi corrigida nesta rotina, movendo-a para depois de
-`RT-CAT-001`, de quem ela depende.
+Não dá para exigir um recurso que ainda não existe. O vínculo bloco↔recurso pertence a CAT-003. É
+um defeito de recorte do plano, do mesmo tipo que a ordenação de `RT-EQP-004` — que também foi
+corrigida nesta rotina, movendo-a para depois de `RT-CAT-001`, de quem ela depende.
+
+**Entregue em [RT-CAT-003](RT-CAT-003-recurso.md)** (2026-09-01): `BlocoDoServico` ganhou
+`recursosExigidos`, gravado junto com os blocos, e a exigência ficou **no bloco** — porque a
+coloração ocupa o lavatório em 30 dos seus 100 minutos (RN-CAT-010).
 
 ## 10. Pendências
 
-- [ ] **Recursos exigidos por bloco** — depende de RT-CAT-003. É o que permite saber que o
+- [x] **Recursos exigidos por bloco** — entregue em RT-CAT-003. É o que permite saber que o
       lavatório está ocupado durante a lavagem, mesmo com o profissional livre na pausa
 - [ ] **Editar serviço não existe**, só cadastrar e ativar/desativar. Vai aparecer: corrigir a
       duração de um serviço é rotina, e hoje a saída seria desativar e recriar — o que perde o
-      histórico que a desativação existia para preservar
+      histórico que a desativação existia para preservar. RT-CAT-003 agravou: os recursos de uma
+      receita também só podem ser definidos no cadastro
 - [ ] **Não há categoria** (cabelo, unha, estética). Um cardápio de quarenta itens sem agrupamento
       é uma lista para rolar. Não estava no escopo pedido
 - [ ] **Nada avisa que mudar a duração afeta agendamentos futuros** — quando a agenda existir,

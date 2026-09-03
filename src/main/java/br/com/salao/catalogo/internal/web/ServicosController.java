@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.net.URI;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -66,8 +67,15 @@ public class ServicosController {
         this.catalogo = catalogo;
     }
 
-    /** Uma etapa do serviço. A ordem é a da lista. */
-    public record EtapaRequest(@NotNull TipoDeBloco tipo, @NotNull Integer duracaoMinutos) {
+    /**
+     * Uma etapa do serviço. A ordem é a da lista.
+     *
+     * <p>{@code recursosExigidos} (RT-CAT-003) é por etapa e não por serviço: a coloração ocupa o
+     * lavatório só na lavagem, e exigi-lo no serviço inteiro reservaria 100 minutos de um
+     * equipamento usado por 30.
+     */
+    public record EtapaRequest(@NotNull TipoDeBloco tipo, @NotNull Integer duracaoMinutos,
+                               Set<UUID> recursosExigidos) {
     }
 
     public record CadastrarServicoRequest(
@@ -90,7 +98,8 @@ public class ServicosController {
             @Valid @RequestBody CadastrarServicoRequest req) {
         ServicoResumo criado = cadastrar.executar(req.nome(), req.descricao(),
                 req.etapas().stream()
-                        .map(e -> new EtapaBruta(e.tipo(), e.duracaoMinutos()))
+                        .map(e -> new EtapaBruta(e.tipo(), e.duracaoMinutos(),
+                                e.recursosExigidos()))
                         .toList());
         return ResponseEntity.created(URI.create("/api/v1/servicos/" + criado.id())).body(criado);
     }

@@ -30,7 +30,29 @@ public enum ErrosDoCatalogo implements CodigoDeErro {
      * passado mudaria sozinho. Corrige-se cadastrando outro preço, que deixa rastro.
      */
     PRECO_JA_VIGENTE("ER-CAT-PRECO_JA_VIGENTE", HttpStatus.UNPROCESSABLE_ENTITY,
-            "Este preço já está valendo");
+            "Este preço já está valendo"),
+
+    /**
+     * RT-CAT-003 — a receita exige um recurso que não existe neste salão.
+     *
+     * <p>Código próprio porque é <strong>também a barreira de tenant</strong>: no PostgreSQL as
+     * checagens de chave estrangeira não passam pela RLS, então um id de outro salão seria aceito
+     * pela FK. Quem recusa é o caso de uso, e é este o erro que ele devolve.
+     */
+    RECURSO_NAO_ENCONTRADO("ER-CAT-RECURSO_NAO_ENCONTRADO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Recurso não encontrado"),
+
+    /**
+     * Tentou desativar um recurso que alguma receita ainda exige.
+     *
+     * <p>Deixar passar tornaria todos esses serviços impossíveis de marcar — sem erro, sem aviso, e
+     * sem ninguém conseguir explicar por que a agenda parou de oferecer horário para coloração.
+     */
+    RECURSO_EM_USO("ER-CAT-RECURSO_EM_USO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Recurso exigido por serviços ativos"),
+
+    RECURSO_NOME_JA_CADASTRADO("ER-CAT-RECURSO_NOME_JA_CADASTRADO", HttpStatus.CONFLICT,
+            "Já existe um recurso com este nome");
 
     private final String codigo;
     private final HttpStatus status;

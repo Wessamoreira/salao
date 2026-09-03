@@ -66,9 +66,18 @@ a resposta original com `Idempotent-Replay: true`. Mesma chave + payload diferen
 
 ## Concorrência
 
-Recursos mutáveis expõem `versao`. `PATCH`/`PUT` exige `If-Match` com a versão; divergência →
+Todo recurso REST mutável expõe `versao`, e `PUT`/`PATCH` exige a versão de volta; divergência →
 409 `ER-INF-VERSAO_DESATUALIZADA`. Isso resolve duas recepcionistas na mesma comanda, que é o
 caso comum e não o exótico.
+
+**A versão vai no corpo, não em `If-Match`.** Este documento pedia o cabeçalho, e a implementação
+seguiu outro caminho a partir de RT-CLI-007 — está sendo corrigido aqui, e não o contrário, porque
+a razão é boa: o cabeçalho obriga o cliente a costurar dois lugares (corpo e header) para uma
+informação que já é do formulário, e o front acaba montando o `If-Match` a partir do próprio corpo.
+Vale para `cliente` (RT-CLI-007) e `recurso` (RT-CAT-003), e é o padrão para o que vier.
+
+*(Aqui "recurso" é o do REST. O `Recurso` do salão — lavatório, cadeira, sala — é entidade de
+`catalogo`, RT-CAT-003.)*
 
 ## Capabilities — o contrato que elimina regra de negócio do front
 

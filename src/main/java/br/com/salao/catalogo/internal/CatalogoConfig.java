@@ -1,11 +1,17 @@
 package br.com.salao.catalogo.internal;
 
+import br.com.salao.catalogo.api.RecursoApi;
 import br.com.salao.catalogo.api.ServicoApi;
+import br.com.salao.catalogo.internal.application.AtualizarRecursoUseCase;
+import br.com.salao.catalogo.internal.application.CadastrarRecursoUseCase;
 import br.com.salao.catalogo.internal.application.CadastrarServicoUseCase;
+import br.com.salao.catalogo.internal.application.DefinirAtivacaoDoRecursoUseCase;
 import br.com.salao.catalogo.internal.application.DefinirAtivacaoDoServicoUseCase;
 import br.com.salao.catalogo.internal.application.DefinirPrecoUseCase;
 import br.com.salao.catalogo.internal.application.RemoverPrecoFuturoUseCase;
+import br.com.salao.catalogo.internal.application.ListarRecursosUseCase;
 import br.com.salao.catalogo.internal.application.ListarServicosUseCase;
+import br.com.salao.catalogo.internal.infra.RecursosJdbc;
 import br.com.salao.catalogo.internal.infra.ServicosJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
@@ -34,8 +40,9 @@ public class CatalogoConfig {
 
     @Bean
     public CadastrarServicoUseCase cadastrarServicoUseCase(ServicosJdbc servicos,
+                                                           RecursosJdbc recursos,
                                                            AuditoriaApi auditoria) {
-        return new CadastrarServicoUseCase(servicos, auditoria);
+        return new CadastrarServicoUseCase(servicos, recursos, auditoria);
     }
 
     @Bean
@@ -61,5 +68,41 @@ public class CatalogoConfig {
     public DefinirAtivacaoDoServicoUseCase definirAtivacaoDoServicoUseCase(
             ServicosJdbc servicos, AuditoriaApi auditoria) {
         return new DefinirAtivacaoDoServicoUseCase(servicos, auditoria);
+    }
+
+    // ------------------------------------------------------------------ RT-CAT-003
+
+    @Bean
+    public RecursosJdbc recursosJdbc(DataSource dataSource) {
+        return new RecursosJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    @Primary
+    public RecursoApi recursoApi(RecursosJdbc jdbc) {
+        return jdbc;
+    }
+
+    @Bean
+    public CadastrarRecursoUseCase cadastrarRecursoUseCase(RecursosJdbc recursos,
+                                                           AuditoriaApi auditoria) {
+        return new CadastrarRecursoUseCase(recursos, auditoria);
+    }
+
+    @Bean
+    public AtualizarRecursoUseCase atualizarRecursoUseCase(RecursosJdbc recursos,
+                                                           AuditoriaApi auditoria) {
+        return new AtualizarRecursoUseCase(recursos, auditoria);
+    }
+
+    @Bean
+    public DefinirAtivacaoDoRecursoUseCase definirAtivacaoDoRecursoUseCase(
+            RecursosJdbc recursos, AuditoriaApi auditoria) {
+        return new DefinirAtivacaoDoRecursoUseCase(recursos, auditoria);
+    }
+
+    @Bean
+    public ListarRecursosUseCase listarRecursosUseCase(RecursosJdbc recursos) {
+        return new ListarRecursosUseCase(recursos);
     }
 }
