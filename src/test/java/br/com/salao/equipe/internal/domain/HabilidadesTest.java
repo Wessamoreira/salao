@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import br.com.salao.equipe.api.Habilidades;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -65,5 +66,46 @@ class HabilidadesTest {
 
         assertThatThrownBy(() -> so.servicos().add(coloracao))
                 .isInstanceOf(UnsupportedOperationException.class);
+    }
+
+    // ------------------------------------------------------------------ RT-CAT-004
+
+    @Test
+    @DisplayName("duração para serviço que a pessoa não executa é contradição")
+    void duracao_exige_habilidade() {
+        // É exatamente a incoerência que existiria se duração e habilidade fossem tabelas
+        // separadas: "a Ana leva 30 minutos numa coloração que ela não faz".
+        assertThatThrownBy(() -> new Habilidades(false, Set.of(manicure), Map.of(coloracao, 30)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("não executa");
+    }
+
+    @Test
+    @DisplayName("no regime aberto, duração vale para qualquer serviço")
+    void regime_aberto_aceita_qualquer_duracao() {
+        // Coerente: ela executa todos, então tem tempo próprio em qualquer um.
+        var aberto = new Habilidades(true, Set.of(), Map.of(coloracao, 90));
+
+        assertThat(aberto.duracaoDe(coloracao)).contains(90);
+        assertThat(aberto.duracaoDe(manicure)).as("sem duração própria: usa a do catálogo")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("duração zero ou negativa é recusada")
+    void duracao_precisa_ser_positiva() {
+        // Zero não é duração, é serviço que não acontece. Quem quer a do catálogo não informa
+        // nenhuma — vazio e zero dizem coisas diferentes.
+        assertThatThrownBy(() -> new Habilidades(true, Set.of(), Map.of(coloracao, 0)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("positiva");
+        assertThatThrownBy(() -> new Habilidades(true, Set.of(), Map.of(coloracao, -10)))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("sem duração própria, a resposta é vazia e não zero")
+    void sem_duracao_e_vazio() {
+        assertThat(Habilidades.todosOsServicos().duracaoDe(coloracao)).isEmpty();
     }
 }

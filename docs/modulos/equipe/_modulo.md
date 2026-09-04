@@ -7,7 +7,7 @@
 ## Fronteira
 
 Expõe `ProfissionalApi` (`porId`, `ativos`, `estaAtivo`, `jornadaDe`, `intervalosEm`,
-`bloqueiosEntre`, `executa`, `habilidadesDe`, `queExecutam`), `ProfissionalResumo` e o vocabulário
+`bloqueiosEntre`, `executa`, `habilidadesDe`, `queExecutam`, `receitaDe`), `ProfissionalResumo` e o vocabulário
 de vínculo, de jornada e de habilidade (`Habilidades`).
 
 `intervalosEm(profissional, data)` é o método que importa para a agenda: jornada daquele dia da
@@ -40,7 +40,7 @@ consulta a tabela.
 | [RT-EQP-002](RT-EQP-002-jornada-semanal.md) — jornada semanal | implementada |
 | [RT-EQP-003](RT-EQP-003-bloqueio-de-jornada.md) — exceção de jornada | implementada |
 | [RT-EQP-004](RT-EQP-004-habilidades.md) — habilidades | implementada |
-| RT-CAT-004 — duração por profissional | próxima (acrescenta coluna à mesma tabela) |
+| [RT-CAT-004](../catalogo/RT-CAT-004-duracao-por-profissional.md) — duração por profissional | implementada (coluna de `habilidade`) |
 
 ## Regras
 

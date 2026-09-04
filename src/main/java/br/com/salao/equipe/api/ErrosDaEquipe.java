@@ -58,7 +58,21 @@ public enum ErrosDaEquipe implements CodigoDeErro {
      * separaria os salões.
      */
     SERVICO_NAO_ENCONTRADO("ER-EQP-SERVICO_NAO_ENCONTRADO", HttpStatus.UNPROCESSABLE_ENTITY,
-            "Serviço não encontrado");
+            "Serviço não encontrado"),
+
+    /**
+     * RT-CAT-004 — a duração informada não cabe na receita do serviço.
+     *
+     * <p>Numa coloração de 30+40+30, dizer que alguém a faz em 40 minutos seria dizer que ela
+     * aplica, espera a química agir e finaliza no tempo em que só a química acontece. A pausa não
+     * encolhe: é reação, não habilidade.
+     */
+    DURACAO_NAO_CABE("ER-EQP-DURACAO_NAO_CABE", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Duração não cabe na receita do serviço"),
+
+    /** Duração para um serviço que o profissional não executa — uma contradição. */
+    DURACAO_SEM_HABILIDADE("ER-EQP-DURACAO_SEM_HABILIDADE", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Duração informada para serviço que o profissional não executa");
 
     private final String codigo;
     private final HttpStatus status;

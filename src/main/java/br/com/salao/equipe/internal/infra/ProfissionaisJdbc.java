@@ -1,5 +1,7 @@
 package br.com.salao.equipe.internal.infra;
 
+import br.com.salao.catalogo.api.SequenciaDeBlocos;
+import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.equipe.api.BloqueioDeJornada;
 import br.com.salao.equipe.api.Habilidades;
 import br.com.salao.equipe.api.IntervaloDeTrabalho;
@@ -17,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -66,8 +69,16 @@ public class ProfissionaisJdbc implements ProfissionalApi {
 
     private final JdbcClient jdbc;
 
-    public ProfissionaisJdbc(JdbcClient jdbc) {
+    /**
+     * O catálogo entra aqui por causa de {@code receitaDe} (RT-CAT-004): a receita de um
+     * profissional é a do serviço, reescalada pela duração dele. Compor as duas metades neste
+     * ponto é o que permite a agenda fazer uma pergunta só.
+     */
+    private final ServicoApi catalogo;
+
+    public ProfissionaisJdbc(JdbcClient jdbc, ServicoApi catalogo) {
         this.jdbc = jdbc;
+        this.catalogo = catalogo;
     }
 
     public UUID inserir(UUID estabelecimentoId, String nome, String apelido, Documento documento,
@@ -327,18 +338,61 @@ public class ProfissionaisJdbc implements ProfissionalApi {
                 .optional()
                 .orElse(true);
 
-        var servicos = new LinkedHashSet<>(jdbc.sql(
-                "select servico_id from habilidade where profissional_id = :id order by servico_id")
+        record Linha(UUID servicoId, Integer duracao) {
+        }
+        List<Linha> linhas = jdbc.sql("""
+                select servico_id, duracao_minutos
+                  from habilidade
+                 where profissional_id = :id
+                 order by servico_id
+                """)
                 .param("id", profissionalId)
-                .query(UUID.class)
-                .list());
+                .query((rs, n) -> {
+                    // `wasNull` reporta sobre a ÚLTIMA coluna lida, então ele é capturado na
+                    // linha seguinte ao getInt e não dentro do construtor: ali os argumentos
+                    // seriam avaliados da esquerda para a direita, o getObject rodaria antes, e
+                    // `wasNull` passaria a falar do servico_id — que nunca é nulo. O sintoma
+                    // seria toda duração ausente virar zero.
+                    int duracao = rs.getInt("duracao_minutos");
+                    Integer propria = rs.wasNull() ? null : duracao;
+                    return new Linha(rs.getObject("servico_id", UUID.class), propria);
+                })
+                .list();
+
+        var servicos = new LinkedHashSet<UUID>();
+        var duracoes = new LinkedHashMap<UUID, Integer>();
+        linhas.forEach(linha -> {
+            servicos.add(linha.servicoId());
+            if (linha.duracao() != null) {
+                duracoes.put(linha.servicoId(), linha.duracao());
+            }
+        });
 
         // Não passa pelo construtor de Habilidades: ele recusa "restrito e vazio", e o banco pode
         // legitimamente ter essa combinação num profissional cujo único serviço saiu do cardápio.
         // Recusar na LEITURA transformaria um dado velho em erro 500 numa tela de consulta.
         return todos || !servicos.isEmpty()
-                ? new Habilidades(todos, servicos)
+                ? new Habilidades(todos, servicos, duracoes)
                 : Habilidades.todosOsServicos();
+    }
+
+    /**
+     * RT-CAT-004 — a receita como este profissional a executa.
+     *
+     * <p>As duas metades — "ela faz?" e "em quanto tempo?" — compostas aqui, para a agenda fazer
+     * uma pergunta só e não haver como usar a duração do catálogo para quem leva outra.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<SequenciaDeBlocos> receitaDe(UUID profissionalId, UUID servicoId) {
+        if (!executa(profissionalId, servicoId)) {
+            return Optional.empty();
+        }
+        return catalogo.porId(servicoId)
+                .map(servico -> habilidadesDe(profissionalId)
+                        .duracaoDe(servicoId)
+                        .map(servico.blocos()::comDuracaoTotal)
+                        .orElseGet(servico::blocos));
     }
 
     @Override
@@ -376,15 +430,23 @@ public class ProfissionaisJdbc implements ProfissionalApi {
                 .param("id", profissionalId)
                 .update();
 
-        for (UUID servicoId : habilidades.servicos()) {
+        // A duração viaja NESTA escrita, e não numa tabela irmã: o "apaga e regrava" acima a
+        // apagaria em silêncio a cada edição de habilidade — o mesmo defeito que RT-CAT-003
+        // evitou gravando o recurso exigido junto com o bloco.
+        var comDuracao = new LinkedHashSet<>(habilidades.servicos());
+        comDuracao.addAll(habilidades.duracoes().keySet());
+
+        for (UUID servicoId : comDuracao) {
             jdbc.sql("""
                     insert into habilidade
-                        (estabelecimento_id, profissional_id, servico_id, criado_por)
-                    values (:estabelecimento, :profissional, :servico, :criadoPor)
+                        (estabelecimento_id, profissional_id, servico_id, duracao_minutos,
+                         criado_por)
+                    values (:estabelecimento, :profissional, :servico, :duracao, :criadoPor)
                     """)
                     .param("estabelecimento", estabelecimentoId)
                     .param("profissional", profissionalId)
                     .param("servico", servicoId)
+                    .param("duracao", habilidades.duracoes().get(servicoId))
                     .param("criadoPor", criadoPor)
                     .update();
         }

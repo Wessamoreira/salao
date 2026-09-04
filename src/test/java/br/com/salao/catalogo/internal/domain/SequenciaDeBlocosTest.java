@@ -181,4 +181,99 @@ class SequenciaDeBlocosTest {
                 .as("null e vazio significam a mesma coisa: nenhum equipamento disputado")
                 .isEqualTo(Set.of());
     }
+
+    // ------------------------------------------------------------------ RT-CAT-004
+
+    @Test
+    @DisplayName("a pausa NÃO encolhe quando o profissional é mais rápido")
+    void pausa_nao_encolhe() {
+        // É a decisão da rotina. A Ana é mais rápida aplicando e finalizando; a química leva os
+        // mesmos 40 minutos, porque é reação e não habilidade. Encolher a pausa junto mandaria
+        // lavar o cabelo antes da hora, e quem paga o resultado é a cliente.
+        var daAna = coloracao().comDuracaoTotal(90);
+
+        assertThat(daAna.duracaoTotal()).isEqualTo(90);
+        assertThat(daAna.blocos().get(1).duracaoMinutos()).as("a química").isEqualTo(40);
+        assertThat(daAna.minutosDoProfissional()).as("o trabalho encolheu de 60 para 50")
+                .isEqualTo(50);
+        assertThat(daAna.blocos().get(0).duracaoMinutos()).isEqualTo(25);
+        assertThat(daAna.blocos().get(2).duracaoMinutos()).isEqualTo(25);
+    }
+
+    @Test
+    @DisplayName("serviço de bloco único: a duração é o bloco")
+    void bloco_unico() {
+        var escova = SequenciaDeBlocos.simples(45);
+
+        assertThat(escova.comDuracaoTotal(30).duracaoTotal()).isEqualTo(30);
+        assertThat(escova.comDuracaoTotal(30).blocos()).singleElement()
+                .satisfies(b -> assertThat(b.duracaoMinutos()).isEqualTo(30));
+    }
+
+    @Test
+    @DisplayName("o arredondamento é determinístico e a soma fecha exata")
+    void distribuicao_fecha_exata() {
+        // Sem regra fixa, a mesma entrada produziria receitas diferentes conforme a ordem de
+        // iteração — e a agenda mostraria horários que mudam sozinhos.
+        var servico = new SequenciaDeBlocos(List.of(
+                BlocoDoServico.ativo(30), BlocoDoServico.pausa(40), BlocoDoServico.ativo(20)));
+
+        var reduzido = servico.comDuracaoTotal(91);
+
+        assertThat(reduzido.duracaoTotal()).isEqualTo(91);
+        assertThat(reduzido.minutosDePausa()).isEqualTo(40);
+        assertThat(reduzido.comDuracaoTotal(91)).isEqualTo(reduzido);
+    }
+
+    @Test
+    @DisplayName("nenhum bloco ativo pode desaparecer")
+    void bloco_ativo_nunca_some() {
+        var servico = new SequenciaDeBlocos(List.of(
+                BlocoDoServico.ativo(100), BlocoDoServico.pausa(10), BlocoDoServico.ativo(1)));
+
+        var minimo = servico.comDuracaoTotal(12);
+
+        assertThat(minimo.blocos()).allSatisfy(
+                bloco -> assertThat(bloco.duracaoMinutos()).isPositive());
+        assertThat(minimo.duracaoTotal()).isEqualTo(12);
+    }
+
+    @Test
+    @DisplayName("duração que não deixa espaço para o trabalho é recusada")
+    void duracao_menor_que_a_pausa() {
+        // Dizer que alguém faz a coloração em 40 minutos é dizer que ela aplica, espera a química
+        // e finaliza no tempo em que só a química acontece.
+        assertThatThrownBy(() -> coloracao().comDuracaoTotal(40))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("pausa");
+        assertThatThrownBy(() -> coloracao().comDuracaoTotal(41))
+                .as("41 deixa 1 minuto para dois blocos ativos")
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    @DisplayName("o mínimo possível é a pausa mais um minuto por bloco ativo")
+    void minimo_absoluto() {
+        var minimo = coloracao().comDuracaoTotal(42);
+
+        assertThat(minimo.duracaoTotal()).isEqualTo(42);
+        assertThat(minimo.minutosDoProfissional()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("reescalar preserva os recursos exigidos de cada bloco")
+    void reescalar_preserva_recursos() {
+        // O que se muda é o tempo, não a receita: se a lavagem exige o lavatório, ela continua
+        // exigindo quando a Ana a faz mais rápido.
+        UUID lavatorio = UUID.randomUUID();
+        var servico = new SequenciaDeBlocos(List.of(
+                BlocoDoServico.ativo(30),
+                BlocoDoServico.pausa(40),
+                BlocoDoServico.ativo(30).exigindo(lavatorio)));
+
+        var daAna = servico.comDuracaoTotal(90);
+
+        assertThat(daAna.blocos().get(2).recursosExigidos()).containsExactly(lavatorio);
+        assertThat(daAna.recursosExigidos()).containsExactly(lavatorio);
+    }
 }

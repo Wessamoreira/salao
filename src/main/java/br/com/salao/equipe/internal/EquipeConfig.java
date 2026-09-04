@@ -22,8 +22,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 public class EquipeConfig {
 
     @Bean
-    public ProfissionaisJdbc profissionaisJdbc(DataSource dataSource) {
-        return new ProfissionaisJdbc(JdbcClient.create(dataSource));
+    public ProfissionaisJdbc profissionaisJdbc(DataSource dataSource, ServicoApi catalogo) {
+        return new ProfissionaisJdbc(JdbcClient.create(dataSource), catalogo);
     }
 
     /**

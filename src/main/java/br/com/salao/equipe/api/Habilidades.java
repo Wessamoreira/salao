@@ -1,11 +1,15 @@
 package br.com.salao.equipe.api;
 
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 
 /**
- * RT-EQP-004 — o que um profissional executa.
+ * RT-EQP-004 — o que um profissional executa, e RT-CAT-004 — em quanto tempo.
  *
  * <h2>Os dois regimes, e por que não há um padrão implícito</h2>
  *
@@ -29,25 +33,57 @@ import java.util.UUID;
  * <p>Seria o único jeito de deixar alguém sem poder atender nada sem dizer isso em lugar nenhum —
  * a agenda simplesmente pararia de oferecer horário dela. Quem quer tirar a pessoa da agenda
  * desativa o profissional, que é explícito e reversível.
+ *
+ * <h2>A duração só existe para serviço que a pessoa executa</h2>
+ *
+ * <p>{@code duracoes} guarda quanto <em>este</em> profissional leva num serviço, em minutos totais.
+ * Toda chave precisa passar por {@link #executa}: dizer "a Ana leva 30 minutos numa coloração que
+ * ela não faz" é uma contradição, e é justamente a que existiria se duração e habilidade fossem
+ * tabelas separadas.
+ *
+ * <p>No regime aberto isso permite duração para qualquer serviço, que é o correto — ela executa
+ * todos. No restrito, só para os da lista.
  */
-public record Habilidades(boolean executaTodos, Set<UUID> servicos) {
+public record Habilidades(boolean executaTodos, Set<UUID> servicos, Map<UUID, Integer> duracoes) {
 
     public Habilidades {
         servicos = servicos == null ? Set.of() : Set.copyOf(new LinkedHashSet<>(servicos));
+        duracoes = duracoes == null ? Map.of() : Map.copyOf(new LinkedHashMap<>(duracoes));
+
         if (!executaTodos && servicos.isEmpty()) {
             throw new IllegalArgumentException(
                     "restringir a nenhum serviço deixaria o profissional sem poder atender nada; "
                             + "para tirá-lo da agenda, desative-o");
         }
+        var forasteiras = new TreeSet<String>();
+        for (Map.Entry<UUID, Integer> entrada : duracoes.entrySet()) {
+            if (!executaTodos && !servicos.contains(entrada.getKey())) {
+                forasteiras.add(entrada.getKey().toString());
+            }
+            if (entrada.getValue() == null || entrada.getValue() <= 0) {
+                throw new IllegalArgumentException(
+                        "duração precisa ser positiva no serviço " + entrada.getKey()
+                                + "; para usar a do catálogo, não informe nenhuma");
+            }
+        }
+        if (!forasteiras.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "há duração para serviço que o profissional não executa: "
+                            + String.join(", ", forasteiras));
+        }
     }
 
-    /** O padrão de quem acabou de ser cadastrado: o cardápio inteiro. */
+    public Habilidades(boolean executaTodos, Set<UUID> servicos) {
+        this(executaTodos, servicos, Map.of());
+    }
+
+    /** O padrão de quem acabou de ser cadastrado: o cardápio inteiro, no tempo do catálogo. */
     public static Habilidades todosOsServicos() {
-        return new Habilidades(true, Set.of());
+        return new Habilidades(true, Set.of(), Map.of());
     }
 
     public static Habilidades apenas(Set<UUID> servicos) {
-        return new Habilidades(false, servicos);
+        return new Habilidades(false, servicos, Map.of());
     }
 
     /**
@@ -59,5 +95,15 @@ public record Habilidades(boolean executaTodos, Set<UUID> servicos) {
      */
     public boolean executa(UUID servicoId) {
         return executaTodos || servicos.contains(servicoId);
+    }
+
+    /**
+     * RT-CAT-004 — quanto esta pessoa leva neste serviço, se for diferente do catálogo.
+     *
+     * <p>Vazio significa "usa a do catálogo", que é o caso da maioria — e é diferente de zero, que
+     * não é duração nenhuma.
+     */
+    public Optional<Integer> duracaoDe(UUID servicoId) {
+        return Optional.ofNullable(duracoes.get(servicoId));
     }
 }

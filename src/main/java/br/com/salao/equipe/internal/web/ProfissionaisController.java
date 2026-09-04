@@ -158,8 +158,14 @@ public class ProfissionaisController {
      *
      * <p>Um endpoint só, e não um para a chave e outro para a lista: separá-los criaria o instante
      * em que o profissional está restrito e ainda sem nenhum serviço.
+     *
+     * <p>{@code duracoes} (RT-CAT-004) vem na mesma requisição pela mesma razão e por mais uma: a
+     * escrita apaga e regrava as linhas, então uma duração enviada à parte seria apagada pela
+     * próxima edição de habilidade, em silêncio. É a lição de RT-CAT-003 sobre os recursos do
+     * bloco, na segunda aparição.
      */
-    public record HabilidadesRequest(@NotNull Boolean executaTodos, Set<UUID> servicos) {
+    public record HabilidadesRequest(@NotNull Boolean executaTodos, Set<UUID> servicos,
+                                     Map<UUID, Integer> duracoes) {
     }
 
     @GetMapping("/{id}/habilidades")
@@ -171,7 +177,8 @@ public class ProfissionaisController {
     public Habilidades definirHabilidades(@PathVariable UUID id,
                                           @Valid @RequestBody HabilidadesRequest req) {
         return definirHabilidades.executar(id, req.executaTodos(),
-                req.servicos() == null ? Set.of() : req.servicos());
+                req.servicos() == null ? Set.of() : req.servicos(),
+                req.duracoes() == null ? Map.of() : req.duracoes());
     }
 
     /** Quem pode fazer este serviço — a consulta da tela de marcação. */

@@ -57,22 +57,27 @@ public class DefinirHabilidadesUseCase {
 
     @PreAuthorize("hasAuthority('" + Permissao.USUARIO_GERENCIAR + "')")
     @Transactional
-    public Habilidades executar(UUID profissionalId, boolean executaTodos, Set<UUID> servicos) {
+    public Habilidades executar(UUID profissionalId, boolean executaTodos, Set<UUID> servicos,
+                                Map<UUID, Integer> duracoes) {
         if (profissionais.porId(profissionalId).isEmpty()) {
             throw new ErroDeDominio(ErrosDaEquipe.PROFISSIONAL_NAO_ENCONTRADO,
                     "profissional " + profissionalId + " não encontrado");
         }
         Habilidades antes = profissionais.habilidadesDe(profissionalId);
-        Habilidades novas = montar(executaTodos, servicos);
+        Habilidades novas = montar(executaTodos, servicos, duracoes);
         conferirServicos(novas.servicos());
+        conferirServicos(novas.duracoes().keySet());
+        conferirQueAsDuracoesCabem(novas.duracoes());
 
         profissionais.substituirHabilidades(TenantContext.obrigatorio(), profissionalId, novas,
                 UsuarioAtual.idOuNulo());
 
         auditoria.registrar(RegistroDeAuditoria.alteracao("HABILIDADES_DEFINIDAS", "profissional",
                 profissionalId,
-                Map.of("executaTodos", antes.executaTodos(), "servicos", antes.servicos().size()),
-                Map.of("executaTodos", novas.executaTodos(), "servicos", novas.servicos().size())));
+                Map.of("executaTodos", antes.executaTodos(), "servicos", antes.servicos().size(),
+                        "duracoesProprias", antes.duracoes().size()),
+                Map.of("executaTodos", novas.executaTodos(), "servicos", novas.servicos().size(),
+                        "duracoesProprias", novas.duracoes().size())));
 
         if (antes.executaTodos() && !novas.executaTodos()) {
             // Vale um registro visível: é a passagem do regime aberto para o restrito, e a partir
@@ -90,15 +95,43 @@ public class DefinirHabilidadesUseCase {
      * {@code IllegalArgumentException} — correto no domínio, e 500 na borda. Sétima ocorrência da
      * família; o tradutor entrou junto com o código pela terceira vez seguida.
      */
-    Habilidades montar(boolean executaTodos, Set<UUID> servicos) {
+    Habilidades montar(boolean executaTodos, Set<UUID> servicos, Map<UUID, Integer> duracoes) {
         try {
-            return new Habilidades(executaTodos, servicos);
+            return new Habilidades(executaTodos, servicos, duracoes);
         } catch (IllegalArgumentException e) {
-            throw new ErroDeDominio(ErrosDaEquipe.HABILIDADES_VAZIAS, e.getMessage());
+            // Duas recusas diferentes do mesmo construtor, e elas merecem códigos diferentes: uma
+            // é "você esvaziou a lista", a outra é "você deu duração para o que ela não faz".
+            // Um código só obrigaria a tela a adivinhar qual dos dois campos destacar.
+            throw new ErroDeDominio(
+                    e.getMessage().startsWith("há duração")
+                            ? ErrosDaEquipe.DURACAO_SEM_HABILIDADE
+                            : ErrosDaEquipe.HABILIDADES_VAZIAS,
+                    e.getMessage());
         }
     }
 
-    private void conferirServicos(Set<UUID> servicos) {
+    /**
+     * RT-CAT-004 — a duração precisa caber na receita.
+     *
+     * <p>Quem decide é o próprio domínio: {@code comDuracaoTotal} recusa o que não deixa ao menos
+     * um minuto de trabalho por bloco ativo depois de descontadas as pausas. Aqui só se traduz —
+     * mais uma vez, uma exceção de domínio que vinda da borda seria 500.
+     */
+    private void conferirQueAsDuracoesCabem(Map<UUID, Integer> duracoes) {
+        for (Map.Entry<UUID, Integer> entrada : duracoes.entrySet()) {
+            var servico = catalogo.porId(entrada.getKey()).orElseThrow();
+            try {
+                servico.blocos().comDuracaoTotal(entrada.getValue());
+            } catch (IllegalArgumentException e) {
+                throw new ErroDeDominio(ErrosDaEquipe.DURACAO_NAO_CABE,
+                        servico.nome() + ": " + e.getMessage(),
+                        Map.of("servico", servico.nome(),
+                                "minutosDePausa", servico.blocos().minutosDePausa()));
+            }
+        }
+    }
+
+    private void conferirServicos(java.util.Collection<UUID> servicos) {
         if (servicos.isEmpty()) {
             return;
         }

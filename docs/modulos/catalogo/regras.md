@@ -225,3 +225,59 @@ depois o equipamento" é a ordem em que as coisas acontecem na vida.
 `RecursosDoSalaoIT.desativa_quando_ninguem_mais_exige`
 **Erro.** `ER-CAT-RECURSO_EM_USO` (422) · **Configurável?** Não
 **Origem.** 2026-09-01
+
+---
+
+### RN-CAT-013 — A duração por profissional encolhe o trabalho, nunca a pausa
+
+**Enunciado.** Um profissional pode ter duração própria num serviço, em minutos **totais**. Ao
+reescalar, os blocos `PAUSA` ficam intactos e só os `ATIVO` mudam, na proporção original. Duração
+que não deixe ao menos um minuto por bloco ativo depois das pausas é recusada.
+
+**Motivo.** Se a Ana faz coloração em 90 minutos em vez de 100, ela é mais rápida **aplicando e
+finalizando**. A química continua levando 40 minutos, porque é reação e não habilidade. Encolher a
+pausa junto mandaria lavar o cabelo antes da hora, e quem paga o resultado é a cliente.
+
+Pelo mesmo motivo há um piso: dizer que alguém faz a coloração em 40 minutos é dizer que ela
+aplica, espera a química agir e finaliza no tempo em que só a química acontece.
+
+A distribuição é determinística — um minuto de base por bloco ativo, o resto proporcional, e os
+minutos do arredondamento para as maiores frações. Sem regra fixa, a mesma entrada produziria
+receitas diferentes conforme a ordem de iteração, e a agenda mostraria horários que mudam sozinhos.
+
+**Onde é garantida.** `SequenciaDeBlocos.comDuracaoTotal` ·
+`DefinirHabilidadesUseCase.conferirQueAsDuracoesCabem` traduz.
+**Rotinas.** RT-CAT-004, RT-AGD-001 · **Teste.** `SequenciaDeBlocosTest.pausa_nao_encolhe`,
+`SequenciaDeBlocosTest.duracao_menor_que_a_pausa`, `SequenciaDeBlocosTest.bloco_ativo_nunca_some`,
+`DuracaoPorProfissionalIT.a_pausa_nao_encolhe`
+**Erro.** `ER-EQP-DURACAO_NAO_CABE` (422) · **Configurável?** Por profissional e serviço
+**Origem.** 2026-09-04
+
+---
+
+### RN-CAT-014 — Duração própria vive na habilidade, e a agenda pergunta uma vez só
+
+**Enunciado.** A duração é coluna de `habilidade`, e só existe para serviço que o profissional
+executa. Quem precisa da receita de alguém usa `ProfissionalApi.receitaDe`, que devolve os blocos já
+reescalados — ou vazio, se a pessoa não executa o serviço.
+
+**Motivo.** Duas razões, uma conceitual e uma mecânica.
+
+Conceitual: duração e habilidade são a mesma relação (profissional × serviço). Tabelas separadas
+permitiriam "a Ana leva 30 minutos numa coloração que ela não faz".
+
+Mecânica: `substituirHabilidades` apaga e regrava as linhas a cada edição. Numa tabela irmã, toda
+edição de habilidade apagaria as durações **em silêncio** — o mesmo defeito que RN-CAT-010 evitou
+gravando o recurso exigido junto com o bloco. É a segunda aparição da mesma lição.
+
+E `receitaDe` é uma pergunta só porque duas seriam um convite: quem esquecesse de compor usaria a
+duração do catálogo para alguém que leva quinze minutos a mais, e nada acusaria — a agenda apenas
+ficaria errada.
+
+**Onde é garantida.** Coluna `habilidade.duracao_minutos` (V24) · invariante do construtor de
+`Habilidades` · `ProfissionaisJdbc.receitaDe`.
+**Rotinas.** RT-CAT-004, RT-AGD-001, RT-AGD-002 · **Teste.**
+`HabilidadesTest.duracao_exige_habilidade`, `DuracaoPorProfissionalIT.duracao_sobrevive_a_edicao`,
+`DuracaoPorProfissionalIT.sem_habilidade_sem_receita`
+**Erro.** `ER-EQP-DURACAO_SEM_HABILIDADE` (422) · **Configurável?** Não
+**Origem.** 2026-09-04

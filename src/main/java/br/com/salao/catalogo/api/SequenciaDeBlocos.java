@@ -76,6 +76,102 @@ public record SequenciaDeBlocos(List<BlocoDoServico> blocos) {
         return blocos.stream().anyMatch(bloco -> bloco.tipo() == TipoDeBloco.PAUSA);
     }
 
+    /** Quanto do total é pausa — o tempo que não depende de quem executa. */
+    public int minutosDePausa() {
+        return duracaoTotal() - minutosDoProfissional();
+    }
+
+    /** Quantos blocos ocupam o profissional. É o mínimo absoluto de minutos ativos. */
+    public int quantidadeDeBlocosAtivos() {
+        return (int) blocos.stream().filter(bloco -> bloco.tipo().ocupaOProfissional()).count();
+    }
+
+    /**
+     * RT-CAT-004 — a mesma receita, executada por quem leva {@code minutos} no total.
+     *
+     * <h2>A pausa não encolhe</h2>
+     *
+     * <p>É a decisão da rotina. Se a Ana faz coloração em 90 minutos em vez de 100, ela é mais
+     * rápida <strong>aplicando e finalizando</strong> — a química continua levando os mesmos 40
+     * minutos, porque é reação, não habilidade. Encolher a pausa junto mandaria lavar o cabelo
+     * antes da hora, e o resultado quem paga é a cliente.
+     *
+     * <p>Então os 90 viram: 40 de pausa, intocados, e 50 distribuídos entre os blocos ativos na
+     * proporção original.
+     *
+     * <h2>A distribuição é determinística</h2>
+     *
+     * <p>Cada bloco ativo recebe 1 minuto de base — nenhum pode desaparecer — e o resto é
+     * repartido proporcionalmente, com os minutos que sobram do arredondamento indo para os blocos
+     * de maior fração e, em empate, para o primeiro. Sem uma regra fixa, a mesma entrada produziria
+     * receitas diferentes conforme a ordem de iteração, e a agenda mostraria horários que mudam
+     * sozinhos.
+     *
+     * @throws IllegalArgumentException se {@code minutos} não deixar ao menos um minuto para cada
+     *                                  bloco ativo depois de descontadas as pausas
+     */
+    public SequenciaDeBlocos comDuracaoTotal(int minutos) {
+        int pausa = minutosDePausa();
+        int ativos = quantidadeDeBlocosAtivos();
+        int aDistribuir = minutos - pausa;
+        if (aDistribuir < ativos) {
+            throw new IllegalArgumentException(
+                    "duração de " + minutos + " min não cabe: " + pausa
+                            + " min são de pausa, que não encolhe, e sobram menos de "
+                            + ativos + " min para o trabalho");
+        }
+        if (minutos == duracaoTotal()) {
+            return this;
+        }
+        return new SequenciaDeBlocos(redistribuir(aDistribuir));
+    }
+
+    private List<BlocoDoServico> redistribuir(int aDistribuir) {
+        int somaAtivaOriginal = minutosDoProfissional();
+        int ativos = quantidadeDeBlocosAtivos();
+        int sobra = aDistribuir - ativos;
+
+        // Piso proporcional sobre a sobra, guardando a fração de cada um para o desempate.
+        var minutosPorBloco = new int[blocos.size()];
+        var fracao = new long[blocos.size()];
+        int distribuido = 0;
+        for (int i = 0; i < blocos.size(); i++) {
+            BlocoDoServico bloco = blocos.get(i);
+            if (!bloco.tipo().ocupaOProfissional()) {
+                minutosPorBloco[i] = bloco.duracaoMinutos();
+                continue;
+            }
+            long numerador = (long) sobra * bloco.duracaoMinutos();
+            int piso = (int) (numerador / somaAtivaOriginal);
+            fracao[i] = numerador % somaAtivaOriginal;
+            minutosPorBloco[i] = 1 + piso;
+            distribuido += piso;
+        }
+
+        // Os minutos que o arredondamento deixou de fora vão para as maiores frações.
+        int restante = sobra - distribuido;
+        var ordemPorFracao = new java.util.ArrayList<Integer>();
+        for (int i = 0; i < blocos.size(); i++) {
+            if (blocos.get(i).tipo().ocupaOProfissional()) {
+                ordemPorFracao.add(i);
+            }
+        }
+        ordemPorFracao.sort((a, b) -> fracao[a] == fracao[b]
+                ? Integer.compare(a, b)
+                : Long.compare(fracao[b], fracao[a]));
+        for (int k = 0; k < restante; k++) {
+            minutosPorBloco[ordemPorFracao.get(k % ordemPorFracao.size())]++;
+        }
+
+        var novos = new java.util.ArrayList<BlocoDoServico>(blocos.size());
+        for (int i = 0; i < blocos.size(); i++) {
+            BlocoDoServico bloco = blocos.get(i);
+            novos.add(new BlocoDoServico(bloco.tipo(), minutosPorBloco[i],
+                    bloco.recursosExigidos()));
+        }
+        return novos;
+    }
+
     /**
      * RT-CAT-003 — todos os recursos que a receita toca, em qualquer bloco.
      *

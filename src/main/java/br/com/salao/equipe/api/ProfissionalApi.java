@@ -1,5 +1,6 @@
 package br.com.salao.equipe.api;
 
+import br.com.salao.catalogo.api.SequenciaDeBlocos;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -72,4 +73,18 @@ public interface ProfissionalApi {
      * está no regime "faz o cardápio inteiro".
      */
     List<ProfissionalResumo> queExecutam(UUID servicoId);
+
+    /**
+     * RT-CAT-004 — a receita como <strong>esta pessoa</strong> a executa.
+     *
+     * <p>Devolve vazio quando o profissional não executa o serviço, está inativo, ou o serviço não
+     * existe. Quando executa, devolve os blocos do catálogo — reescalados se houver duração
+     * própria, iguais se não houver.
+     *
+     * <p>É uma pergunta só de propósito. A agenda precisa das duas coisas juntas — "ela faz?" e
+     * "em quanto tempo?" — e deixá-las em dois métodos seria convidar algum chamador a usar a
+     * duração do catálogo para alguém que leva quinze minutos a mais. O erro não apareceria: a
+     * agenda só ficaria errada.
+     */
+    Optional<SequenciaDeBlocos> receitaDe(UUID profissionalId, UUID servicoId);
 }

@@ -19,6 +19,7 @@ import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.shared.tenant.AbstractPostgresIT;
 import br.com.salao.shared.tenant.TenantContext;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
@@ -115,7 +116,7 @@ class HabilidadesIT extends AbstractPostgresIT {
         UUID manicure = servico(tenant, "Manicure");
 
         TenantContext.executar(tenant,
-                () -> definirHabilidades.executar(ana, false, Set.of(manicure)));
+                () -> definirHabilidades.executar(ana, false, Set.of(manicure), Map.of()));
 
         assertThat(TenantContext.obter(tenant, () -> equipe.executa(ana, manicure))).isTrue();
         assertThat(TenantContext.obter(tenant, () -> equipe.executa(ana, coloracao)))
@@ -131,7 +132,7 @@ class HabilidadesIT extends AbstractPostgresIT {
         UUID ana = profissional(tenant, "Ana", 0);
         UUID manicure = servico(tenant, "Manicure");
         TenantContext.executar(tenant,
-                () -> definirHabilidades.executar(ana, false, Set.of(manicure)));
+                () -> definirHabilidades.executar(ana, false, Set.of(manicure), Map.of()));
 
         UUID servicoNovo = servico(tenant, "Botox capilar");
 
@@ -146,10 +147,10 @@ class HabilidadesIT extends AbstractPostgresIT {
         UUID manicure = servico(tenant, "Manicure");
         UUID coloracao = servico(tenant, "Coloração");
         TenantContext.executar(tenant,
-                () -> definirHabilidades.executar(ana, false, Set.of(manicure)));
+                () -> definirHabilidades.executar(ana, false, Set.of(manicure), Map.of()));
 
         var voltou = TenantContext.obter(tenant,
-                () -> definirHabilidades.executar(ana, true, Set.of()));
+                () -> definirHabilidades.executar(ana, true, Set.of(), Map.of()));
 
         assertThat(voltou.executaTodos()).isTrue();
         assertThat(voltou.servicos()).isEmpty();
@@ -165,7 +166,7 @@ class HabilidadesIT extends AbstractPostgresIT {
         UUID ana = profissional(tenant, "Ana", 0);
 
         Throwable erro = catchThrowable(() -> TenantContext.executar(tenant,
-                () -> definirHabilidades.executar(ana, false, Set.of())));
+                () -> definirHabilidades.executar(ana, false, Set.of(), Map.of())));
 
         assertThat(erro).isInstanceOf(ErroDeDominio.class);
         assertThat(codigoDe(erro)).isEqualTo("ER-EQP-HABILIDADES_VAZIAS");
@@ -187,7 +188,7 @@ class HabilidadesIT extends AbstractPostgresIT {
         UUID coloracaoDoB = servico(salaoB, "Coloração");
 
         Throwable erro = catchThrowable(() -> TenantContext.executar(salaoA,
-                () -> definirHabilidades.executar(ana, false, Set.of(coloracaoDoB))));
+                () -> definirHabilidades.executar(ana, false, Set.of(coloracaoDoB), Map.of())));
 
         assertThat(codigoDe(erro)).isEqualTo("ER-EQP-SERVICO_NAO_ENCONTRADO");
     }
@@ -199,7 +200,7 @@ class HabilidadesIT extends AbstractPostgresIT {
         UUID ana = profissional(tenant, "Ana", 0);
 
         Throwable erro = catchThrowable(() -> TenantContext.executar(tenant,
-                () -> definirHabilidades.executar(ana, false, Set.of(UUID.randomUUID()))));
+                () -> definirHabilidades.executar(ana, false, Set.of(UUID.randomUUID()), Map.of())));
 
         assertThat(codigoDe(erro)).isEqualTo("ER-EQP-SERVICO_NAO_ENCONTRADO");
     }
@@ -216,7 +217,7 @@ class HabilidadesIT extends AbstractPostgresIT {
                 () -> definirAtivacaoDoServico.executar(coloracao, false));
 
         var habilidades = TenantContext.obter(tenant,
-                () -> definirHabilidades.executar(ana, false, Set.of(coloracao)));
+                () -> definirHabilidades.executar(ana, false, Set.of(coloracao), Map.of()));
 
         assertThat(habilidades.servicos()).containsExactly(coloracao);
     }
@@ -234,7 +235,7 @@ class HabilidadesIT extends AbstractPostgresIT {
         UUID ana = profissional(tenant, "Ana", 0);
         UUID julia = profissional(tenant, "Júlia", 1);
         TenantContext.executar(tenant,
-                () -> definirHabilidades.executar(julia, false, Set.of(manicure)));
+                () -> definirHabilidades.executar(julia, false, Set.of(manicure), Map.of()));
 
         var podemColorir = TenantContext.obter(tenant, () -> equipe.queExecutam(coloracao));
         var podemFazerUnha = TenantContext.obter(tenant, () -> equipe.queExecutam(manicure));
@@ -279,7 +280,7 @@ class HabilidadesIT extends AbstractPostgresIT {
         UUID ana = profissional(salaoA, "Ana", 0);
         UUID manicure = servico(salaoA, "Manicure");
         TenantContext.executar(salaoA,
-                () -> definirHabilidades.executar(ana, false, Set.of(manicure)));
+                () -> definirHabilidades.executar(ana, false, Set.of(manicure), Map.of()));
 
         assertThat(TenantContext.obter(salaoB, () -> equipe.executa(ana, manicure)))
                 .as("do salão B, a profissional do A nem existe").isFalse();
@@ -296,7 +297,7 @@ class HabilidadesIT extends AbstractPostgresIT {
                 "dona-" + UUID.randomUUID() + "@salao.test", "senha-bem-comprida-1"));
 
         assertThatThrownBy(() -> TenantContext.executar(tenant,
-                () -> definirHabilidades.executar(UUID.randomUUID(), true, Set.of())))
+                () -> definirHabilidades.executar(UUID.randomUUID(), true, Set.of(), Map.of())))
                 .isInstanceOf(AccessDeniedException.class);
     }
 }

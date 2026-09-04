@@ -46,8 +46,8 @@ banco protege "no máximo um", não "no máximo três" — ver a primeira pendê
 | [RT-CAT-001](RT-CAT-001-servico-com-blocos.md) — serviço com blocos | implementada |
 | [RT-CAT-002](RT-CAT-002-preco-com-vigencia.md) — preço com vigência | implementada |
 | [RT-CAT-003](RT-CAT-003-recurso.md) — recurso (lavatório, cadeira, sala) | implementada |
-| RT-CAT-004 — override de duração por profissional | próxima, em `equipe` |
+| [RT-CAT-004](RT-CAT-004-duracao-por-profissional.md) — duração por profissional | implementada, em `equipe` |
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-CAT-001 a RN-CAT-012.
+Ver [regras.md](regras.md) — RN-CAT-001 a RN-CAT-014.
