@@ -1,6 +1,6 @@
 # Módulo `agenda`
 
-- **Sigla:** AGD · **Fase de introdução:** 1 · **Status:** não iniciado
+- **Sigla:** AGD · **Fase de introdução:** 1 · **Status:** em construção
 
 ## Responsabilidade
 
@@ -21,7 +21,7 @@ ocupados duas vezes.
 
 | Operação | Assinatura | Consumido por |
 |---|---|---|
-| Consultar disponibilidade | `DisponibilidadeApi.consultar(profissionalId, data, servicoId)` | `conversacional`, front |
+| Consultar disponibilidade | `DisponibilidadeApi.consultar(data, servicoId, profissionalId)` — `profissionalId` nulo = qualquer um que faça | `conversacional`, front |
 | Buscar agendamento | `AgendaApi.porId(id)` → `AgendamentoResumo` | `atendimento` |
 | Agenda do dia | `AgendaApi.doDia(data)` → `List<AgendamentoResumo>` | `atendimento`, painel |
 | Marcar em atendimento | `AgendaApi.iniciarAtendimento(id)` | `atendimento` (ao abrir comanda) |
@@ -72,7 +72,7 @@ Escopo `:own` é filtro de query, não de tela. Acesso a id de outro devolve **4
 
 | ID | Título | Fase | Status |
 |---|---|---|---|
-| RT-AGD-001 | Consultar disponibilidade | 1 | rascunho |
+| [RT-AGD-001](RT-AGD-001-consultar-disponibilidade.md) | Consultar disponibilidade | 1 | **implementada** |
 | RT-AGD-002 | Criar agendamento | 1 | especificado |
 | RT-AGD-003 | Reagendar | 1 | rascunho |
 | RT-AGD-004 | Confirmar | 1 | rascunho |

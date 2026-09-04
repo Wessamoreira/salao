@@ -28,5 +28,13 @@ public record ConfiguracaoDoEstabelecimento(
         PeriodicidadeDeFechamento periodicidadeDeFechamento,
         String paisPadrao,
         String dddPadrao,
+        /**
+         * RT-AGD-001 — de quantos em quantos minutos a agenda oferece horário.
+         *
+         * <p>É do salão porque uns marcam de 15 em 15, outros de 30, e barbearia costuma
+         * trabalhar de 10. Um número fixo no código estaria errado para metade deles — e o
+         * efeito não seria um erro, seria a agenda oferecendo horários que aquele salão não usa.
+         */
+        int granularidadeAgendaMinutos,
         boolean ativo) {
 }

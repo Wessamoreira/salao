@@ -2,6 +2,8 @@ package br.com.salao.equipe.api;
 
 import br.com.salao.catalogo.api.SequenciaDeBlocos;
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.Map;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -87,4 +89,29 @@ public interface ProfissionalApi {
      * agenda só ficaria errada.
      */
     Optional<SequenciaDeBlocos> receitaDe(UUID profissionalId, UUID servicoId);
+
+    // ------------------------------------------------------------------ RT-AGD-001
+
+    /**
+     * O que cada um destes profissionais atende nesta data, num punhado fixo de consultas.
+     *
+     * <p>Existe porque a disponibilidade pergunta pela equipe inteira: {@link #intervalosEm(UUID,
+     * LocalDate)} num laço custaria duas consultas por profissional, e a grade do dia (RT-AGD-011)
+     * pergunta por dez de uma vez. É a mesma razão de {@code ServicoApi.idsExistentes}.
+     *
+     * <p>Profissional sem jornada no dia não aparece no mapa — vazio significa "não atende", e
+     * quem itera sobre as chaves já pula quem não trabalha.
+     */
+    Map<UUID, List<IntervaloDeTrabalho>> intervalosEm(Collection<UUID> profissionais,
+                                                      LocalDate data);
+
+    /**
+     * A receita deste serviço para cada um destes profissionais, num punhado fixo de consultas.
+     *
+     * <p>Só entram os que executam o serviço e estão ativos — a mesma resposta de
+     * {@link #receitaDe}, e pela mesma razão de ser uma pergunta só: quem tivesse de compor
+     * habilidade e duração no chamador acabaria usando a duração do catálogo para quem leva outra,
+     * e a agenda ficaria errada sem nada acusar.
+     */
+    Map<UUID, SequenciaDeBlocos> receitasDe(Collection<UUID> profissionais, UUID servicoId);
 }

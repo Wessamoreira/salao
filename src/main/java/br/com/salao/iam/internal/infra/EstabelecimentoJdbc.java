@@ -27,7 +27,7 @@ public class EstabelecimentoJdbc implements EstabelecimentoApi {
     private static final String BUSCAR = """
             select id, nome, timezone, moeda, base_comissao,
                    desconto_afeta_comissao, periodicidade_fechamento,
-                   pais_padrao, ddd_padrao, ativo
+                   pais_padrao, ddd_padrao, granularidade_agenda_minutos, ativo
               from estabelecimento
              where id = :id
             """;
@@ -53,6 +53,7 @@ public class EstabelecimentoJdbc implements EstabelecimentoApi {
                         PeriodicidadeDeFechamento.valueOf(rs.getString("periodicidade_fechamento")),
                         rs.getString("pais_padrao"),
                         rs.getString("ddd_padrao"),
+                        rs.getInt("granularidade_agenda_minutos"),
                         rs.getBoolean("ativo")))
                 .optional();
     }

@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -450,5 +451,118 @@ public class ProfissionaisJdbc implements ProfissionalApi {
                     .param("criadoPor", criadoPor)
                     .update();
         }
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-001
+
+    /** Duas consultas para a equipe inteira: jornada do dia e bloqueios que o alcançam. */
+    @Override
+    @Transactional(readOnly = true)
+    public Map<UUID, List<IntervaloDeTrabalho>> intervalosEm(Collection<UUID> profissionais,
+                                                             LocalDate data) {
+        if (profissionais.isEmpty()) {
+            return Map.of();
+        }
+        List<UUID> ids = List.copyOf(profissionais);
+
+        var jornadaPorProfissional = new LinkedHashMap<UUID, List<IntervaloDeTrabalho>>();
+        jdbc.sql("""
+                select profissional_id, inicio, fim
+                  from jornada_profissional
+                 where profissional_id in (:ids)
+                   and dia_semana = :dia
+                 order by profissional_id, inicio
+                """)
+                .param("ids", ids)
+                .param("dia", data.getDayOfWeek().getValue())
+                .query((rs, n) -> Map.entry(rs.getObject("profissional_id", UUID.class),
+                        new IntervaloDeTrabalho(rs.getTime("inicio").toLocalTime(),
+                                rs.getTime("fim").toLocalTime())))
+                .list()
+                .forEach(entrada -> jornadaPorProfissional
+                        .computeIfAbsent(entrada.getKey(), id -> new ArrayList<>())
+                        .add(entrada.getValue()));
+
+        if (jornadaPorProfissional.isEmpty()) {
+            return Map.of();
+        }
+        List<BloqueioDeJornada> bloqueios = jdbc.sql("""
+                select id, profissional_id, motivo, observacao,
+                       data_inicio, data_fim, hora_inicio, hora_fim
+                  from bloqueio_de_jornada
+                 where (profissional_id in (:ids) or profissional_id is null)
+                   and data_inicio <= :data
+                   and data_fim >= :data
+                """)
+                .param("ids", ids)
+                .param("data", data)
+                .query(BLOQUEIO)
+                .list();
+
+        var saida = new LinkedHashMap<UUID, List<IntervaloDeTrabalho>>();
+        jornadaPorProfissional.forEach((profissionalId, doDia) -> {
+            // Bloqueio sem profissional vale para o salão inteiro (RN-EQP-009).
+            List<IntervaloDeTrabalho> removidos = bloqueios.stream()
+                    .filter(bloqueio -> bloqueio.profissionalId() == null
+                            || bloqueio.profissionalId().equals(profissionalId))
+                    .map(bloqueio -> bloqueio.faixaEm(data))
+                    .filter(java.util.Objects::nonNull)
+                    .toList();
+            List<IntervaloDeTrabalho> livres =
+                    SubtracaoDeIntervalos.subtrair(doDia, removidos);
+            if (!livres.isEmpty()) {
+                saida.put(profissionalId, livres);
+            }
+        });
+        return saida;
+    }
+
+    /** Uma consulta para o serviço e uma para as habilidades da equipe toda. */
+    @Override
+    @Transactional(readOnly = true)
+    public Map<UUID, SequenciaDeBlocos> receitasDe(Collection<UUID> profissionais,
+                                                   UUID servicoId) {
+        if (profissionais.isEmpty()) {
+            return Map.of();
+        }
+        var servico = catalogo.porId(servicoId);
+        if (servico.isEmpty()) {
+            return Map.of();
+        }
+        List<UUID> ids = List.copyOf(profissionais);
+
+        record Linha(UUID profissionalId, boolean executaTodos, boolean naLista, Integer duracao) {
+        }
+        List<Linha> linhas = jdbc.sql("""
+                select p.id,
+                       p.executa_todos_os_servicos,
+                       h.servico_id is not null as na_lista,
+                       h.duracao_minutos
+                  from profissional p
+                  left join habilidade h
+                         on h.profissional_id = p.id and h.servico_id = :servico
+                 where p.id in (:ids) and p.ativo
+                """)
+                .param("ids", ids)
+                .param("servico", servicoId)
+                .query((rs, n) -> {
+                    int duracao = rs.getInt("duracao_minutos");
+                    Integer propria = rs.wasNull() ? null : duracao;
+                    return new Linha(rs.getObject("id", UUID.class),
+                            rs.getBoolean("executa_todos_os_servicos"),
+                            rs.getBoolean("na_lista"), propria);
+                })
+                .list();
+
+        var saida = new LinkedHashMap<UUID, SequenciaDeBlocos>();
+        for (Linha linha : linhas) {
+            if (!linha.executaTodos() && !linha.naLista()) {
+                continue;
+            }
+            saida.put(linha.profissionalId(), linha.duracao() == null
+                    ? servico.get().blocos()
+                    : servico.get().blocos().comDuracaoTotal(linha.duracao()));
+        }
+        return saida;
     }
 }

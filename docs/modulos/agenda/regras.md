@@ -176,3 +176,64 @@ estabelecimento. · **Origem.** 2026-08-28
 | `ER-AGD-TRANSICAO_INVALIDA` | 409 | RN-AGD-007 | "Este agendamento já foi {status} e não pode mais ser alterado." |
 | `ER-AGD-DATA_PASSADA` | 422 | RN-AGD-008 | "Não é possível agendar em uma data que já passou." |
 | `ER-AGD-SERVICO_INATIVO` | 422 | — | "Este serviço não está mais disponível." |
+
+---
+
+### RN-AGD-010 — Janela é fechada no início e aberta no fim
+
+**Enunciado.** Todo período da agenda é `[inicio, fim)`. Dois atendimentos que se encostam — um
+termina às 10h, o outro começa às 10h — **não** conflitam.
+
+**Motivo.** Com o fim fechado, todo horário cheio de agenda seria um conflito: a recepção
+aprenderia a marcar às 10h01 e o dia perderia um minuto por cliente.
+
+E a semântica precisa ser **a mesma** no domínio e no banco. Se `Janela.cruzaCom` discordasse do
+`tstzrange` das constraints, a aplicação ofereceria horários que o banco recusaria na hora de
+gravar — ou esconderia horários que ele aceitaria.
+
+**Onde é garantida.** `Janela.cruzaCom` · `tstzrange` nas constraints de exclusão (V25).
+**Rotinas.** RT-AGD-001, RT-AGD-002 · **Teste.**
+`JanelaESubtracaoTest.encostar_nao_e_cruzar`, `DisponibilidadeIT.banco_deixa_encostar`,
+`BuscaDeEncaixeTest.encostar_nao_e_conflito`
+**Configurável?** Não · **Origem.** 2026-09-04
+
+---
+
+### RN-AGD-011 — O bloco cabe em uma janela livre, não na soma delas
+
+**Enunciado.** Um bloco `ATIVO` precisa caber inteiro dentro de **um** intervalo livre do
+profissional. Blocos `PAUSA` não exigem o profissional, mas todo bloco que exija recurso precisa de
+unidade livre — inclusive na pausa.
+
+**Motivo.** Livre das 9h às 12h e das 13h às 18h são oito horas, e mesmo assim um serviço de 45
+minutos não começa às 11h30: atravessaria o almoço. Somar as durações disponíveis e comparar com a
+duração do serviço é o erro mais fácil de cometer aqui.
+
+A metade da pausa é o que faz a agenda render: durante a química a profissional atende outra
+cliente. Exigir que ela estivesse livre jogaria fora 40 minutos por coloração.
+
+**Onde é garantida.** `BuscaDeEncaixe.cabe`.
+**Rotinas.** RT-AGD-001, RT-AGD-002, RT-AGD-008 · **Teste.**
+`BuscaDeEncaixeTest.ativo_nao_atravessa_buraco`,
+`BuscaDeEncaixeTest.pausa_nao_exige_o_profissional`,
+`BuscaDeEncaixeTest.recurso_na_pausa_bloqueia`, `DisponibilidadeIT.pausa_libera_encaixe`
+**Configurável?** Não — é o modelo · **Origem.** 2026-09-04
+
+---
+
+### RN-AGD-012 — A grade de horários é do salão, e alinhada ao dia
+
+**Enunciado.** A disponibilidade oferece horários de `granularidade_agenda_minutos` em
+`granularidade_agenda_minutos`, contados a partir do início do dia civil no fuso do salão.
+
+**Motivo.** Uns salões marcam de 15 em 15, outros de 30, e barbearia costuma trabalhar de 10. Um
+número fixo estaria errado para metade deles, e o efeito não seria um erro — seria a agenda
+oferecendo horários que aquele salão não usa.
+
+O alinhamento é ao dia e não à jornada de cada um: por profissional, duas colunas da grade da
+recepção mostrariam horários desencontrados (9h05 numa, 9h00 na outra) e o dia ficaria ilegível.
+
+**Onde é garantida.** `estabelecimento.granularidade_agenda_minutos` (V25) ·
+`BuscaDeEncaixe.horarios`.
+**Rotinas.** RT-AGD-001, RT-AGD-011 · **Teste.** `BuscaDeEncaixeTest.granularidade_manda`
+**Configurável?** Sim, por salão (5 a 60 minutos) · **Origem.** 2026-09-04
