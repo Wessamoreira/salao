@@ -109,11 +109,17 @@ aceita subquery em `EXCLUDE`. Se os blocos ficarem com status velho, um agendame
 continua bloqueando o horário. É a fragilidade conhecida do modelo de blocos, e o preço pago por
 ele funcionar.
 
-**Onde é garantida.** Domínio: `Agendamento.alterarStatus` altera cabeça e blocos juntos.
-**Nunca por trigger** — regra invisível não é testável em unidade e some da revisão de código.
+**Onde é garantida.** `AgendaJdbc.alterarStatus` altera cabeça e blocos juntos, e é o **único**
+caminho por onde o status muda — não haver outro caminho é o que garante que nenhum caso de uso
+faça metade. **Nunca por trigger** — regra invisível não é testável em unidade e some da revisão de
+código.
+
+*(Nota de RT-AGD-004: a proibição de gatilho foi mantida por ser decisão escrita, mas convive com
+uma tensão — RLS e `EXCLUDE` são igualmente invisíveis e o projeto confia neles, verificando-os por
+teste de integração. Se um dia a divergência de status acontecer de verdade, vale reabrir.)*
 
 **Rotinas.** RT-AGD-004, RT-AGD-005, RT-AGD-006, RT-ATD-001, RT-ATD-006
-**Teste.** `AgendamentoIT.cancelar_libera_todos_os_blocos_para_novo_agendamento`
+**Teste.** `ConfirmarAgendamentoIT.confirma_e_os_blocos_acompanham` · (cancelamento em RT-AGD-005)
 **Configurável?** Não · **Origem.** 2026-08-28
 
 ---

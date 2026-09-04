@@ -3,6 +3,7 @@ package br.com.salao.agenda.internal.web;
 import br.com.salao.agenda.api.AgendamentoResumo;
 import br.com.salao.agenda.api.BlocoDoAgendamento;
 import br.com.salao.agenda.api.OrigemDoAgendamento;
+import br.com.salao.agenda.internal.application.ConfirmarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.CriarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.NovoAgendamento;
@@ -19,6 +20,7 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -40,14 +42,17 @@ public class AgendamentosController {
     private final CriarAgendamentoUseCase criar;
     private final ConsultarAgendamentoUseCase consultar;
     private final ReagendarUseCase reagendar;
+    private final ConfirmarAgendamentoUseCase confirmar;
     private final ClienteApi clientes;
 
     public AgendamentosController(CriarAgendamentoUseCase criar,
                                   ConsultarAgendamentoUseCase consultar,
-                                  ReagendarUseCase reagendar, ClienteApi clientes) {
+                                  ReagendarUseCase reagendar,
+                                  ConfirmarAgendamentoUseCase confirmar, ClienteApi clientes) {
         this.criar = criar;
         this.consultar = consultar;
         this.reagendar = reagendar;
+        this.confirmar = confirmar;
         this.clientes = clientes;
     }
 
@@ -140,5 +145,21 @@ public class AgendamentosController {
         return comNome(reagendar.executar(new PedidoDeReagendamento(id, req.inicio(),
                 req.profissionalId(), req.duracaoMinutos(), req.versao(),
                 req.forcarForaJornada(), req.forcarPassado(), req.justificativa())));
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-004
+
+    /**
+     * {@code pelaCliente} distingue quem confirmou: a própria cliente pelo link do lembrete, ou o
+     * salão por ela. Vai para o evento, porque mandar "obrigado por confirmar" para quem não
+     * confirmou nada é pior do que não mandar nada.
+     */
+    public record ConfirmacaoRequest(@NotNull Integer versao, boolean pelaCliente) {
+    }
+
+    @PatchMapping("/{id}/confirmacao")
+    public AgendamentoResponse confirmar(@PathVariable UUID id,
+                                         @Valid @RequestBody ConfirmacaoRequest req) {
+        return comNome(confirmar.executar(id, req.versao(), req.pelaCliente()));
     }
 }

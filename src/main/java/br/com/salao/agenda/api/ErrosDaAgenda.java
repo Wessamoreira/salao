@@ -56,7 +56,16 @@ public enum ErrosDaAgenda implements CodigoDeErro {
      * cancelado ou concluído, muito menos — mover o passado reescreveria o que aconteceu.
      */
     NAO_PODE_REAGENDAR("ER-AGD-NAO_PODE_REAGENDAR", HttpStatus.UNPROCESSABLE_ENTITY,
-            "Este agendamento não pode ser movido");
+            "Este agendamento não pode ser movido"),
+
+    /**
+     * RN-AGD-007 — a transição de status pedida não existe na máquina de estados.
+     *
+     * <p>409 e não 422: o pedido está bem formado, o que não bate é o estado atual do recurso. A
+     * tela recarrega e mostra em que estado ele realmente está.
+     */
+    TRANSICAO_INVALIDA("ER-AGD-TRANSICAO_INVALIDA", HttpStatus.CONFLICT,
+            "Transição de status inválida");
 
     private final String codigo;
     private final HttpStatus status;

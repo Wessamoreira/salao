@@ -257,6 +257,42 @@ public class AgendaJdbc {
                 .update();
     }
 
+    // ------------------------------------------------------------------ RT-AGD-004
+
+    /**
+     * RN-AGD-006 — muda o status da cabeça <strong>e dos blocos</strong>, sempre juntos.
+     *
+     * <p>Um método só, e não dois, porque a regra é justamente que ninguém faça metade. A
+     * constraint parcial precisa do status na própria linha do bloco (o Postgres não aceita
+     * subquery em {@code EXCLUDE}), então um bloco com status velho é um horário que continua
+     * bloqueado depois do cancelamento — e ninguém descobre até a cliente ligar perguntando por
+     * que não consegue marcar.
+     *
+     * <p>A regra do projeto é explícita em não usar gatilho: "regra invisível não é testável em
+     * unidade e some da revisão de código". Este método é a alternativa — visível, com um nome, e
+     * o único caminho por onde o status muda.
+     *
+     * @return quantas cabeças mudaram: zero significa que a versão não bate
+     */
+    public int alterarStatus(UUID agendamentoId, StatusAgendamento novo, int versao) {
+        int cabecas = jdbc.sql("""
+                update agendamento set status = :status, versao = versao + 1
+                 where id = :id and versao = :versao
+                """)
+                .param("id", agendamentoId)
+                .param("status", novo.name())
+                .param("versao", versao)
+                .update();
+        if (cabecas == 0) {
+            return 0;
+        }
+        jdbc.sql("update agendamento_bloco set status = :status where agendamento_id = :id")
+                .param("id", agendamentoId)
+                .param("status", novo.name())
+                .update();
+        return cabecas;
+    }
+
     public record Ocupacoes(Map<UUID, List<Janela>> porProfissional,
                             Map<UUID, List<Janela>> porRecurso) {
 
