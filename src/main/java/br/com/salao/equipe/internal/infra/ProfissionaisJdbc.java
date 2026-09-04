@@ -1,6 +1,7 @@
 package br.com.salao.equipe.internal.infra;
 
 import br.com.salao.equipe.api.BloqueioDeJornada;
+import br.com.salao.equipe.api.Habilidades;
 import br.com.salao.equipe.api.IntervaloDeTrabalho;
 import br.com.salao.equipe.api.MotivoDoBloqueio;
 import br.com.salao.equipe.api.JornadaSemanal;
@@ -16,6 +17,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -286,5 +288,105 @@ public class ProfissionaisJdbc implements ProfissionalApi {
                 .param("id", id)
                 .param("ativo", ativo)
                 .update();
+    }
+
+    // ------------------------------------------------------------------ RT-EQP-004
+
+    /**
+     * Uma consulta só, e ela precisa distinguir três respostas: "executa", "não executa" e
+     * "profissional não existe / está inativo".
+     *
+     * <p>O {@code where ativo} está na consulta e não em quem chama de propósito — quem não
+     * trabalha mais não executa nada, e deixar as duas checagens separadas seria convidar a
+     * esquecer uma delas em algum dos chamadores.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public boolean executa(UUID profissionalId, UUID servicoId) {
+        return jdbc.sql("""
+                select p.executa_todos_os_servicos
+                    or exists (select 1 from habilidade h
+                                where h.profissional_id = p.id and h.servico_id = :servico)
+                  from profissional p
+                 where p.id = :profissional and p.ativo
+                """)
+                .param("profissional", profissionalId)
+                .param("servico", servicoId)
+                .query(Boolean.class)
+                .optional()
+                .orElse(false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Habilidades habilidadesDe(UUID profissionalId) {
+        Boolean todos = jdbc.sql(
+                "select executa_todos_os_servicos from profissional where id = :id")
+                .param("id", profissionalId)
+                .query(Boolean.class)
+                .optional()
+                .orElse(true);
+
+        var servicos = new LinkedHashSet<>(jdbc.sql(
+                "select servico_id from habilidade where profissional_id = :id order by servico_id")
+                .param("id", profissionalId)
+                .query(UUID.class)
+                .list());
+
+        // Não passa pelo construtor de Habilidades: ele recusa "restrito e vazio", e o banco pode
+        // legitimamente ter essa combinação num profissional cujo único serviço saiu do cardápio.
+        // Recusar na LEITURA transformaria um dado velho em erro 500 numa tela de consulta.
+        return todos || !servicos.isEmpty()
+                ? new Habilidades(todos, servicos)
+                : Habilidades.todosOsServicos();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProfissionalResumo> queExecutam(UUID servicoId) {
+        return jdbc.sql("select " + CAMPOS + """
+                  from profissional p
+                 where p.ativo
+                   and (p.executa_todos_os_servicos
+                        or exists (select 1 from habilidade h
+                                    where h.profissional_id = p.id
+                                      and h.servico_id = :servico))
+                 order by nome
+                """)
+                .param("servico", servicoId)
+                .query(RESUMO)
+                .list();
+    }
+
+    /**
+     * Substitui o regime e a lista inteira, como a jornada (RT-EQP-002).
+     *
+     * <p>Reconciliar o que entrou e o que saiu seria código existindo para economizar escritas num
+     * conjunto de dezenas de linhas — e que erra na primeira vez que alguém desmarcar e remarcar o
+     * mesmo serviço. Substituir é mais simples e não tem estado intermediário.
+     */
+    public void substituirHabilidades(UUID estabelecimentoId, UUID profissionalId,
+                                      Habilidades habilidades, UUID criadoPor) {
+        jdbc.sql("update profissional set executa_todos_os_servicos = :todos where id = :id")
+                .param("id", profissionalId)
+                .param("todos", habilidades.executaTodos())
+                .update();
+
+        jdbc.sql("delete from habilidade where profissional_id = :id")
+                .param("id", profissionalId)
+                .update();
+
+        for (UUID servicoId : habilidades.servicos()) {
+            jdbc.sql("""
+                    insert into habilidade
+                        (estabelecimento_id, profissional_id, servico_id, criado_por)
+                    values (:estabelecimento, :profissional, :servico, :criadoPor)
+                    """)
+                    .param("estabelecimento", estabelecimentoId)
+                    .param("profissional", profissionalId)
+                    .param("servico", servicoId)
+                    .param("criadoPor", criadoPor)
+                    .update();
+        }
     }
 }

@@ -2,8 +2,10 @@ package br.com.salao.catalogo.api;
 
 import br.com.salao.shared.dinheiro.Money;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -33,4 +35,16 @@ public interface ServicoApi {
 
     /** O histórico completo, do mais recente para o mais antigo. */
     List<PrecoVigente> historicoDePrecos(UUID servicoId);
+
+    /**
+     * Quais destes ids são serviços <strong>deste salão</strong>, numa consulta só.
+     *
+     * <p>Existe para quem precisa validar um conjunto — {@code equipe} conferindo habilidades
+     * (RT-EQP-004) é o primeiro caso. Chamar {@link #porId} num laço custaria uma consulta por
+     * serviço, e {@code porId} ainda traz os blocos, que quem só quer saber se existe não usa.
+     *
+     * <p>Inclui os desativados de propósito: um serviço fora do cardápio hoje pode voltar, e
+     * recusar a habilidade dele faria a informação se perder no caminho.
+     */
+    Set<UUID> idsExistentes(Collection<UUID> candidatos);
 }

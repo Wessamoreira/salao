@@ -1,8 +1,10 @@
 package br.com.salao.equipe.internal;
 
+import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.equipe.internal.application.CadastrarProfissionalUseCase;
 import br.com.salao.equipe.internal.application.DefinirAtivacaoDoProfissionalUseCase;
+import br.com.salao.equipe.internal.application.DefinirHabilidadesUseCase;
 import br.com.salao.equipe.internal.application.DefinirJornadaUseCase;
 import br.com.salao.equipe.internal.application.ListarProfissionaisUseCase;
 import br.com.salao.equipe.internal.application.RegistrarBloqueioUseCase;
@@ -69,5 +71,14 @@ public class EquipeConfig {
     public DefinirAtivacaoDoProfissionalUseCase definirAtivacaoDoProfissionalUseCase(
             ProfissionaisJdbc profissionais, AuditoriaApi auditoria) {
         return new DefinirAtivacaoDoProfissionalUseCase(profissionais, auditoria);
+    }
+
+    // ------------------------------------------------------------------ RT-EQP-004
+
+    @Bean
+    public DefinirHabilidadesUseCase definirHabilidadesUseCase(ProfissionaisJdbc profissionais,
+                                                               ServicoApi catalogo,
+                                                               AuditoriaApi auditoria) {
+        return new DefinirHabilidadesUseCase(profissionais, catalogo, auditoria);
     }
 }

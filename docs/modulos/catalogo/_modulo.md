@@ -22,10 +22,13 @@ ocupado não é horário disponível.
 pagou é do `atendimento`, que precisa **copiar o preço para o item da comanda** (RN-CAT-006). Sem
 essa cópia, alterar um preço mudaria o que um atendimento antigo custou.
 
-**Quem executa o quê.** Habilidades são `RT-EQP-004`, no módulo `equipe`.
+**Quem executa o quê.** Habilidades são `RT-EQP-004`, no módulo `equipe` — e `catalogo` continua
+sem depender de `equipe`, que é o sentido da separação.
 
-**Quanto tempo cada profissional leva.** O override por profissional é `RT-CAT-004`: a duração aqui
-é a do serviço, não a da pessoa.
+**Quanto tempo cada profissional leva.** A duração aqui é a do serviço, não a da pessoa. O override
+é `RT-CAT-004` e será implementado em **`equipe`**, como coluna da tabela `habilidade`: a duração de
+alguém num serviço é atributo da relação profissional × serviço, e uma tabela à parte permitiria a
+contradição "leva 30 minutos numa coloração que não faz".
 
 **Se o lavatório está ocupado às 15h.** O catálogo diz que existem três e que a lavagem usa um; quem
 conta os ocupados é a `agenda`. E a garantia de não estourar a capacidade é dela: o `EXCLUDE` do
@@ -43,7 +46,7 @@ banco protege "no máximo um", não "no máximo três" — ver a primeira pendê
 | [RT-CAT-001](RT-CAT-001-servico-com-blocos.md) — serviço com blocos | implementada |
 | [RT-CAT-002](RT-CAT-002-preco-com-vigencia.md) — preço com vigência | implementada |
 | [RT-CAT-003](RT-CAT-003-recurso.md) — recurso (lavatório, cadeira, sala) | implementada |
-| RT-CAT-004 — override de duração por profissional | próxima |
+| RT-CAT-004 — override de duração por profissional | próxima, em `equipe` |
 
 ## Regras
 

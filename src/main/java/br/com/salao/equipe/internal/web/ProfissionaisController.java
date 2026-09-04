@@ -3,11 +3,13 @@ package br.com.salao.equipe.internal.web;
 import br.com.salao.equipe.api.IntervaloDeTrabalho;
 import br.com.salao.equipe.api.JornadaSemanal;
 import br.com.salao.equipe.api.ProfissionalResumo;
+import br.com.salao.equipe.api.Habilidades;
 import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.equipe.api.TipoDeVinculo;
 import br.com.salao.equipe.internal.application.CadastrarProfissionalUseCase;
 import br.com.salao.equipe.internal.application.DadosDoProfissional;
 import br.com.salao.equipe.internal.application.DefinirAtivacaoDoProfissionalUseCase;
+import br.com.salao.equipe.internal.application.DefinirHabilidadesUseCase;
 import br.com.salao.equipe.internal.application.DefinirJornadaUseCase;
 import br.com.salao.equipe.internal.application.PeriodoBruto;
 import br.com.salao.equipe.internal.application.ListarProfissionaisUseCase;
@@ -23,6 +25,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Map;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -48,17 +51,20 @@ public class ProfissionaisController {
     private final ListarProfissionaisUseCase listar;
     private final DefinirAtivacaoDoProfissionalUseCase definirAtivacao;
     private final DefinirJornadaUseCase definirJornada;
+    private final DefinirHabilidadesUseCase definirHabilidades;
     private final ProfissionalApi equipe;
 
     public ProfissionaisController(CadastrarProfissionalUseCase cadastrar,
                                    ListarProfissionaisUseCase listar,
                                    DefinirAtivacaoDoProfissionalUseCase definirAtivacao,
                                    DefinirJornadaUseCase definirJornada,
+                                   DefinirHabilidadesUseCase definirHabilidades,
                                    ProfissionalApi equipe) {
         this.cadastrar = cadastrar;
         this.listar = listar;
         this.definirAtivacao = definirAtivacao;
         this.definirJornada = definirJornada;
+        this.definirHabilidades = definirHabilidades;
         this.equipe = equipe;
     }
 
@@ -140,5 +146,37 @@ public class ProfissionaisController {
     public ProfissionalResumo definirAtivacao(@PathVariable UUID id,
                                               @Valid @RequestBody AtivacaoRequest req) {
         return definirAtivacao.executar(id, req.ativo());
+    }
+
+    // ------------------------------------------------------------------ RT-EQP-004
+
+    /**
+     * RT-EQP-004 — o regime e a lista, sempre juntos.
+     *
+     * <p>{@code executaTodos = true} é "faz o cardápio inteiro" e ignora a lista;
+     * {@code false} é "faz apenas estes", e aí a lista não pode vir vazia.
+     *
+     * <p>Um endpoint só, e não um para a chave e outro para a lista: separá-los criaria o instante
+     * em que o profissional está restrito e ainda sem nenhum serviço.
+     */
+    public record HabilidadesRequest(@NotNull Boolean executaTodos, Set<UUID> servicos) {
+    }
+
+    @GetMapping("/{id}/habilidades")
+    public Habilidades habilidades(@PathVariable UUID id) {
+        return equipe.habilidadesDe(id);
+    }
+
+    @PutMapping("/{id}/habilidades")
+    public Habilidades definirHabilidades(@PathVariable UUID id,
+                                          @Valid @RequestBody HabilidadesRequest req) {
+        return definirHabilidades.executar(id, req.executaTodos(),
+                req.servicos() == null ? Set.of() : req.servicos());
+    }
+
+    /** Quem pode fazer este serviço — a consulta da tela de marcação. */
+    @GetMapping("/que-executam/{servicoId}")
+    public List<ProfissionalResumo> queExecutam(@PathVariable UUID servicoId) {
+        return equipe.queExecutam(servicoId);
     }
 }

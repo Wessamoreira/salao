@@ -50,4 +50,26 @@ public interface ProfissionalApi {
 
     /** Os bloqueios de um período, do profissional e do salão inteiro. */
     List<BloqueioDeJornada> bloqueiosEntre(UUID profissionalId, LocalDate inicio, LocalDate fim);
+
+    /**
+     * RT-EQP-004 — se este profissional executa este serviço.
+     *
+     * <p>É a pergunta de RN-AGD-001, e é por aqui que a agenda a faz: a habilidade vive neste
+     * módulo, e join entre módulos é proibido.
+     *
+     * <p>Devolve {@code false} para profissional inativo, sem exceção: quem não trabalha mais não
+     * executa nada, e obrigar quem chama a checar as duas coisas seria convidar a esquecer uma.
+     */
+    boolean executa(UUID profissionalId, UUID servicoId);
+
+    /** O regime e a lista de um profissional — o que a tela de cadastro mostra. */
+    Habilidades habilidadesDe(UUID profissionalId);
+
+    /**
+     * Quem pode fazer este serviço, entre os ativos.
+     *
+     * <p>É a consulta da tela de marcação, e inclui tanto quem tem o serviço na lista quanto quem
+     * está no regime "faz o cardápio inteiro".
+     */
+    List<ProfissionalResumo> queExecutam(UUID servicoId);
 }

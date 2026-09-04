@@ -215,3 +215,79 @@ caso isolado.
 **Rotinas.** RT-EQP-003 · **Teste.** `BloqueioDeJornadaIT.observacao_nao_vai_para_a_trilha`
 **Configurável?** Não
 **Origem.** 2026-08-30
+
+---
+
+### RN-EQP-013 — Habilidade tem dois regimes, e o padrão é o aberto
+
+**Enunciado.** Cada profissional está num de dois regimes, dito na coluna
+`executa_todos_os_servicos`: **aberto** (faz o cardápio inteiro, a lista é ignorada) ou
+**restrito** (faz apenas os serviços em `habilidade`). O padrão é aberto.
+
+**Motivo.** Lista vazia não pode ter significado implícito, porque as duas leituras erram:
+
+- *Vazia = não faz nada* obrigaria um salão de 6 profissionais e 40 serviços a marcar 240 caixas
+  antes do primeiro agendamento — e faria **todo serviço novo nascer invisível** para todo mundo
+  até alguém revisitar 6 cadastros. O sintoma seria "por que a coloração nova não aparece?", em
+  silêncio, para sempre.
+- *Vazia = faz tudo* deixa a recepção marcar progressiva com quem só faz manicure, e a descoberta é
+  no balcão com a cliente sentada — o defeito que RN-AGD-001 existe para impedir.
+
+O padrão aberto é o que faz um salão novo funcionar no primeiro dia; restringir é deliberado, e a
+consequência (serviço novo não alcança quem está restrito) é visível.
+
+**Onde é garantida.** Coluna `profissional.executa_todos_os_servicos` (V23) · `Habilidades.executa`
+· `ProfissionaisJdbc.executa`.
+**Rotinas.** RT-EQP-004, RT-AGD-001, RT-AGD-002 · **Teste.**
+`HabilidadesTest.regime_aberto_alcanca_servico_novo`,
+`HabilidadesIT.servico_novo_alcanca_quem_ja_existia`,
+`HabilidadesIT.restrito_nao_recebe_servico_novo`
+**Configurável?** Por profissional, é a própria chave
+**Origem.** 2026-09-02
+
+---
+
+### RN-EQP-014 — Restringir a nenhum serviço é recusado
+
+**Enunciado.** Passar ao regime restrito com lista vazia é recusado. O regime e a lista são
+escritos na mesma operação.
+
+**Motivo.** Seria o único jeito de deixar alguém sem poder atender nada **sem que isso estivesse
+dito em lugar nenhum**: a agenda simplesmente pararia de oferecer horário dessa pessoa, e nenhuma
+tela mostraria por quê. Quem quer tirar alguém da agenda desativa o profissional (RN-EQP-005), que
+é explícito e reversível.
+
+Escrever regime e lista juntos elimina o instante em que o profissional está restrito e ainda sem
+serviço nenhum — o estado que esta regra proíbe.
+
+**Onde é garantida.** Construtor de `Habilidades` · `DefinirHabilidadesUseCase.montar` traduz.
+**Rotinas.** RT-EQP-004 · **Teste.** `HabilidadesTest.restrito_e_vazio_e_recusado`,
+`HabilidadesIT.restrito_e_vazio_e_422`
+**Erro.** `ER-EQP-HABILIDADES_VAZIAS` (422) · **Configurável?** Não
+**Origem.** 2026-09-02
+
+---
+
+### RN-EQP-015 — Habilidade não tem chave estrangeira para serviço
+
+**Enunciado.** `habilidade.servico_id` é uuid sem FK. Quem garante que o serviço existe e é deste
+salão é `DefinirHabilidadesUseCase`, via `ServicoApi`.
+
+**Motivo.** `servico` é do módulo `catalogo` e `habilidade` é de `equipe`. Uma FK costuraria os dois
+esquemas e deixaria um `on delete` do catálogo alterar dado da equipe — a fronteira existiria no
+código e não no banco, que é o inverso do que este projeto faz no resto. É a mesma razão de
+RN-AGD-001 proibir join entre módulos.
+
+E não se perde garantia nenhuma: por RN-CAT-011, **a FK também não separaria os salões**, porque as
+checagens de integridade referencial do PostgreSQL não passam pela RLS. Aqui a checagem da
+aplicação não é reforço — é, e sempre seria, a única barreira.
+
+Serviço desativado continua valendo como habilidade: ele pode voltar ao cardápio, e recusá-lo faria
+a informação de quem sabe executá-lo se perder no caminho.
+
+**Onde é garantida.** `DefinirHabilidadesUseCase.conferirServicos` · `ServicoApi.idsExistentes`
+(uma consulta para o conjunto, nunca uma por serviço).
+**Rotinas.** RT-EQP-004 · **Teste.** `HabilidadesIT.servico_de_outro_salao_nao_serve`,
+`HabilidadesIT.servico_inexistente`, `HabilidadesIT.servico_desativado_ainda_serve`
+**Erro.** `ER-EQP-SERVICO_NAO_ENCONTRADO` (422) · **Configurável?** Não
+**Origem.** 2026-09-02

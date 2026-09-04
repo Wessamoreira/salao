@@ -6,6 +6,17 @@ construir a IA antes do domínio estável é retrabalho garantido.
 
 Legenda de tamanho: `P` ≤ 1 dia · `M` 2–3 dias · `G` 4–7 dias · `GG` > 1 semana.
 
+## Correções de recorte já aplicadas
+
+A ordem original tinha defeitos que só apareceram ao implementar. Ficam registrados aqui para não
+serem "corrigidos" de volta:
+
+| Quando | O que mudou | Por quê |
+|---|---|---|
+| RT-CAT-001 | `RT-EQP-004` movida para **depois** de `RT-CAT-001` | habilidade é profissional × **serviço**; não dá para declarar habilidade num catálogo que não existe |
+| RT-CAT-001 | "recursos exigidos" saiu do título e virou `RT-CAT-003` | não dá para exigir um recurso antes de a entidade existir |
+| RT-EQP-004 | `RT-CAT-004` movida para **depois** de `RT-EQP-004`, e realocada ao módulo `equipe` | override de duração e habilidade são **a mesma relação**; separá-las permitiria "leva 30 min numa coloração que não faz" e faria `catalogo` depender de `equipe` |
+
 ---
 
 ## Fase 0 — Fundação
@@ -74,8 +85,8 @@ automático, e criar uma migration sem `estabelecimento_id` quebra o build.
 | RT-CAT-001 | Serviço com **blocos** ATIVO/PAUSA, duração e recursos exigidos | G | INF-002 |
 | RT-CAT-002 | Preço com vigência + histórico | M | CAT-001 |
 | RT-CAT-003 | Recurso (lavatório, cadeira, sala) | P | INF-002 |
-| RT-CAT-004 | Override de duração por profissional | P | CAT-001, EQP-001 |
 | RT-EQP-004 | Habilidades: quais serviços cada profissional executa | P | EQP-001, CAT-001 |
+| RT-CAT-004 | Duração por profissional (coluna de `habilidade`, em `equipe`) | P | EQP-004 |
 | RT-AGD-001 | **Consultar disponibilidade** (jornada − bloqueios − blocos ocupados) | G | CAT-001, EQP-002 |
 | RT-AGD-002 | **Criar agendamento** com blocos e exclusion constraint | G | AGD-001, CLI-001 |
 | RT-AGD-003 | Reagendar / mover (drag & drop) | M | AGD-002 |

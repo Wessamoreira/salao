@@ -12,8 +12,14 @@ suas habilidades e esteja ativo.
 **Motivo.** Recepção agendava progressiva com quem só faz manicure, e a descoberta era no balcão,
 com a cliente já sentada.
 
-**Onde é garantida.** Aplicação: `AgendaPolitica.validarHabilidade`, consultando `EquipeApi`.
-Não há constraint de banco — a habilidade vive em outro módulo e join entre módulos é proibido.
+**Onde é garantida.** Aplicação: `AgendaPolitica.validarHabilidade`, consultando
+`ProfissionalApi.executa` (RT-EQP-004). Não há constraint de banco — a habilidade vive em outro
+módulo e join entre módulos é proibido.
+
+`executa` já devolve `false` para profissional inativo, então a validação é uma pergunta só: a
+checagem de atividade mora na consulta e não em quem chama, para nenhum chamador esquecer uma das
+duas. E note que "sem habilidade" tem dois sentidos, resolvidos por RN-EQP-013: no regime aberto o
+profissional executa tudo; só no restrito a lista limita.
 
 **Rotinas.** RT-AGD-002, RT-AGD-003, RT-AGD-009, RT-CNV-005
 **Teste.** `CriarAgendamentoIT.profissional_sem_habilidade_e_rejeitado`

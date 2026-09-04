@@ -38,7 +38,27 @@ public enum ErrosDaEquipe implements CodigoDeErro {
             "Horários se sobrepõem"),
 
     BLOQUEIO_NAO_ENCONTRADO("ER-EQP-BLOQUEIO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
-            "Bloqueio não encontrado");
+            "Bloqueio não encontrado"),
+
+    /**
+     * RT-EQP-004 — restringir a habilidade para nenhum serviço.
+     *
+     * <p>Deixaria o profissional sem poder atender nada, e sem que isso estivesse dito em lugar
+     * nenhum: a agenda simplesmente pararia de oferecer horário dele. Quem quer tirar a pessoa da
+     * agenda desativa o profissional.
+     */
+    HABILIDADES_VAZIAS("ER-EQP-HABILIDADES_VAZIAS", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Restrição sem nenhum serviço"),
+
+    /**
+     * Habilidade declarada para um serviço que não existe neste salão.
+     *
+     * <p>Não há chave estrangeira para {@code servico} — ela costuraria dois módulos. Esta
+     * checagem é a única barreira, e é também a de tenant: ver RN-CAT-011, que mostra que nem a FK
+     * separaria os salões.
+     */
+    SERVICO_NAO_ENCONTRADO("ER-EQP-SERVICO_NAO_ENCONTRADO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Serviço não encontrado");
 
     private final String codigo;
     private final HttpStatus status;

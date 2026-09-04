@@ -283,6 +283,19 @@ public class ServicosJdbc implements ServicoApi {
                 .update();
     }
 
+    /** Ver {@code ServicoApi.idsExistentes} — a validação em lote que evita o laço de porId. */
+    @Override
+    @Transactional(readOnly = true)
+    public Set<UUID> idsExistentes(java.util.Collection<UUID> candidatos) {
+        if (candidatos.isEmpty()) {
+            return Set.of();
+        }
+        return Set.copyOf(jdbc.sql("select id from servico where id in (:ids)")
+                .param("ids", List.copyOf(candidatos))
+                .query(UUID.class)
+                .list());
+    }
+
     public int definirAtivacao(UUID id, boolean ativo) {
         return jdbc.sql("""
                 update servico set ativo = :ativo, versao = versao + 1
