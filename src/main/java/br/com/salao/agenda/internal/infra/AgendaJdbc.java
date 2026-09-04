@@ -225,6 +225,38 @@ public class AgendaJdbc {
                 .list();
     }
 
+    // ------------------------------------------------------------------ RT-AGD-003
+
+    /**
+     * Apaga os blocos do agendamento.
+     *
+     * <p>Chamada <strong>antes</strong> de gravar os novos, na mesma transação, e é isso que faz
+     * mover 13h→13h15 funcionar: sem apagar primeiro, o agendamento colidiria <em>consigo mesmo</em>
+     * na exclusion constraint. É o defeito mais fácil de escrever nesta rotina, e o que só aparece
+     * quando alguém arrasta um bloco alguns minutos.
+     */
+    public int apagarBlocos(UUID agendamentoId) {
+        return jdbc.sql("delete from agendamento_bloco where agendamento_id = :id")
+                .param("id", agendamentoId)
+                .update();
+    }
+
+    /** Move a cabeça, conferindo a versão. Zero linhas significa que alguém salvou antes. */
+    public int moverCabeca(UUID agendamentoId, int versao, UUID profissionalId, Janela periodo) {
+        return jdbc.sql("""
+                update agendamento
+                   set profissional_id = :profissional, inicio = :inicio, fim = :fim,
+                       versao = versao + 1
+                 where id = :id and versao = :versao
+                """)
+                .param("id", agendamentoId)
+                .param("versao", versao)
+                .param("profissional", profissionalId)
+                .param("inicio", OffsetDateTime.ofInstant(periodo.inicio(), ZoneOffset.UTC))
+                .param("fim", OffsetDateTime.ofInstant(periodo.fim(), ZoneOffset.UTC))
+                .update();
+    }
+
     public record Ocupacoes(Map<UUID, List<Janela>> porProfissional,
                             Map<UUID, List<Janela>> porRecurso) {
 

@@ -6,17 +6,12 @@ import br.com.salao.agenda.api.BlocoDoAgendamento;
 import br.com.salao.agenda.api.ErrosDaAgenda;
 import br.com.salao.agenda.api.Janela;
 import br.com.salao.agenda.api.StatusAgendamento;
-import br.com.salao.agenda.internal.domain.MaterializadorDeBlocos;
-import br.com.salao.agenda.internal.domain.MaterializadorDeBlocos.BlocoNoTempo;
 import br.com.salao.agenda.internal.infra.AgendaJdbc;
-import br.com.salao.agenda.internal.infra.AgendaJdbc.UnidadeOcupada;
-import br.com.salao.catalogo.api.Recurso;
 import br.com.salao.catalogo.api.RecursoApi;
 import br.com.salao.catalogo.api.SequenciaDeBlocos;
 import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.catalogo.api.ServicoResumo;
 import br.com.salao.cliente.api.ClienteApi;
-import br.com.salao.equipe.api.IntervaloDeTrabalho;
 import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
@@ -28,14 +23,8 @@ import br.com.salao.shared.idempotencia.Idempotencia;
 import br.com.salao.shared.seguranca.UsuarioAtual;
 import br.com.salao.shared.tempo.Relogio;
 import br.com.salao.shared.tenant.TenantContext;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,30 +60,28 @@ public class CriarAgendamentoUseCase {
 
     private final ProfissionalApi equipe;
     private final ServicoApi catalogo;
-    private final RecursoApi recursos;
     private final ClienteApi clientes;
     private final EstabelecimentoApi estabelecimentos;
     private final AgendaJdbc agenda;
     private final AuditoriaApi auditoria;
     private final ApplicationEventPublisher eventos;
     private final Idempotencia idempotencia;
-    private final Relogio relogio;
+    private final ReservaDeHorario reserva;
 
     public CriarAgendamentoUseCase(ProfissionalApi equipe, ServicoApi catalogo,
                                    RecursoApi recursos, ClienteApi clientes,
                                    EstabelecimentoApi estabelecimentos, AgendaJdbc agenda,
                                    AuditoriaApi auditoria, ApplicationEventPublisher eventos,
                                    Idempotencia idempotencia, Relogio relogio) {
+        this.reserva = new ReservaDeHorario(equipe, recursos, agenda, relogio);
         this.equipe = equipe;
         this.catalogo = catalogo;
-        this.recursos = recursos;
         this.clientes = clientes;
         this.estabelecimentos = estabelecimentos;
         this.agenda = agenda;
         this.auditoria = auditoria;
         this.eventos = eventos;
         this.idempotencia = idempotencia;
-        this.relogio = relogio;
     }
 
     @PreAuthorize("hasAuthority('" + Permissao.AGENDA_ESCREVER_TODAS + "')")
@@ -130,15 +117,12 @@ public class CriarAgendamentoUseCase {
                                 + " não executa " + servico.nome()));
         receita = comDuracaoPedida(receita, pedido.duracaoMinutos());
 
-        List<BlocoNoTempo> noTempo =
-                MaterializadorDeBlocos.materializar(receita, pedido.inicio());
-        Janela periodo = MaterializadorDeBlocos.periodoTotal(noTempo);
-
-        validarNaoRetroativo(pedido, periodo);
-        ZoneId fuso = estabelecimentos.fusoDe(tenant);
-        validarJornada(pedido, noTempo, fuso);
-
-        List<BlocoDoAgendamento> blocos = alocar(pedido, noTempo, periodo);
+        var montada = this.reserva.montar(pedido.profissionalId(), receita, pedido.inicio(),
+                estabelecimentos.fusoDe(tenant),
+                new ReservaDeHorario.Forcamentos(pedido.forcarForaJornada(),
+                        pedido.forcarPassado(), pedido.justificativa()));
+        Janela periodo = montada.periodo();
+        List<BlocoDoAgendamento> blocos = montada.blocos();
 
         StatusAgendamento status = StatusAgendamento.inicialPara(pedido.origem());
         UUID id;
@@ -181,118 +165,6 @@ public class CriarAgendamentoUseCase {
         } catch (IllegalArgumentException e) {
             throw new ErroDeDominio(ErrosDaAgenda.SERVICO_INATIVO, e.getMessage());
         }
-    }
-
-    /** RN-AGD-008 — a recepção lança o que ficou no papel, mas dizendo que é isso. */
-    private void validarNaoRetroativo(NovoAgendamento pedido, Janela periodo) {
-        if (!periodo.inicio().isBefore(relogio.agora())) {
-            return;
-        }
-        if (!pedido.forcarPassado()) {
-            throw new ErroDeDominio(ErrosDaAgenda.DATA_PASSADA,
-                    "o horário " + periodo.inicio() + " já passou");
-        }
-        exigirJustificativa(pedido);
-    }
-
-    /**
-     * RN-AGD-002 — todo bloco que ocupa o profissional dentro da jornada, menos as exceções.
-     *
-     * <p>Só os blocos ATIVO. A pausa pode cair no almoço: a cliente fica com a química agindo e a
-     * profissional almoça — que é exatamente o que acontece no salão.
-     */
-    private void validarJornada(NovoAgendamento pedido, List<BlocoNoTempo> blocos, ZoneId fuso) {
-        if (pedido.forcarForaJornada()) {
-            exigirJustificativa(pedido);
-            return;
-        }
-        var livres = new ArrayList<Janela>();
-        // Dois dias: um serviço pode atravessar a meia-noite, e a jornada é por dia da semana.
-        for (LocalDate data : diasTocados(blocos, fuso)) {
-            for (IntervaloDeTrabalho intervalo
-                    : equipe.intervalosEm(List.of(pedido.profissionalId()), data)
-                            .getOrDefault(pedido.profissionalId(), List.of())) {
-                livres.add(new Janela(data.atTime(intervalo.inicio()).atZone(fuso).toInstant(),
-                        data.atTime(intervalo.fim()).atZone(fuso).toInstant()));
-            }
-        }
-        for (BlocoNoTempo bloco : blocos) {
-            if (bloco.profissionalOcupado()
-                    && livres.stream().noneMatch(bloco.janela()::cabeEm)) {
-                throw new ErroDeDominio(ErrosDaAgenda.FORA_DA_JORNADA,
-                        "o trecho de " + bloco.janela().inicio() + " a " + bloco.janela().fim()
-                                + " está fora da jornada");
-            }
-        }
-    }
-
-    private Set<LocalDate> diasTocados(List<BlocoNoTempo> blocos, ZoneId fuso) {
-        var dias = new LinkedHashSet<LocalDate>();
-        for (BlocoNoTempo bloco : blocos) {
-            dias.add(bloco.janela().inicio().atZone(fuso).toLocalDate());
-            dias.add(bloco.janela().fim().minusNanos(1).atZone(fuso).toLocalDate());
-        }
-        return dias;
-    }
-
-    private void exigirJustificativa(NovoAgendamento pedido) {
-        if (pedido.justificativa() == null || pedido.justificativa().isBlank()) {
-            throw new ErroDeDominio(ErrosDaAgenda.FORA_DA_JORNADA,
-                    "forçar exige justificativa, que vai para a trilha");
-        }
-    }
-
-    /**
-     * Transforma cada bloco em linha, alocando a unidade de cada recurso exigido.
-     *
-     * <p>Bloco com mais de um recurso vira mais de uma linha com a mesma {@code ordem}: a primeira
-     * carrega o profissional, as demais só o recurso. É o caso raro — uma cliente usa uma cadeira e
-     * um lavatório, não dois de cada — e agrupar por {@code ordem} devolve a linha do tempo.
-     */
-    private List<BlocoDoAgendamento> alocar(NovoAgendamento pedido, List<BlocoNoTempo> noTempo,
-                                            Janela periodo) {
-        Set<UUID> exigidos = new LinkedHashSet<>();
-        noTempo.forEach(bloco -> exigidos.addAll(bloco.recursosExigidos()));
-
-        Map<UUID, List<UnidadeOcupada>> ocupadas = agenda.unidadesOcupadas(exigidos, periodo);
-        Map<UUID, Integer> quantidades = new HashMap<>();
-        for (Recurso recurso : recursos.ativos()) {
-            quantidades.put(recurso.id(), recurso.quantidade());
-        }
-
-        var deste = new HashMap<UUID, List<UnidadeOcupada>>();
-        var linhas = new ArrayList<BlocoDoAgendamento>();
-        for (BlocoNoTempo bloco : noTempo) {
-            UUID profissional = bloco.profissionalOcupado() ? pedido.profissionalId() : null;
-            boolean primeira = true;
-
-            for (UUID recursoId : bloco.recursosExigidos()) {
-                Integer quantidade = quantidades.get(recursoId);
-                if (quantidade == null) {
-                    throw new ErroDeDominio(ErrosDaAgenda.RECURSO_OCUPADO,
-                            "o recurso " + recursoId + " não está disponível");
-                }
-                int unidade = AlocadorDeUnidades.primeiraLivre(recursoId, quantidade,
-                                bloco.janela(), ocupadas,
-                                deste.getOrDefault(recursoId, List.of()))
-                        .orElseThrow(() -> new ErroDeDominio(ErrosDaAgenda.RECURSO_OCUPADO,
-                                "nenhuma unidade livre do recurso " + recursoId
-                                        + " entre " + bloco.janela().inicio()
-                                        + " e " + bloco.janela().fim()));
-                deste.computeIfAbsent(recursoId, id -> new ArrayList<>())
-                        .add(new UnidadeOcupada(unidade, bloco.janela()));
-                linhas.add(new BlocoDoAgendamento(bloco.ordem(), bloco.tipo(), bloco.janela(),
-                        primeira ? profissional : null, recursoId, unidade));
-                primeira = false;
-            }
-            if (primeira) {
-                // Nenhum recurso: a linha do bloco existe do mesmo jeito, porque é ela que guarda
-                // a linha do tempo — inclusive a da pausa, que não ocupa ninguém.
-                linhas.add(new BlocoDoAgendamento(bloco.ordem(), bloco.tipo(), bloco.janela(),
-                        profissional, null, null));
-            }
-        }
-        return linhas;
     }
 
     /**

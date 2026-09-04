@@ -42,6 +42,17 @@ public enum StatusAgendamento {
     }
 
     /**
+     * RT-AGD-003 — se ainda dá para arrastar na grade.
+     *
+     * <p>Um atendimento em curso não se move: a cliente já está na cadeira. Um terminal, muito
+     * menos — mover o passado reescreveria o que aconteceu. Sobram os dois que ainda vão
+     * acontecer.
+     */
+    public boolean podeSerMovido() {
+        return this == SOLICITADO || this == CONFIRMADO;
+    }
+
+    /**
      * Em que status um agendamento nasce.
      *
      * <p>Quem marca no balcão já confirmou com a cliente ali — nasce {@code CONFIRMADO}. Quem

@@ -47,7 +47,16 @@ public enum ErrosDaAgenda implements CodigoDeErro {
             "Cliente não encontrado"),
 
     AGENDAMENTO_NAO_ENCONTRADO("ER-AGD-AGENDAMENTO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
-            "Agendamento não encontrado");
+            "Agendamento não encontrado"),
+
+    /**
+     * RT-AGD-003 — só se move o que ainda vai acontecer.
+     *
+     * <p>Um atendimento em curso não se arrasta na grade: a cliente já está na cadeira. Um
+     * cancelado ou concluído, muito menos — mover o passado reescreveria o que aconteceu.
+     */
+    NAO_PODE_REAGENDAR("ER-AGD-NAO_PODE_REAGENDAR", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Este agendamento não pode ser movido");
 
     private final String codigo;
     private final HttpStatus status;

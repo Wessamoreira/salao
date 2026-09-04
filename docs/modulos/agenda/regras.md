@@ -284,3 +284,50 @@ antes de complicar.
 `DisponibilidadeIT.banco_garante_capacidade_por_unidade`
 **Erro.** `ER-AGD-RECURSO_OCUPADO` (409) · **Configurável?** Não
 **Origem.** 2026-09-04
+
+---
+
+### RN-AGD-015 — Só se move o que ainda vai acontecer
+
+**Enunciado.** Reagendar exige status `SOLICITADO` ou `CONFIRMADO`. Ao mover, os blocos antigos são
+apagados e os novos gravados **na mesma transação**, com o delete antes da alocação de recursos.
+
+**Motivo.** Um atendimento `EM_ATENDIMENTO` não se arrasta: a cliente já está na cadeira. Um
+terminal, muito menos — mover o passado reescreveria o que aconteceu.
+
+E a ordem importa mais do que parece: mover das 13h para as 13h15 é mover para um horário que se
+**sobrepõe ao atual**. Sem apagar antes, o agendamento colide consigo mesmo na exclusion constraint
+e a recepção vê "horário ocupado" apontando para o próprio atendimento que tenta mover. O mesmo
+vale para o recurso: sem o delete anterior à alocação, ele disputa o lavatório com ele mesmo.
+
+Na mesma transação porque, se ela falhar depois do delete, o horário não pode ficar vago — o
+rollback devolve os blocos e a cliente continua marcada onde estava.
+
+**Onde é garantida.** `StatusAgendamento.podeSerMovido` · `ReagendarUseCase` (ordem das operações)
+· `AgendaJdbc.apagarBlocos`.
+**Rotinas.** RT-AGD-003, RT-AGD-008 · **Teste.**
+`ReagendarIT.mover_para_horario_sobreposto`,
+`ReagendarIT.recurso_proprio_nao_disputa_consigo_mesmo`,
+`ReagendarIT.conflito_faz_rollback_completo`, `ReagendarIT.em_atendimento_nao_move`
+**Erro.** `ER-AGD-NAO_PODE_REAGENDAR` (422) · **Configurável?** Não
+**Origem.** 2026-09-04
+
+---
+
+### RN-AGD-016 — Mudar de coluna adota o ritmo de quem vai atender; ficar preserva
+
+**Enunciado.** Ao reagendar, a duração é: a informada no pedido, se houver; senão a atual, quando o
+profissional não muda; senão a receita do profissional de destino.
+
+**Motivo.** Arrastar da coluna da Ana (escova em 30) para a da Júlia (45 do catálogo) faz o bloco
+**crescer** — é o que RN-CAT-013 diz e o que a grade precisa mostrar. Esconder seria prometer um
+horário que não existe.
+
+Mas quem move um bloco de 90 minutos quinze minutos para frente espera um bloco de 90 minutos. Sem
+a preservação, uma duração forçada na criação se perderia no primeiro arrasto, em silêncio.
+
+**Onde é garantida.** `ReagendarUseCase.duracaoAPreservar`.
+**Rotinas.** RT-AGD-003 · **Teste.**
+`ReagendarIT.mudar_de_profissional_recalcula_a_duracao`,
+`ReagendarIT.mesma_coluna_preserva_a_duracao`
+**Configurável?** Não · **Origem.** 2026-09-04

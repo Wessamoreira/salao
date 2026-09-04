@@ -6,6 +6,8 @@ import br.com.salao.agenda.api.OrigemDoAgendamento;
 import br.com.salao.agenda.internal.application.ConsultarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.CriarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.NovoAgendamento;
+import br.com.salao.agenda.internal.application.PedidoDeReagendamento;
+import br.com.salao.agenda.internal.application.ReagendarUseCase;
 import br.com.salao.cliente.api.ClienteApi;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -18,6 +20,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,12 +39,15 @@ public class AgendamentosController {
 
     private final CriarAgendamentoUseCase criar;
     private final ConsultarAgendamentoUseCase consultar;
+    private final ReagendarUseCase reagendar;
     private final ClienteApi clientes;
 
     public AgendamentosController(CriarAgendamentoUseCase criar,
-                                  ConsultarAgendamentoUseCase consultar, ClienteApi clientes) {
+                                  ConsultarAgendamentoUseCase consultar,
+                                  ReagendarUseCase reagendar, ClienteApi clientes) {
         this.criar = criar;
         this.consultar = consultar;
+        this.reagendar = reagendar;
         this.clientes = clientes;
     }
 
@@ -107,5 +113,32 @@ public class AgendamentosController {
     @GetMapping("/{id}")
     public AgendamentoResponse porId(@PathVariable UUID id) {
         return comNome(consultar.porId(id));
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-003
+
+    /**
+     * RT-AGD-003 — arrastar na grade.
+     *
+     * <p>{@code profissionalId} nulo mantém quem já atendia: arrastar para cima e para baixo na
+     * mesma coluna é o movimento mais comum, e obrigar a repetir o profissional faria o front
+     * mandar o dado que ele acabou de receber.
+     */
+    public record ReagendarRequest(
+            @NotNull Instant inicio,
+            UUID profissionalId,
+            Integer duracaoMinutos,
+            @NotNull Integer versao,
+            boolean forcarForaJornada,
+            boolean forcarPassado,
+            @Size(max = 500) String justificativa) {
+    }
+
+    @PutMapping("/{id}/horario")
+    public AgendamentoResponse reagendar(@PathVariable UUID id,
+                                         @Valid @RequestBody ReagendarRequest req) {
+        return comNome(reagendar.executar(new PedidoDeReagendamento(id, req.inicio(),
+                req.profissionalId(), req.duracaoMinutos(), req.versao(),
+                req.forcarForaJornada(), req.forcarPassado(), req.justificativa())));
     }
 }

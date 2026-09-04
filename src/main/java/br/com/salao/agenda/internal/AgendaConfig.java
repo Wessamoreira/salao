@@ -4,6 +4,7 @@ import br.com.salao.agenda.api.DisponibilidadeApi;
 import br.com.salao.agenda.internal.application.ConsultarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarDisponibilidadeUseCase;
 import br.com.salao.agenda.internal.application.CriarAgendamentoUseCase;
+import br.com.salao.agenda.internal.application.ReagendarUseCase;
 import br.com.salao.agenda.internal.infra.AgendaJdbc;
 import br.com.salao.catalogo.api.RecursoApi;
 import br.com.salao.catalogo.api.ServicoApi;
@@ -58,5 +59,14 @@ public class AgendaConfig {
     @Bean
     public ConsultarAgendamentoUseCase consultarAgendamentoUseCase(AgendaJdbc agenda) {
         return new ConsultarAgendamentoUseCase(agenda);
+    }
+
+    @Bean
+    public ReagendarUseCase reagendarUseCase(ProfissionalApi equipe, RecursoApi recursos,
+                                             EstabelecimentoApi estabelecimentos,
+                                             AgendaJdbc agenda, AuditoriaApi auditoria,
+                                             ApplicationEventPublisher eventos, Relogio relogio) {
+        return new ReagendarUseCase(equipe, recursos, estabelecimentos, agenda, auditoria,
+                eventos, relogio);
     }
 }
