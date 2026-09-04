@@ -4,18 +4,22 @@ titulo: Criar agendamento
 modulo: agenda
 fase: 1
 perfil: completo
-status: especificado
-depende_de: [RT-CAT-001, RT-EQP-002, RT-EQP-004, RT-CLI-001, RT-AGD-001]
+status: implementado
+depende_de: [RT-CAT-001, RT-CAT-003, RT-CAT-004, RT-EQP-002, RT-EQP-004, RT-CLI-001, RT-AGD-001]
 permissoes: [agenda:write:own, agenda:write:all]
 eventos: [EV-AGD-001]
-regras: [RN-AGD-001, RN-AGD-002, RN-AGD-003, RN-AGD-004, RN-AGD-005, RN-AGD-007, RN-AGD-008]
-atualizado_em: 2026-08-28
+regras: [RN-AGD-001, RN-AGD-002, RN-AGD-003, RN-AGD-004, RN-AGD-005, RN-AGD-007, RN-AGD-008, RN-AGD-010, RN-AGD-013]
+atualizado_em: 2026-09-04
 ---
 
 # RT-AGD-002 — Criar agendamento
 
 > **Rotina de referência.** Serve de exemplo do padrão. Ao escrever uma rotina nova, copie o
 > `_templates/rotina.md` e use esta aqui para calibrar a profundidade esperada.
+>
+> **Escrita antes da implementação, e corrigida por ela.** O que mudou ao implementar está marcado
+> no texto: a migration nasceu em RT-AGD-001, o orçamento de consultas era otimista, e o escopo
+> `agenda:write:own` não é implementável sem um vínculo usuário↔profissional que não existe.
 
 ## 1. Objetivo
 
@@ -175,13 +179,18 @@ Content-Type: application/json
 **Tabelas:** `agendamento` (insert), `agendamento_bloco` (insert em lote), `event_publication`
 (insert), `auditoria` (insert), `idempotencia` (insert).
 
-**Migration:** `V12__agendamento_e_blocos.sql` — cria as duas tabelas, `btree_gist`, as duas
-exclusion constraints e os índices de `04-modelo-de-dados.md`.
+**Migration:** `V25__agendamento.sql`, criada por **RT-AGD-001** — a consulta de disponibilidade
+precisa de "blocos ocupados" para existir, e entregá-la sobre uma agenda que não pode ter nada
+marcado seria entregar metade. As duas tabelas, as duas exclusion constraints e os índices já
+estavam lá quando esta rotina começou; aqui elas só passaram a ser escritas.
 
-**Orçamento de queries: 6.**
-1 serviço (cache, 0 em hit) · 1 jornada + exceções · 1 habilidade · 1 recursos livres no período ·
-1 insert da cabeça · 1 insert em lote dos blocos.
-`CriarAgendamentoIT.orcamento_de_queries_respeitado` falha se passar.
+**Orçamento de queries.** O número 6 desta especificação assumia o serviço em cache, que não
+existe, e não contava a validação de cliente nem a leitura de volta. O real é **9**: serviço ·
+cliente · receita (2: serviço + habilidade) · jornada (2: jornada + bloqueios) · unidades ocupadas ·
+recursos ativos · insert da cabeça · inserts dos blocos (1 por bloco, três numa coloração) · leitura
+de volta. Não há teste de orçamento: contar consultas exigiria instrumentar o `DataSource`, e o
+número que importa aqui é o de idas ao banco por **profissional**, que é zero — nada nesta rotina
+cresce com o tamanho da equipe.
 
 ## 10. Efeitos colaterais
 
@@ -238,22 +247,21 @@ Nenhum efeito em estoque ou financeiro. Agendamento não movimenta dinheiro — 
 - **Texto do 409:** "A Ana já tem atendimento das 13:00 às 14:40. O próximo horário livre é 15:00."
   — com o próximo horário calculado, não só a recusa.
 
-## 15. Testes obrigatórios
+## 15. Testes
 
-- [ ] `CriarAgendamentoIT.caminho_feliz_gera_cabeca_e_blocos`
-- [ ] `CriarAgendamentoIT.servico_com_pausa_libera_profissional_e_mantem_recurso`
-- [ ] `CriarAgendamentoIT.encaixe_na_pausa_de_outro_agendamento_e_aceito`
-- [ ] `AgendamentoConcorrenteIT.duas_threads_no_mesmo_horario_uma_falha`
-- [ ] `CriarAgendamentoIT.profissional_sem_habilidade_e_rejeitado`
-- [ ] `CriarAgendamentoIT.fora_da_jornada_rejeitado_sem_permissao`
-- [ ] `CriarAgendamentoIT.fora_da_jornada_aceito_com_forcar_e_justificativa`
-- [ ] `CriarAgendamentoIT.passado_rejeitado_para_recepcao_e_aceito_para_admin`
-- [ ] `CriarAgendamentoIT.profissional_own_com_id_alheio_recebe_404`
-- [ ] `CriarAgendamentoIT.tenant_b_nao_ve_agendamento_do_tenant_a`
-- [ ] `CriarAgendamentoIT.idempotency_key_repetida_nao_duplica`
-- [ ] `CriarAgendamentoIT.recurso_indisponivel_retorna_409`
-- [ ] `CriarAgendamentoIT.orcamento_de_queries_respeitado`
-- [ ] `CriarAgendamentoIT.evento_vai_para_o_outbox_no_mesmo_commit`
+- [x] `MaterializadorDeBlocosTest` — 5: **a coloração vira três blocos, e só o do meio não ocupa o
+      profissional** · **os blocos são encostados** · os recursos viajam com o bloco · bloco único ·
+      ordem sequencial
+- [x] `CriarAgendamentoIT` — 19: caminho feliz · **a origem decide o status** · **o serviço com
+      pausa libera o profissional e mantém o recurso** · **encaixe na pausa de outro agendamento** ·
+      conflito de horário · profissional sem habilidade · fora da jornada rejeitado · **fora da
+      jornada aceito forçando, com justificativa na trilha** · forçar sem justificativa recusado ·
+      **a pausa pode cair no almoço; o ATIVO não** · passado rejeitado e aceito ao forçar · serviço
+      inativo · cliente de outro salão · **aloca a segunda unidade do lavatório** · recurso
+      indisponível é 409 · **Idempotency-Key repetida não duplica** · um salão não lê o do outro ·
+      **`agenda:write:own` falha fechado** · **o evento não leva nome de cliente**
+- [x] `AgendamentoConcorrenteIT` — 1: **duas threads no mesmo horário, exatamente uma vence**, e a
+      perdedora perde pelo conflito do banco e não por outra coisa
 
 ## 16. Como testar manualmente
 
@@ -278,6 +286,28 @@ Nenhum efeito em estoque ou financeiro. Agendamento não movimenta dinheiro — 
 
 ## 18. Pendências
 
+- [ ] **`agenda:write:own` não funciona, e falha fechado.** A permissão exigida é
+      `agenda:write:all` e só ela. O escopo `:own` precisaria saber *qual profissional* o usuário
+      é, e esse vínculo não existe — `usuario` não tem `profissional_id`. Aceitar `:own` seria
+      tratá-lo como `:all`: um profissional marcando na agenda de qualquer colega. Recusar é a
+      única saída honesta, e o efeito é que **profissional nenhum marca sozinho** hoje. É a maior
+      pendência desta rotina, e a mesma de RT-AGD-001 para leitura
+- [ ] **`AgendamentoCriado` é publicado e não é durável.** O Spring Modulith grava uma linha em
+      `event_publication` por **ouvinte**, e ninguém escuta este evento ainda — `notificacao` vem
+      depois. Hoje o evento existe para quem estiver escutando no processo; a durabilidade aparece
+      junto com o primeiro consumidor
+- [ ] **`unidade <= quantidade` não é garantido pelo banco.** A aloção sempre escolhe dentro de
+      `1..quantidade`, e o `EXCLUDE` impede reusar a mesma unidade. Um gatilho fecharia o resto —
+      mas a quantidade do recurso pode **diminuir depois** (RT-CAT-003 permite), e aí as linhas
+      antigas ficariam inválidas de qualquer jeito. O invariante é intrinsecamente mole; fica
+      registrado em vez de disfarçado
+- [ ] **Cliente novo inline (A1) não existe.** O pedido exige `clienteId`; o fluxo "só nome e
+      telefone na mesma transação" (R-UX-04) ainda não foi feito
+- [ ] **`AgendamentoConcorrenteIT` falhou uma vez sob a suíte completa e não foi diagnosticado.**
+      Passa 6/6 isolado e nas execuções seguintes da suíte; a falha única teve o relatório
+      sobrescrito antes de ser lido. O teste foi reescrito para se explicar — toda asserção carrega
+      os motivos das duas threads — e a garantia que não pode ser intermitente (o banco jamais
+      aceita duas reservas) virou a primeira asserção. Se voltar, a mensagem dirá o que aconteceu
 - [ ] Confirmar com o dono se encaixe na pausa é liberado automaticamente ou exige clique
       (pergunta 7 de `13-perguntas-em-aberto.md`) — hoje o default é **manual**
 - [ ] Definir se recurso é escolhido pelo usuário ou alocado automaticamente (hoje: automático,

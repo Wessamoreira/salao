@@ -27,15 +27,22 @@ import org.springframework.test.context.DynamicPropertySource;
 /**
  * RT-IAM-006 — autorização e imposição de segundo fator pelo HTTP.
  *
- * <p>Usa {@code /api/v1/agendamentos}, que ainda não existe, como sonda: <strong>403 significa
- * barrado pela autorização; 404 significa que passou por ela</strong> e só não achou o
- * controller. É o discriminador exato de que se precisa aqui.
+ * <p>Usa uma rota inexistente sob {@code /api/v1} como sonda: <strong>403 significa barrado pela
+ * autorização; qualquer outra coisa significa que passou por ela</strong>. É o discriminador exato
+ * de que se precisa aqui.
+ *
+ * <p>A sonda era {@code /api/v1/agendamentos}, "que ainda não existe" — e RT-AGD-002 a fez
+ * existir. O {@code GET} passou a devolver 405 em vez de 404 e dois testes quebraram sem que nada
+ * de autorização tivesse mudado. Uma sonda que depende de um controller <em>não</em> existir é uma
+ * armadilha para quem escrever o controller: a rota agora é deliberadamente inexistente, e a
+ * asserção afirma o que o teste quer dizer — "não foi barrado" — em vez de um código exato que
+ * muda com o roteamento.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class AutorizacaoWebIT extends AbstractPostgresIT {
 
     private static final String SENHA = "senha-bem-comprida-1";
-    private static final String ROTA_PROTEGIDA = "/api/v1/agendamentos";
+    private static final String ROTA_PROTEGIDA = "/api/v1/_sonda-de-autorizacao";
 
     /**
      * Limite de taxa alto: esta classe exercita o fluxo de autenticação e faz muito mais
@@ -103,8 +110,8 @@ class AutorizacaoWebIT extends AbstractPostgresIT {
         assertThat(tokenNovo).isNotEqualTo(token);
 
         assertThat(get(ROTA_PROTEGIDA, tokenNovo).statusCode())
-                .as("404: passou pela autorização e só não achou o controller")
-                .isEqualTo(404);
+                .as("passou pela autorização; o que vem depois é roteamento")
+                .isNotIn(401, 403);
     }
 
     @Test
@@ -113,7 +120,8 @@ class AutorizacaoWebIT extends AbstractPostgresIT {
         rebaixarParaRecepcao();
         String token = entrar();
 
-        assertThat(get(ROTA_PROTEGIDA, token).statusCode()).isEqualTo(404);
+        assertThat(get(ROTA_PROTEGIDA, token).statusCode())
+                .as("passou pela autorização").isNotIn(401, 403);
     }
 
     @Test

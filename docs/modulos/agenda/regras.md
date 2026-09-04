@@ -237,3 +237,50 @@ recepção mostrariam horários desencontrados (9h05 numa, 9h00 na outra) e o di
 `BuscaDeEncaixe.horarios`.
 **Rotinas.** RT-AGD-001, RT-AGD-011 · **Teste.** `BuscaDeEncaixeTest.granularidade_manda`
 **Configurável?** Sim, por salão (5 a 60 minutos) · **Origem.** 2026-09-04
+
+---
+
+### RN-AGD-013 — Quem marca decide o status inicial
+
+**Enunciado.** Agendamento criado com origem `PAINEL` ou `RECORRENCIA` nasce `CONFIRMADO`; com
+origem `WEB` ou `WHATSAPP`, nasce `SOLICITADO`.
+
+**Motivo.** Quem marca no balcão já falou com a cliente ali — pedir confirmação seria criar
+trabalho para confirmar o que acabou de ser combinado. Quem marca sozinho pelo site ou pelo
+WhatsApp não passou por ninguém do salão: sem a distinção, a agenda de sábado encheria de horário
+que ninguém validou, e o salão descobriria no sábado.
+
+Os dois ocupam a agenda igualmente (`StatusAgendamento.OCUPAM_A_AGENDA`) — a diferença é sobre
+quem precisa olhar, não sobre reservar o horário.
+
+**Onde é garantida.** `StatusAgendamento.inicialPara`.
+**Rotinas.** RT-AGD-002, RT-AGD-004, RT-CNV-005 · **Teste.**
+`CriarAgendamentoIT.origem_decide_o_status`
+**Configurável?** Não hoje. É candidato natural a virar configuração do salão
+**Origem.** 2026-09-04
+
+---
+
+### RN-AGD-014 — A unidade do recurso é escolhida na marcação, não contada
+
+**Enunciado.** Ao criar um agendamento, cada bloco que exige recurso recebe uma **unidade**
+concreta (`1..quantidade`), a primeira livre no período.
+
+**Motivo.** `recurso` é contável (RN-CAT-009) e `EXCLUDE` garante *no máximo um*, não *no máximo
+três*. Contar na aplicação — "dois lavatórios ocupados, ainda cabe" — é verificação sob
+concorrência sem trava: duas marcações simultâneas passam pela mesma contagem e estouram a
+capacidade. Escolhendo qual unidade, a constraint sobre `(recurso_id, unidade, periodo)` devolve a
+garantia ao banco, com o mesmo mecanismo que protege a jornada.
+
+**Custo aceito.** A escolha é gulosa. Em grafo de intervalos, alocar por ordem de *início* é ótimo
+— mas as marcações não chegam nessa ordem, e uma marcação posterior que comece antes pode ser
+recusada mesmo cabendo com um rearranjo. Com dois ou três lavatórios pode nunca aparecer: medir
+antes de complicar.
+
+**Onde é garantida.** `AlocadorDeUnidades.primeiraLivre` · constraint
+`bloco_sem_sobreposicao_recurso` (V25).
+**Rotinas.** RT-AGD-002, RT-AGD-003 · **Teste.** `CriarAgendamentoIT.aloca_a_segunda_unidade`,
+`CriarAgendamentoIT.recurso_indisponivel_retorna_409`,
+`DisponibilidadeIT.banco_garante_capacidade_por_unidade`
+**Erro.** `ER-AGD-RECURSO_OCUPADO` (409) · **Configurável?** Não
+**Origem.** 2026-09-04

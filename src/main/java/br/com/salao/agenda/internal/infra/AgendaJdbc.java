@@ -1,8 +1,16 @@
 package br.com.salao.agenda.internal.infra;
 
+import br.com.salao.agenda.api.AgendamentoResumo;
+import br.com.salao.agenda.api.BlocoDoAgendamento;
 import br.com.salao.agenda.api.Janela;
+import br.com.salao.agenda.api.OrigemDoAgendamento;
+import br.com.salao.agenda.api.StatusAgendamento;
+import br.com.salao.catalogo.api.TipoDeBloco;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.Collection;
+import java.util.Optional;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -75,6 +83,146 @@ public class AgendaJdbc {
 
     private static Instant instante(OffsetDateTime valor) {
         return valor.toInstant();
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-002
+
+    /**
+     * Quais unidades de quais recursos estão tomadas no período.
+     *
+     * <p>Uma consulta para todos os recursos da receita: um serviço pode exigir lavatório e
+     * cadeira, e duas idas ao banco para alocar duas unidades seria o começo de uma por bloco.
+     */
+    @Transactional(readOnly = true)
+    public Map<UUID, List<UnidadeOcupada>> unidadesOcupadas(Collection<UUID> recursos,
+                                                            Janela periodo) {
+        if (recursos.isEmpty()) {
+            return Map.of();
+        }
+        var porRecurso = new LinkedHashMap<UUID, List<UnidadeOcupada>>();
+        jdbc.sql("""
+                select recurso_id, unidade, lower(periodo) as inicio, upper(periodo) as fim
+                  from agendamento_bloco
+                 where recurso_id in (:recursos)
+                   and periodo && tstzrange(:inicio, :fim)
+                   and status in ('SOLICITADO', 'CONFIRMADO', 'EM_ATENDIMENTO')
+                """)
+                .param("recursos", List.copyOf(recursos))
+                .param("inicio", OffsetDateTime.ofInstant(periodo.inicio(), ZoneOffset.UTC))
+                .param("fim", OffsetDateTime.ofInstant(periodo.fim(), ZoneOffset.UTC))
+                .query((rs, n) -> Map.entry(rs.getObject("recurso_id", UUID.class),
+                        new UnidadeOcupada(rs.getInt("unidade"),
+                                new Janela(instante(rs.getObject("inicio", OffsetDateTime.class)),
+                                        instante(rs.getObject("fim", OffsetDateTime.class))))))
+                .list()
+                .forEach(entrada -> porRecurso
+                        .computeIfAbsent(entrada.getKey(), id -> new ArrayList<>())
+                        .add(entrada.getValue()));
+        return porRecurso;
+    }
+
+    public record UnidadeOcupada(int unidade, Janela janela) {
+    }
+
+    public UUID inserirCabeca(UUID estabelecimentoId, UUID clienteId, UUID profissionalId,
+                              UUID servicoId, StatusAgendamento status, Janela periodo,
+                              OrigemDoAgendamento origem, String observacao, UUID criadoPor) {
+        return jdbc.sql("""
+                insert into agendamento (estabelecimento_id, cliente_id, profissional_id,
+                                         servico_id, status, inicio, fim, origem, observacao,
+                                         criado_por)
+                values (:estabelecimento, :cliente, :profissional, :servico, :status, :inicio,
+                        :fim, :origem, :observacao, :criadoPor)
+                returning id
+                """)
+                .param("estabelecimento", estabelecimentoId)
+                .param("cliente", clienteId)
+                .param("profissional", profissionalId)
+                .param("servico", servicoId)
+                .param("status", status.name())
+                .param("inicio", OffsetDateTime.ofInstant(periodo.inicio(), ZoneOffset.UTC))
+                .param("fim", OffsetDateTime.ofInstant(periodo.fim(), ZoneOffset.UTC))
+                .param("origem", origem.name())
+                .param("observacao", observacao)
+                .param("criadoPor", criadoPor)
+                .query(UUID.class)
+                .single();
+    }
+
+    /** Os blocos, um a um. São três ou cinco — lote aqui seria otimizar o que não dói. */
+    public void inserirBlocos(UUID estabelecimentoId, UUID agendamentoId,
+                              List<BlocoDoAgendamento> blocos, StatusAgendamento status) {
+        for (BlocoDoAgendamento bloco : blocos) {
+            jdbc.sql("""
+                    insert into agendamento_bloco (estabelecimento_id, agendamento_id, ordem,
+                                                   tipo, profissional_id, recurso_id, unidade,
+                                                   periodo, status)
+                    values (:estabelecimento, :agendamento, :ordem, :tipo, :profissional,
+                            :recurso, :unidade, tstzrange(:inicio, :fim), :status)
+                    """)
+                    .param("estabelecimento", estabelecimentoId)
+                    .param("agendamento", agendamentoId)
+                    .param("ordem", bloco.ordem())
+                    .param("tipo", bloco.tipo().name())
+                    .param("profissional", bloco.profissionalId())
+                    .param("recurso", bloco.recursoId())
+                    .param("unidade", bloco.unidade())
+                    .param("inicio", OffsetDateTime.ofInstant(bloco.janela().inicio(),
+                            ZoneOffset.UTC))
+                    .param("fim", OffsetDateTime.ofInstant(bloco.janela().fim(), ZoneOffset.UTC))
+                    .param("status", status.name())
+                    .update();
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<AgendamentoResumo> porId(UUID agendamentoId) {
+        record Cabeca(UUID id, UUID clienteId, UUID profissionalId, UUID servicoId,
+                      StatusAgendamento status, Instant inicio, Instant fim,
+                      OrigemDoAgendamento origem, String observacao, int versao) {
+        }
+        Optional<Cabeca> cabeca = jdbc.sql("""
+                select id, cliente_id, profissional_id, servico_id, status, inicio, fim,
+                       origem, observacao, versao
+                  from agendamento where id = :id
+                """)
+                .param("id", agendamentoId)
+                .query((rs, n) -> new Cabeca(rs.getObject("id", UUID.class),
+                        rs.getObject("cliente_id", UUID.class),
+                        rs.getObject("profissional_id", UUID.class),
+                        rs.getObject("servico_id", UUID.class),
+                        StatusAgendamento.valueOf(rs.getString("status")),
+                        rs.getObject("inicio", OffsetDateTime.class).toInstant(),
+                        rs.getObject("fim", OffsetDateTime.class).toInstant(),
+                        OrigemDoAgendamento.valueOf(rs.getString("origem")),
+                        rs.getString("observacao"), rs.getInt("versao")))
+                .optional();
+
+        return cabeca.map(c -> new AgendamentoResumo(c.id(), c.clienteId(), c.profissionalId(),
+                c.servicoId(), c.status(), c.inicio(), c.fim(), c.origem(), c.observacao(),
+                blocosDe(agendamentoId), c.versao()));
+    }
+
+    private List<BlocoDoAgendamento> blocosDe(UUID agendamentoId) {
+        return jdbc.sql("""
+                select ordem, tipo, profissional_id, recurso_id, unidade,
+                       lower(periodo) as inicio, upper(periodo) as fim
+                  from agendamento_bloco
+                 where agendamento_id = :id
+                 order by ordem, recurso_id nulls first
+                """)
+                .param("id", agendamentoId)
+                .query((rs, n) -> {
+                    int unidade = rs.getInt("unidade");
+                    Integer qual = rs.wasNull() ? null : unidade;
+                    return new BlocoDoAgendamento(rs.getInt("ordem"),
+                            TipoDeBloco.valueOf(rs.getString("tipo")),
+                            new Janela(instante(rs.getObject("inicio", OffsetDateTime.class)),
+                                    instante(rs.getObject("fim", OffsetDateTime.class))),
+                            rs.getObject("profissional_id", UUID.class),
+                            rs.getObject("recurso_id", UUID.class), qual);
+                })
+                .list();
     }
 
     public record Ocupacoes(Map<UUID, List<Janela>> porProfissional,

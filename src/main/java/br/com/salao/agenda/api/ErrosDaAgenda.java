@@ -16,7 +16,38 @@ public enum ErrosDaAgenda implements CodigoDeErro {
      * quando o problema é que aquela pessoa não faz aquilo. RN-AGD-001 com nome.
      */
     PROFISSIONAL_NAO_EXECUTA("ER-AGD-PROFISSIONAL_NAO_EXECUTA", HttpStatus.UNPROCESSABLE_ENTITY,
-            "Profissional não executa este serviço");
+            "Profissional não executa este serviço"),
+
+    /**
+     * RN-AGD-004 — o horário foi tomado, inclusive na corrida perdida contra o banco.
+     *
+     * <p>É o erro que o front trata como estado normal e não como falha: recarrega a faixa e
+     * mostra o que sobrou (R-UX-20). Duas clientes na mesma cadeira foi a reclamação nº 1 do
+     * caderno.
+     */
+    CONFLITO_HORARIO("ER-AGD-CONFLITO_HORARIO", HttpStatus.CONFLICT,
+            "Horário já ocupado"),
+
+    /** RN-AGD-005 — nenhuma unidade do recurso está livre no período. */
+    RECURSO_OCUPADO("ER-AGD-RECURSO_OCUPADO", HttpStatus.CONFLICT,
+            "Nenhum recurso livre neste horário"),
+
+    /** RN-AGD-002 — fora da jornada, e sem permissão (ou vontade) de forçar. */
+    FORA_DA_JORNADA("ER-AGD-FORA_DA_JORNADA", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Horário fora da jornada do profissional"),
+
+    /** RN-AGD-008 — a recepção lança atendimento de ontem; só admin pode. */
+    DATA_PASSADA("ER-AGD-DATA_PASSADA", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Não se agenda no passado"),
+
+    SERVICO_INATIVO("ER-AGD-SERVICO_INATIVO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Serviço fora do cardápio"),
+
+    CLIENTE_NAO_ENCONTRADO("ER-AGD-CLIENTE_NAO_ENCONTRADO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Cliente não encontrado"),
+
+    AGENDAMENTO_NAO_ENCONTRADO("ER-AGD-AGENDAMENTO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
+            "Agendamento não encontrado");
 
     private final String codigo;
     private final HttpStatus status;
