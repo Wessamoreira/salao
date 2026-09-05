@@ -628,6 +628,50 @@ public class AgendaJdbc {
         return porAgendamento;
     }
 
+    // ------------------------------------------------------------------ RT-NOT-002
+
+    /** O que o lembrete precisa saber. Nada de nome: quem monta o texto busca pela API. */
+    public record AgendamentoALembrar(UUID id, UUID clienteId, UUID profissionalId,
+                                      Instant inicio) {
+    }
+
+    /**
+     * Os agendamentos que merecem lembrete agora.
+     *
+     * <p>Três filtros, e cada um responde a uma pergunta que o salão faria:
+     *
+     * <ul>
+     *   <li><strong>Janela de início.</strong> "Amanhã" é uma faixa larga de propósito: com uma
+     *       faixa estreita, uma execução perdida (reinício, deploy) deixaria aquelas clientes sem
+     *       lembrete nenhum, em silêncio. Larga, a execução seguinte alcança as mesmas — e a
+     *       duplicata é impedida por RN-NOT-003, não por precisão de horário.</li>
+     *   <li><strong>Idade do agendamento.</strong> Quem acabou de marcar não precisa ser lembrada
+     *       do que acabou de combinar no balcão.</li>
+     *   <li><strong>Status.</strong> Só o que ainda vai acontecer. Lembrar de um cancelado é o
+     *       tipo de mensagem que faz a cliente aparecer para um horário que não existe.</li>
+     * </ul>
+     */
+    @Transactional(readOnly = true)
+    public List<AgendamentoALembrar> aLembrar(Instant de, Instant ate, Instant criadoAte) {
+        return jdbc.sql("""
+                select id, cliente_id, profissional_id, inicio
+                  from agendamento
+                 where inicio >= :de and inicio < :ate
+                   and criado_em <= :criadoAte
+                   and status in ('SOLICITADO', 'CONFIRMADO')
+                 order by inicio
+                """)
+                .param("de", OffsetDateTime.ofInstant(de, ZoneOffset.UTC))
+                .param("ate", OffsetDateTime.ofInstant(ate, ZoneOffset.UTC))
+                .param("criadoAte", OffsetDateTime.ofInstant(criadoAte, ZoneOffset.UTC))
+                .query((rs, n) -> new AgendamentoALembrar(
+                        rs.getObject("id", UUID.class),
+                        rs.getObject("cliente_id", UUID.class),
+                        rs.getObject("profissional_id", UUID.class),
+                        rs.getObject("inicio", OffsetDateTime.class).toInstant()))
+                .list();
+    }
+
     public record Ocupacoes(Map<UUID, List<Janela>> porProfissional,
                             Map<UUID, List<Janela>> porRecurso) {
 

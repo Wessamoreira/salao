@@ -34,8 +34,8 @@ mandar.
 | Rotina | Situação |
 |---|---|
 | [RT-NOT-001](RT-NOT-001-envio.md) — envio com template, retry e opt-out | implementada |
-| RT-NOT-002 — lembrete 24h antes | próxima |
+| [RT-NOT-002](RT-NOT-002-lembrete.md) — lembrete 24h antes | implementada |
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-NOT-001 a RN-NOT-003.
+Ver [regras.md](regras.md) — RN-NOT-001 a RN-NOT-004.

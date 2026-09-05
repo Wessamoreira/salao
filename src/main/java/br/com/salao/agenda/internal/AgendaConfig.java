@@ -17,6 +17,7 @@ import br.com.salao.agenda.internal.application.ReagendarUseCase;
 import br.com.salao.agenda.internal.application.RegistrarNoShowUseCase;
 import br.com.salao.agenda.internal.application.FilaDeEsperaUseCase;
 import br.com.salao.agenda.internal.infra.AgendaJdbc;
+import br.com.salao.agenda.internal.infra.LembradorDeAgendamentos;
 import br.com.salao.agenda.internal.infra.FilaDeEsperaJdbc;
 import br.com.salao.catalogo.api.RecursoApi;
 import br.com.salao.catalogo.api.ServicoApi;
@@ -25,6 +26,8 @@ import br.com.salao.cliente.api.ClienteApi;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.shared.idempotencia.Idempotencia;
+import br.com.salao.notificacao.api.NotificacaoApi;
+import br.com.salao.shared.manutencao.ConexaoDeManutencao;
 import br.com.salao.shared.tempo.Relogio;
 import javax.sql.DataSource;
 import org.springframework.context.ApplicationEventPublisher;
@@ -187,5 +190,16 @@ public class AgendaConfig {
                                                        EstabelecimentoApi estabelecimentos,
                                                        Relogio relogio) {
         return new PainelDoBalcaoUseCase(agenda, equipe, clientes, estabelecimentos, relogio);
+    }
+
+    // ------------------------------------------------------------------ RT-NOT-002
+
+    @Bean
+    public LembradorDeAgendamentos lembradorDeAgendamentos(
+            ConexaoDeManutencao manutencao, AgendaJdbc agenda, NotificacaoApi notificacao,
+            ClienteApi clientes, ProfissionalApi equipe, EstabelecimentoApi estabelecimentos,
+            Relogio relogio) {
+        return new LembradorDeAgendamentos(manutencao, agenda, notificacao, clientes, equipe,
+                estabelecimentos, relogio);
     }
 }

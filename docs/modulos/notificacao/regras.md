@@ -71,3 +71,29 @@ passariam pela mesma checagem.
 `MensagensJdbc.enfileirar`.
 **Rotinas.** RT-NOT-001, RT-NOT-002 · **Teste.** `NotificacaoIT.referencia_impede_duplicata`
 **Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-NOT-004 — O lembrete tem janela larga e idade mínima
+
+**Enunciado.** O lembrete é gerado para agendamentos que começam entre 12 e 26 horas à frente, cujo
+registro tenha ao menos 2 horas, e que ainda ocupem a agenda.
+
+**Motivo.** A janela é larga porque uma faixa estreita deixaria sem lembrete todas as clientes
+daquela hora se a execução falhasse — e o silêncio não aparece em lugar nenhum. Repetir é barato;
+perder é caro. A duplicata é impedida pela referência única (RN-NOT-003), não pela precisão do
+agendamento do job: apoiar a correção no relógio seria trocar uma garantia do banco por uma do
+sistema operacional.
+
+A idade mínima existe porque quem combinou o horário no balcão há dez minutos não precisa de uma
+mensagem dizendo o que acabou de combinar. A regra adia o lembrete, não o cancela — a janela larga
+alcança a mesma cliente na execução seguinte.
+
+E só o que ainda ocupa a agenda: lembrar de um cancelado faz a cliente aparecer para um horário que
+não existe.
+
+**Onde é garantida.** `LembradorDeAgendamentos` · `AgendaJdbc.aLembrar`.
+**Rotinas.** RT-NOT-002 · **Teste.** `LembradorDeAgendamentosIT.nao_duplica`,
+`LembradorDeAgendamentosIT.recem_marcado_nao_lembra`,
+`LembradorDeAgendamentosIT.cancelado_nao_lembra`
+**Configurável?** Ainda não, e deveria ser por salão · **Origem.** 2026-09-05

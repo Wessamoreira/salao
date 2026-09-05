@@ -87,8 +87,29 @@ Escopo `:own` é filtro de query, não de tela. Acesso a id de outro devolve **4
 
 ## Dependências
 
-`catalogo` (serviço, blocos, recursos) · `equipe` (jornada, exceções, habilidade, duração) ·
-`cliente` (**só `existe`**, para validar o vínculo sem carregar dado pessoal). Três é o teto
-aceitável; uma quarta dependência exige revisar a fronteira — e o teto foi atingido em RT-AGD-002.
+**Fontes** — de onde a agenda lê para decidir:
 
-`iam` (`AuditoriaApi`, `EstabelecimentoApi`) não conta: todo módulo depende dele.
+`catalogo` (serviço, blocos, recursos) · `equipe` (jornada, exceções, habilidade, duração) ·
+`cliente` (**só `existe`**, para validar o vínculo sem carregar dado pessoal).
+
+Três é o teto, e ele foi atingido em RT-AGD-002. Uma quarta **fonte** exige revisar a fronteira:
+cada uma é um lugar de onde a agenda precisa saber algo para tomar sua decisão, e mais de três
+significa que a decisão não é dela.
+
+**Destino** — para onde a agenda manda o que decidiu:
+
+`notificacao` (`NotificacaoApi.enfileirar`), desde RT-NOT-002.
+
+**A revisão que RT-NOT-002 exigiu.** À primeira vista é a quarta dependência e deveria disparar a
+regra. Ela é de outra natureza, e a distinção vale ser escrita: uma fonte é algo de que a agenda
+*depende para decidir*; um destino é algo a quem ela *conta o que decidiu*. O destino não participa
+de nenhuma regra da agenda, não pode recusar nada, e trocá-lo por outro não muda uma linha de
+lógica — o lembrete continua sendo devido no mesmo instante, mande quem mandar.
+
+O teto de três continua valendo **para fontes**. Destinos são contados à parte, e a pergunta que os
+limita é outra: quantos lugares precisam saber o que a agenda decidiu?
+
+*(O sentido da seta importa: `notificacao` nunca chama `agenda`. Se um dia chamar, virou fonte e
+conta no teto.)*
+
+`iam` (`AuditoriaApi`, `EstabelecimentoApi`) não conta em nenhum dos dois: todo módulo depende dele.
