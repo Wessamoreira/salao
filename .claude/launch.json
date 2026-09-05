@@ -2,11 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "previa-clientes",
+      "name": "previa-agenda",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "previa", "--prefix", "frontend"],
-      "port": 5174,
-      "url": "http://localhost:5174"
+      "runtimeArgs": ["--prefix", "frontend", "run", "previa:agenda"],
+      "port": 5174
     }
   ]
 }

@@ -468,4 +468,23 @@ public class ClientesJdbc implements ClienteApi {
     public boolean existe(UUID clienteId) {
         return !jdbc.sql(EXISTE).param("id", clienteId).query(Integer.class).list().isEmpty();
     }
+
+    // ------------------------------------------------------------------ RT-AGD-011
+
+    /** Ver {@code ClienteApi.nomesDe} — só o nome, numa consulta, para a grade da agenda. */
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.Map<UUID, String> nomesDe(java.util.Collection<UUID> clienteIds) {
+        if (clienteIds.isEmpty()) {
+            return java.util.Map.of();
+        }
+        var nomes = new java.util.LinkedHashMap<UUID, String>();
+        jdbc.sql("select id, nome from cliente where id in (:ids)")
+                .param("ids", List.copyOf(clienteIds))
+                .query((rs, n) -> java.util.Map.entry(rs.getObject("id", UUID.class),
+                        rs.getString("nome")))
+                .list()
+                .forEach(entrada -> nomes.put(entrada.getKey(), entrada.getValue()));
+        return nomes;
+    }
 }

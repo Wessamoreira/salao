@@ -1,0 +1,398 @@
+/*
+ * A grade da agenda.
+ *
+ * Referência é calendário nativo, não dashboard: a recepção lê isto com o telefone no
+ * ombro. Densidade alta, cor só onde carrega informação, e nenhuma sombra em card.
+ */
+
+.agenda {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-3);
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------------ cabeçalho */
+
+.agenda-topo {
+  display: flex;
+  align-items: center;
+  gap: var(--e-4);
+  padding: var(--e-3) var(--e-4);
+  border-bottom: 1px solid var(--regua-forte);
+}
+
+.agenda-data {
+  font-size: var(--t-16);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  /* Numeral tabular: a data muda de largura a cada clique na seta, e sem `tnum` o
+     título dança de um lado para o outro. */
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda-dia-da-semana {
+  font-size: var(--t-12);
+  color: var(--tinta-fraca);
+  text-transform: capitalize;
+}
+
+.agenda-navegacao { display: flex; gap: var(--e-1); }
+
+.agenda-navegacao button {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--e-2);
+  font: inherit;
+  font-size: var(--t-12);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  cursor: pointer;
+}
+.agenda-navegacao button:hover { background: var(--papel-fundo); }
+
+/* ------------------------------------------------------------------ colunas */
+
+.agenda-corpo {
+  display: flex;
+  flex-grow: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.agenda-horas {
+  position: relative;
+  flex-shrink: 0;
+  width: 52px;
+  border-right: 1px solid var(--regua-forte);
+}
+
+.agenda-hora {
+  position: absolute;
+  right: var(--e-1);
+  /* Sobe meia linha para o número ficar encostado na régua, e não flutuando abaixo. */
+  transform: translateY(-50%);
+  font-size: var(--t-11);
+  font-variant-numeric: tabular-nums;
+  /* --tinta-tenue mede 2.53 sobre papel e não serve para texto (docs/16). Aqui vale
+     --tinta-fraca, que passa em AA sobre --papel. */
+  color: var(--tinta-fraca);
+}
+
+.agenda-colunas { display: flex; flex-grow: 1; min-width: 0; }
+
+.agenda-coluna {
+  flex: 1 1 0;
+  min-width: 148px;
+  border-right: 1px solid var(--regua);
+}
+.agenda-coluna:last-child { border-right: none; }
+
+.agenda-profissional {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  height: 44px;
+  padding: 0 var(--e-3);
+  background: var(--papel);
+  border-bottom: 1px solid var(--regua-forte);
+}
+
+.agenda-inicial {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  font-size: var(--t-11);
+  font-weight: 600;
+  color: var(--tinta);
+  background: var(--papel-afundado);
+  border-radius: 50%;
+}
+
+.agenda-nome {
+  flex-grow: 1;
+  min-width: 0;
+  font-size: var(--t-12);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*
+ * A carga do dia — o número que decide se dá para encaixar mais um.
+ * A crítica de design apontou a falta dele como segundo achado mais sério.
+ */
+.agenda-carga {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.agenda-carga strong {
+  font-size: var(--t-11);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.agenda-carga-barra {
+  width: 34px;
+  height: 3px;
+  background: var(--regua);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.agenda-carga-barra div { height: 100%; background: var(--tinta-fraca); }
+
+/* ------------------------------------------------------------------ pista */
+
+.agenda-pista { position: relative; }
+
+.agenda-linha {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--regua);
+}
+.agenda-linha.cheia { border-top-color: var(--regua-forte); }
+
+/* Fora da jornada: afundado, não branco. Coluna vazia e clara parece disponível. */
+.agenda-fora-da-jornada {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: var(--papel-afundado);
+}
+
+/*
+ * A linha do agora — o achado mais sério da crítica: sem ela, um calendário é uma
+ * tabela. Vermelho aqui é informação, não decoração, e é a única cor da tela que não
+ * vem de um status.
+ */
+.agenda-agora {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px solid var(--status-falta);
+  z-index: 1;
+  pointer-events: none;
+}
+/*
+ * O selo com a hora, na régua — e ele não é enfeite.
+ *
+ * A linha do agora é vermelha, e a falta também: sem o selo, uma linha vermelha
+ * atravessando a grade tem dois significados possíveis, e o pior é que ela cruza
+ * justamente os blocos de falta. O selo diz qual dos dois é.
+ *
+ * Fica só na régua, uma vez. Um marcador por coluna repetiria a mesma informação
+ * quatro vezes numa tela que já é densa.
+ */
+.agenda-selo-agora {
+  position: absolute;
+  right: var(--e-1);
+  transform: translateY(-50%);
+  padding: 1px var(--e-1);
+  font-size: var(--t-10);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  color: var(--papel);
+  background: var(--status-falta);
+  border-radius: var(--raio-2);
+  z-index: 3;
+}
+
+/* ------------------------------------------------------------------ tarjas */
+
+.agenda-bloco {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  padding: var(--e-1) 5px;
+  overflow: hidden;
+  font-size: var(--t-11);
+  line-height: 1.25;
+  text-align: left;
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-left-width: 3px;
+  border-radius: var(--raio-2);
+  cursor: pointer;
+}
+.agenda-bloco:focus-visible { outline: 2px solid var(--tinta); outline-offset: 1px; }
+
+.agenda-bloco .hora {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.agenda-bloco .cliente {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--tinta-fraca);
+}
+
+/*
+ * Forma além de cor (docs/16, decisão 2): daltonismo é comum, e em preto e branco a
+ * tela precisa continuar legível. Cada status tem borda própria além da matiz.
+ */
+.agenda-bloco.confirmado {
+  background: var(--status-confirmado-fundo);
+  border-color: var(--status-confirmado);
+  border-left-style: solid;
+}
+.agenda-bloco.solicitado {
+  background: var(--status-solicitado-fundo);
+  border-color: var(--status-solicitado);
+  border-style: dashed;
+  border-left-style: dashed;
+}
+.agenda-bloco.atendendo {
+  background: var(--status-atendendo-fundo);
+  border-color: var(--status-atendendo);
+}
+.agenda-bloco.falta {
+  background: var(--status-falta-fundo);
+  border-color: var(--status-falta);
+}
+.agenda-bloco.falta .cliente { text-decoration: line-through; }
+
+/*
+ * Cancelado sai da grade sem sumir: o buraco precisa ser visível na agenda de ontem.
+ *
+ * Sem `opacity`, e a razão é medível. Opacidade no container compõe o texto com o
+ * fundo e derruba o contraste real — mas a medição continua lendo a cor DECLARADA e
+ * diz que está tudo bem. É um jeito de reprovar em AA passando na verificação.
+ *
+ * O que distingue um cancelado é forma: borda tracejada neutra, sem preenchimento,
+ * texto riscado. É o que o sistema pede (decisão 2) e sobrevive em preto e branco.
+ */
+.agenda-bloco.cancelado {
+  background: transparent;
+  border-color: var(--regua-forte);
+  border-style: dashed;
+}
+.agenda-bloco.cancelado .hora,
+.agenda-bloco.cancelado .cliente {
+  color: var(--tinta-fraca);
+  text-decoration: line-through;
+}
+
+/*
+ * A pausa — a peça que distingue este sistema de uma agenda genérica.
+ *
+ * Hachura diagonal e nenhum texto: a cliente está no salão e a profissional está livre.
+ * Desenhá-la como o bloco cheio faria a grade mentir sobre a ocupação dela.
+ */
+.agenda-bloco.pausa {
+  background: repeating-linear-gradient(
+    45deg, transparent, transparent 4px,
+    var(--papel-afundado) 4px, var(--papel-afundado) 8px);
+  border-color: var(--regua);
+  border-left-width: 1px;
+  cursor: default;
+}
+
+/*
+ * Bloqueio: hachura, e texto em --tinta cheia.
+ *
+ * --tinta-fraca mede 4.67 contra o papel e pareceria aprovado — mas a hachura alterna
+ * --papel-afundado e --regua, e sobre a listra escura a razão cai abaixo de AA. Fundo
+ * padronado não tem UM contraste: tem o do pior pixel, e é esse que vale.
+ */
+.agenda-bloco.bloqueio {
+  background: repeating-linear-gradient(
+    -45deg, var(--papel-afundado), var(--papel-afundado) 5px,
+    var(--regua) 5px, var(--regua) 6px);
+  border-color: var(--regua-forte);
+  border-left-width: 1px;
+}
+.agenda-bloco.bloqueio .cliente { color: var(--tinta); }
+
+.agenda-vazia {
+  display: grid;
+  place-items: center;
+  padding: var(--e-10) var(--e-4);
+  text-align: center;
+  color: var(--tinta-fraca);
+  font-size: var(--t-14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agenda * { transition: none !important; }
+}
+
+/* ------------------------------------------------------------------ detalhe */
+
+/*
+ * O que não cabe na tarja.
+ *
+ * Uma tarja de 20px comporta a hora e um nome truncado. O resto — nome inteiro,
+ * status por extenso, quanto custa da agenda — precisa de algum lugar, e sem ele o
+ * clique na tarja seria affordance falsa: um botão que não faz nada é pior que um
+ * bloco que não é botão.
+ *
+ * Painel lateral e não diálogo: a recepção precisa continuar vendo a grade enquanto
+ * lê, porque a pergunta seguinte é sempre "e o que tem em volta?".
+ */
+.agenda-detalhe {
+  flex-shrink: 0;
+  width: 232px;
+  padding: var(--e-4);
+  background: var(--papel);
+  border-left: 1px solid var(--regua-forte);
+  overflow-y: auto;
+}
+
+.agenda-detalhe h3 {
+  margin: 0 0 var(--e-1);
+  font-size: var(--t-16);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.agenda-detalhe dl {
+  margin: var(--e-4) 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--e-2) var(--e-3);
+  font-size: var(--t-12);
+}
+.agenda-detalhe dt {
+  font-size: var(--t-10);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+  align-self: center;
+}
+.agenda-detalhe dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda-detalhe-fechar {
+  float: right;
+  padding: 0 var(--e-1);
+  font: inherit;
+  font-size: var(--t-14);
+  color: var(--tinta-fraca);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.agenda-detalhe-fechar:hover { color: var(--tinta); }

@@ -2,6 +2,7 @@ package br.com.salao.agenda.internal;
 
 import br.com.salao.agenda.api.DisponibilidadeApi;
 import br.com.salao.agenda.internal.application.BloquearGradeUseCase;
+import br.com.salao.agenda.internal.application.AgendaDoDiaUseCase;
 import br.com.salao.agenda.internal.application.CancelarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConfirmarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarAgendamentoUseCase;
@@ -166,5 +167,14 @@ public class AgendaConfig {
                                                    AuditoriaApi auditoria) {
         return new FilaDeEsperaUseCase(fila, clientes, catalogo, equipe, estabelecimentos,
                 auditoria);
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-011
+
+    @Bean
+    public AgendaDoDiaUseCase agendaDoDiaUseCase(AgendaJdbc agenda, ProfissionalApi equipe,
+                                                 ClienteApi clientes,
+                                                 EstabelecimentoApi estabelecimentos) {
+        return new AgendaDoDiaUseCase(agenda, equipe, clientes, estabelecimentos);
     }
 }

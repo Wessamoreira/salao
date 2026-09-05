@@ -82,7 +82,7 @@ Escopo `:own` é filtro de query, não de tela. Acesso a id de outro devolve **4
 | [RT-AGD-008](RT-AGD-008-empurrar-agenda.md) | Empurrar agenda em massa | 1 | **implementada** |
 | [RT-AGD-009](RT-AGD-009-recorrencia.md) | Recorrência | 1 | **implementada** |
 | [RT-AGD-010](RT-AGD-010-fila-de-espera.md) | Fila de espera | 1 | **parcial** (falta a chamada automática) |
-| RT-AGD-011 | Grade de agenda (front) | 1 | rascunho |
+| [RT-AGD-011](RT-AGD-011-grade.md) | Grade de agenda (front) | 1 | **implementada** |
 | RT-AGD-012 | Painel do balcão (SSE) | 1 | rascunho |
 
 ## Dependências

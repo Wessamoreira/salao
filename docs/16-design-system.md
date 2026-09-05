@@ -112,6 +112,19 @@ vermelho por isso — e por já contradizer o próprio argumento de ser discreta
 **`--tinta-tenue` não sobrevive a nenhum uso de texto**, nem como placeholder: 2.53 é ilegível de
 fato, não no papel. Ele fica reservado a traço e separador.
 
+### O que RT-AGD-011 acrescentou
+
+Duas armadilhas que a medição por si só **aprova**:
+
+**`opacity` no container quebra o contraste em silêncio.** A verificação lê a cor declarada, não a
+composta: um bloco com `opacity: 0.65` mede como se fosse opaco e reprova de fato. Opacidade não é
+forma nem cor — é atalho que custa legibilidade. O que distingue um item apagado é borda, traço e
+riscado.
+
+**Fundo padronado não tem um contraste.** Hachura alterna dois tons, e o texto precisa passar contra
+o **pior pixel** — não contra a média nem contra o que a medição encontra subindo a árvore até achar
+um fundo sólido. Texto sobre padrão vai em `--tinta` cheia.
+
 ### Como verificar de novo
 
 A prévia (`frontend/preview/`) roda a tela real sem backend; o console do navegador mede em

@@ -6,6 +6,7 @@ import br.com.salao.agenda.api.OrigemDoAgendamento;
 import br.com.salao.agenda.internal.application.CancelarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConfirmarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarAgendamentoUseCase;
+import br.com.salao.agenda.internal.application.AgendaDoDiaUseCase;
 import br.com.salao.agenda.internal.application.CriarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.EmpurrarAgendaUseCase;
 import br.com.salao.agenda.internal.application.NovoAgendamento;
@@ -19,8 +20,10 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.net.URI;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,6 +32,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -50,6 +54,7 @@ public class AgendamentosController {
     private final CancelarAgendamentoUseCase cancelar;
     private final RegistrarNoShowUseCase registrarFalta;
     private final EmpurrarAgendaUseCase empurrar;
+    private final AgendaDoDiaUseCase agendaDoDia;
     private final ClienteApi clientes;
 
     public AgendamentosController(CriarAgendamentoUseCase criar,
@@ -58,7 +63,8 @@ public class AgendamentosController {
                                   ConfirmarAgendamentoUseCase confirmar,
                                   CancelarAgendamentoUseCase cancelar,
                                   RegistrarNoShowUseCase registrarFalta,
-                                  EmpurrarAgendaUseCase empurrar, ClienteApi clientes) {
+                                  EmpurrarAgendaUseCase empurrar, AgendaDoDiaUseCase agendaDoDia,
+                                  ClienteApi clientes) {
         this.criar = criar;
         this.consultar = consultar;
         this.reagendar = reagendar;
@@ -66,6 +72,7 @@ public class AgendamentosController {
         this.cancelar = cancelar;
         this.registrarFalta = registrarFalta;
         this.empurrar = empurrar;
+        this.agendaDoDia = agendaDoDia;
         this.clientes = clientes;
     }
 
@@ -131,6 +138,18 @@ public class AgendamentosController {
     @GetMapping("/{id}")
     public AgendamentoResponse porId(@PathVariable UUID id) {
         return comNome(consultar.porId(id));
+    }
+
+    /**
+     * RT-AGD-011 — tudo o que a grade de um dia precisa, numa chamada.
+     *
+     * <p>Uma e não quatro: a recepção troca de dia a cada poucos segundos, e cada troca que
+     * dispara quatro requisições produz quatro momentos em que a tela está pela metade.
+     */
+    @GetMapping("/dia")
+    public AgendaDoDiaUseCase.AgendaDoDia doDia(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate data) {
+        return agendaDoDia.executar(data);
     }
 
     // ------------------------------------------------------------------ RT-AGD-003

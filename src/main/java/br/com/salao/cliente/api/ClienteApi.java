@@ -1,6 +1,8 @@
 package br.com.salao.cliente.api;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,4 +39,19 @@ public interface ClienteApi {
 
     /** O que vale hoje para cada finalidade — inclusive as que nunca foram perguntadas. */
     List<EstadoDoConsentimento> consentimentos(UUID clienteId);
+
+    /**
+     * RT-AGD-011 — os nomes de um punhado de clientes, numa consulta.
+     *
+     * <p>Existe para a grade da agenda, que escreve o nome na tarja de cada atendimento: buscar um
+     * a um seria uma consulta por bloco para desenhar um dia.
+     *
+     * <p><strong>Só o nome</strong>, e é a diferença para {@link #porId}. A grade precisa escrever
+     * algo na tarja e nada mais — telefone, e-mail e observação não têm o que fazer numa tela que
+     * mostra trinta pessoas de uma vez, e o que não é carregado não vaza em log.
+     *
+     * <p>Cliente anonimizado devolve o rótulo de anonimizado, como em qualquer outra leitura: a
+     * grade de dois meses atrás não é exceção à LGPD.
+     */
+    Map<UUID, String> nomesDe(Collection<UUID> clienteIds);
 }

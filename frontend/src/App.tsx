@@ -6,6 +6,7 @@ import { Casca } from './layout/Casca';
 import { Protegida } from './layout/Protegida';
 import { Login } from './telas/Login';
 import { SegundoFator } from './telas/SegundoFator';
+import { Agenda } from './telas/agenda/Agenda';
 import { Clientes } from './telas/clientes/Clientes';
 import { Configuracao } from './telas/config/Configuracao';
 import { EmBreve } from './telas/EmBreve';
@@ -47,7 +48,7 @@ export function App() {
             <Route index element={<Navigate to="/agenda" replace />} />
             {/* As telas de negócio chegam nas rotinas das fases 1 a 3. A casca existe
                 para que cada uma entre sem mexer em rota, sessão ou permissão. */}
-            <Route path="/agenda" element={<EmBreve titulo="Agenda" rotina="RT-AGD-011" />} />
+            <Route path="/agenda" element={<Agenda />} />
             <Route path="/comandas" element={<EmBreve titulo="Atendimento" rotina="RT-ATD-008" />} />
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/estoque" element={<EmBreve titulo="Estoque" rotina="RT-EST-001" />} />
