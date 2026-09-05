@@ -170,10 +170,52 @@ class ArquiteturaTest {
         "br.com.salao.iam.internal.application.ConsultarCapacidadesUseCase",
     };
 
+    /**
+     * Casos de uso que <strong>não são porta</strong>: nenhuma requisição os alcança.
+     *
+     * <p>Categoria descoberta em RT-NOT-001, quando a regra pegou
+     * {@code EnfileirarMensagemUseCase} e estava certa em perguntar. A resposta é que ele é API de
+     * módulo: quem o chama é {@code agenda} pedindo um lembrete, já dentro de uma operação
+     * autorizada — e a permissão certa é a de quem chamou, não uma inventada aqui.
+     *
+     * <p>Exigir {@code @PreAuthorize} nele seria pior do que não exigir: qualquer permissão que se
+     * escolhesse estaria errada para algum chamador, e o resultado seria uma tranca que o próprio
+     * sistema teria de contornar.
+     *
+     * <p><strong>A condição para entrar aqui é dura:</strong> não pode existir controller que
+     * chegue nesta classe. No dia em que "mandar mensagem avulsa" virar tela, ela sai desta lista
+     * e ganha permissão de verdade.
+     */
+    private static final String[] NAO_SAO_PORTA = {
+        // Chamado por `agenda` (lembrete, cancelamento) e por `atendimento` (pesquisa), sempre
+        // dentro de uma operação que já checou a sua própria permissão.
+        "br.com.salao.notificacao.internal.application.EnfileirarMensagemUseCase",
+    };
+
     private static DescribedPredicate<JavaClass> foraDaListaDeTrancadosPelaIdentidade() {
-        var permitidas = Set.of(TRANCADOS_PELA_IDENTIDADE);
-        return DescribedPredicate.describe("fora da lista dos trancados pela identidade",
+        var permitidas = new java.util.HashSet<String>();
+        permitidas.addAll(Set.of(TRANCADOS_PELA_IDENTIDADE));
+        permitidas.addAll(Set.of(NAO_SAO_PORTA));
+        return DescribedPredicate.describe("fora das listas de exceção",
                 classe -> !permitidas.contains(classe.getFullName()));
+    }
+
+    /**
+     * O que sustenta a lista acima: nenhum controller alcança um caso de uso que não é porta.
+     *
+     * <p>Sem este teste, {@code NAO_SAO_PORTA} seria uma afirmação sobre o passado. Com ele, a
+     * primeira tela que expuser um desses reprova o build e obriga a decidir a permissão — que é
+     * exatamente o momento em que a decisão precisa ser tomada.
+     */
+    @Test
+    void o_que_nao_e_porta_continua_nao_sendo() {
+        for (String classe : NAO_SAO_PORTA) {
+            noClasses().that().resideInAPackage("..web..")
+                    .should().dependOnClassesThat().haveFullyQualifiedName(classe)
+                    .because(classe + " está na lista de \"não é porta\" e por isso dispensa "
+                            + "@PreAuthorize; um controller chamando-o quebra essa premissa")
+                    .check(CLASSES);
+        }
     }
 
     @Test
