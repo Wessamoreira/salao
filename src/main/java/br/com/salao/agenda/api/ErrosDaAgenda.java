@@ -109,7 +109,23 @@ public enum ErrosDaAgenda implements CodigoDeErro {
             "Dados da recorrência inválidos"),
 
     RECORRENCIA_NAO_ENCONTRADA("ER-AGD-RECORRENCIA_NAO_ENCONTRADA", HttpStatus.NOT_FOUND,
-            "Recorrência não encontrada");
+            "Recorrência não encontrada"),
+
+    /** RT-AGD-010 — janela de dias ou faixa de hora inválida. */
+    ESPERA_INVALIDA("ER-AGD-ESPERA_INVALIDA", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Dados da espera inválidos"),
+
+    /**
+     * A mesma cliente já está na fila para o mesmo serviço.
+     *
+     * <p>Duas entradas seriam duas ligações pela mesma vaga — e a segunda é a que faz o salão
+     * parecer desorganizado justamente com quem já está esperando.
+     */
+    JA_ESTA_NA_FILA("ER-AGD-JA_ESTA_NA_FILA", HttpStatus.CONFLICT,
+            "Esta cliente já está na fila para este serviço"),
+
+    ESPERA_NAO_ENCONTRADA("ER-AGD-ESPERA_NAO_ENCONTRADA", HttpStatus.NOT_FOUND,
+            "Espera não encontrada");
 
     private final String codigo;
     private final HttpStatus status;

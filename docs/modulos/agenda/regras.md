@@ -504,3 +504,25 @@ nada" com aparência de "marcou três". Por isso `CriarRecorrenciaUseCase` não 
 **Rotinas.** RT-AGD-009 · **Teste.** `RecorrenciaIT.parcial_e_o_certo_aqui`,
 `RecorrenciaIT.recusa_nao_envenena_a_transacao`, `RecorrenciaIT.encerrar_cancela_o_futuro`
 **Configurável?** Não · **Origem.** 2026-09-04
+
+---
+
+### RN-AGD-023 — A fila expira pela janela, não por limpeza
+
+**Enunciado.** Uma espera vale para um intervalo de dias e uma faixa de hora opcional. A busca por
+candidatos filtra por essa janela, então uma espera vencida deixa de ser oferecida sozinha — sem
+job, sem limpeza. Ela continua visível na fila para quem quiser resolver.
+
+**Motivo.** Uma fila que dependesse de um job para dar a resposta certa daria a resposta errada
+exatamente quando o job falhasse. E ninguém percebe um job que não roda até alguém ser chamado para
+um horário de duas semanas atrás.
+
+**Corolário — a hora é relógio de parede.** A faixa é comparada em `LocalTime` no fuso do salão, não
+em instante: "quinta à tarde" é uma frase sobre o relógio da parede, e comparar instantes faria a
+faixa escorregar uma hora na virada do horário de verão. Por isso o banco filtra serviço,
+profissional e dias, e o domínio decide a hora.
+
+**Onde é garantida.** `FilaDeEsperaJdbc.candidatosA` (índice) · `EsperaNaFila.serve` (domínio).
+**Rotinas.** RT-AGD-010 · **Teste.** `FilaDeEsperaIT.janela_vencida_some_sozinha`,
+`EsperaNaFilaTest.hora_de_parede_e_nao_instante`, `EsperaNaFilaTest.faixa_de_hora`
+**Configurável?** Por espera, é a própria janela · **Origem.** 2026-09-04

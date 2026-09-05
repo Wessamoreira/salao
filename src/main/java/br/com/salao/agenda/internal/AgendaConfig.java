@@ -13,7 +13,9 @@ import br.com.salao.agenda.internal.application.EncerrarRecorrenciaUseCase;
 import br.com.salao.agenda.internal.application.RegistroDaSerie;
 import br.com.salao.agenda.internal.application.ReagendarUseCase;
 import br.com.salao.agenda.internal.application.RegistrarNoShowUseCase;
+import br.com.salao.agenda.internal.application.FilaDeEsperaUseCase;
 import br.com.salao.agenda.internal.infra.AgendaJdbc;
+import br.com.salao.agenda.internal.infra.FilaDeEsperaJdbc;
 import br.com.salao.catalogo.api.RecursoApi;
 import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.equipe.api.ProfissionalApi;
@@ -148,5 +150,21 @@ public class AgendaConfig {
             AgendaJdbc agenda, CancelarAgendamentoUseCase cancelar, AuditoriaApi auditoria,
             Relogio relogio) {
         return new EncerrarRecorrenciaUseCase(agenda, cancelar, auditoria, relogio);
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-010
+
+    @Bean
+    public FilaDeEsperaJdbc filaDeEsperaJdbc(DataSource dataSource) {
+        return new FilaDeEsperaJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public FilaDeEsperaUseCase filaDeEsperaUseCase(FilaDeEsperaJdbc fila, ClienteApi clientes,
+                                                   ServicoApi catalogo, ProfissionalApi equipe,
+                                                   EstabelecimentoApi estabelecimentos,
+                                                   AuditoriaApi auditoria) {
+        return new FilaDeEsperaUseCase(fila, clientes, catalogo, equipe, estabelecimentos,
+                auditoria);
     }
 }
