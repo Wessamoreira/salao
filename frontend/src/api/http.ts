@@ -97,6 +97,57 @@ export async function api<T>(caminho: string, init: RequestInit = {}): Promise<T
 }
 
 /** Restaura a sessão no boot trocando o cookie por um token novo. */
+/**
+ * RT-AGD-012 — o stream de avisos do painel.
+ *
+ * `fetch` e não `EventSource`, e a razão é de segurança: `EventSource` não manda
+ * cabeçalho, então autenticar exigiria o token na query string — que fica em log de
+ * proxy, em histórico e em Referer. A regra do projeto é explícita: nunca dado sensível
+ * em parâmetro de URL.
+ *
+ * O corpo de um SSE é texto simples separado por linha em branco. Ler com o
+ * `ReadableStream` do fetch custa vinte linhas e resolve o problema inteiro.
+ *
+ * @returns função que encerra o stream
+ */
+export function ouvirEventos(caminho: string, aoAviso: () => void): () => void {
+  const cancelador = new AbortController();
+
+  (async () => {
+    try {
+      const resposta = await enviar(caminho, {
+        headers: { Accept: 'text/event-stream' },
+        signal: cancelador.signal,
+      }, tokenAtual());
+      if (!resposta.ok || !resposta.body) return;
+
+      const leitor = resposta.body.getReader();
+      const decodificador = new TextDecoder();
+      let restante = '';
+
+      for (;;) {
+        const { done, value } = await leitor.read();
+        if (done) break;
+        restante += decodificador.decode(value, { stream: true });
+
+        // Cada evento termina em linha em branco. O que sobra é evento pela metade e
+        // fica para a próxima leitura — sem isso, um evento partido no meio de um
+        // pacote TCP viraria dois avisos truncados.
+        const partes = restante.split('\n\n');
+        restante = partes.pop() ?? '';
+        for (const parte of partes) {
+          if (parte.includes('event: agenda')) aoAviso();
+        }
+      }
+    } catch {
+      // Rede caiu ou a aba fechou. O painel volta a pedir o retrato quando reconectar;
+      // não há o que registrar aqui além de ruído.
+    }
+  })();
+
+  return () => cancelador.abort();
+}
+
 export async function restaurarSessao(): Promise<boolean> {
   return (await renovarSessao()) !== null;
 }

@@ -11,6 +11,7 @@ import br.com.salao.agenda.internal.application.EmpurrarAgendaUseCase;
 import br.com.salao.agenda.internal.application.CriarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.CriarRecorrenciaUseCase;
 import br.com.salao.agenda.internal.application.EncerrarRecorrenciaUseCase;
+import br.com.salao.agenda.internal.application.PainelDoBalcaoUseCase;
 import br.com.salao.agenda.internal.application.RegistroDaSerie;
 import br.com.salao.agenda.internal.application.ReagendarUseCase;
 import br.com.salao.agenda.internal.application.RegistrarNoShowUseCase;
@@ -176,5 +177,15 @@ public class AgendaConfig {
                                                  ClienteApi clientes,
                                                  EstabelecimentoApi estabelecimentos) {
         return new AgendaDoDiaUseCase(agenda, equipe, clientes, estabelecimentos);
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-012
+
+    @Bean
+    public PainelDoBalcaoUseCase painelDoBalcaoUseCase(AgendaJdbc agenda, ProfissionalApi equipe,
+                                                       ClienteApi clientes,
+                                                       EstabelecimentoApi estabelecimentos,
+                                                       Relogio relogio) {
+        return new PainelDoBalcaoUseCase(agenda, equipe, clientes, estabelecimentos, relogio);
     }
 }

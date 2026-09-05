@@ -526,3 +526,29 @@ profissional e dias, e o domínio decide a hora.
 **Rotinas.** RT-AGD-010 · **Teste.** `FilaDeEsperaIT.janela_vencida_some_sozinha`,
 `EsperaNaFilaTest.hora_de_parede_e_nao_instante`, `EsperaNaFilaTest.faixa_de_hora`
 **Configurável?** Por espera, é a própria janela · **Origem.** 2026-09-04
+
+---
+
+### RN-AGD-024 — O painel avisa que mudou; ele não manda o que mudou
+
+**Enunciado.** O painel do balcão recebe, por SSE em processo, um aviso sem carga útil, e responde
+pedindo o retrato inteiro de novo. O stream **não** passa pelo outbox.
+
+**Motivo.** Um stream de deltas exige que o cliente aplique todos, na ordem, sem perder nenhum — e
+quando ele perde um (reconexão, aba em segundo plano, rede oscilando) a tela fica errada em
+silêncio, para sempre, numa parede que ninguém olha de perto. Pedir o retrato é barato e sempre
+correto.
+
+E não pelo outbox porque eventos duráveis são **reenviados**: um painel que replayasse os
+cancelamentos de ontem ao reconectar mostraria a cliente errada. Perder um aviso enquanto está
+desconectado é o comportamento certo aqui.
+
+**Isolamento.** A conexão é registrada sob o estabelecimento de quem a abriu, fixado na abertura; o
+evento carrega o seu. Sem o casamento, o painel de um salão receberia o movimento do outro — e
+apareceria numa tela pendurada na parede.
+
+**Onde é garantida.** `PainelDeEventos` (`@TransactionalEventListener`, mapa por tenant) ·
+`PainelController` fixa o tenant na abertura.
+**Rotinas.** RT-AGD-012 · **Teste.** `PainelDeEventosTest.tenant_separa_as_conexoes`,
+`PainelDeEventosTest.painel_quebrado_sai_da_lista`
+**Configurável?** Não · **Origem.** 2026-09-05

@@ -7,6 +7,7 @@ import { Protegida } from './layout/Protegida';
 import { Login } from './telas/Login';
 import { SegundoFator } from './telas/SegundoFator';
 import { Agenda } from './telas/agenda/Agenda';
+import { Painel } from './telas/agenda/Painel';
 import { Clientes } from './telas/clientes/Clientes';
 import { Configuracao } from './telas/config/Configuracao';
 import { EmBreve } from './telas/EmBreve';
@@ -55,6 +56,12 @@ export function App() {
             <Route path="/financeiro" element={<EmBreve titulo="Financeiro" rotina="RT-FIN-004" />} />
             <Route path="/config" element={<Configuracao />} />
           </Route>
+
+          {/*
+              O painel fica FORA da casca: ele roda numa tela pendurada na parede, sem
+              menu, sem navegação e sem nada em que alguém possa clicar por engano.
+            */}
+          <Route path="/painel" element={<Protegida><Painel /></Protegida>} />
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

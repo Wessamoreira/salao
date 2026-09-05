@@ -1,0 +1,125 @@
+/*
+ * O painel do balcão.
+ *
+ * Lido a dois ou três metros (docs/10-usabilidade). Tudo aqui é grande de propósito, e
+ * o que não se lê de longe simplesmente não está na tela — o que ninguém lê só serve
+ * para vazar, e esta tela é vista por quem está esperando.
+ */
+
+.painel {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: var(--e-8) var(--e-10);
+  background: var(--papel);
+  color: var(--tinta);
+}
+
+.painel-topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: var(--e-5);
+  border-bottom: 1px solid var(--regua-forte);
+}
+
+/* Instrument Serif aparece em dois lugares no produto; identidade é um deles. */
+.painel-identidade {
+  font-family: var(--fonte-identidade);
+  font-size: 34px;
+  letter-spacing: -0.01em;
+}
+
+.painel-relogio {
+  font-size: 44px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.painel-cabecalho,
+.painel-linha {
+  display: grid;
+  grid-template-columns: 150px 1fr 260px 210px;
+  gap: 0 var(--e-6);
+  align-items: center;
+}
+
+.painel-cabecalho {
+  padding: var(--e-5) 0 var(--e-3);
+}
+.painel-cabecalho span {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  /*
+   * --tinta-fraca, e não --tinta-tenue como no canvas.
+   *
+   * O canvas é anterior à medição de contraste (RT-CLI-006): --tinta-tenue mede 2.53
+   * sobre papel e não sobrevive a nenhum uso de texto. Aqui vale 4.67.
+   */
+  color: var(--tinta-fraca);
+}
+
+.painel-linha {
+  padding: var(--e-4) 0;
+  border-bottom: 1px solid var(--regua);
+}
+
+.painel-hora {
+  font-size: 31px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  font-variant-numeric: tabular-nums;
+}
+
+.painel-cliente { font-size: 29px; letter-spacing: -0.01em; }
+.painel-profissional { font-size: 27px; color: var(--tinta-fraca); }
+
+/*
+ * A situação: barra colorida à esquerda e texto em --tinta.
+ *
+ * O canvas pintava o TEXTO com a cor do status. A medição mostrou que nenhum status
+ * passa em AA sobre papel — o melhor deles dá 3.25 — e "cor nunca em texto" virou
+ * regra do sistema. A cor continua carregando a informação; ela só mudou de lugar.
+ */
+.painel-situacao {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  font-size: 22px;
+}
+.painel-situacao::before {
+  content: '';
+  width: 4px;
+  height: 26px;
+  border-radius: 2px;
+  background: var(--regua-forte);
+}
+.painel-situacao.confirmado::before { background: var(--status-confirmado); }
+.painel-situacao.solicitado::before { background: var(--status-solicitado); }
+.painel-situacao.atendendo::before { background: var(--status-atendendo); }
+
+/* Forma além de cor: em preto e branco, "em atendimento" continua se distinguindo. */
+.painel-situacao.atendendo { font-weight: 600; }
+.painel-situacao.solicitado { font-style: italic; }
+
+.painel-rodape {
+  display: flex;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: var(--e-5);
+  border-top: 1px solid var(--regua-forte);
+  font-size: 16px;
+  color: var(--tinta-fraca);
+  font-variant-numeric: tabular-nums;
+}
+
+.painel-vazio {
+  display: grid;
+  place-items: center;
+  flex-grow: 1;
+  font-size: 27px;
+  color: var(--tinta-fraca);
+}

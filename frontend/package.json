@@ -11,7 +11,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "previa": "vite --port 5174 --open /preview/clientes.html",
-    "previa:agenda": "vite --port 5174 --open /preview/agenda.html"
+    "previa:agenda": "vite --port 5174 --open /preview/agenda.html",
+    "previa:painel": "vite --port 5174 --open /preview/painel.html"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.102.8",

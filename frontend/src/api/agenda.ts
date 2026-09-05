@@ -1,5 +1,6 @@
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from './http';
+import { api, ouvirEventos } from './http';
 
 export type StatusAgendamento =
   | 'SOLICITADO' | 'CONFIRMADO' | 'EM_ATENDIMENTO'
@@ -87,7 +88,7 @@ export interface AgendaDoDia {
 export function useAgendaDoDia(data: string) {
   return useQuery({
     queryKey: ['agenda', data],
-    queryFn: () => api<AgendaDoDia>(`/api/v1/agendamentos/dia?data=${data}`),
+    queryFn: () => api<AgendaDoDia>(`/v1/agendamentos/dia?data=${data}`),
   });
 }
 
@@ -99,7 +100,7 @@ export function useDisponibilidade(data: string, servicoId?: string, profissiona
     queryFn: () => {
       const busca = new URLSearchParams({ data, servico: servicoId! });
       if (profissionalId) busca.set('profissional', profissionalId);
-      return api<HorarioDisponivel[]>(`/api/v1/disponibilidade?${busca}`);
+      return api<HorarioDisponivel[]>(`/v1/disponibilidade?${busca}`);
     },
   });
 }
@@ -108,7 +109,7 @@ export function useAgendamento(id: string | null) {
   return useQuery({
     queryKey: ['agendamento', id],
     enabled: Boolean(id),
-    queryFn: () => api<Agendamento>(`/api/v1/agendamentos/${id}`),
+    queryFn: () => api<Agendamento>(`/v1/agendamentos/${id}`),
   });
 }
 
@@ -130,10 +131,55 @@ export function useReagendar() {
   const fila = useQueryClient();
   return useMutation({
     mutationFn: ({ id, inicio, profissionalId, versao }: Reagendamento) =>
-      api<Agendamento>(`/api/v1/agendamentos/${id}/horario`, {
+      api<Agendamento>(`/v1/agendamentos/${id}/horario`, {
         method: 'PUT',
         body: JSON.stringify({ inicio, profissionalId, versao }),
       }),
     onSettled: () => fila.invalidateQueries({ queryKey: ['agenda'] }),
   });
+}
+
+// ------------------------------------------------------------------ RT-AGD-012
+
+export type SituacaoNoPainel =
+  | 'SOLICITADO' | 'CONFIRMADO' | 'EM_ATENDIMENTO';
+
+export interface LinhaDoPainel {
+  inicio: string;
+  cliente: string;
+  profissional: string;
+  situacao: SituacaoNoPainel;
+}
+
+export interface Painel {
+  estabelecimento: string;
+  fuso: string;
+  atualizadoEm: string;
+  linhas: LinhaDoPainel[];
+  restantes: number;
+}
+
+/**
+ * O painel do balcão: retrato + aviso de que mudou.
+ *
+ * O aviso NÃO carrega o dado — ele faz o painel pedir o retrato de novo. Parece um
+ * passo a mais e evita a classe de bug mais chata deste tipo de tela: um stream de
+ * deltas precisa que o cliente aplique todos, na ordem, sem perder nenhum; quando ele
+ * perde um (reconexão, aba em segundo plano, rede oscilando), a tela fica errada em
+ * silêncio, para sempre, numa parede que ninguém olha de perto.
+ */
+export function usePainel() {
+  const fila = useQueryClient();
+  const consulta = useQuery({
+    queryKey: ['painel'],
+    queryFn: () => api<Painel>('/v1/painel'),
+    // Rede de salão cai. O retrato tem custo baixo e a checagem periódica é o que faz
+    // o painel se recuperar sozinho de um stream que morreu sem avisar.
+    refetchInterval: 60_000,
+  });
+
+  useEffect(() => ouvirEventos('/v1/painel/eventos',
+    () => fila.invalidateQueries({ queryKey: ['painel'] })), [fila]);
+
+  return consulta;
 }
