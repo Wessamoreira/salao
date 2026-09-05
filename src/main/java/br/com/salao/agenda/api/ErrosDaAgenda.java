@@ -85,7 +85,14 @@ public enum ErrosDaAgenda implements CodigoDeErro {
      * cliente chegasse na hora certa.
      */
     AINDA_NAO_COMECOU("ER-AGD-AINDA_NAO_COMECOU", HttpStatus.UNPROCESSABLE_ENTITY,
-            "O horário ainda não começou");
+            "O horário ainda não começou"),
+
+    /** RT-AGD-007 — dados do bloqueio inválidos: sem alvo, sem motivo, ou período vazio. */
+    BLOQUEIO_INVALIDO("ER-AGD-BLOQUEIO_INVALIDO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Dados do bloqueio inválidos"),
+
+    BLOQUEIO_NAO_ENCONTRADO("ER-AGD-BLOQUEIO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
+            "Bloqueio não encontrado");
 
     private final String codigo;
     private final HttpStatus status;

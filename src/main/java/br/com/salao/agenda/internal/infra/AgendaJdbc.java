@@ -2,6 +2,8 @@ package br.com.salao.agenda.internal.infra;
 
 import br.com.salao.agenda.api.AgendamentoResumo;
 import br.com.salao.agenda.api.BlocoDoAgendamento;
+import br.com.salao.agenda.api.BloqueioDaGrade;
+import br.com.salao.agenda.api.MotivoDoBloqueioDeAgenda;
 import br.com.salao.agenda.api.Janela;
 import br.com.salao.agenda.api.OrigemDoAgendamento;
 import br.com.salao.agenda.api.StatusAgendamento;
@@ -309,6 +311,113 @@ public class AgendaJdbc {
                 .param("status", novo.name())
                 .update();
         return cabecas;
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-007
+
+    /**
+     * Grava o bloqueio e a linha que o faz ocupar a grade.
+     *
+     * <p>Duas escritas, uma transação. A segunda é o que importa: como linha de
+     * {@code agendamento_bloco}, o bloqueio disputa o profissional e o recurso pela mesma exclusion
+     * constraint dos atendimentos. Marcar por cima é recusado pelo banco, sem uma linha de código a
+     * mais em RT-AGD-002 nem em RT-AGD-003.
+     *
+     * <p>Status {@code CONFIRMADO} porque é o que o coloca dentro do filtro da constraint — e
+     * porque é verdade: não existe bloqueio à espera de aprovação.
+     */
+    public UUID inserirBloqueio(UUID estabelecimentoId, BloqueioDaGrade bloqueio, UUID criadoPor) {
+        UUID id = jdbc.sql("""
+                insert into bloqueio (estabelecimento_id, profissional_id, recurso_id, unidade,
+                                      motivo, descricao, criado_por)
+                values (:estabelecimento, :profissional, :recurso, :unidade, :motivo, :descricao,
+                        :criadoPor)
+                returning id
+                """)
+                .param("estabelecimento", estabelecimentoId)
+                .param("profissional", bloqueio.profissionalId())
+                .param("recurso", bloqueio.recursoId())
+                .param("unidade", bloqueio.unidade())
+                .param("motivo", bloqueio.motivo().name())
+                .param("descricao", bloqueio.descricao())
+                .param("criadoPor", criadoPor)
+                .query(UUID.class)
+                .single();
+
+        jdbc.sql("""
+                insert into agendamento_bloco (estabelecimento_id, bloqueio_id, ordem, tipo,
+                                               profissional_id, recurso_id, unidade, periodo,
+                                               status)
+                values (:estabelecimento, :bloqueio, 0, 'BLOQUEIO', :profissional, :recurso,
+                        :unidade, tstzrange(:inicio, :fim), 'CONFIRMADO')
+                """)
+                .param("estabelecimento", estabelecimentoId)
+                .param("bloqueio", id)
+                .param("profissional", bloqueio.profissionalId())
+                .param("recurso", bloqueio.recursoId())
+                .param("unidade", bloqueio.unidade())
+                .param("inicio", OffsetDateTime.ofInstant(bloqueio.janela().inicio(),
+                        ZoneOffset.UTC))
+                .param("fim", OffsetDateTime.ofInstant(bloqueio.janela().fim(), ZoneOffset.UTC))
+                .update();
+        return id;
+    }
+
+    /** Apagar leva a linha da grade junto, pelo {@code on delete cascade}. */
+    public int apagarBloqueio(UUID bloqueioId) {
+        return jdbc.sql("delete from bloqueio where id = :id")
+                .param("id", bloqueioId)
+                .update();
+    }
+
+    @Transactional(readOnly = true)
+    public List<BloqueioDaGrade> bloqueiosEm(Janela periodo) {
+        return jdbc.sql("""
+                select b.id, b.profissional_id, b.recurso_id, b.unidade, b.motivo, b.descricao,
+                       lower(bl.periodo) as inicio, upper(bl.periodo) as fim
+                  from bloqueio b
+                  join agendamento_bloco bl on bl.bloqueio_id = b.id
+                 where bl.periodo && tstzrange(:inicio, :fim)
+                 order by lower(bl.periodo)
+                """)
+                .param("inicio", OffsetDateTime.ofInstant(periodo.inicio(), ZoneOffset.UTC))
+                .param("fim", OffsetDateTime.ofInstant(periodo.fim(), ZoneOffset.UTC))
+                .query((rs, n) -> {
+                    int unidade = rs.getInt("unidade");
+                    Integer qual = rs.wasNull() ? null : unidade;
+                    return new BloqueioDaGrade(rs.getObject("id", UUID.class),
+                            rs.getObject("profissional_id", UUID.class),
+                            rs.getObject("recurso_id", UUID.class), qual,
+                            MotivoDoBloqueioDeAgenda.valueOf(rs.getString("motivo")),
+                            rs.getString("descricao"),
+                            new Janela(instante(rs.getObject("inicio", OffsetDateTime.class)),
+                                    instante(rs.getObject("fim", OffsetDateTime.class))));
+                })
+                .list();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<BloqueioDaGrade> bloqueioPorId(UUID bloqueioId) {
+        return jdbc.sql("""
+                select b.id, b.profissional_id, b.recurso_id, b.unidade, b.motivo, b.descricao,
+                       lower(bl.periodo) as inicio, upper(bl.periodo) as fim
+                  from bloqueio b
+                  join agendamento_bloco bl on bl.bloqueio_id = b.id
+                 where b.id = :id
+                """)
+                .param("id", bloqueioId)
+                .query((rs, n) -> {
+                    int unidade = rs.getInt("unidade");
+                    Integer qual = rs.wasNull() ? null : unidade;
+                    return new BloqueioDaGrade(rs.getObject("id", UUID.class),
+                            rs.getObject("profissional_id", UUID.class),
+                            rs.getObject("recurso_id", UUID.class), qual,
+                            MotivoDoBloqueioDeAgenda.valueOf(rs.getString("motivo")),
+                            rs.getString("descricao"),
+                            new Janela(instante(rs.getObject("inicio", OffsetDateTime.class)),
+                                    instante(rs.getObject("fim", OffsetDateTime.class))));
+                })
+                .optional();
     }
 
     public record Ocupacoes(Map<UUID, List<Janela>> porProfissional,

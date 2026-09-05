@@ -33,8 +33,15 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>Rota própria e não sob {@code /profissionais/{id}}: o bloqueio pode ser do salão inteiro, e
  * pendurá-lo na rota de um profissional obrigaria a inventar um id falso para o feriado.
  */
+/*
+ * A rota era /api/v1/bloqueios até RT-AGD-007, quando a agenda ganhou o SEU bloqueio — o da grade,
+ * que ocupa um horário e vale para recurso. "Bloqueio" sozinho passou a significar duas coisas, e
+ * a rota curta ficaria com a menos procurada: quem abre a grade e arrasta espera /bloqueios.
+ * Renomear as duas custou uma linha cada e nada mais, porque nenhum front consome nenhuma delas
+ * ainda.
+ */
 @RestController
-@RequestMapping("/api/v1/bloqueios")
+@RequestMapping("/api/v1/bloqueios-de-jornada")
 public class BloqueiosController {
 
     private final RegistrarBloqueioUseCase registrar;

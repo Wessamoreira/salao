@@ -415,3 +415,33 @@ que ele precisa ser levado a sério.
 **Rotinas.** RT-AGD-006, RT-REL-* · **Teste.**
 `RegistrarNoShowIT.minutos_perdidos_descontam_a_pausa`
 **Configurável?** Não · **Origem.** 2026-09-04
+
+---
+
+### RN-AGD-020 — Bloqueio de grade é linha do mesmo bloco dos atendimentos
+
+**Enunciado.** Um bloqueio de agenda vira linha em `agendamento_bloco`, com `tipo = 'BLOQUEIO'`,
+`agendamento_id` nulo e status `CONFIRMADO`. Ele participa das **mesmas** exclusion constraints dos
+atendimentos, nos dois sentidos: não se marca por cima de um bloqueio, e não se bloqueia por cima de
+um atendimento.
+
+**Motivo.** Uma tabela própria com constraint espelhada teria duas exclusões para manter coerentes,
+e a segunda seria a que ficasse para trás. Como linha do mesmo bloco, a garantia é uma só — e
+RT-AGD-002 e RT-AGD-003 não precisaram de nenhuma linha a mais.
+
+Recusar o bloqueio por cima de um atendimento é o comportamento certo: quem quer o horário livre
+cancela primeiro, avisando a cliente, em vez de fazê-la chegar e descobrir.
+
+**Distinção de RT-EQP-003.** O bloqueio de *jornada* molda quando a pessoa trabalha, entra no
+cálculo de disponibilidade e é **forçável** por admin. O de *grade* ocupa o horário, vale para
+recurso e **não é forçável**: "a Ana está em curso" é opinião do dono; "o lavatório está quebrado"
+não é.
+
+**Onde é garantida.** Tabela `bloqueio` + linha em `agendamento_bloco` (V27) ·
+`bloco_pertence_a_um_dono` impede linha órfã · as constraints de V25.
+**Rotinas.** RT-AGD-007, RT-AGD-002, RT-AGD-003 · **Teste.**
+`BloquearGradeIT.agendamento_nao_passa_por_cima_do_bloqueio`,
+`BloquearGradeIT.bloqueio_nao_passa_por_cima_do_agendamento`,
+`BloquearGradeIT.bloqueio_de_recurso`, `BloquearGradeIT.remover_devolve_o_horario`
+**Erro.** `ER-AGD-CONFLITO_HORARIO` (409), `ER-AGD-RECURSO_OCUPADO` (409)
+**Configurável?** Não · **Origem.** 2026-09-04

@@ -1,6 +1,7 @@
 package br.com.salao.agenda.internal;
 
 import br.com.salao.agenda.api.DisponibilidadeApi;
+import br.com.salao.agenda.internal.application.BloquearGradeUseCase;
 import br.com.salao.agenda.internal.application.CancelarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConfirmarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarAgendamentoUseCase;
@@ -97,5 +98,13 @@ public class AgendaConfig {
                                                          ApplicationEventPublisher eventos,
                                                          Relogio relogio) {
         return new RegistrarNoShowUseCase(agenda, auditoria, eventos, relogio);
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-007
+
+    @Bean
+    public BloquearGradeUseCase bloquearGradeUseCase(AgendaJdbc agenda, ProfissionalApi equipe,
+                                                     RecursoApi recursos, AuditoriaApi auditoria) {
+        return new BloquearGradeUseCase(agenda, equipe, recursos, auditoria);
     }
 }

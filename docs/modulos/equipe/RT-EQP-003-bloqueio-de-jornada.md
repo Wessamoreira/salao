@@ -14,6 +14,10 @@ atualizado_em: 2026-08-30
 
 # RT-EQP-003 — Exceções de jornada
 
+> **A rota mudou em RT-AGD-007.** Era `/api/v1/bloqueios`; virou `/api/v1/bloqueios-de-jornada`
+> quando a agenda ganhou o seu próprio bloqueio — o da grade, que ocupa horário e vale para recurso.
+> "Bloqueio" sozinho passou a significar duas coisas, e a rota curta ficaria com a menos procurada.
+
 ## 1. Objetivo
 
 Registrar quando alguém **não** atende, e entregar à agenda a resposta que ela realmente precisa:
