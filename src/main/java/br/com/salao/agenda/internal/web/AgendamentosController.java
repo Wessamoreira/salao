@@ -10,6 +10,7 @@ import br.com.salao.agenda.internal.application.CriarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.NovoAgendamento;
 import br.com.salao.agenda.internal.application.PedidoDeReagendamento;
 import br.com.salao.agenda.internal.application.ReagendarUseCase;
+import br.com.salao.agenda.internal.application.RegistrarNoShowUseCase;
 import br.com.salao.cliente.api.ClienteApi;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -46,18 +47,21 @@ public class AgendamentosController {
     private final ReagendarUseCase reagendar;
     private final ConfirmarAgendamentoUseCase confirmar;
     private final CancelarAgendamentoUseCase cancelar;
+    private final RegistrarNoShowUseCase registrarFalta;
     private final ClienteApi clientes;
 
     public AgendamentosController(CriarAgendamentoUseCase criar,
                                   ConsultarAgendamentoUseCase consultar,
                                   ReagendarUseCase reagendar,
                                   ConfirmarAgendamentoUseCase confirmar,
-                                  CancelarAgendamentoUseCase cancelar, ClienteApi clientes) {
+                                  CancelarAgendamentoUseCase cancelar,
+                                  RegistrarNoShowUseCase registrarFalta, ClienteApi clientes) {
         this.criar = criar;
         this.consultar = consultar;
         this.reagendar = reagendar;
         this.confirmar = confirmar;
         this.cancelar = cancelar;
+        this.registrarFalta = registrarFalta;
         this.clientes = clientes;
     }
 
@@ -187,5 +191,20 @@ public class AgendamentosController {
     public AgendamentoResponse cancelar(@PathVariable UUID id,
                                         @Valid @RequestBody CancelamentoRequest req) {
         return comNome(cancelar.executar(id, req.versao(), req.motivo(), req.pelaCliente()));
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-006
+
+    /**
+     * Sem motivo, ao contrário do cancelamento: o motivo do no-show é a própria ausência, e um
+     * campo de texto ali só produziria "não veio" repetido.
+     */
+    public record FaltaRequest(@NotNull Integer versao) {
+    }
+
+    @PatchMapping("/{id}/falta")
+    public AgendamentoResponse registrarFalta(@PathVariable UUID id,
+                                              @Valid @RequestBody FaltaRequest req) {
+        return comNome(registrarFalta.executar(id, req.versao()));
     }
 }

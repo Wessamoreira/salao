@@ -75,7 +75,17 @@ public enum ErrosDaAgenda implements CodigoDeErro {
      * desmarca demais não tem em que se apoiar.
      */
     MOTIVO_OBRIGATORIO("ER-AGD-MOTIVO_OBRIGATORIO", HttpStatus.UNPROCESSABLE_ENTITY,
-            "Cancelamento exige motivo");
+            "Cancelamento exige motivo"),
+
+    /**
+     * RT-AGD-006 — no-show marcado antes de o horário começar.
+     *
+     * <p>Ninguém falta a um compromisso que ainda não começou. Marcar antes seria registrar uma
+     * ausência que não aconteceu — e, como o status é terminal, não haveria como desfazer quando a
+     * cliente chegasse na hora certa.
+     */
+    AINDA_NAO_COMECOU("ER-AGD-AINDA_NAO_COMECOU", HttpStatus.UNPROCESSABLE_ENTITY,
+            "O horário ainda não começou");
 
     private final String codigo;
     private final HttpStatus status;

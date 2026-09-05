@@ -7,6 +7,7 @@ import br.com.salao.agenda.internal.application.ConsultarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarDisponibilidadeUseCase;
 import br.com.salao.agenda.internal.application.CriarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ReagendarUseCase;
+import br.com.salao.agenda.internal.application.RegistrarNoShowUseCase;
 import br.com.salao.agenda.internal.infra.AgendaJdbc;
 import br.com.salao.catalogo.api.RecursoApi;
 import br.com.salao.catalogo.api.ServicoApi;
@@ -86,5 +87,15 @@ public class AgendaConfig {
     public CancelarAgendamentoUseCase cancelarAgendamentoUseCase(
             AgendaJdbc agenda, AuditoriaApi auditoria, ApplicationEventPublisher eventos) {
         return new CancelarAgendamentoUseCase(agenda, auditoria, eventos);
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-006
+
+    @Bean
+    public RegistrarNoShowUseCase registrarNoShowUseCase(AgendaJdbc agenda,
+                                                         AuditoriaApi auditoria,
+                                                         ApplicationEventPublisher eventos,
+                                                         Relogio relogio) {
+        return new RegistrarNoShowUseCase(agenda, auditoria, eventos, relogio);
     }
 }

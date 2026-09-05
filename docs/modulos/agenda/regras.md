@@ -371,3 +371,47 @@ autoria · coluna `agendamento.cancelado_pela_cliente` (V26).
 `CancelarAgendamentoIT.cancelar_duas_vezes`
 **Erro.** `ER-AGD-MOTIVO_OBRIGATORIO` (422), `ER-AGD-TRANSICAO_INVALIDA` (409)
 **Configurável?** Não · **Origem.** 2026-09-04
+
+---
+
+### RN-AGD-018 — No-show só depois de o horário começar
+
+**Enunciado.** Registrar falta exige que o início do agendamento já tenha passado. Basta ter
+começado — não é preciso esperar o fim. O status resultante é terminal e libera o horário.
+
+**Motivo.** Cancelar é sobre o futuro; no-show é sobre o passado. Marcar antes registraria uma
+ausência que não aconteceu, num status terminal que não teria como ser desfeito quando a cliente
+chegasse na hora certa.
+
+Basta o início porque às 13h15 de um horário das 13h a recepção já sabe. Exigir o fim faria o salão
+esperar uma hora e meia para registrar o evidente, e o resto do horário — que poderia receber um
+encaixe — ficaria bloqueado esse tempo todo.
+
+**Corolário.** `CANCELADO` não vira `NO_SHOW`: quem avisou que não vinha não faltou. Misturar os
+dois estragaria o número que sustenta a conversa com a cliente.
+
+**Onde é garantida.** `RegistrarNoShowUseCase`, comparando com o port `Relogio` (RN-INF-006) ·
+máquina de estados para o corolário.
+**Rotinas.** RT-AGD-006 · **Teste.** `RegistrarNoShowIT.nao_marca_falta_no_futuro`,
+`RegistrarNoShowIT.basta_ter_comecado`, `RegistrarNoShowIT.cancelado_nao_vira_falta`
+**Erro.** `ER-AGD-AINDA_NAO_COMECOU` (422) · **Configurável?** A tolerância ainda não é, e deveria
+**Origem.** 2026-09-04
+
+---
+
+### RN-AGD-019 — Prejuízo de falta conta o tempo do profissional, não o do relógio
+
+**Enunciado.** `minutosPerdidos` de um no-show é a soma dos blocos que ocupam o profissional, não a
+duração total do serviço.
+
+**Motivo.** Numa coloração de 100 minutos, 40 são pausa e a profissional estaria livre de qualquer
+jeito. Contar os 100 infla o prejuízo — e tira a credibilidade do número justamente na conversa em
+que ele precisa ser levado a sério.
+
+É a mesma distinção que faz a agenda render (RN-CAT-001), aplicada ao relatório.
+
+**Onde é garantida.** `AgendamentoResumo.minutosDoProfissional`, usado por
+`RegistrarNoShowUseCase`.
+**Rotinas.** RT-AGD-006, RT-REL-* · **Teste.**
+`RegistrarNoShowIT.minutos_perdidos_descontam_a_pausa`
+**Configurável?** Não · **Origem.** 2026-09-04
