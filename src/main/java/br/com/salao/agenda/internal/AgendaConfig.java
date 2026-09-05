@@ -6,6 +6,7 @@ import br.com.salao.agenda.internal.application.CancelarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConfirmarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarDisponibilidadeUseCase;
+import br.com.salao.agenda.internal.application.EmpurrarAgendaUseCase;
 import br.com.salao.agenda.internal.application.CriarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ReagendarUseCase;
 import br.com.salao.agenda.internal.application.RegistrarNoShowUseCase;
@@ -106,5 +107,17 @@ public class AgendaConfig {
     public BloquearGradeUseCase bloquearGradeUseCase(AgendaJdbc agenda, ProfissionalApi equipe,
                                                      RecursoApi recursos, AuditoriaApi auditoria) {
         return new BloquearGradeUseCase(agenda, equipe, recursos, auditoria);
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-008
+
+    @Bean
+    public EmpurrarAgendaUseCase empurrarAgendaUseCase(ProfissionalApi equipe, RecursoApi recursos,
+                                                       EstabelecimentoApi estabelecimentos,
+                                                       AgendaJdbc agenda, AuditoriaApi auditoria,
+                                                       ApplicationEventPublisher eventos,
+                                                       Relogio relogio) {
+        return new EmpurrarAgendaUseCase(equipe, recursos, estabelecimentos, agenda, auditoria,
+                eventos, relogio);
     }
 }

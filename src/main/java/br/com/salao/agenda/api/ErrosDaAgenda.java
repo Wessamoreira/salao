@@ -92,7 +92,17 @@ public enum ErrosDaAgenda implements CodigoDeErro {
             "Dados do bloqueio inválidos"),
 
     BLOQUEIO_NAO_ENCONTRADO("ER-AGD-BLOQUEIO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
-            "Bloqueio não encontrado");
+            "Bloqueio não encontrado"),
+
+    /**
+     * RT-AGD-008 — o empurrão não coube, e nada foi movido.
+     *
+     * <p>Tudo ou nada: uma agenda empurrada pela metade é pior do que uma agenda não empurrada,
+     * porque a recepção não consegue dizer em que estado ela está — e já ligou para parte das
+     * clientes. O erro nomeia o atendimento que barrou, para haver o que consertar.
+     */
+    EMPURRAO_NAO_COUBE("ER-AGD-EMPURRAO_NAO_COUBE", HttpStatus.CONFLICT,
+            "O empurrão não coube; nada foi movido");
 
     private final String codigo;
     private final HttpStatus status;

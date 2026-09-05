@@ -445,3 +445,34 @@ não é.
 `BloquearGradeIT.bloqueio_de_recurso`, `BloquearGradeIT.remover_devolve_o_horario`
 **Erro.** `ER-AGD-CONFLITO_HORARIO` (409), `ER-AGD-RECURSO_OCUPADO` (409)
 **Configurável?** Não · **Origem.** 2026-09-04
+
+---
+
+### RN-AGD-021 — Empurrar a agenda é tudo ou nada, e força a jornada
+
+**Enunciado.** Empurrar move todos os agendamentos móveis de um profissional a partir de um instante,
+numa transação só. Se qualquer um não couber, **nada se move**. O empurrão força a jornada
+automaticamente, com justificativa obrigatória registrada na trilha; conflito com outro atendimento,
+recurso ou bloqueio continua sendo recusa.
+
+**Motivo.** Uma agenda empurrada pela metade é pior do que uma não empurrada: a recepção não
+consegue dizer em que estado ela está, e já ligou para parte das clientes avisando um horário que
+talvez não exista.
+
+Forçar a jornada é a consequência esperada — se a profissional atrasou meia hora, o dia dela termina
+meia hora depois. Recusar por causa disso tornaria a rotina inútil no caso em que ela mais serve. A
+distinção é que a jornada é informação sobre o dia daquela pessoa, e o conflito é sobre o dia de
+outra.
+
+**Implementação.** Os blocos de **todos** os alvos são apagados antes de qualquer regravação, para o
+conjunto não disputar consigo mesmo — a mesma razão de RN-AGD-015, aplicada a um conjunto. Sem isso
+seria preciso mover do último para o primeiro ao empurrar para frente, e o inverso ao puxar para
+trás.
+
+**Onde é garantida.** `EmpurrarAgendaUseCase`, uma transação · `AgendaJdbc.moveisDe` filtra por
+status móvel.
+**Rotinas.** RT-AGD-008 · **Teste.** `EmpurrarAgendaIT.tudo_ou_nada`,
+`EmpurrarAgendaIT.empurrar_nao_colide_consigo_mesmo`,
+`EmpurrarAgendaIT.sai_da_jornada_sem_reclamar`, `EmpurrarAgendaIT.em_atendimento_fica`
+**Erro.** `ER-AGD-EMPURRAO_NAO_COUBE` (409) · **Configurável?** Não
+**Origem.** 2026-09-04

@@ -7,6 +7,7 @@ import br.com.salao.agenda.internal.application.CancelarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConfirmarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.CriarAgendamentoUseCase;
+import br.com.salao.agenda.internal.application.EmpurrarAgendaUseCase;
 import br.com.salao.agenda.internal.application.NovoAgendamento;
 import br.com.salao.agenda.internal.application.PedidoDeReagendamento;
 import br.com.salao.agenda.internal.application.ReagendarUseCase;
@@ -48,6 +49,7 @@ public class AgendamentosController {
     private final ConfirmarAgendamentoUseCase confirmar;
     private final CancelarAgendamentoUseCase cancelar;
     private final RegistrarNoShowUseCase registrarFalta;
+    private final EmpurrarAgendaUseCase empurrar;
     private final ClienteApi clientes;
 
     public AgendamentosController(CriarAgendamentoUseCase criar,
@@ -55,13 +57,15 @@ public class AgendamentosController {
                                   ReagendarUseCase reagendar,
                                   ConfirmarAgendamentoUseCase confirmar,
                                   CancelarAgendamentoUseCase cancelar,
-                                  RegistrarNoShowUseCase registrarFalta, ClienteApi clientes) {
+                                  RegistrarNoShowUseCase registrarFalta,
+                                  EmpurrarAgendaUseCase empurrar, ClienteApi clientes) {
         this.criar = criar;
         this.consultar = consultar;
         this.reagendar = reagendar;
         this.confirmar = confirmar;
         this.cancelar = cancelar;
         this.registrarFalta = registrarFalta;
+        this.empurrar = empurrar;
         this.clientes = clientes;
     }
 
@@ -206,5 +210,28 @@ public class AgendamentosController {
     public AgendamentoResponse registrarFalta(@PathVariable UUID id,
                                               @Valid @RequestBody FaltaRequest req) {
         return comNome(registrarFalta.executar(id, req.versao()));
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-008
+
+    /**
+     * RT-AGD-008 — a profissional atrasou; empurra o dia dela.
+     *
+     * <p>Não fica sob {@code /{id}} porque não é sobre um agendamento: é sobre a agenda de uma
+     * pessoa a partir de um instante. {@code minutos} negativo puxa para trás.
+     */
+    public record EmpurrarRequest(
+            @NotNull UUID profissionalId,
+            @NotNull Instant aPartirDe,
+            @NotNull Integer minutos,
+            @NotBlank @Size(max = 500) String justificativa) {
+    }
+
+    @PostMapping("/empurrao")
+    public List<AgendamentoResponse> empurrar(@Valid @RequestBody EmpurrarRequest req) {
+        return empurrar.executar(req.profissionalId(), req.aPartirDe(), req.minutos(),
+                        req.justificativa()).stream()
+                .map(this::comNome)
+                .toList();
     }
 }

@@ -83,9 +83,8 @@ testes dele continuaram passando sem alteração.
 
 ## 8. Pendências
 
-- [ ] **Não existe "mover em lote"** — RT-AGD-008 (empurrar a agenda quando a profissional atrasa)
-      vai precisar mover vários de uma vez, e fazer N chamadas desta rotina seria N transações e N
-      chances de metade passar
+- [x] **"Mover em lote"** — entregue em [RT-AGD-008](RT-AGD-008-empurrar-agenda.md), numa
+      transação só e com tudo-ou-nada, exatamente pela razão registrada aqui
 - [ ] **O 409 não sugere o próximo horário livre.** R-UX-20 pede "A Ana já tem atendimento das
       13:00 às 14:40. O próximo horário livre é 15:00" — a disponibilidade (RT-AGD-001) já sabe
       calcular isso; falta ligar

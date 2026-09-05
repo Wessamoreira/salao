@@ -420,6 +420,49 @@ public class AgendaJdbc {
                 .optional();
     }
 
+    // ------------------------------------------------------------------ RT-AGD-008
+
+    /**
+     * O que o empurrão precisa saber de cada agendamento — e nada mais.
+     *
+     * <p>Sem os blocos de propósito: o empurrão os apaga e regrava a partir da receita, então
+     * carregá-los seria trazer do banco exatamente o que vai ser jogado fora.
+     */
+    public record AgendamentoAEmpurrar(UUID id, UUID servicoId, Instant inicio,
+                                       StatusAgendamento status, int versao) {
+    }
+
+    /**
+     * Os agendamentos deste profissional que começam a partir de um instante e ainda podem ser
+     * movidos, numa consulta.
+     *
+     * <p>Filtra por {@code SOLICITADO} e {@code CONFIRMADO} — os mesmos de
+     * {@code StatusAgendamento.podeSerMovido}. O que está {@code EM_ATENDIMENTO} fica onde está:
+     * empurrar o atendimento que está acontecendo mudaria o horário de quem já está na cadeira.
+     *
+     * <p>Em ordem de início, que é a ordem em que a recepção os vê e a que o empurrão preserva.
+     */
+    @Transactional(readOnly = true)
+    public List<AgendamentoAEmpurrar> moveisDe(UUID profissionalId, Instant aPartirDe) {
+        return jdbc.sql("""
+                select id, servico_id, inicio, status, versao
+                  from agendamento
+                 where profissional_id = :profissional
+                   and inicio >= :aPartirDe
+                   and status in ('SOLICITADO', 'CONFIRMADO')
+                 order by inicio
+                """)
+                .param("profissional", profissionalId)
+                .param("aPartirDe", OffsetDateTime.ofInstant(aPartirDe, ZoneOffset.UTC))
+                .query((rs, n) -> new AgendamentoAEmpurrar(
+                        rs.getObject("id", UUID.class),
+                        rs.getObject("servico_id", UUID.class),
+                        rs.getObject("inicio", OffsetDateTime.class).toInstant(),
+                        StatusAgendamento.valueOf(rs.getString("status")),
+                        rs.getInt("versao")))
+                .list();
+    }
+
     public record Ocupacoes(Map<UUID, List<Janela>> porProfissional,
                             Map<UUID, List<Janela>> porRecurso) {
 
