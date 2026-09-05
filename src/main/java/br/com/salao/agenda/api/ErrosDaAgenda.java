@@ -102,7 +102,14 @@ public enum ErrosDaAgenda implements CodigoDeErro {
      * clientes. O erro nomeia o atendimento que barrou, para haver o que consertar.
      */
     EMPURRAO_NAO_COUBE("ER-AGD-EMPURRAO_NAO_COUBE", HttpStatus.CONFLICT,
-            "O empurrão não coube; nada foi movido");
+            "O empurrão não coube; nada foi movido"),
+
+    /** RT-AGD-009 — dados da série inválidos: frequência, quantidade ou primeiro horário. */
+    RECORRENCIA_INVALIDA("ER-AGD-RECORRENCIA_INVALIDA", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Dados da recorrência inválidos"),
+
+    RECORRENCIA_NAO_ENCONTRADA("ER-AGD-RECORRENCIA_NAO_ENCONTRADA", HttpStatus.NOT_FOUND,
+            "Recorrência não encontrada");
 
     private final String codigo;
     private final HttpStatus status;

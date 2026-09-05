@@ -8,6 +8,9 @@ import br.com.salao.agenda.internal.application.ConsultarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarDisponibilidadeUseCase;
 import br.com.salao.agenda.internal.application.EmpurrarAgendaUseCase;
 import br.com.salao.agenda.internal.application.CriarAgendamentoUseCase;
+import br.com.salao.agenda.internal.application.CriarRecorrenciaUseCase;
+import br.com.salao.agenda.internal.application.EncerrarRecorrenciaUseCase;
+import br.com.salao.agenda.internal.application.RegistroDaSerie;
 import br.com.salao.agenda.internal.application.ReagendarUseCase;
 import br.com.salao.agenda.internal.application.RegistrarNoShowUseCase;
 import br.com.salao.agenda.internal.infra.AgendaJdbc;
@@ -119,5 +122,31 @@ public class AgendaConfig {
                                                        Relogio relogio) {
         return new EmpurrarAgendaUseCase(equipe, recursos, estabelecimentos, agenda, auditoria,
                 eventos, relogio);
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-009
+
+    @Bean
+    public CriarRecorrenciaUseCase criarRecorrenciaUseCase(CriarAgendamentoUseCase criar,
+                                                           EstabelecimentoApi estabelecimentos,
+                                                           AgendaJdbc agenda,
+                                                           RegistroDaSerie registro) {
+        return new CriarRecorrenciaUseCase(criar, estabelecimentos, agenda, registro);
+    }
+
+    /**
+     * Bean, e não {@code new} dentro do caso de uso: objeto sem proxy não tem transação, e o
+     * {@code @Transactional} dos métodos dele seria decoração.
+     */
+    @Bean
+    public RegistroDaSerie registroDaSerie(AgendaJdbc agenda, AuditoriaApi auditoria) {
+        return new RegistroDaSerie(agenda, auditoria);
+    }
+
+    @Bean
+    public EncerrarRecorrenciaUseCase encerrarRecorrenciaUseCase(
+            AgendaJdbc agenda, CancelarAgendamentoUseCase cancelar, AuditoriaApi auditoria,
+            Relogio relogio) {
+        return new EncerrarRecorrenciaUseCase(agenda, cancelar, auditoria, relogio);
     }
 }

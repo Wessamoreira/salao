@@ -3,6 +3,8 @@ package br.com.salao.agenda.internal.infra;
 import br.com.salao.agenda.api.AgendamentoResumo;
 import br.com.salao.agenda.api.BlocoDoAgendamento;
 import br.com.salao.agenda.api.BloqueioDaGrade;
+import br.com.salao.agenda.api.Frequencia;
+import br.com.salao.agenda.api.Recorrencia;
 import br.com.salao.agenda.api.MotivoDoBloqueioDeAgenda;
 import br.com.salao.agenda.api.Janela;
 import br.com.salao.agenda.api.OrigemDoAgendamento;
@@ -460,6 +462,88 @@ public class AgendaJdbc {
                         rs.getObject("inicio", OffsetDateTime.class).toInstant(),
                         StatusAgendamento.valueOf(rs.getString("status")),
                         rs.getInt("versao")))
+                .list();
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-009
+
+    @Transactional
+    public UUID inserirRecorrencia(UUID estabelecimentoId, Recorrencia recorrencia,
+                                   UUID criadoPor) {
+        return jdbc.sql("""
+                insert into recorrencia (estabelecimento_id, cliente_id, profissional_id,
+                                         servico_id, frequencia, primeiro_inicio, criado_por)
+                values (:estabelecimento, :cliente, :profissional, :servico, :frequencia,
+                        :inicio, :criadoPor)
+                returning id
+                """)
+                .param("estabelecimento", estabelecimentoId)
+                .param("cliente", recorrencia.clienteId())
+                .param("profissional", recorrencia.profissionalId())
+                .param("servico", recorrencia.servicoId())
+                .param("frequencia", recorrencia.frequencia().name())
+                .param("inicio", OffsetDateTime.ofInstant(recorrencia.primeiroInicio(),
+                        ZoneOffset.UTC))
+                .param("criadoPor", criadoPor)
+                .query(UUID.class)
+                .single();
+    }
+
+    /** Liga o agendamento à série que o gerou — é o que faz a grade poder marcar "recorrente". */
+    @Transactional
+    public void vincularARecorrencia(UUID agendamentoId, UUID recorrenciaId) {
+        jdbc.sql("update agendamento set recorrencia_id = :recorrencia where id = :id")
+                .param("id", agendamentoId)
+                .param("recorrencia", recorrenciaId)
+                .update();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Recorrencia> recorrenciaPorId(UUID recorrenciaId) {
+        return jdbc.sql("""
+                select id, cliente_id, profissional_id, servico_id, frequencia, primeiro_inicio,
+                       ativa
+                  from recorrencia where id = :id
+                """)
+                .param("id", recorrenciaId)
+                .query((rs, n) -> new Recorrencia(rs.getObject("id", UUID.class),
+                        rs.getObject("cliente_id", UUID.class),
+                        rs.getObject("profissional_id", UUID.class),
+                        rs.getObject("servico_id", UUID.class),
+                        Frequencia.valueOf(rs.getString("frequencia")),
+                        rs.getObject("primeiro_inicio", OffsetDateTime.class).toInstant(),
+                        rs.getBoolean("ativa")))
+                .optional();
+    }
+
+    @Transactional
+    public int encerrarRecorrencia(UUID recorrenciaId) {
+        return jdbc.sql("""
+                update recorrencia set ativa = false, encerrada_em = now()
+                 where id = :id and ativa
+                """)
+                .param("id", recorrenciaId)
+                .update();
+    }
+
+    /**
+     * As ocorrências futuras de uma série que ainda ocupam a agenda.
+     *
+     * <p>Só as futuras: encerrar a série não reescreve o que já aconteceu. E só as que ocupam —
+     * uma já cancelada não precisa ser cancelada de novo.
+     */
+    @Transactional(readOnly = true)
+    public List<UUID> ocorrenciasFuturasDe(UUID recorrenciaId, Instant aPartirDe) {
+        return jdbc.sql("""
+                select id from agendamento
+                 where recorrencia_id = :recorrencia
+                   and inicio >= :aPartirDe
+                   and status in ('SOLICITADO', 'CONFIRMADO')
+                 order by inicio
+                """)
+                .param("recorrencia", recorrenciaId)
+                .param("aPartirDe", OffsetDateTime.ofInstant(aPartirDe, ZoneOffset.UTC))
+                .query(UUID.class)
                 .list();
     }
 

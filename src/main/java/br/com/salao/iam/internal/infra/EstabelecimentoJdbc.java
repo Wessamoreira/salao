@@ -89,7 +89,18 @@ public class EstabelecimentoJdbc implements EstabelecimentoApi {
                 .update();
     }
 
+    /**
+     * {@code @Transactional} aqui não é decoração: sem ele, a chamada a {@code configuracao} logo
+     * abaixo é <strong>auto-invocação</strong> e não passa pelo proxy, então nenhuma transação é
+     * aberta — e sem transação não há {@code SET LOCAL app.tenant_id}, o que faz a RLS esconder a
+     * linha e este método estourar "estabelecimento não encontrado" para um tenant que existe.
+     *
+     * <p>Funcionou por muito tempo porque todo chamador já vinha de dentro de uma transação. O
+     * primeiro que não vinha (RT-AGD-009, que precisa de uma transação por ocorrência) revelou a
+     * dependência escondida.
+     */
     @Override
+    @Transactional(readOnly = true)
     public ZoneId fusoDe(UUID estabelecimentoId) {
         return configuracao(estabelecimentoId)
                 .map(ConfiguracaoDoEstabelecimento::fuso)

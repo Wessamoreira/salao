@@ -476,3 +476,31 @@ status móvel.
 `EmpurrarAgendaIT.sai_da_jornada_sem_reclamar`, `EmpurrarAgendaIT.em_atendimento_fica`
 **Erro.** `ER-AGD-EMPURRAO_NAO_COUBE` (409) · **Configurável?** Não
 **Origem.** 2026-09-04
+
+---
+
+### RN-AGD-022 — Série é parcial; empurrão é tudo ou nada
+
+**Enunciado.** Criar uma recorrência marca as ocorrências que couberem e devolve as que não
+couberam. Encerrar uma série, ao contrário, é atômico.
+
+**Motivo.** Cada ocorrência de uma série é um **compromisso independente** que por acaso foi pedido
+junto com os outros: a terceira quinta ser feriado é esperado, e recusar as outras onze por causa
+dela seria absurdo. Já o empurrão (RN-AGD-021) é **um ato só** — o dia da profissional andou —, e
+metade dele é pior do que nada.
+
+O critério que separa os dois: *as partes são consequências de um mesmo fato, ou compromissos
+separados?*
+
+**Consequência técnica.** O parcial exige **uma transação por ocorrência**. Numa transação única, a
+recusa de uma marcaria tudo como rollback-only — e a violação da exclusion constraint aborta a
+transação no PostgreSQL, deixando os comandos seguintes sem efeito. O resultado seria "não marca
+nada" com aparência de "marcou três". Por isso `CriarRecorrenciaUseCase` não é `@Transactional`, e
+`EncerrarRecorrenciaUseCase` é.
+
+**Onde é garantida.** Ausência deliberada de `@Transactional` em `CriarRecorrenciaUseCase` ·
+`RegistroDaSerie` para as escritas que precisam de transação · `@Transactional` em
+`EncerrarRecorrenciaUseCase`.
+**Rotinas.** RT-AGD-009 · **Teste.** `RecorrenciaIT.parcial_e_o_certo_aqui`,
+`RecorrenciaIT.recusa_nao_envenena_a_transacao`, `RecorrenciaIT.encerrar_cancela_o_futuro`
+**Configurável?** Não · **Origem.** 2026-09-04
