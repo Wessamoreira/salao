@@ -12,6 +12,7 @@ import br.com.salao.equipe.api.ProfissionalResumo;
 import br.com.salao.equipe.api.TipoDeVinculo;
 import br.com.salao.equipe.internal.domain.Documento;
 import br.com.salao.equipe.internal.domain.SubtracaoDeIntervalos;
+import br.com.salao.shared.jdbc.Colunas;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.time.DayOfWeek;
@@ -349,13 +350,7 @@ public class ProfissionaisJdbc implements ProfissionalApi {
                 """)
                 .param("id", profissionalId)
                 .query((rs, n) -> {
-                    // `wasNull` reporta sobre a ÚLTIMA coluna lida, então ele é capturado na
-                    // linha seguinte ao getInt e não dentro do construtor: ali os argumentos
-                    // seriam avaliados da esquerda para a direita, o getObject rodaria antes, e
-                    // `wasNull` passaria a falar do servico_id — que nunca é nulo. O sintoma
-                    // seria toda duração ausente virar zero.
-                    int duracao = rs.getInt("duracao_minutos");
-                    Integer propria = rs.wasNull() ? null : duracao;
+                    Integer propria = Colunas.inteiroOuNulo(rs, "duracao_minutos");
                     return new Linha(rs.getObject("servico_id", UUID.class), propria);
                 })
                 .list();
@@ -546,8 +541,7 @@ public class ProfissionaisJdbc implements ProfissionalApi {
                 .param("ids", ids)
                 .param("servico", servicoId)
                 .query((rs, n) -> {
-                    int duracao = rs.getInt("duracao_minutos");
-                    Integer propria = rs.wasNull() ? null : duracao;
+                    Integer propria = Colunas.inteiroOuNulo(rs, "duracao_minutos");
                     return new Linha(rs.getObject("id", UUID.class),
                             rs.getBoolean("executa_todos_os_servicos"),
                             rs.getBoolean("na_lista"), propria);

@@ -43,6 +43,7 @@ módulo.
 | RN-INF-008 | Registro de idempotência commita na mesma transação do efeito de negócio | `IdempotenciaJdbc`; `IdempotenciaIT.falha_no_negocio_libera_a_chave` |
 | RN-INF-009 | Evento carrega ID, nunca PII — o outbox não tem RLS | `EventoDeDominio`; `ArquiteturaTest.listener_assincrono_so_recebe_evento_de_dominio` |
 | RN-INF-010 | Toda chave de cache começa pelo tenant | `GeradorDeChaveComTenant`; `CacheIT.chave_inclui_o_tenant` |
+| RN-INF-014 | Coluna numérica anulável é lida por `Colunas`, nunca por `getInt` + `wasNull` na mão | `ArquiteturaTest.coluna_anulavel_nao_e_lida_na_mao` — `wasNull` fala da **última** coluna lida, e o erro já aconteceu duas vezes (RT-CAT-004, RT-ARQ-001) |
 
 ## Nota sobre o front
 

@@ -15,6 +15,7 @@ import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import java.sql.ResultSet;
 import java.time.Instant;
 import org.springframework.security.access.prepost.PreAuthorize;
 import java.time.LocalDate;
@@ -93,6 +94,18 @@ class ArquiteturaTest {
                 .orShould().haveRawType(Float.class)
                 .because("dinheiro é BigDecimal/numeric(19,4); ponto flutuante em dinheiro é "
                         + "erro de centavo composto (ADR-0009)")
+                .check(CLASSES);
+    }
+
+    @Test
+    void coluna_anulavel_nao_e_lida_na_mao() {
+        noClasses().that().doNotHaveFullyQualifiedName("br.com.salao.shared.jdbc.Colunas")
+                .should().callMethod(ResultSet.class, "wasNull")
+                .because("getInt + wasNull na mão já deu errado duas vezes neste projeto — "
+                        + "RT-CAT-004 e RT-ARQ-001 —, porque wasNull se refere à ÚLTIMA coluna "
+                        + "lida e os argumentos de um construtor são avaliados da esquerda para a "
+                        + "direita: a segunda leitura apaga a resposta da primeira. Use Colunas, "
+                        + "que não tem como ser usada errado")
                 .check(CLASSES);
     }
 

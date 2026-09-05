@@ -121,6 +121,11 @@ invariante do domínio.
 Estourar foi sorte de novo: se `Habilidades` aceitasse zero, o defeito teria virado receita de
 duração zero na agenda. Um invariante bem posto transforma um bug silencioso em um alto.
 
+> **O mesmo erro voltou em RT-ARQ-001**, com o comentário que o explicava escrito quinze arquivos
+> ao lado. Foi o que fez virar `Colunas.inteiroOuNulo` / `Colunas.longoOuNulo` e regra de
+> arquitetura (RN-INF-014): um comentário não impede o erro; uma função que não tem como ser usada
+> errado, sim.
+
 ## 8. Testes
 
 - [x] `SequenciaDeBlocosTest` — 7 novos: **a pausa não encolhe** · bloco único · **o arredondamento

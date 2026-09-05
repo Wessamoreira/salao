@@ -10,6 +10,7 @@ import br.com.salao.agenda.api.Janela;
 import br.com.salao.agenda.api.OrigemDoAgendamento;
 import br.com.salao.agenda.api.StatusAgendamento;
 import br.com.salao.catalogo.api.TipoDeBloco;
+import br.com.salao.shared.jdbc.Colunas;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -217,8 +218,7 @@ public class AgendaJdbc {
                 """)
                 .param("id", agendamentoId)
                 .query((rs, n) -> {
-                    int unidade = rs.getInt("unidade");
-                    Integer qual = rs.wasNull() ? null : unidade;
+                    Integer qual = Colunas.inteiroOuNulo(rs, "unidade");
                     return new BlocoDoAgendamento(rs.getInt("ordem"),
                             TipoDeBloco.valueOf(rs.getString("tipo")),
                             new Janela(instante(rs.getObject("inicio", OffsetDateTime.class)),
@@ -385,8 +385,7 @@ public class AgendaJdbc {
                 .param("inicio", OffsetDateTime.ofInstant(periodo.inicio(), ZoneOffset.UTC))
                 .param("fim", OffsetDateTime.ofInstant(periodo.fim(), ZoneOffset.UTC))
                 .query((rs, n) -> {
-                    int unidade = rs.getInt("unidade");
-                    Integer qual = rs.wasNull() ? null : unidade;
+                    Integer qual = Colunas.inteiroOuNulo(rs, "unidade");
                     return new BloqueioDaGrade(rs.getObject("id", UUID.class),
                             rs.getObject("profissional_id", UUID.class),
                             rs.getObject("recurso_id", UUID.class), qual,
@@ -409,8 +408,7 @@ public class AgendaJdbc {
                 """)
                 .param("id", bloqueioId)
                 .query((rs, n) -> {
-                    int unidade = rs.getInt("unidade");
-                    Integer qual = rs.wasNull() ? null : unidade;
+                    Integer qual = Colunas.inteiroOuNulo(rs, "unidade");
                     return new BloqueioDaGrade(rs.getObject("id", UUID.class),
                             rs.getObject("profissional_id", UUID.class),
                             rs.getObject("recurso_id", UUID.class), qual,
@@ -610,8 +608,7 @@ public class AgendaJdbc {
                 """)
                 .param("ids", agendamentoIds)
                 .query((rs, n) -> {
-                    int unidade = rs.getInt("unidade");
-                    Integer qual = rs.wasNull() ? null : unidade;
+                    Integer qual = Colunas.inteiroOuNulo(rs, "unidade");
                     return Map.entry(rs.getObject("agendamento_id", UUID.class),
                             new BlocoDoAgendamento(rs.getInt("ordem"),
                                     TipoDeBloco.valueOf(rs.getString("tipo")),
