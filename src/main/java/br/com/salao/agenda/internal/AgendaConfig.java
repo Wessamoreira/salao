@@ -1,6 +1,7 @@
 package br.com.salao.agenda.internal;
 
 import br.com.salao.agenda.api.DisponibilidadeApi;
+import br.com.salao.agenda.internal.application.CancelarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConfirmarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarDisponibilidadeUseCase;
@@ -77,5 +78,13 @@ public class AgendaConfig {
     public ConfirmarAgendamentoUseCase confirmarAgendamentoUseCase(
             AgendaJdbc agenda, AuditoriaApi auditoria, ApplicationEventPublisher eventos) {
         return new ConfirmarAgendamentoUseCase(agenda, auditoria, eventos);
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-005
+
+    @Bean
+    public CancelarAgendamentoUseCase cancelarAgendamentoUseCase(
+            AgendaJdbc agenda, AuditoriaApi auditoria, ApplicationEventPublisher eventos) {
+        return new CancelarAgendamentoUseCase(agenda, auditoria, eventos);
     }
 }

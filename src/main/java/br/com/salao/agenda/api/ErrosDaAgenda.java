@@ -65,7 +65,17 @@ public enum ErrosDaAgenda implements CodigoDeErro {
      * tela recarrega e mostra em que estado ele realmente está.
      */
     TRANSICAO_INVALIDA("ER-AGD-TRANSICAO_INVALIDA", HttpStatus.CONFLICT,
-            "Transição de status inválida");
+            "Transição de status inválida"),
+
+    /**
+     * RT-AGD-005 — cancelamento sem motivo.
+     *
+     * <p>Cancelar é a operação que apaga um compromisso da agenda de duas pessoas. Sem o motivo,
+     * o histórico da cliente vira uma coluna de "cancelado" sem sentido, e a conversa sobre quem
+     * desmarca demais não tem em que se apoiar.
+     */
+    MOTIVO_OBRIGATORIO("ER-AGD-MOTIVO_OBRIGATORIO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Cancelamento exige motivo");
 
     private final String codigo;
     private final HttpStatus status;

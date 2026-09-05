@@ -3,6 +3,7 @@ package br.com.salao.agenda.internal.web;
 import br.com.salao.agenda.api.AgendamentoResumo;
 import br.com.salao.agenda.api.BlocoDoAgendamento;
 import br.com.salao.agenda.api.OrigemDoAgendamento;
+import br.com.salao.agenda.internal.application.CancelarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConfirmarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.CriarAgendamentoUseCase;
@@ -11,6 +12,7 @@ import br.com.salao.agenda.internal.application.PedidoDeReagendamento;
 import br.com.salao.agenda.internal.application.ReagendarUseCase;
 import br.com.salao.cliente.api.ClienteApi;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.net.URI;
@@ -43,16 +45,19 @@ public class AgendamentosController {
     private final ConsultarAgendamentoUseCase consultar;
     private final ReagendarUseCase reagendar;
     private final ConfirmarAgendamentoUseCase confirmar;
+    private final CancelarAgendamentoUseCase cancelar;
     private final ClienteApi clientes;
 
     public AgendamentosController(CriarAgendamentoUseCase criar,
                                   ConsultarAgendamentoUseCase consultar,
                                   ReagendarUseCase reagendar,
-                                  ConfirmarAgendamentoUseCase confirmar, ClienteApi clientes) {
+                                  ConfirmarAgendamentoUseCase confirmar,
+                                  CancelarAgendamentoUseCase cancelar, ClienteApi clientes) {
         this.criar = criar;
         this.consultar = consultar;
         this.reagendar = reagendar;
         this.confirmar = confirmar;
+        this.cancelar = cancelar;
         this.clientes = clientes;
     }
 
@@ -161,5 +166,26 @@ public class AgendamentosController {
     public AgendamentoResponse confirmar(@PathVariable UUID id,
                                          @Valid @RequestBody ConfirmacaoRequest req) {
         return comNome(confirmar.executar(id, req.versao(), req.pelaCliente()));
+    }
+
+    // ------------------------------------------------------------------ RT-AGD-005
+
+    /**
+     * {@code motivo} é obrigatório: sem ele o histórico da cliente vira uma coluna de "cancelado"
+     * sem sentido, e a conversa sobre quem desmarca demais não tem em que se apoiar.
+     *
+     * <p>{@code DELETE} seria a rota "natural" e está errada — cancelar não apaga nada, e o
+     * agendamento cancelado é justamente o registro que sustenta essa conversa.
+     */
+    public record CancelamentoRequest(
+            @NotNull Integer versao,
+            @NotBlank @Size(max = 500) String motivo,
+            boolean pelaCliente) {
+    }
+
+    @PatchMapping("/{id}/cancelamento")
+    public AgendamentoResponse cancelar(@PathVariable UUID id,
+                                        @Valid @RequestBody CancelamentoRequest req) {
+        return comNome(cancelar.executar(id, req.versao(), req.motivo(), req.pelaCliente()));
     }
 }

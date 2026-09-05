@@ -275,12 +275,30 @@ public class AgendaJdbc {
      * @return quantas cabeças mudaram: zero significa que a versão não bate
      */
     public int alterarStatus(UUID agendamentoId, StatusAgendamento novo, int versao) {
+        return alterarStatus(agendamentoId, novo, versao, null, null);
+    }
+
+    /**
+     * RT-AGD-005 — a mesma mudança de status, gravando também por que e por quem.
+     *
+     * <p>Motivo e autoria vão na <strong>mesma escrita</strong> do status: um cancelamento gravado
+     * sem o motivo, ainda que por um instante, é um registro que já nasceu incompleto — e não há
+     * segunda oportunidade, porque o status é terminal.
+     */
+    public int alterarStatus(UUID agendamentoId, StatusAgendamento novo, int versao,
+                             String motivoCancelamento, Boolean pelaCliente) {
         int cabecas = jdbc.sql("""
-                update agendamento set status = :status, versao = versao + 1
+                update agendamento
+                   set status = :status,
+                       motivo_cancelamento = coalesce(:motivo, motivo_cancelamento),
+                       cancelado_pela_cliente = coalesce(:pelaCliente, cancelado_pela_cliente),
+                       versao = versao + 1
                  where id = :id and versao = :versao
                 """)
                 .param("id", agendamentoId)
                 .param("status", novo.name())
+                .param("motivo", motivoCancelamento)
+                .param("pelaCliente", pelaCliente)
                 .param("versao", versao)
                 .update();
         if (cabecas == 0) {

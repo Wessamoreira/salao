@@ -76,7 +76,7 @@ Escopo `:own` é filtro de query, não de tela. Acesso a id de outro devolve **4
 | [RT-AGD-002](RT-AGD-002-criar-agendamento.md) | Criar agendamento | 1 | **implementada** |
 | [RT-AGD-003](RT-AGD-003-reagendar.md) | Reagendar | 1 | **implementada** |
 | [RT-AGD-004](RT-AGD-004-confirmar.md) | Confirmar | 1 | **implementada** |
-| RT-AGD-005 | Cancelar | 1 | rascunho |
+| [RT-AGD-005](RT-AGD-005-cancelar.md) | Cancelar | 1 | **implementada** |
 | RT-AGD-006 | Registrar no-show | 1 | rascunho |
 | RT-AGD-007 | Bloqueio de agenda | 1 | rascunho |
 | RT-AGD-008 | Empurrar agenda em massa | 1 | rascunho |

@@ -162,8 +162,14 @@ usuário com `agenda:write:all` registrando atendimento já ocorrido.
 
 ### RN-AGD-009 — Cancelamento libera a vaga para a fila de espera
 
-**Enunciado.** Cancelar publica `VagaLiberada`. O primeiro da fila compatível (mesmo serviço,
-janela aceita) é notificado e tem TTL para responder antes do próximo.
+**Enunciado.** Cancelar publica `AgendamentoCancelado`, que **carrega a janela liberada**
+(profissional, serviço, início e fim). O primeiro da fila compatível é notificado e tem TTL para
+responder antes do próximo.
+
+*(Revisado em RT-AGD-005: o enunciado dizia `VagaLiberada`, um segundo evento. Seriam dois eventos
+com o mesmo conteúdo no mesmo instante — `AgendamentoCancelado` já carrega tudo de que a fila
+precisa, e buscar o agendamento de volta não serviria, porque ele acabou de deixar de existir para
+a agenda.)*
 
 **Onde é garantida.** `CancelarAgendamentoUseCase` publica; `ChamarFilaEsperaUseCase` consome.
 **Rotinas.** RT-AGD-005, RT-AGD-010 · **Configurável?** Sim — fila pode ser desligada por
@@ -336,4 +342,32 @@ a preservação, uma duração forçada na criação se perderia no primeiro arr
 **Rotinas.** RT-AGD-003 · **Teste.**
 `ReagendarIT.mudar_de_profissional_recalcula_a_duracao`,
 `ReagendarIT.mesma_coluna_preserva_a_duracao`
+**Configurável?** Não · **Origem.** 2026-09-04
+
+---
+
+### RN-AGD-017 — Cancelar exige motivo, e registra quem cancelou
+
+**Enunciado.** Cancelar exige um motivo em texto livre e a marcação de quem desmarcou — a cliente
+ou o salão. Os dois são gravados na mesma escrita que muda o status. Cancelamento é terminal: não
+existe desfazer, e cancelar um cancelado é recusado.
+
+**Motivo.** Sem o motivo, o histórico da cliente vira uma coluna de "cancelado" sem sentido. Sem a
+autoria, *"a Marilda desmarcou três vezes"* e *"eu remarquei a Marilda três vezes porque a Ana
+faltou"* viram a mesma linha no relatório — e são conversas opostas.
+
+Na mesma escrita porque um cancelamento gravado sem o motivo, ainda que por um instante, já nasceu
+incompleto, e não há segunda chance num status terminal.
+
+Recusar o segundo cancelamento é onde esta regra **difere** de RT-AGD-004: confirmar o já confirmado
+é inócuo e devolve o estado; cancelar o já cancelado chega com outro motivo e outra autoria, e
+aceitar em silêncio sobrescreveria o registro do que aconteceu. A diferença é se o segundo pedido
+carrega informação nova.
+
+**Onde é garantida.** `CancelarAgendamentoUseCase` · `AgendaJdbc.alterarStatus` com motivo e
+autoria · coluna `agendamento.cancelado_pela_cliente` (V26).
+**Rotinas.** RT-AGD-005, RT-AGD-006 · **Teste.**
+`CancelarAgendamentoIT.motivo_obrigatorio`, `CancelarAgendamentoIT.motivo_e_autoria_gravados`,
+`CancelarAgendamentoIT.cancelar_duas_vezes`
+**Erro.** `ER-AGD-MOTIVO_OBRIGATORIO` (422), `ER-AGD-TRANSICAO_INVALIDA` (409)
 **Configurável?** Não · **Origem.** 2026-09-04
