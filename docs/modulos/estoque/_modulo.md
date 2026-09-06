@@ -8,8 +8,8 @@
 
 ## Fronteira
 
-Expõe `ProdutoApi`, `ProdutoResumo`, `LoteResumo`, `FinalidadeDoProduto`,
-`UnidadeDeMedida`, `TipoDeMovimento` e `ErrosDoEstoque`.
+Expõe `ProdutoApi`, `ProdutoResumo`, `LoteResumo`, `SaldoDoProduto`,
+`FinalidadeDoProduto`, `UnidadeDeMedida`, `TipoDeMovimento` e `ErrosDoEstoque`.
 
 `ProdutoApi` nasceu em RT-ATD-003, quando o primeiro módulo passou a consumir produto — antes
 disso teria sido interface sem chamador, documentação que o compilador não confere.
@@ -35,6 +35,7 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 |---|---|
 | [RT-EST-001](RT-EST-001-cadastro-de-produto.md) — cadastro de produto | implementada |
 | [RT-EST-002](RT-EST-002-entrada-de-lote.md) — entrada de lote com custo e validade | implementada |
+| [RT-EST-003](RT-EST-003-saldo-e-custo-medio.md) — saldo e custo médio ponderado | implementada |
 
 ## Rotas
 
@@ -47,7 +48,9 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 | `GET /api/v1/produtos` | lista; `somenteVendaveis` é a do balcão | `estoque:read` |
 | `POST /api/v1/produtos/{id}/lotes` | a caixa chegou: lote + movimento de entrada | `estoque:write` |
 | `GET /api/v1/produtos/{id}/lotes` | os lotes, **na ordem do FEFO** | `estoque:read` |
+| `GET /api/v1/produtos/saldos` | o inventário; padrão traz também o que zerou | `estoque:read` |
+| `GET /api/v1/produtos/{id}/saldo` | quanto há e a que custo médio | `estoque:read` |
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-EST-001 a RN-EST-008.
+Ver [regras.md](regras.md) — RN-EST-001 a RN-EST-010.

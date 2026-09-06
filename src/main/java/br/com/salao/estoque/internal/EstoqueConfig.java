@@ -4,6 +4,7 @@ import br.com.salao.estoque.internal.application.AtualizarProdutoUseCase;
 import br.com.salao.estoque.internal.application.CadastrarProdutoUseCase;
 import br.com.salao.estoque.internal.application.DefinirAtivacaoDoProdutoUseCase;
 import br.com.salao.estoque.internal.application.DefinirPrecoDeVendaUseCase;
+import br.com.salao.estoque.internal.application.ConsultarSaldoUseCase;
 import br.com.salao.estoque.internal.application.ListarLotesUseCase;
 import br.com.salao.estoque.internal.application.ListarProdutosUseCase;
 import br.com.salao.estoque.internal.application.RegistrarEntradaDeLoteUseCase;
@@ -67,6 +68,11 @@ public class EstoqueConfig {
     @Bean
     public ListarLotesUseCase listarLotesUseCase(LotesJdbc lotes) {
         return new ListarLotesUseCase(lotes);
+    }
+
+    @Bean
+    public ConsultarSaldoUseCase consultarSaldoUseCase(LotesJdbc lotes) {
+        return new ConsultarSaldoUseCase(lotes);
     }
 
     @Bean

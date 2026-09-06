@@ -1,6 +1,8 @@
 package br.com.salao.estoque.internal.infra;
 
 import br.com.salao.estoque.api.LoteResumo;
+import br.com.salao.estoque.api.SaldoDoProduto;
+import br.com.salao.estoque.api.UnidadeDeMedida;
 import br.com.salao.estoque.api.TipoDeMovimento;
 import br.com.salao.shared.dinheiro.Money;
 import java.math.BigDecimal;
@@ -125,6 +127,87 @@ public class LotesJdbc {
                 .param("somenteComSaldo", somenteComSaldo)
                 .query(LotesJdbc::mapear)
                 .list();
+    }
+
+    // ------------------------------------------------------------------ RT-EST-003
+
+    /**
+     * O saldo e o custo médio, calculados no banco.
+     *
+     * <h2>Por que só os lotes com saldo positivo entram na média</h2>
+     *
+     * <p>Lote zerado não tem unidade nenhuma para ponderar — incluí-lo puxaria a média para o custo
+     * de mercadoria que já saiu. E lote com saldo negativo (que só aparece se um ajuste errar) tem
+     * peso negativo: ele <em>subtrairia</em> valor de um estoque que existe, e a média poderia até
+     * ficar negativa.
+     *
+     * <p>A quantidade, essa soma tudo — inclusive o negativo. Esconder um saldo negativo seria
+     * esconder o erro que precisa ser corrigido (RT-EST-005).
+     *
+     * <h2>Nulo quando não há estoque</h2>
+     *
+     * <p>Zero significaria "tenho unidades que não custaram nada", que é o caso real da amostra do
+     * fornecedor. Sem estoque não existe média a tirar, e o {@code case} devolve nulo.
+     */
+    private static final String SALDO = """
+            with saldo_por_lote as (
+              select l.produto_id,
+                     l.custo_unitario,
+                     coalesce((select sum(m.quantidade) from movimento_estoque m
+                                where m.lote_id = l.id), 0) as saldo
+                from lote l
+            )
+            select p.id as produto_id, p.nome, p.unidade,
+                   coalesce(sum(s.saldo), 0) as quantidade,
+                   case when sum(case when s.saldo > 0 then s.saldo end) > 0
+                        then sum(case when s.saldo > 0 then s.saldo * s.custo_unitario end)
+                           / sum(case when s.saldo > 0 then s.saldo end)
+                   end as custo_medio
+              from produto p
+              left join saldo_por_lote s on s.produto_id = p.id
+            """;
+
+    @Transactional(readOnly = true)
+    public Optional<SaldoDoProduto> saldoDoProduto(UUID produtoId) {
+        return jdbc.sql(SALDO + " where p.id = :produto group by p.id, p.nome, p.unidade")
+                .param("produto", produtoId)
+                .query(LotesJdbc::mapearSaldo)
+                .optional();
+    }
+
+    /**
+     * O saldo de todos os produtos, em ordem de nome.
+     *
+     * <p>Uma consulta para a tela inteira. Perguntar produto a produto seria uma consulta por linha
+     * para desenhar o inventário — a mesma razão de {@code ClienteApi.nomesDe}.
+     */
+    @Transactional(readOnly = true)
+    public List<SaldoDoProduto> saldos(boolean somenteComEstoque) {
+        return jdbc.sql(SALDO + """
+                 where p.ativo
+                 group by p.id, p.nome, p.unidade
+                having :somenteComEstoque = false or coalesce(sum(s.saldo), 0) > 0
+                 order by lower(p.nome)
+                """)
+                .param("somenteComEstoque", somenteComEstoque)
+                .query(LotesJdbc::mapearSaldo)
+                .list();
+    }
+
+    private static SaldoDoProduto mapearSaldo(ResultSet rs, int linha) throws SQLException {
+        BigDecimal quantidade = rs.getBigDecimal("quantidade");
+        BigDecimal custoMedio = rs.getBigDecimal("custo_medio");
+        Money medio = custoMedio == null ? null : new Money(custoMedio);
+        Money valor = medio == null || quantidade.signum() <= 0
+                ? Money.ZERO
+                : medio.multiplicar(quantidade);
+        return new SaldoDoProduto(
+                rs.getObject("produto_id", UUID.class),
+                rs.getString("nome"),
+                UnidadeDeMedida.valueOf(rs.getString("unidade")),
+                quantidade,
+                medio,
+                valor);
     }
 
     private static LoteResumo mapear(ResultSet rs, int linha) throws SQLException {

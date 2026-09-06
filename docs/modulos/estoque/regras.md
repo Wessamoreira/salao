@@ -163,3 +163,48 @@ escolhido na tela, e descobrir isso depois custa um inventário.
 `EntradaDeLoteIT.vencida_entra`, `EntradaDeLoteIT.produto_inativo`,
 `ProdutosWebIT.lotes_em_ordem_fefo`
 **Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-EST-009 — Saldo, custo médio e valor em estoque são projeção, nunca coluna
+
+**Enunciado.** O saldo de um produto é a soma dos movimentos de todos os seus lotes; o custo médio é
+a ponderação dos lotes com saldo positivo; o valor em estoque é o produto dos dois. Nenhum dos três
+é gravado.
+
+**Motivo.** É RN-EST-006 um nível acima, e o que se ganha é o mesmo, ampliado: **não existe
+"recalcular o estoque"**. Não há job noturno, script de correção, nem a conversa de *"o saldo do
+sistema está errado, precisa rodar aquela rotina"* — que é a conversa que todo sistema de estoque
+com coluna de saldo acaba tendo.
+
+**Onde é garantida.** `LotesJdbc.SALDO` calcula tudo em uma consulta · nenhuma coluna de saldo em
+`produto` ou `lote`.
+**Rotinas.** RT-EST-003 · **Teste.** `SaldoEcustoMedioIT.custo_medio_ponderado`,
+`EntradaDeLoteIT.saldo_e_projecao`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-EST-010 — Só lote com saldo positivo pondera; sem estoque, o custo médio é nulo
+
+**Enunciado.** A média ponderada considera apenas lotes com saldo maior que zero. A quantidade
+total soma todos, inclusive saldos negativos. Sem nenhum lote positivo, o custo médio é **nulo** e
+o valor em estoque é zero.
+
+**Motivo.** Lote zerado não tem unidade para ponderar, e incluí-lo puxaria a média para o custo de
+mercadoria que já saiu — a média é do que está na prateleira. Lote negativo tem peso negativo:
+subtrairia valor de um estoque que existe, e a média poderia ficar negativa.
+
+A quantidade mostra o negativo porque escondê-lo seria esconder o erro que precisa ser corrigido
+(RT-EST-005). Estoque que nunca mostra número estranho é estoque em que ninguém confia.
+
+E nulo não é zero: zero significaria "tenho unidades que não custaram nada", que é o caso real da
+amostra do fornecedor. É a mesma distinção de `ServicoApi.precoEm` (RN-ATD-005) e de
+`taxa_prevista` (RN-FIN-004).
+
+**Onde é garantida.** Os `case when saldo > 0` da consulta de saldo · `SaldoDoProduto.custoMedio`
+anulável.
+**Rotinas.** RT-EST-003 · **Teste.** `SaldoEcustoMedioIT.lote_zerado_nao_pondera`,
+`SaldoEcustoMedioIT.sem_estoque_sem_media`, `SaldoEcustoMedioIT.saldo_negativo_aparece`,
+`SaldoEcustoMedioIT.amostra_de_graca`
+**Configurável?** Não · **Origem.** 2026-09-05

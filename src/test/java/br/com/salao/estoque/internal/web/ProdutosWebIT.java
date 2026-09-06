@@ -199,6 +199,45 @@ class ProdutosWebIT extends AbstractPostgresIT {
                 """, token).statusCode()).isIn(400, 422);
     }
 
+
+    @Test
+    @DisplayName("o saldo e o custo médio saem prontos do servidor")
+    void saldo_do_produto() throws Exception {
+        String token = entrar();
+        String id = idDe(post("/api/v1/produtos", """
+                {"nome":"Shampoo","finalidade":"VENDA","unidade":"UN"}
+                """, token));
+        post("/api/v1/produtos/" + id + "/lotes", """
+                {"quantidade":10,"custoUnitario":20}
+                """, token);
+        post("/api/v1/produtos/" + id + "/lotes", """
+                {"quantidade":5,"custoUnitario":26}
+                """, token);
+
+        var saldo = get("/api/v1/produtos/" + id + "/saldo", token);
+
+        assertThat(saldo.statusCode()).isEqualTo(200);
+        assertThat(saldo.body()).contains("\"quantidade\":15.000")
+                .contains("\"custoMedio\":{\"valor\":22.0000}")
+                .contains("\"valorEmEstoque\":{\"valor\":330.0000}");
+    }
+
+    @Test
+    @DisplayName("/saldos é caminho, não uuid — e traz o que está zerado")
+    void lista_de_saldos() throws Exception {
+        // A rota literal precisa vencer o /{id}: a tela de reposição existe justamente para
+        // mostrar o que acabou.
+        String token = entrar();
+        post("/api/v1/produtos", """
+                {"nome":"Máscara","finalidade":"VENDA","unidade":"UN"}
+                """, token);
+
+        var saldos = get("/api/v1/produtos/saldos", token);
+
+        assertThat(saldos.statusCode()).isEqualTo(200);
+        assertThat(saldos.body()).contains("Máscara").contains("\"custoMedio\":null");
+    }
+
     private String entrar() throws Exception {
         var resposta = post("/api/v1/auth/login",
                 "{\"email\":\"ana@salao.test\",\"senha\":\"" + SENHA + "\"}", null);

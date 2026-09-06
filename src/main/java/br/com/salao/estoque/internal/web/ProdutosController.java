@@ -3,12 +3,14 @@ package br.com.salao.estoque.internal.web;
 import br.com.salao.estoque.api.FinalidadeDoProduto;
 import br.com.salao.estoque.api.LoteResumo;
 import br.com.salao.estoque.api.ProdutoResumo;
+import br.com.salao.estoque.api.SaldoDoProduto;
 import br.com.salao.estoque.api.UnidadeDeMedida;
 import br.com.salao.estoque.internal.application.AtualizarProdutoUseCase;
 import br.com.salao.estoque.internal.application.CadastrarProdutoUseCase;
 import br.com.salao.estoque.internal.application.DadosDoProduto;
 import br.com.salao.estoque.internal.application.DefinirAtivacaoDoProdutoUseCase;
 import br.com.salao.estoque.internal.application.DefinirPrecoDeVendaUseCase;
+import br.com.salao.estoque.internal.application.ConsultarSaldoUseCase;
 import br.com.salao.estoque.internal.application.DadosDaEntrada;
 import br.com.salao.estoque.internal.application.ListarLotesUseCase;
 import br.com.salao.estoque.internal.application.ListarProdutosUseCase;
@@ -52,13 +54,15 @@ public class ProdutosController {
     private final ListarProdutosUseCase listar;
     private final RegistrarEntradaDeLoteUseCase registrarEntrada;
     private final ListarLotesUseCase listarLotes;
+    private final ConsultarSaldoUseCase consultarSaldo;
 
     public ProdutosController(CadastrarProdutoUseCase cadastrar, AtualizarProdutoUseCase atualizar,
                               DefinirPrecoDeVendaUseCase definirPreco,
                               DefinirAtivacaoDoProdutoUseCase definirAtivacao,
                               ListarProdutosUseCase listar,
                               RegistrarEntradaDeLoteUseCase registrarEntrada,
-                              ListarLotesUseCase listarLotes) {
+                              ListarLotesUseCase listarLotes,
+                              ConsultarSaldoUseCase consultarSaldo) {
         this.cadastrar = cadastrar;
         this.atualizar = atualizar;
         this.definirPreco = definirPreco;
@@ -66,6 +70,7 @@ public class ProdutosController {
         this.listar = listar;
         this.registrarEntrada = registrarEntrada;
         this.listarLotes = listarLotes;
+        this.consultarSaldo = consultarSaldo;
     }
 
     /**
@@ -196,5 +201,28 @@ public class ProdutosController {
     public List<LoteResumo> lotes(@PathVariable UUID id,
                                   @RequestParam(defaultValue = "true") boolean somenteComSaldo) {
         return listarLotes.executar(id, somenteComSaldo);
+    }
+
+    // ------------------------------------------------------------------ RT-EST-003
+
+    /**
+     * O inventário: o que há de cada produto e quanto vale.
+     *
+     * <p>Rota literal antes de {@code /{id}} de propósito — {@code /saldos} é um caminho, não um
+     * uuid.
+     *
+     * @param somenteComEstoque padrão {@code false}: a tela de reposição existe justamente para
+     *                          mostrar o que está zerado
+     */
+    @GetMapping("/saldos")
+    public List<SaldoDoProduto> saldos(
+            @RequestParam(defaultValue = "false") boolean somenteComEstoque) {
+        return consultarSaldo.deTodos(somenteComEstoque);
+    }
+
+    /** Quanto há deste produto, e a que custo médio. Nada disso é coluna: tudo é projeção. */
+    @GetMapping("/{id}/saldo")
+    public ResponseEntity<SaldoDoProduto> saldo(@PathVariable UUID id) {
+        return ResponseEntity.of(consultarSaldo.doProduto(id));
     }
 }
