@@ -1,14 +1,24 @@
 package br.com.salao.atendimento.internal.infra;
 
 import br.com.salao.atendimento.api.ComandaResumo;
+import br.com.salao.atendimento.api.ExecutanteDoItem;
+import br.com.salao.atendimento.api.ItemDaComanda;
+import br.com.salao.atendimento.api.OrigemDaComissao;
+import br.com.salao.atendimento.api.PapelDoExecutante;
+import br.com.salao.atendimento.api.TipoDeItem;
 import br.com.salao.atendimento.api.OrigemDaComanda;
 import br.com.salao.atendimento.api.StatusDaComanda;
+import br.com.salao.shared.dinheiro.Money;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -114,6 +124,175 @@ public class ComandasJdbc {
                 .list();
     }
 
+    // ------------------------------------------------------------------ RT-ATD-002
+
+    private static final String CAMPOS_DO_ITEM = """
+            id, tipo, servico_id, produto_id, agendamento_id, descricao, quantidade,
+            preco_unitario, desconto, valor_total
+            """;
+
+    @Transactional
+    public UUID inserirItemDeServico(UUID estabelecimentoId, UUID comandaId, UUID servicoId,
+                                     UUID agendamentoId, String descricao, BigDecimal quantidade,
+                                     Money precoUnitario, Money valorTotal, Instant criadoEm) {
+        return jdbc.sql("""
+                insert into item_comanda (estabelecimento_id, comanda_id, tipo, servico_id,
+                                          agendamento_id, descricao, quantidade, preco_unitario,
+                                          valor_total, criado_em)
+                values (:estabelecimento, :comanda, 'SERVICO', :servico, :agendamento, :descricao,
+                        :quantidade, :preco, :total, :criadoEm)
+                returning id
+                """)
+                .param("estabelecimento", estabelecimentoId)
+                .param("comanda", comandaId)
+                .param("servico", servicoId)
+                .param("agendamento", agendamentoId)
+                .param("descricao", descricao)
+                .param("quantidade", quantidade)
+                .param("preco", precoUnitario.valor())
+                .param("total", valorTotal.valor())
+                .param("criadoEm", OffsetDateTime.ofInstant(criadoEm, ZoneOffset.UTC))
+                .query(UUID.class)
+                .single();
+    }
+
+    @Transactional
+    public void inserirExecutante(UUID estabelecimentoId, UUID itemId, UUID profissionalId,
+                                  PapelDoExecutante papel, BigDecimal percentual,
+                                  OrigemDaComissao origem, Money base, Money comissao) {
+        jdbc.sql("""
+                insert into executante (estabelecimento_id, item_comanda_id, profissional_id,
+                                        papel, percentual_comissao, regra_origem,
+                                        base_calculo, valor_comissao)
+                values (:estabelecimento, :item, :profissional, :papel, :percentual, :origem,
+                        :base, :comissao)
+                """)
+                .param("estabelecimento", estabelecimentoId)
+                .param("item", itemId)
+                .param("profissional", profissionalId)
+                .param("papel", papel.name())
+                .param("percentual", percentual)
+                .param("origem", origem.name())
+                .param("base", base.valor())
+                .param("comissao", comissao.valor())
+                .update();
+    }
+
+    /**
+     * Apaga o item. Os executantes vão junto, por {@code on delete cascade}.
+     *
+     * <p>Apagar, e não marcar como removido: item lançado por engano não é fato do atendimento, é
+     * digitação. O que precisa sobreviver a uma correção é o <em>fechamento</em> — e comanda
+     * fechada não aceita remoção (RN-ATD-006).
+     */
+    @Transactional
+    public int removerItem(UUID itemId) {
+        return jdbc.sql("delete from item_comanda where id = :id").param("id", itemId).update();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<UUID> comandaDoItem(UUID itemId) {
+        return jdbc.sql("select comanda_id from item_comanda where id = :id")
+                .param("id", itemId)
+                .query(UUID.class)
+                .optional();
+    }
+
+    /**
+     * Recalcula os totais gravados da comanda a partir dos itens.
+     *
+     * <p>Uma consulta só, no banco: somar na aplicação exigiria carregar todos os itens para
+     * escrever três números, e duas somas — a da tela e a da gravação — divergem no dia em que
+     * alguém arredondar diferente.
+     *
+     * <p>{@code versao} sobe junto: quem estava com a comanda na tela precisa saber que ela mudou.
+     */
+    @Transactional
+    public void recalcularTotais(UUID comandaId) {
+        jdbc.sql("""
+                update comanda c
+                   set valor_bruto = coalesce(t.bruto, 0),
+                       valor_desconto = coalesce(t.desconto, 0),
+                       valor_liquido = coalesce(t.bruto, 0) - coalesce(t.desconto, 0),
+                       versao = c.versao + 1
+                  from (select sum(preco_unitario * quantidade) as bruto,
+                               sum(desconto) as desconto
+                          from item_comanda where comanda_id = :comanda) t
+                 where c.id = :comanda
+                """)
+                .param("comanda", comandaId)
+                .update();
+    }
+
+    /** Os itens da comanda, com os executantes de cada um, em duas consultas. */
+    @Transactional(readOnly = true)
+    public List<ItemDaComanda> itensDe(UUID comandaId) {
+        record Linha(UUID id, TipoDeItem tipo, UUID servicoId, UUID produtoId, UUID agendamentoId,
+                     String descricao, BigDecimal quantidade, Money preco, Money desconto,
+                     Money total) {
+        }
+        List<Linha> linhas = jdbc.sql("select " + CAMPOS_DO_ITEM + """
+                  from item_comanda where comanda_id = :comanda order by criado_em, id
+                """)
+                .param("comanda", comandaId)
+                .query((rs, i) -> new Linha(
+                        rs.getObject("id", UUID.class),
+                        TipoDeItem.valueOf(rs.getString("tipo")),
+                        rs.getObject("servico_id", UUID.class),
+                        rs.getObject("produto_id", UUID.class),
+                        rs.getObject("agendamento_id", UUID.class),
+                        rs.getString("descricao"),
+                        rs.getBigDecimal("quantidade"),
+                        new Money(rs.getBigDecimal("preco_unitario")),
+                        new Money(rs.getBigDecimal("desconto")),
+                        new Money(rs.getBigDecimal("valor_total"))))
+                .list();
+        if (linhas.isEmpty()) {
+            return List.of();
+        }
+
+        Map<UUID, List<ExecutanteDoItem>> porItem = executantesDe(
+                linhas.stream().map(Linha::id).toList());
+        List<ItemDaComanda> itens = new ArrayList<>(linhas.size());
+        for (Linha l : linhas) {
+            itens.add(new ItemDaComanda(l.id(), l.tipo(), l.servicoId(), l.produtoId(),
+                    l.agendamentoId(), l.descricao(), l.quantidade(), l.preco(), l.desconto(),
+                    l.total(), porItem.getOrDefault(l.id(), List.of())));
+        }
+        return itens;
+    }
+
+    /**
+     * Os executantes de vários itens, numa consulta.
+     *
+     * <p>Um por item seria uma consulta por linha para desenhar a comanda — a mesma razão de
+     * {@code ClienteApi.nomesDe} existir.
+     */
+    @Transactional(readOnly = true)
+    public Map<UUID, List<ExecutanteDoItem>> executantesDe(List<UUID> itens) {
+        Map<UUID, List<ExecutanteDoItem>> porItem = new LinkedHashMap<>();
+        jdbc.sql("""
+                select id, item_comanda_id, profissional_id, papel, percentual_comissao,
+                       regra_origem, base_calculo, valor_comissao
+                  from executante where item_comanda_id = any(:itens) order by papel, id
+                """)
+                .param("itens", itens.toArray(UUID[]::new))
+                .query((rs, i) -> {
+                    UUID item = rs.getObject("item_comanda_id", UUID.class);
+                    porItem.computeIfAbsent(item, k -> new ArrayList<>()).add(new ExecutanteDoItem(
+                            rs.getObject("id", UUID.class),
+                            rs.getObject("profissional_id", UUID.class),
+                            PapelDoExecutante.valueOf(rs.getString("papel")),
+                            rs.getBigDecimal("percentual_comissao"),
+                            OrigemDaComissao.valueOf(rs.getString("regra_origem")),
+                            new Money(rs.getBigDecimal("base_calculo")),
+                            new Money(rs.getBigDecimal("valor_comissao"))));
+                    return item;
+                })
+                .list();
+        return porItem;
+    }
+
     private static ComandaResumo mapear(ResultSet rs, int linha) throws SQLException {
         OffsetDateTime fechada = rs.getObject("fechada_em", OffsetDateTime.class);
         return new ComandaResumo(
@@ -125,9 +304,9 @@ public class ComandasJdbc {
                 rs.getObject("aberta_em", OffsetDateTime.class).toInstant(),
                 rs.getObject("aberta_por", UUID.class),
                 fechada == null ? null : fechada.toInstant(),
-                rs.getBigDecimal("valor_bruto"),
-                rs.getBigDecimal("valor_desconto"),
-                rs.getBigDecimal("valor_liquido"),
+                new Money(rs.getBigDecimal("valor_bruto")),
+                new Money(rs.getBigDecimal("valor_desconto")),
+                new Money(rs.getBigDecimal("valor_liquido")),
                 rs.getInt("versao"));
     }
 }

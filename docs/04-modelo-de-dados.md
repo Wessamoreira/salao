@@ -199,6 +199,12 @@ profissional. `regra_origem` existe para responder "por que a minha comissão fo
 `executante` resolve o assistente que lava o cabelo (pergunta em aberto 6): é uma linha a mais no
 item, com percentual próprio.
 
+> Em código desde RT-ATD-002. O enunciado que vale está em
+> [`modulos/atendimento/regras.md`](modulos/atendimento/regras.md) — e com uma precisão que faltava
+> aqui: o snapshot é gravado **no lançamento** do item, não no fechamento. O que o fechamento
+> congela são os derivados (`base_calculo` e `valor_comissao`), que acompanham o desconto enquanto
+> a comanda está aberta.
+
 ## Financeiro — livro-razão
 
 ```sql

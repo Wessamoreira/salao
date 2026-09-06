@@ -1,6 +1,6 @@
 package br.com.salao.atendimento.api;
 
-import java.math.BigDecimal;
+import br.com.salao.shared.dinheiro.Money;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -11,9 +11,9 @@ import java.util.UUID;
  * precisa exibir busca na {@code ClienteApi}, e o que não é carregado não vaza em log. A barra de
  * comandas abertas pede os nomes em lote, numa consulta só.
  *
- * <p>Os três valores são zero enquanto não há item (RT-ATD-002). Estão aqui desde já porque é a
- * soma <em>gravada</em> que o fechamento congela — o contrato da tela não muda quando os itens
- * chegarem.
+ * <p>Os três valores são a soma <strong>gravada</strong> dos itens, recalculada a cada mudança
+ * enquanto a comanda está aberta e congelada no fechamento. Somar os itens a cada leitura seria
+ * dar resposta diferente depois que o preço do catálogo mudasse.
  */
 public record ComandaResumo(
         UUID id,
@@ -24,8 +24,8 @@ public record ComandaResumo(
         Instant abertaEm,
         UUID abertaPor,
         Instant fechadaEm,
-        BigDecimal valorBruto,
-        BigDecimal valorDesconto,
-        BigDecimal valorLiquido,
+        Money valorBruto,
+        Money valorDesconto,
+        Money valorLiquido,
         int versao) {
 }

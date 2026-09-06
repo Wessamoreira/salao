@@ -1,9 +1,5 @@
 # Regras de negócio — módulo `atendimento`
 
-> **RN-ATD-010** (snapshot obrigatório de preço, percentual e regra de origem) já está enunciada em
-> [`04-modelo-de-dados`](../../04-modelo-de-dados.md) e pertence às rotinas que a implementam —
-> RT-ATD-002 e RT-ATD-006. Não está aqui ainda porque nenhuma linha de código a sustenta.
-
 ---
 
 ### RN-ATD-001 — Uma comanda aberta por cliente; abrir de novo devolve a mesma
@@ -90,4 +86,124 @@ A pergunta que `origem` responde é do dono: *quanto do faturamento entra sem ho
 **Onde é garantida.** `comanda.origem` (`check`), preenchida por qual das duas portas foi usada.
 **Rotinas.** RT-ATD-001 · **Teste.** `AbrirComandaIT.abre_avulsa`,
 `AbrirComandaIT.abre_do_agendamento`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-005 — Serviço sem preço é recusado; zero não é preço
+
+**Enunciado.** Lançar um serviço que não tem preço vigente na data é recusado
+(`ER-ATD-SERVICO_SEM_PRECO`). Serviço desativado também (`ER-ATD-SERVICO_FORA_DO_CARDAPIO`).
+
+**Motivo.** O contrato de `ServicoApi.precoEm` já dizia por quê: *"zero é um preço, e um serviço sem
+preço num relatório financeiro precisa aparecer como pendência de cadastro, não como brinde"*.
+Lançar zero transforma falha de cadastro em faturamento perdido silencioso — o pior tipo, porque a
+comanda fecha certinho e o dinheiro não aparece em lugar nenhum.
+
+Desativar é decisão do salão de não vender mais aquilo. Aceitar aqui faria a desativação valer só
+para quem marca horário, e não para quem cobra.
+
+**Onde é garantida.** `AdicionarItemDeServicoUseCase.executar`.
+**Rotinas.** RT-ATD-002 · **Teste.** `AdicionarItemDeServicoIT.servico_sem_preco`,
+`AdicionarItemDeServicoIT.servico_desativado`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-006 — Comanda que não está aberta não muda
+
+**Enunciado.** Item só entra e só sai de comanda `ABERTA`. Comanda `FECHADA` ou `ESTORNADA` recusa
+lançamento e remoção (`ER-ATD-COMANDA_NAO_ESTA_ABERTA`).
+
+**Motivo.** É o que dá sentido ao fechamento. Se a comanda continuasse mudando depois de fechada, o
+valor pago, a comissão apurada e o lançamento no razão passariam a discordar dela — e o registro
+que existe para ser a verdade do atendimento viraria o único que não é.
+
+Corrigir uma comanda fechada é estornar e reabrir (RT-ATD-007), com trilha, não editar em silêncio.
+
+**Onde é garantida.** `AdicionarItemDeServicoUseCase.comandaAberta` · `RemoverItemUseCase.executar`.
+**Rotinas.** RT-ATD-002 · **Teste.** `AdicionarItemDeServicoIT.comanda_fechada`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-007 — Quem executa precisa executar aquele serviço, e estar ativo
+
+**Enunciado.** O executante de um item de serviço tem de estar ativo e ter a habilidade do serviço
+(`ProfissionalApi.executa`). Senão, `ER-ATD-NAO_EXECUTA_O_SERVICO` ou
+`ER-ATD-PROFISSIONAL_NAO_ENCONTRADO`.
+
+**Motivo.** É a mesma exigência de RN-AGD-001, do outro lado do atendimento. Deixar passar
+produziria comissão para alguém cuja regra para aquele serviço nunca foi configurada — o número
+apareceria certo na tela e errado no repasse.
+
+Quando o salão põe alguém para substituir, a habilidade é o cadastro que precisava mesmo ser
+corrigido, e corrigi-lo é uma tela.
+
+**Onde é garantida.** `AdicionarItemDeServicoUseCase.profissionalQueExecuta`.
+**Rotinas.** RT-ATD-002 · **Teste.** `AdicionarItemDeServicoIT.nao_executa_o_servico`,
+`AdicionarItemDeServicoIT.profissional_inativo`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-008 — Os totais da comanda são gravados, e somados num lugar só
+
+**Enunciado.** `valor_bruto`, `valor_desconto` e `valor_liquido` são recalculados por uma consulta
+no banco a cada mudança de item, e `versao` sobe junto. Não são derivados na leitura nem somados na
+aplicação. Lançar ou remover um item devolve a **comanda inteira**.
+
+**Motivo.** Somar na leitura daria resposta diferente depois que o preço do catálogo mudasse — o
+mesmo problema de RN-ATD-010, uma camada acima.
+
+E somar em dois lugares — na tela e na gravação — produz divergência no dia em que alguém arredondar
+diferente. Devolver a comanda inteira é o que impede o front de somar por conta.
+
+**Onde é garantida.** `ComandasJdbc.recalcularTotais` · a resposta de lançar e de remover.
+**Rotinas.** RT-ATD-002 · **Teste.** `AdicionarItemDeServicoIT.dois_itens_somam`,
+`AdicionarItemDeServicoIT.remover_item`, `ComandasWebIT.lancar_item_devolve_a_comanda`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-009 — Item removido é apagado; a trilha fica na auditoria
+
+**Enunciado.** Remover um item apaga a linha (e os executantes, por cascata). O registro de
+auditoria é gravado **antes** do `delete`, com descrição e valor do que saiu.
+
+**Motivo.** Item lançado por engano não é fato do atendimento — é digitação. Uma comanda cheia de
+linhas riscadas é pior de conferir do que uma comanda certa, e quem confere é a recepção com a
+cliente esperando.
+
+A trilha não se perde porque a auditoria é append-only e a role da aplicação não tem `UPDATE` nem
+`DELETE` nela. Gravar depois do `delete` seria gravar o quê — a linha já não existe, e "o que saiu
+da comanda" é justamente a pergunta que a trilha precisa responder.
+
+**Onde é garantida.** `RemoverItemUseCase.executar` · `on delete cascade` em `executante`.
+**Rotinas.** RT-ATD-002 · **Teste.** `AdicionarItemDeServicoIT.remover_item`,
+`AdicionarItemDeServicoIT.remover_item_de_outra_comanda`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-010 — Snapshot obrigatório: preço, percentual e origem da regra
+
+**Enunciado.** `descricao` e `preco_unitario` do item, e `percentual_comissao` e `regra_origem` do
+executante, são gravados no lançamento e **nunca recalculados**.
+
+**Motivo.** Sem isso, reprocessar um fechamento de três meses atrás produz número diferente do
+repasse já pago — e não há como explicar a diferença ao profissional.
+
+`regra_origem` existe para responder *"por que a minha comissão foi 35% e não 40%"*. É a pergunta
+que chega depois que a regra mudou, e recalcular com a regra de hoje é justamente o que não
+responde.
+
+Enunciada desde [`04-modelo-de-dados`](../../04-modelo-de-dados.md); passa a valer em código a
+partir de RT-ATD-002, e o fechamento (RT-ATD-006) é quem congela também os valores derivados —
+`base_calculo` e `valor_comissao`, que enquanto a comanda está aberta acompanham o desconto.
+
+**Onde é garantida.** `AdicionarItemDeServicoUseCase.executar` copia do catálogo e da ficha ·
+colunas `descricao`, `preco_unitario`, `percentual_comissao`, `regra_origem`.
+**Rotinas.** RT-ATD-002, RT-ATD-006 · **Teste.** `AdicionarItemDeServicoIT.preco_e_snapshot`,
+`AdicionarItemDeServicoIT.percentual_e_snapshot`
 **Configurável?** Não · **Origem.** 2026-09-05

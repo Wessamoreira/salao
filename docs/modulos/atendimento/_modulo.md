@@ -18,6 +18,9 @@ atendimento é somado — e, a partir de RT-ATD-006, o único que congela esse v
 **Quanto custa.** Preço é do `catalogo`, e o que a comanda guarda é o *snapshot* do preço no
 momento da venda (RN-ATD-010) — não uma consulta que muda de resposta quando a tabela muda.
 
+**Quem faz o quê.** Habilidade é da `equipe`. Este módulo pergunta se a pessoa executa o serviço; a
+resposta, e a regra por trás dela, são de lá.
+
 **Quando o atendimento aconteceu.** É da `agenda`. A comanda registra que aconteceu, não em que
 horário estava marcado.
 
@@ -28,18 +31,33 @@ precisa exibir, e o que não é carregado não vaza em log.
 
 - `cliente` — `ClienteApi` (existência e nomes em lote)
 - `agenda` — `AgendaApi.porId` (de quem é o horário, e se ele ainda vale)
-- `iam` — `Permissao`, `AuditoriaApi`, `UsuarioAtual`
+- `catalogo` — `ServicoApi` (o que é, e quanto custava hoje)
+- `equipe` — `ProfissionalApi` (quem executa o quê, e com que percentual)
+- `iam` — `Permissao`, `AuditoriaApi`, `EstabelecimentoApi`, `UsuarioAtual`
 
-Três, que é o teto que a `agenda` também segue. `catalogo`, `estoque` e `financeiro` entram nas
-rotinas seguintes e vão estourá-lo — quando isso acontecer, vale a distinção que RT-NOT-002
-produziu: **fonte** (aquilo de que o módulo depende para decidir) conta no teto; **destino** (a
-quem ele conta o que decidiu) não.
+**Cinco, e o teto de três não vale aqui.** RT-ATD-001 registrou "três, que é o teto que a agenda
+segue"; RT-ATD-002 estourou, e a correção é da frase, não do módulo.
+
+O teto da `agenda` existe porque ela **decide** — se um horário está livre —, e um módulo que
+precisa de muitas fontes para decidir está decidindo o que não é dele. `atendimento` **registra**:
+a comanda é, por definição, onde catálogo, equipe, agenda e cliente se encontram. Contar
+dependências aqui mediria a natureza do módulo, não um defeito.
+
+O guarda certo para ele é de direção, não de número:
+
+- nada pode depender de `atendimento` para **decidir** — quem depende, depende do que já aconteceu;
+- `atendimento` não decide nada que é de outro: preço é do `catalogo`, habilidade é da `equipe`,
+  horário é da `agenda`. Ele copia o que eles dizem, no instante em que dizem, e guarda a cópia.
+
+Se algum dia uma regra de preço ou de habilidade aparecer dentro deste módulo, é aí que a fronteira
+foi rompida — não quando a sexta dependência entrar.
 
 ## Rotinas
 
 | Rotina | Situação |
 |---|---|
 | [RT-ATD-001](RT-ATD-001-abrir-comanda.md) — abrir comanda, do agendamento ou avulsa | implementada |
+| [RT-ATD-002](RT-ATD-002-item-de-servico.md) — item de serviço + executantes | implementada |
 
 ## Rotas
 
@@ -47,7 +65,10 @@ quem ele conta o que decidiu) não.
 |---|---|
 | `POST /api/v1/comandas` | abre — 201 se criou, **200 se já estava aberta** |
 | `GET /api/v1/comandas/abertas` | a barra do balcão (R-UX-07), da mais antiga para a mais nova |
+| `GET /api/v1/comandas/{id}` | a comanda com os itens — a tela de fechamento |
+| `POST /api/v1/comandas/{id}/itens` | lança um serviço; devolve a **comanda inteira**, com o total novo |
+| `DELETE /api/v1/comandas/{id}/itens/{itemId}` | tira uma linha lançada errada |
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-ATD-001 a RN-ATD-004.
+Ver [regras.md](regras.md) — RN-ATD-001 a RN-ATD-010.

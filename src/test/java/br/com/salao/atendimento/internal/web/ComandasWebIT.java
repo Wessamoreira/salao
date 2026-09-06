@@ -2,16 +2,31 @@ package br.com.salao.atendimento.internal.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import br.com.salao.catalogo.api.TipoDeBloco;
+import br.com.salao.catalogo.internal.application.CadastrarServicoUseCase;
+import br.com.salao.catalogo.internal.application.DefinirPrecoUseCase;
+import br.com.salao.catalogo.internal.application.EtapaBruta;
+import br.com.salao.equipe.api.TipoDeVinculo;
+import br.com.salao.equipe.internal.application.CadastrarProfissionalUseCase;
+import br.com.salao.equipe.internal.application.DadosDoProfissional;
 import br.com.salao.iam.api.Perfil;
+import br.com.salao.iam.api.Permissao;
 import br.com.salao.iam.internal.application.ProvisionarEstabelecimentoCommand;
 import br.com.salao.iam.internal.application.ProvisionarEstabelecimentoUseCase;
+import br.com.salao.shared.dinheiro.Money;
 import br.com.salao.shared.tenant.AbstractPostgresIT;
+import br.com.salao.shared.tenant.TenantContext;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,6 +34,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 /**
  * RT-ATD-001 — o contrato HTTP da comanda.
@@ -35,15 +53,19 @@ class ComandasWebIT extends AbstractPostgresIT {
     @Value("${local.server.port}")
     private int porta;
 
-    @Autowired
-    private ProvisionarEstabelecimentoUseCase provisionar;
+    @Autowired private ProvisionarEstabelecimentoUseCase provisionar;
+    @Autowired private CadastrarProfissionalUseCase cadastrarProfissional;
+    @Autowired private CadastrarServicoUseCase cadastrarServico;
+    @Autowired private DefinirPrecoUseCase definirPreco;
+
+    private UUID tenant;
 
     private final HttpClient http = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5)).build();
 
     @BeforeEach
     void criarSalaoComRecepcao() throws SQLException {
-        provisionar.executar(new ProvisionarEstabelecimentoCommand(
+        tenant = provisionar.executar(new ProvisionarEstabelecimentoCommand(
                 "Salão", null, null, null, null, null, null, "11",
                 "Ana", "ana@salao.test", SENHA));
         trocarPerfil(Perfil.RECEPCAO);
@@ -144,6 +166,108 @@ class ComandasWebIT extends AbstractPostgresIT {
         assertThat(post("/api/v1/comandas", "{\"clienteId\":\""
                 + java.util.UUID.randomUUID() + "\"}", null).statusCode()).isIn(401, 403);
         assertThat(get("/api/v1/comandas/abertas", null).statusCode()).isIn(401, 403);
+    }
+
+
+    /**
+     * Cadastro que só o dono faz, montado por dentro.
+     *
+     * <p>Pela porta HTTP exigiria entrar como ADMIN, e ADMIN exige segundo fator — que já tem
+     * teste próprio. O que este arquivo protege é o contrato da comanda, não o do cadastro.
+     */
+    private <T> T comoDono(Supplier<T> acao) {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("dona", null, List.of(
+                        new SimpleGrantedAuthority(Permissao.CONFIG_GERENCIAR),
+                        new SimpleGrantedAuthority(Permissao.USUARIO_GERENCIAR))));
+        try {
+            return TenantContext.obter(tenant, acao::get);
+        } finally {
+            SecurityContextHolder.clearContext();
+        }
+    }
+
+    private UUID umaProfissional() {
+        return comoDono(() -> cadastrarProfissional.executar(new DadosDoProfissional(
+                "Ana Ribeiro", "Ana", "11144477735", TipoDeVinculo.EMPREGADO, null, null,
+                new BigDecimal("40.00"), null, null, null))).id();
+    }
+
+    private UUID umServicoDe80() {
+        UUID servico = comoDono(() -> cadastrarServico.executar("Escova", null,
+                List.of(new EtapaBruta(TipoDeBloco.ATIVO, 45)))).id();
+        comoDono(() -> definirPreco.executar(servico, Money.de("80"), LocalDate.now()));
+        return servico;
+    }
+
+    private String abrirComandaDe(String clienteId, String token) throws Exception {
+        var criada = post("/api/v1/comandas", "{\"clienteId\":\"" + clienteId + "\"}", token);
+        String local = criada.headers().firstValue("Location").orElseThrow();
+        return local.substring(local.lastIndexOf('/') + 1);
+    }
+
+    @Test
+    @DisplayName("lançar item devolve a comanda inteira, com o total novo")
+    void lancar_item_devolve_a_comanda() throws Exception {
+        // Devolver só o item obrigaria o front a somar por conta — e duas somas, a da tela e a do
+        // banco, divergem no dia em que alguém arredondar diferente.
+        String token = entrar();
+        String comanda = abrirComandaDe(umaCliente(token), token);
+        UUID servico = umServicoDe80();
+        UUID profissional = umaProfissional();
+
+        var resposta = post("/api/v1/comandas/" + comanda + "/itens",
+                "{\"servicoId\":\"" + servico + "\",\"profissionalId\":\"" + profissional
+                        + "\"}", token);
+
+        assertThat(resposta.statusCode()).isEqualTo(201);
+        assertThat(resposta.body()).contains("Escova").contains("80.0000")
+                .contains("PRINCIPAL").contains("PROFISSIONAL");
+    }
+
+    @Test
+    @DisplayName("a comanda detalhada traz os itens; remover devolve o total ao que era")
+    void detalhe_e_remocao() throws Exception {
+        String token = entrar();
+        String comanda = abrirComandaDe(umaCliente(token), token);
+        post("/api/v1/comandas/" + comanda + "/itens",
+                "{\"servicoId\":\"" + umServicoDe80() + "\",\"profissionalId\":\""
+                        + umaProfissional() + "\"}", token);
+
+        var detalhe = get("/api/v1/comandas/" + comanda, token);
+        assertThat(detalhe.statusCode()).isEqualTo(200);
+        assertThat(detalhe.body()).contains("Escova");
+
+        String itemId = detalhe.body().replaceAll("(?s).*\"itens\":\\[\\{\"id\":\"([^\"]+)\".*", "$1");
+        var apos = delete("/api/v1/comandas/" + comanda + "/itens/" + itemId, token);
+
+        assertThat(apos.statusCode()).isEqualTo(200);
+        assertThat(apos.body()).contains("\"itens\":[]");
+    }
+
+    @Test
+    @DisplayName("item sem serviço nem profissional para na borda")
+    void item_incompleto() throws Exception {
+        String token = entrar();
+        String comanda = abrirComandaDe(umaCliente(token), token);
+
+        assertThat(post("/api/v1/comandas/" + comanda + "/itens", "{}", token).statusCode())
+                .isIn(400, 422);
+    }
+
+    @Test
+    @DisplayName("comanda que não existe responde 404")
+    void comanda_inexistente() throws Exception {
+        assertThat(get("/api/v1/comandas/" + UUID.randomUUID(), entrar()).statusCode())
+                .isEqualTo(404);
+    }
+
+    private HttpResponse<String> delete(String caminho, String token) throws Exception {
+        var b = HttpRequest.newBuilder(URI.create("http://localhost:" + porta + caminho)).DELETE();
+        if (token != null) {
+            b.header("Authorization", "Bearer " + token);
+        }
+        return http.send(b.build(), HttpResponse.BodyHandlers.ofString());
     }
 
     private String entrar() throws Exception {
