@@ -208,3 +208,70 @@ anulável.
 `SaldoEcustoMedioIT.sem_estoque_sem_media`, `SaldoEcustoMedioIT.saldo_negativo_aparece`,
 `SaldoEcustoMedioIT.amostra_de_graca`
 **Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-EST-011 — A saída é FEFO: vence primeiro, sai primeiro
+
+**Enunciado.** Toda baixa consome os lotes na ordem `validade nulls last, recebido_em`. Uma baixa
+pode atravessar vários lotes.
+
+**Motivo.** Num salão o que estraga não é o que chegou primeiro, é o que vence primeiro. FIFO
+deixaria vencer no armário a caixa comprada ontem com validade curta — que é justamente o
+desperdício que o sistema existe para evitar.
+
+O que não tem validade sai por último: não corre risco de perder.
+
+**Onde é garantida.** `idx_lote_fefo` · a ordem no `travarLotesDoProduto` e no `doProduto` ·
+`BaixaFefo.baixar` percorre nessa ordem.
+**Rotinas.** RT-EST-004 · **Teste.** `BaixaFefoIT.fefo_e_nao_fifo`,
+`BaixaFefoIT.sem_validade_por_ultimo`, `BaixaFefoIT.baixa_em_varios_lotes`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-EST-012 — O custo da retirada é a média do que saiu, não o custo médio do produto
+
+**Enunciado.** Cada movimento de saída grava o custo **do lote** de onde a unidade saiu. A baixa
+devolve a média ponderada dessas parcelas, que é o custo daquela retirada.
+
+**Motivo.** São perguntas diferentes: o custo médio do produto (RN-EST-010) vale o inventário — é a
+média do que está na prateleira; o custo da retirada mede a margem daquela venda — é a média do que
+saiu.
+
+Usar o custo médio do produto na venda faria a margem de uma venda mudar quando a próxima caixa
+chegasse mais cara, que é exatamente o que o snapshot existe para impedir (RN-ATD-010).
+
+**Onde é garantida.** `movimento_estoque.custo_unitario` recebe o custo do lote ·
+`BaixaFefo` pondera as parcelas.
+**Rotinas.** RT-EST-004 · **Teste.** `BaixaFefoIT.baixa_em_varios_lotes`,
+`BaixaFefoIT.custo_da_retirada_nao_e_o_do_produto`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-EST-013 — A baixa trava os lotes antes de decidir, em dois comandos
+
+**Enunciado.** A baixa executa `select ... for update` sobre os lotes do produto e **só então** lê
+os saldos, em outro comando. Saldo insuficiente recusa a operação inteira, sem baixar nada, e a
+mensagem informa quanto há.
+
+**Motivo.** Sem lock, duas comandas fechando ao mesmo tempo leem o mesmo saldo, as duas decidem que
+cabe, e o lote fica negativo. O saldo ser projeção **não** protege disso: projeção resolve saldo
+errado, não corrida.
+
+E lock com leitura no mesmo comando também não protege — foi assim na primeira versão, com teste
+provando as duas baixas passando. Em `READ COMMITTED`, quem acorda do `for update` reavalia a linha
+travada na versão nova, mas a subconsulta do saldo, na lista de seleção, já foi resolvida com o
+snapshot do início do comando: a segunda transação acorda com o lock na mão e o saldo de antes.
+
+Cada comando pega um snapshot novo, então a leitura separada já enxerga o commit do vizinho.
+
+A ordem do `order by` é a mesma para todas as transações: quem trava as mesmas linhas em ordens
+diferentes faz deadlock.
+
+**Onde é garantida.** `LotesJdbc.travarLotesDoProduto` (só trava) · `BaixaFefo.baixar` lê depois ·
+a transação da baixa.
+**Rotinas.** RT-EST-004 · **Teste.** `BaixaFefoIT.concorrencia_na_ultima_unidade`,
+`BaixaFefoIT.saldo_insuficiente`, `BaixaFefoIT.recusa_nao_deixa_rastro`
+**Configurável?** Não · **Origem.** 2026-09-05

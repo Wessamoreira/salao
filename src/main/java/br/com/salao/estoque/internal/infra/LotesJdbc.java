@@ -210,6 +210,43 @@ public class LotesJdbc {
                 valor);
     }
 
+    // ------------------------------------------------------------------ RT-EST-004
+
+    /**
+     * Trava os lotes do produto, na ordem do FEFO. <strong>Só trava — não lê saldo.</strong>
+     *
+     * <h2>Por que o lock e a leitura são dois comandos</h2>
+     *
+     * <p>A primeira versão fazia os dois de uma vez: {@code select ... , (subconsulta de saldo)
+     * ... for update}. E não funcionou — duas baixas simultâneas levaram a mesma última unidade,
+     * com teste provando.
+     *
+     * <p>A causa é o {@code READ COMMITTED}. Quando a segunda transação fica bloqueada no
+     * {@code for update} e finalmente pega a linha, o PostgreSQL reavalia a <em>linha travada</em>
+     * na versão nova — mas a subconsulta do saldo, que está na lista de seleção, já foi resolvida
+     * com o snapshot do início do comando. A segunda transação acorda com o lock na mão e o saldo
+     * de antes: vê uma unidade que já não existe.
+     *
+     * <p>Separar resolve porque, em {@code READ COMMITTED}, <strong>cada comando pega um snapshot
+     * novo</strong>. O lock vem primeiro; a leitura do saldo vem depois, num comando que começa
+     * já com o commit do vizinho visível.
+     *
+     * <p>A ordem do {@code order by} é a mesma para todo mundo, e isso não é detalhe: transações
+     * que travam as mesmas linhas em ordens diferentes fazem deadlock.
+     */
+    @Transactional
+    public void travarLotesDoProduto(UUID produtoId) {
+        jdbc.sql("""
+                select l.id from lote l
+                 where l.produto_id = :produto
+                 order by l.validade nulls last, l.recebido_em, l.id
+                   for update
+                """)
+                .param("produto", produtoId)
+                .query(UUID.class)
+                .list();
+    }
+
     private static LoteResumo mapear(ResultSet rs, int linha) throws SQLException {
         Date validade = rs.getDate("validade");
         return new LoteResumo(

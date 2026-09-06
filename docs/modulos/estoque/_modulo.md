@@ -8,8 +8,14 @@
 
 ## Fronteira
 
-Expõe `ProdutoApi`, `ProdutoResumo`, `LoteResumo`, `SaldoDoProduto`,
-`FinalidadeDoProduto`, `UnidadeDeMedida`, `TipoDeMovimento` e `ErrosDoEstoque`.
+Expõe `ProdutoApi`, `EstoqueApi`, `ProdutoResumo`, `LoteResumo`, `SaldoDoProduto`,
+`BaixaDeEstoque`, `FinalidadeDoProduto`, `UnidadeDeMedida`, `TipoDeMovimento` e
+`ErrosDoEstoque`.
+
+`EstoqueApi.baixar` **não tem rota HTTP**, de propósito: baixa é consequência de fechar
+comanda ou de executar serviço, não ação de usuário. Uma rota direta seria um caminho
+para o saldo diminuir sem que nada explicasse por quê — e é esse caminho que RT-EST-005
+fecha, exigindo motivo.
 
 `ProdutoApi` nasceu em RT-ATD-003, quando o primeiro módulo passou a consumir produto — antes
 disso teria sido interface sem chamador, documentação que o compilador não confere.
@@ -36,6 +42,7 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 | [RT-EST-001](RT-EST-001-cadastro-de-produto.md) — cadastro de produto | implementada |
 | [RT-EST-002](RT-EST-002-entrada-de-lote.md) — entrada de lote com custo e validade | implementada |
 | [RT-EST-003](RT-EST-003-saldo-e-custo-medio.md) — saldo e custo médio ponderado | implementada |
+| [RT-EST-004](RT-EST-004-baixa-fefo.md) — baixa FEFO, venda e consumo interno | implementada |
 
 ## Rotas
 
@@ -53,4 +60,4 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-EST-001 a RN-EST-010.
+Ver [regras.md](regras.md) — RN-EST-001 a RN-EST-013.

@@ -38,6 +38,16 @@ public enum ErrosDoEstoque implements CodigoDeErro {
             "Produto desativado não recebe entrada"),
 
     /**
+     * RT-EST-004 — não há unidades suficientes para a saída.
+     *
+     * <p>A mensagem diz quanto há, não só que faltou: quem está no balcão precisa saber se vende
+     * o que resta ou se troca o produto, e "saldo insuficiente" sozinho não responde nenhuma das
+     * duas.
+     */
+    SALDO_INSUFICIENTE("ER-EST-SALDO_INSUFICIENTE", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Não há saldo suficiente em estoque"),
+
+    /**
      * Alguém salvou por cima de uma tela velha.
      *
      * <p>O bloqueio otimista existe aqui porque preço e finalidade são editados por pessoas
