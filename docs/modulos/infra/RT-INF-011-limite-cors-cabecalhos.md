@@ -113,7 +113,29 @@ também implementa a interface. O Spring Security resolve pelo **nome do bean**
 (`corsConfigurationSource`), então `Customizer.withDefaults()` funciona onde a injeção por tipo
 falha.
 
-## 10. Pendências
+## 10. O limite acopla testes que não têm relação — e isso mordeu
+
+Descoberto em RT-ATD-002. O limite é **por IP**, e todo teste web entra por `127.0.0.1` no mesmo
+JVM: o contador é um só para a suíte inteira. Acrescentar quatro testes a `ComandasWebIT` fez
+`ClientesWebIT` falhar — e falhava um teste diferente a cada execução, porque quem passa do limite
+depende da ordem.
+
+A mensagem não ajudava nada: `NoSuchElement: No value present`, do `Location` que não veio, três
+camadas abaixo do 429 que era a causa.
+
+A correção é o profile `test` subir o limite para a suíte (`application-test.yml`), e não cada
+classe se ajeitar. `LimiteDeTaxaWebIT` continua declarando o seu valor por `@DynamicPropertySource`
+— que vence o arquivo de profile e, por ser propriedade diferente, lhe dá contexto e contador
+próprios.
+
+> **Tentativa que não funcionou:** pôr o limite no `@DynamicPropertySource` de
+> `AbstractPostgresIT`. O do pai venceu o do filho, e o teste do limite passou a não ver limite
+> nenhum. Precedência entre fontes é mais confiável do que ordem entre métodos anotados.
+
+Um usuário de verdade não entra quarenta vezes num minuto do mesmo IP. A suíte entra — e é a suíte
+que precisa ser ajustada, não o limite.
+
+## 11. Pendências
 
 - [ ] Limite distribuído, quando houver mais de uma instância — gatilho de Redis do ADR-0004
 - [ ] Limite por **usuário autenticado**, além de por IP: um escritório inteiro atrás de um NAT

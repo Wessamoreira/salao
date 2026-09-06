@@ -1,0 +1,16 @@
+# Padrões do profile `test`, que AbstractPostgresIT ativa.
+#
+# Vale menos que @DynamicPropertySource de propósito: quem precisa de outro valor declara
+# o seu na própria classe e ganha contexto — e contador — próprios.
+app.rede:
+  # O limite de autenticação é POR IP, e todo teste web entra por 127.0.0.1.
+  #
+  # Com o valor de produção — doze por minuto —, o contador fica compartilhado por classes
+  # que não têm nada a ver umas com as outras: acrescentar quatro testes a ComandasWebIT
+  # fez ClientesWebIT falhar, dizendo apenas que o token veio nulo. E falhava um teste
+  # diferente a cada execução, porque o que passa do limite depende da ordem.
+  #
+  # Um usuário de verdade não entra quarenta vezes num minuto do mesmo IP; a suíte entra.
+  # O limite continua testado onde ele é o assunto — LimiteDeTaxaWebIT declara o seu valor
+  # por @DynamicPropertySource, que vence este arquivo.
+  limite-autenticacao: 500

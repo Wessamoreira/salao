@@ -114,7 +114,6 @@ public abstract class AbstractPostgresIT {
         // valor declaram o seu (TenantIsolamentoIT usa 1; IdempotenciaIT usa 4).
         registro.add("spring.datasource.hikari.maximum-pool-size", () -> "5");
         registro.add("spring.flyway.placeholders.senha_manutencao", () -> MANUTENCAO_SENHA);
-
     }
 
     /**
