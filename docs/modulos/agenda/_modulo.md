@@ -22,9 +22,26 @@ ocupados duas vezes.
 | Operação | Assinatura | Consumido por |
 |---|---|---|
 | Consultar disponibilidade | `DisponibilidadeApi.consultar(data, servicoId, profissionalId)` — `profissionalId` nulo = qualquer um que faça | `conversacional`, front |
-| Buscar agendamento | `AgendaApi.porId(id)` → `AgendamentoResumo` | `atendimento` |
-| Agenda do dia | `AgendaApi.doDia(data)` → `List<AgendamentoResumo>` | `atendimento`, painel |
-| Marcar em atendimento | `AgendaApi.iniciarAtendimento(id)` | `atendimento` (ao abrir comanda) |
+| Buscar agendamento | `AgendaApi.porId(id)` → `AgendamentoResumo` | `atendimento` (RT-ATD-001) |
+| ~~Agenda do dia~~ | `AgendaApi.doDia(data)` — **planejada**, ainda não existe | `atendimento`, painel |
+| ~~Marcar em atendimento~~ | `AgendaApi.iniciarAtendimento(id)` — **planejada**, ver abaixo | `atendimento` (ao abrir comanda) |
+
+### `iniciarAtendimento` está travada por RN-AGD-007, não por falta de código
+
+Abrir a comanda deveria mover o agendamento para `EM_ATENDIMENTO` — a cliente sentou na cadeira.
+A máquina de estados não deixa, em dois pontos, e os dois são decisão escrita:
+
+- **`SOLICITADO` não vai para `EM_ATENDIMENTO`.** Quem marcou pelo site chega ao salão ainda
+  solicitado, e chegar em pessoa *é* a confirmação — mas confirmar é RT-AGD-004, com evento
+  próprio. Encadear as duas transições de dentro de `atendimento` seria escrever a regra de
+  confirmação num segundo lugar.
+- **`NO_SHOW` é terminal.** E abrir comanda para quem foi marcado como faltante é a prova de que a
+  marcação estava errada (RT-ATD-001 §5) — só que desfazer um terminal é exatamente o que a regra
+  proíbe, pela razão certa: desfazer cancelamento devolveria um horário já oferecido a outra
+  pessoa.
+
+A tensão é real e fica registrada aqui em vez de ser resolvida de fora: quem mexe em RN-AGD-007 é
+uma rotina da agenda, não uma do atendimento.
 
 `AgendamentoResumo` **não** expõe entidade JPA nem dados de cliente além de id e nome.
 

@@ -1,5 +1,6 @@
 package br.com.salao.agenda.internal.infra;
 
+import br.com.salao.agenda.api.AgendaApi;
 import br.com.salao.agenda.api.AgendamentoResumo;
 import br.com.salao.agenda.api.BlocoDoAgendamento;
 import br.com.salao.agenda.api.BloqueioDaGrade;
@@ -30,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Uma consulta para o dia inteiro, não uma por profissional: a grade da recepção pergunta por
  * dez pessoas de uma vez, e o agrupamento sai de graça em memória sobre algumas dezenas de linhas.
  */
-public class AgendaJdbc {
+public class AgendaJdbc implements AgendaApi {
 
     /**
      * Os blocos que ocupam alguém ou algo no período.
@@ -181,6 +182,7 @@ public class AgendaJdbc {
     }
 
     @Transactional(readOnly = true)
+    @Override
     public Optional<AgendamentoResumo> porId(UUID agendamentoId) {
         record Cabeca(UUID id, UUID clienteId, UUID profissionalId, UUID servicoId,
                       StatusAgendamento status, Instant inicio, Instant fim,
