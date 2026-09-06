@@ -24,3 +24,9 @@ RT-ATD-005  # 2026-09-05 — mesmo motivo de RT-ATD-004: quem está na frente é
 # 2026-09-05 — RESOLVIDO. RT-EST-001 foi antecipada e RT-ATD-003 saiu logo depois; o script já não
 # aponta salto nenhum. As duas linhas acima ficam como registro do que foi decidido na época — o
 # salto aconteceu, e apagá-lo daqui apagaria a decisão junto.
+
+RT-FIN-001  # 2026-09-05 — passou à frente de RT-ATD-006/007/008, que estão TRAVADAS: fechar
+            # comanda depende de FIN-001 (esta) e de EST-004 (baixa FEFO), e estornar e a tela de
+            # fechamento dependem de ATD-006. A ordem do plano põe ATD-006 antes de FIN-001, mas o
+            # próprio plano declara FIN-001 como dependência dela — a tabela está em conflito com
+            # a coluna "depende de", e a coluna é que vale.

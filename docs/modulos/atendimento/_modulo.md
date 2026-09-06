@@ -38,9 +38,10 @@ precisa exibir, e o que não é carregado não vaza em log.
 - `catalogo` — `ServicoApi` (o que é, e quanto custava hoje)
 - `equipe` — `ProfissionalApi` (quem executa o quê, e com que percentual)
 - `estoque` — `ProdutoApi` (o que é, e se está à venda)
+- `financeiro` — `PagamentoApi` (quanto já foi pago nesta comanda)
 - `iam` — `Permissao`, `AuditoriaApi`, `EstabelecimentoApi`, `LimitesDoUsuarioApi`, `UsuarioAtual`
 
-**Seis, e o teto de três não vale aqui.** RT-ATD-001 registrou "três, que é o teto que a agenda
+**Sete, e o teto de três não vale aqui.** RT-ATD-001 registrou "três, que é o teto que a agenda
 segue"; RT-ATD-002 estourou, e a correção é da frase, não do módulo.
 
 O teto da `agenda` existe porque ela **decide** — se um horário está livre —, e um módulo que
@@ -50,7 +51,9 @@ dependências aqui mediria a natureza do módulo, não um defeito.
 
 O guarda certo para ele é de direção, não de número:
 
-- nada pode depender de `atendimento` para **decidir** — quem depende, depende do que já aconteceu;
+- nada pode depender de `atendimento` para **decidir** — quem depende, depende do que já aconteceu.
+  Foi essa regra que decidiu a direção com o `financeiro` em RT-FIN-001: o pagamento é guardado lá,
+  e a pergunta "quanto falta?" é respondida aqui, porque o total é daqui;
 - `atendimento` não decide nada que é de outro: preço é do `catalogo`, habilidade é da `equipe`,
   horário é da `agenda`. Ele copia o que eles dizem, no instante em que dizem, e guarda a cópia.
 
@@ -76,6 +79,9 @@ foi rompida — não quando a sexta dependência entrar.
 | `GET /api/v1/comandas/{id}` | a comanda com os itens — a tela de fechamento |
 | `POST /api/v1/comandas/{id}/itens` | lança um serviço; devolve a **comanda inteira**, com o total novo |
 | `POST /api/v1/comandas/{id}/produtos` | lança um produto — rota própria, porque produto não tem executante |
+| `POST /api/v1/comandas/{id}/pagamentos` | registra uma forma; devolve **quanto falta** |
+| `DELETE /api/v1/comandas/{id}/pagamentos/{pagId}` | desfaz um pagamento digitado errado |
+| `GET /api/v1/comandas/{id}/conta` | o que já entrou e o que falta — a tela de fechamento |
 | `DELETE /api/v1/comandas/{id}/itens/{itemId}` | tira uma linha lançada errada |
 | `PUT /api/v1/comandas/{id}/itens/{itemId}/desconto` | define o desconto da linha; zero remove |
 | `POST /api/v1/comandas/{id}/itens/{itemId}/executantes` | acrescenta um assistente ao item |

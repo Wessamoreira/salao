@@ -2,6 +2,9 @@ package br.com.salao.atendimento.internal.web;
 
 import br.com.salao.atendimento.api.AberturaDeComanda;
 import br.com.salao.atendimento.api.ComandaDetalhada;
+import br.com.salao.atendimento.api.ContaDaComanda;
+import br.com.salao.financeiro.api.DadosDoPagamento;
+import br.com.salao.financeiro.api.FormaDePagamento;
 import br.com.salao.shared.dinheiro.Money;
 import br.com.salao.atendimento.internal.application.AbrirComandaUseCase;
 import br.com.salao.atendimento.internal.application.AdicionarItemDeProdutoUseCase;
@@ -10,6 +13,9 @@ import br.com.salao.atendimento.internal.application.AdicionarExecutanteUseCase;
 import br.com.salao.atendimento.internal.application.AplicarDescontoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverExecutanteUseCase;
 import br.com.salao.atendimento.internal.application.ConsultarComandaUseCase;
+import br.com.salao.atendimento.internal.application.ConsultarContaUseCase;
+import br.com.salao.atendimento.internal.application.RegistrarPagamentoUseCase;
+import br.com.salao.atendimento.internal.application.RemoverPagamentoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverItemUseCase;
 import br.com.salao.atendimento.internal.application.ListarComandasAbertasUseCase;
 import jakarta.validation.Valid;
@@ -44,6 +50,9 @@ public class ComandasController {
     private final ListarComandasAbertasUseCase abertas;
     private final AdicionarItemDeServicoUseCase adicionarServico;
     private final AdicionarItemDeProdutoUseCase adicionarProduto;
+    private final RegistrarPagamentoUseCase registrarPagamento;
+    private final RemoverPagamentoUseCase removerPagamento;
+    private final ConsultarContaUseCase consultarConta;
     private final RemoverItemUseCase removerItem;
     private final AplicarDescontoUseCase aplicarDesconto;
     private final AdicionarExecutanteUseCase adicionarExecutante;
@@ -56,7 +65,10 @@ public class ComandasController {
                               RemoverItemUseCase removerItem, ConsultarComandaUseCase consultar,
                               AplicarDescontoUseCase aplicarDesconto,
                               AdicionarExecutanteUseCase adicionarExecutante,
-                              RemoverExecutanteUseCase removerExecutante) {
+                              RemoverExecutanteUseCase removerExecutante,
+                              RegistrarPagamentoUseCase registrarPagamento,
+                              RemoverPagamentoUseCase removerPagamento,
+                              ConsultarContaUseCase consultarConta) {
         this.abrir = abrir;
         this.abertas = abertas;
         this.adicionarServico = adicionarServico;
@@ -66,6 +78,9 @@ public class ComandasController {
         this.aplicarDesconto = aplicarDesconto;
         this.adicionarExecutante = adicionarExecutante;
         this.removerExecutante = removerExecutante;
+        this.registrarPagamento = registrarPagamento;
+        this.removerPagamento = removerPagamento;
+        this.consultarConta = consultarConta;
     }
 
     /**
@@ -212,5 +227,52 @@ public class ComandasController {
         ComandaDetalhada comanda = adicionarProduto.executar(id, req.produtoId(),
                 req.quantidade());
         return ResponseEntity.created(URI.create("/api/v1/comandas/" + id)).body(comanda);
+    }
+
+    // ------------------------------------------------------------------ RT-FIN-001
+
+    /**
+     * @param parcelas só em crédito; nulo vira 1
+     * @param nsu e {@code autorizacao} vêm da maquininha, e são o que a conciliação casa depois
+     */
+    public record PagamentoRequest(
+            @jakarta.validation.constraints.NotNull FormaDePagamento forma,
+            @jakarta.validation.constraints.NotNull
+            @jakarta.validation.constraints.Positive BigDecimal valor,
+            @jakarta.validation.constraints.Size(max = 40) String bandeira,
+            @jakarta.validation.constraints.Positive Integer parcelas,
+            @jakarta.validation.constraints.Size(max = 40) String nsu,
+            @jakarta.validation.constraints.Size(max = 40) String autorizacao) {
+
+        DadosDoPagamento paraDados() {
+            return new DadosDoPagamento(forma, new Money(valor), bandeira, parcelas, nsu,
+                    autorizacao);
+        }
+    }
+
+    /**
+     * Registra uma forma de pagamento. Várias por comanda — split é requisito (R-UX-08).
+     *
+     * <p>A resposta traz o <strong>restante</strong>, que é o número que a tela mostra o tempo
+     * todo: subtrair no front seria a mesma conta em dois lugares.
+     */
+    @PostMapping("/{id}/pagamentos")
+    public ResponseEntity<ContaDaComanda> registrarPagamento(
+            @PathVariable UUID id, @Valid @RequestBody PagamentoRequest req) {
+        ContaDaComanda conta = registrarPagamento.executar(id, req.paraDados());
+        return ResponseEntity.created(URI.create("/api/v1/comandas/" + id + "/conta"))
+                .body(conta);
+    }
+
+    @DeleteMapping("/{id}/pagamentos/{pagamentoId}")
+    public ContaDaComanda removerPagamento(@PathVariable UUID id,
+                                           @PathVariable UUID pagamentoId) {
+        return removerPagamento.executar(id, pagamentoId);
+    }
+
+    /** Quanto já entrou e quanto falta. É a consulta da tela de fechamento. */
+    @GetMapping("/{id}/conta")
+    public ResponseEntity<ContaDaComanda> conta(@PathVariable UUID id) {
+        return ResponseEntity.of(consultarConta.executar(id));
     }
 }

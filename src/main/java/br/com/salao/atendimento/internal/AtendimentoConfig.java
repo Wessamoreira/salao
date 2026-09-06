@@ -8,6 +8,9 @@ import br.com.salao.atendimento.internal.application.AdicionarExecutanteUseCase;
 import br.com.salao.atendimento.internal.application.AplicarDescontoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverExecutanteUseCase;
 import br.com.salao.atendimento.internal.application.ConsultarComandaUseCase;
+import br.com.salao.atendimento.internal.application.ConsultarContaUseCase;
+import br.com.salao.atendimento.internal.application.RegistrarPagamentoUseCase;
+import br.com.salao.atendimento.internal.application.RemoverPagamentoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverItemUseCase;
 import br.com.salao.atendimento.internal.application.ListarComandasAbertasUseCase;
 import br.com.salao.atendimento.internal.infra.ComandasJdbc;
@@ -15,6 +18,7 @@ import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.cliente.api.ClienteApi;
 import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.estoque.api.ProdutoApi;
+import br.com.salao.financeiro.api.PagamentoApi;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.api.LimitesDoUsuarioApi;
@@ -83,6 +87,24 @@ public class AtendimentoConfig {
     @Bean
     public ConsultarComandaUseCase consultarComandaUseCase(ComandasJdbc comandas) {
         return new ConsultarComandaUseCase(comandas);
+    }
+
+    @Bean
+    public RegistrarPagamentoUseCase registrarPagamentoUseCase(
+            ComandasJdbc comandas, PagamentoApi pagamentos, AuditoriaApi auditoria) {
+        return new RegistrarPagamentoUseCase(comandas, pagamentos, auditoria);
+    }
+
+    @Bean
+    public RemoverPagamentoUseCase removerPagamentoUseCase(
+            ComandasJdbc comandas, PagamentoApi pagamentos, AuditoriaApi auditoria) {
+        return new RemoverPagamentoUseCase(comandas, pagamentos, auditoria);
+    }
+
+    @Bean
+    public ConsultarContaUseCase consultarContaUseCase(ComandasJdbc comandas,
+                                                       PagamentoApi pagamentos) {
+        return new ConsultarContaUseCase(comandas, pagamentos);
     }
 
     @Bean

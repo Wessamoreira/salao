@@ -103,6 +103,20 @@ public enum ErrosDoAtendimento implements CodigoDeErro {
     PRINCIPAL_NAO_SAI("ER-ATD-PRINCIPAL_NAO_SAI", HttpStatus.UNPROCESSABLE_ENTITY,
             "O executante principal não pode ser removido"),
 
+    // ------------------------------------------------------------------ pagamento
+
+    /**
+     * RT-FIN-001 — a soma dos pagamentos passaria do que a comanda deve.
+     *
+     * <p>Troco não é pagamento: quem entrega cem numa conta de oitenta pagou oitenta. Registrar
+     * cem faria o faturamento do dia crescer sozinho, e o caixa nunca fecharia.
+     */
+    PAGAMENTO_PASSA_DO_TOTAL("ER-ATD-PAGAMENTO_PASSA_DO_TOTAL", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Este pagamento passa do valor da comanda"),
+
+    PAGAMENTO_NAO_E_DESTA_COMANDA("ER-ATD-PAGAMENTO_NAO_E_DESTA_COMANDA", HttpStatus.NOT_FOUND,
+            "Pagamento não encontrado nesta comanda"),
+
     // ------------------------------------------------------------------ desconto
 
     DESCONTO_INVALIDO("ER-ATD-DESCONTO_INVALIDO", HttpStatus.UNPROCESSABLE_ENTITY,

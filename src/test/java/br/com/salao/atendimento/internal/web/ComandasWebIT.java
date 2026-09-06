@@ -355,6 +355,46 @@ class ComandasWebIT extends AbstractPostgresIT {
                 .statusCode()).isIn(400, 422);
     }
 
+
+    @Test
+    @DisplayName("split: cada pagamento devolve o restante, e o último zera")
+    void split_de_pagamento() throws Exception {
+        // R-UX-08: split é requisito, não extra. E o restante vem pronto do servidor — subtrair no
+        // front seria a mesma conta em dois lugares.
+        String token = entrar();
+        String comanda = abrirComandaDe(umaCliente(token), token);
+        post("/api/v1/comandas/" + comanda + "/produtos",
+                "{\"produtoId\":\"" + umShampooDe45() + "\",\"quantidade\":2}", token);
+
+        var primeiro = post("/api/v1/comandas/" + comanda + "/pagamentos",
+                "{\"forma\":\"CREDITO\",\"valor\":50,\"bandeira\":\"VISA\"}", token);
+        assertThat(primeiro.statusCode()).isEqualTo(201);
+        assertThat(primeiro.body()).contains("\"restante\":{\"valor\":40.0000}");
+
+        var segundo = post("/api/v1/comandas/" + comanda + "/pagamentos",
+                "{\"forma\":\"PIX\",\"valor\":40}", token);
+        assertThat(segundo.body()).contains("\"restante\":{\"valor\":0.0000}");
+
+        var conta = get("/api/v1/comandas/" + comanda + "/conta", token);
+        assertThat(conta.statusCode()).isEqualTo(200);
+        assertThat(conta.body()).contains("CREDITO").contains("PIX").contains("VISA");
+    }
+
+    @Test
+    @DisplayName("pagamento acima do que falta é recusado")
+    void pagamento_passa_do_total() throws Exception {
+        String token = entrar();
+        String comanda = abrirComandaDe(umaCliente(token), token);
+        post("/api/v1/comandas/" + comanda + "/produtos",
+                "{\"produtoId\":\"" + umShampooDe45() + "\",\"quantidade\":1}", token);
+
+        var resposta = post("/api/v1/comandas/" + comanda + "/pagamentos",
+                "{\"forma\":\"DINHEIRO\",\"valor\":100}", token);
+
+        assertThat(resposta.statusCode()).isEqualTo(422);
+        assertThat(resposta.body()).contains("ER-ATD-PAGAMENTO_PASSA_DO_TOTAL");
+    }
+
     private UUID umaAssistente() {
         return comoDono(() -> cadastrarProfissional.executar(new DadosDoProfissional(
                 "Bia Nunes", "Bia", "52998224725", TipoDeVinculo.EMPREGADO, null, null,
