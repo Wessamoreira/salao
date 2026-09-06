@@ -1,6 +1,7 @@
 package br.com.salao.estoque.internal.infra;
 
 import br.com.salao.estoque.api.FinalidadeDoProduto;
+import br.com.salao.estoque.api.ProdutoApi;
 import br.com.salao.estoque.api.ProdutoResumo;
 import br.com.salao.estoque.api.UnidadeDeMedida;
 import br.com.salao.shared.dinheiro.Money;
@@ -14,7 +15,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Transactional;
 
 /** RT-EST-001 — os produtos do salão. */
-public class ProdutosJdbc {
+public class ProdutosJdbc implements ProdutoApi {
 
     private static final String CAMPOS = """
             id, nome, descricao, finalidade, unidade, preco_venda, ativo, versao
@@ -91,6 +92,7 @@ public class ProdutosJdbc {
                 .update();
     }
 
+    @Override
     @Transactional(readOnly = true)
     public Optional<ProdutoResumo> porId(UUID id) {
         return jdbc.sql("select " + CAMPOS + " from produto where id = :id")

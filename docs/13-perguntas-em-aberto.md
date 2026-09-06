@@ -12,7 +12,7 @@ resposta muda com o tempo de qualquer forma.
 |---|---|---|---|
 | 1 | Comissão sobre bruto ou líquido da taxa? | `estabelecimento.base_comissao` | `BRUTO` |
 | 2 | Desconto reduz a comissão ou o salão absorve? | `estabelecimento.desconto_afeta_comissao` | `false` (salão absorve) |
-| 3 | Produto paga comissão? Qual percentual? | Cascata de comissão, nível serviço/produto | 0% em produto |
+| 3 | Produto paga comissão? Qual percentual? | Cascata de comissão, nível serviço/produto | **0% em produto — em código desde RT-ATD-003**: item de produto não tem executante. Quem vendeu não fica registrado, e é isso que muda se a resposta virar outra |
 | 5 | Periodicidade do fechamento? | `estabelecimento.periodicidade_fechamento` | `MENSAL` |
 
 **Confirme os defaults com o dono antes da Fase 2** — mas não pare o desenvolvimento por eles.

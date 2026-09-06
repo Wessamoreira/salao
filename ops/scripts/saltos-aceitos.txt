@@ -20,3 +20,7 @@ RT-ATD-005  # 2026-09-05 — mesmo motivo de RT-ATD-004: quem está na frente é
             # por RT-EST-001 (Fase 3). Enquanto ela não vier, toda rotina da Fase 2 vai passar por
             # aqui — e o remédio é antecipar EST-001, não continuar acrescentando linhas nesta
             # lista.
+
+# 2026-09-05 — RESOLVIDO. RT-EST-001 foi antecipada e RT-ATD-003 saiu logo depois; o script já não
+# aponta salto nenhum. As duas linhas acima ficam como registro do que foi decidido na época — o
+# salto aconteceu, e apagá-lo daqui apagaria a decisão junto.

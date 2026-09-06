@@ -165,6 +165,37 @@ public class ComandasJdbc {
      * também aqui seria a mesma conta em dois lugares — que é o defeito que RN-ATD-008 existe
      * para impedir, uma camada acima.
      */
+    /**
+     * RT-ATD-003 — a linha de produto.
+     *
+     * <p>{@code custo_medio_unitario} fica nulo: quem o preenche é a baixa de estoque (RT-EST-004),
+     * que é quem sabe de qual lote a unidade saiu. Preenchê-lo aqui com o custo de hoje faria a
+     * margem de uma venda antiga mudar sozinha quando a próxima caixa chegasse mais cara.
+     */
+    @Transactional
+    public UUID inserirItemDeProduto(UUID estabelecimentoId, UUID comandaId, UUID produtoId,
+                                     String descricao, BigDecimal quantidade, Money precoUnitario,
+                                     Money valorTotal, Instant criadoEm) {
+        return jdbc.sql("""
+                insert into item_comanda (estabelecimento_id, comanda_id, tipo, produto_id,
+                                          descricao, quantidade, preco_unitario, valor_total,
+                                          criado_em)
+                values (:estabelecimento, :comanda, 'PRODUTO', :produto, :descricao, :quantidade,
+                        :preco, :total, :criadoEm)
+                returning id
+                """)
+                .param("estabelecimento", estabelecimentoId)
+                .param("comanda", comandaId)
+                .param("produto", produtoId)
+                .param("descricao", descricao)
+                .param("quantidade", quantidade)
+                .param("preco", precoUnitario.valor())
+                .param("total", valorTotal.valor())
+                .param("criadoEm", OffsetDateTime.ofInstant(criadoEm, ZoneOffset.UTC))
+                .query(UUID.class)
+                .single();
+    }
+
     @Transactional
     public void inserirExecutante(UUID estabelecimentoId, UUID itemId, UUID profissionalId,
                                   PapelDoExecutante papel, BigDecimal percentual,

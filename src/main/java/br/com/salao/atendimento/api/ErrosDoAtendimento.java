@@ -1,0 +1,128 @@
+package br.com.salao.atendimento.api;
+
+import br.com.salao.shared.erro.CodigoDeErro;
+import org.springframework.http.HttpStatus;
+
+/**
+ * RT-ATD-001 — catálogo de erros do módulo. Ver docs/modulos/atendimento/regras.md.
+ *
+ * <h2>Por que um enum por módulo, e não um por caso de uso</h2>
+ *
+ * <p>O módulo nasceu com um enum dentro de cada caso de uso, seguindo {@code arquivos} — que tinha
+ * um caso de uso só. Com seis, {@code ER-ATD-COMANDA_NAO_ESTA_ABERTA} estava declarado
+ * <strong>cinco vezes</strong> e {@code ER-ATD-ITEM_NAO_ENCONTRADO} três.
+ *
+ * <p>Não é redundância inofensiva: mudar o status HTTP ou o título em uma das cópias faria a mesma
+ * falha responder diferente conforme a rota que o usuário tocou, e nada acusaria. É a mesma razão
+ * de {@code catalogo}, {@code agenda}, {@code equipe} e {@code estoque} terem um enum por módulo.
+ */
+public enum ErrosDoAtendimento implements CodigoDeErro {
+
+    // ------------------------------------------------------------------ comanda
+
+    COMANDA_NAO_ENCONTRADA("ER-ATD-COMANDA_NAO_ENCONTRADA", HttpStatus.NOT_FOUND,
+            "Comanda não encontrada"),
+
+    /**
+     * A comanda está fechada ou estornada.
+     *
+     * <p>É o erro mais compartilhado do módulo — lançar item, remover, descontar e mexer em
+     * executante param todos aqui —, e é por isso que ele precisa de uma declaração só.
+     */
+    COMANDA_NAO_ESTA_ABERTA("ER-ATD-COMANDA_NAO_ESTA_ABERTA", HttpStatus.CONFLICT,
+            "Esta comanda não está aberta"),
+
+    CLIENTE_NAO_ENCONTRADO("ER-ATD-CLIENTE_NAO_ENCONTRADO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Cliente não encontrado"),
+
+    AGENDAMENTO_NAO_ENCONTRADO("ER-ATD-AGENDAMENTO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
+            "Agendamento não encontrado"),
+
+    AGENDAMENTO_CANCELADO("ER-ATD-AGENDAMENTO_CANCELADO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Este agendamento foi cancelado"),
+
+    AGENDAMENTO_DE_OUTRA_CLIENTE("ER-ATD-AGENDAMENTO_DE_OUTRA_CLIENTE",
+            HttpStatus.UNPROCESSABLE_ENTITY, "Este horário é de outra cliente"),
+
+    // ------------------------------------------------------------------ item
+
+    ITEM_NAO_ENCONTRADO("ER-ATD-ITEM_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
+            "Item não encontrado"),
+
+    ITEM_NAO_E_SERVICO("ER-ATD-ITEM_NAO_E_SERVICO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Produto não tem executante"),
+
+    QUANTIDADE_INVALIDA("ER-ATD-QUANTIDADE_INVALIDA", HttpStatus.UNPROCESSABLE_ENTITY,
+            "A quantidade precisa ser maior que zero"),
+
+    SERVICO_NAO_ENCONTRADO("ER-ATD-SERVICO_NAO_ENCONTRADO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Serviço não encontrado"),
+
+    SERVICO_FORA_DO_CARDAPIO("ER-ATD-SERVICO_FORA_DO_CARDAPIO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Este serviço não está mais no cardápio"),
+
+    /** Falha de cadastro, não brinde: zero é um preço (RN-ATD-005). */
+    SERVICO_SEM_PRECO("ER-ATD-SERVICO_SEM_PRECO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Este serviço não tem preço definido"),
+
+    PRODUTO_NAO_ENCONTRADO("ER-ATD-PRODUTO_NAO_ENCONTRADO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Produto não encontrado"),
+
+    /**
+     * RT-ATD-003 — o produto existe e não está à venda.
+     *
+     * <p>Código próprio, separado de "sem preço", porque a correção é outra: aqui o produto é de
+     * consumo interno ou foi desativado, e digitar um preço não resolve.
+     */
+    PRODUTO_NAO_E_VENDAVEL("ER-ATD-PRODUTO_NAO_E_VENDAVEL", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Este produto não está à venda"),
+
+    PRODUTO_SEM_PRECO("ER-ATD-PRODUTO_SEM_PRECO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Este produto não tem preço de venda"),
+
+    // ------------------------------------------------------------------ executante
+
+    EXECUTANTE_NAO_ENCONTRADO("ER-ATD-EXECUTANTE_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
+            "Executante não encontrado"),
+
+    PROFISSIONAL_NAO_ENCONTRADO("ER-ATD-PROFISSIONAL_NAO_ENCONTRADO",
+            HttpStatus.UNPROCESSABLE_ENTITY, "Profissional não encontrado ou inativo"),
+
+    NAO_EXECUTA_O_SERVICO("ER-ATD-NAO_EXECUTA_O_SERVICO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Este profissional não executa este serviço"),
+
+    JA_ESTA_NO_ITEM("ER-ATD-JA_ESTA_NO_ITEM", HttpStatus.CONFLICT,
+            "Esta pessoa já está neste item"),
+
+    PERCENTUAL_INVALIDO("ER-ATD-PERCENTUAL_INVALIDO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Percentual inválido"),
+
+    COMISSAO_PASSA_DE_CEM("ER-ATD-COMISSAO_PASSA_DE_CEM", HttpStatus.UNPROCESSABLE_ENTITY,
+            "As comissões do item passariam de 100%"),
+
+    PRINCIPAL_NAO_SAI("ER-ATD-PRINCIPAL_NAO_SAI", HttpStatus.UNPROCESSABLE_ENTITY,
+            "O executante principal não pode ser removido"),
+
+    // ------------------------------------------------------------------ desconto
+
+    DESCONTO_INVALIDO("ER-ATD-DESCONTO_INVALIDO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Desconto inválido"),
+
+    /** 403 e não 422: o valor pode estar certo — quem pediu é que não pode tanto (RN-ATD-012). */
+    DESCONTO_ACIMA_DO_LIMITE("ER-ATD-DESCONTO_ACIMA_DO_LIMITE", HttpStatus.FORBIDDEN,
+            "Desconto acima do seu limite");
+
+    private final String codigo;
+    private final HttpStatus status;
+    private final String titulo;
+
+    ErrosDoAtendimento(String codigo, HttpStatus status, String titulo) {
+        this.codigo = codigo;
+        this.status = status;
+        this.titulo = titulo;
+    }
+
+    @Override public String codigo() { return codigo; }
+    @Override public HttpStatus status() { return status; }
+    @Override public String titulo() { return titulo; }
+}

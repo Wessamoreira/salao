@@ -2,6 +2,7 @@ package br.com.salao.atendimento.internal;
 
 import br.com.salao.agenda.api.AgendaApi;
 import br.com.salao.atendimento.internal.application.AbrirComandaUseCase;
+import br.com.salao.atendimento.internal.application.AdicionarItemDeProdutoUseCase;
 import br.com.salao.atendimento.internal.application.AdicionarItemDeServicoUseCase;
 import br.com.salao.atendimento.internal.application.AdicionarExecutanteUseCase;
 import br.com.salao.atendimento.internal.application.AplicarDescontoUseCase;
@@ -13,6 +14,7 @@ import br.com.salao.atendimento.internal.infra.ComandasJdbc;
 import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.cliente.api.ClienteApi;
 import br.com.salao.equipe.api.ProfissionalApi;
+import br.com.salao.estoque.api.ProdutoApi;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.api.LimitesDoUsuarioApi;
@@ -45,6 +47,12 @@ public class AtendimentoConfig {
             Relogio relogio) {
         return new AdicionarItemDeServicoUseCase(comandas, servicos, profissionais, agenda,
                 estabelecimentos, auditoria, relogio);
+    }
+
+    @Bean
+    public AdicionarItemDeProdutoUseCase adicionarItemDeProdutoUseCase(
+            ComandasJdbc comandas, ProdutoApi produtos, AuditoriaApi auditoria, Relogio relogio) {
+        return new AdicionarItemDeProdutoUseCase(comandas, produtos, auditoria, relogio);
     }
 
     @Bean

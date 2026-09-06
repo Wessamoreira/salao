@@ -1,9 +1,9 @@
 package br.com.salao.atendimento.internal.application;
 
+import br.com.salao.atendimento.api.ErrosDoAtendimento;
 import br.com.salao.atendimento.api.ComandaDetalhada;
 import br.com.salao.atendimento.api.ComandaResumo;
 import br.com.salao.atendimento.api.ItemDaComanda;
-import br.com.salao.atendimento.api.StatusDaComanda;
 import br.com.salao.atendimento.internal.infra.ComandasJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
@@ -11,7 +11,6 @@ import br.com.salao.iam.api.LimitesDoUsuarioApi;
 import br.com.salao.iam.api.Permissao;
 import br.com.salao.iam.api.RegistroDeAuditoria;
 import br.com.salao.shared.dinheiro.Money;
-import br.com.salao.shared.erro.CodigoDeErro;
 import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.shared.seguranca.UsuarioAtual;
 import br.com.salao.shared.tenant.TenantContext;
@@ -21,7 +20,6 @@ import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,31 +52,6 @@ public class AplicarDescontoUseCase {
 
     private static final BigDecimal CEM = new BigDecimal("100");
 
-    public enum Erros implements CodigoDeErro {
-        ITEM_NAO_ENCONTRADO("ER-ATD-ITEM_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
-                "Item não encontrado"),
-        COMANDA_NAO_ESTA_ABERTA("ER-ATD-COMANDA_NAO_ESTA_ABERTA", HttpStatus.CONFLICT,
-                "Esta comanda não está aberta"),
-        DESCONTO_INVALIDO("ER-ATD-DESCONTO_INVALIDO", HttpStatus.UNPROCESSABLE_ENTITY,
-                "Desconto inválido"),
-        DESCONTO_ACIMA_DO_LIMITE("ER-ATD-DESCONTO_ACIMA_DO_LIMITE", HttpStatus.FORBIDDEN,
-                "Desconto acima do seu limite");
-
-        private final String codigo;
-        private final HttpStatus status;
-        private final String titulo;
-
-        Erros(String codigo, HttpStatus status, String titulo) {
-            this.codigo = codigo;
-            this.status = status;
-            this.titulo = titulo;
-        }
-
-        @Override public String codigo() { return codigo; }
-        @Override public HttpStatus status() { return status; }
-        @Override public String titulo() { return titulo; }
-    }
-
     private final ComandasJdbc comandas;
     private final LimitesDoUsuarioApi limites;
     private final EstabelecimentoApi estabelecimentos;
@@ -104,11 +77,8 @@ public class AplicarDescontoUseCase {
     @Transactional
     public ComandaDetalhada executar(UUID comandaId, UUID itemId, Money valor,
                                      BigDecimal percentual) {
-        ComandaResumo comanda = comandaAberta(comandaId);
-        ItemDaComanda item = comandas.itensDe(comandaId).stream()
-                .filter(i -> i.id().equals(itemId)).findFirst()
-                .orElseThrow(() -> new ErroDeDominio(Erros.ITEM_NAO_ENCONTRADO,
-                        "item " + itemId + " não é da comanda " + comandaId));
+        ComandaResumo comanda = ComandaEmEdicao.exigirAberta(comandas, comandaId);
+        ItemDaComanda item = ComandaEmEdicao.exigirItem(comandas, comandaId, itemId);
 
         Money bruto = item.precoUnitario().multiplicar(item.quantidade());
         Money desconto = quantoDescontar(valor, percentual, bruto);
@@ -132,34 +102,23 @@ public class AplicarDescontoUseCase {
                 comandas.itensDe(comandaId));
     }
 
-    private ComandaResumo comandaAberta(UUID comandaId) {
-        ComandaResumo comanda = comandas.porId(comandaId)
-                .orElseThrow(() -> new ErroDeDominio(Erros.ITEM_NAO_ENCONTRADO,
-                        "comanda " + comandaId + " não encontrada"));
-        if (comanda.status() != StatusDaComanda.ABERTA) {
-            throw new ErroDeDominio(Erros.COMANDA_NAO_ESTA_ABERTA,
-                    "a comanda " + comanda.numero() + " está " + comanda.status());
-        }
-        return comanda;
-    }
-
     /** Converte a forma pedida em dinheiro. O que é gravado é sempre valor. */
     private Money quantoDescontar(Money valor, BigDecimal percentual, Money bruto) {
         if ((valor == null) == (percentual == null)) {
-            throw new ErroDeDominio(Erros.DESCONTO_INVALIDO,
+            throw new ErroDeDominio(ErrosDoAtendimento.DESCONTO_INVALIDO,
                     "informe o desconto em valor ou em percentual, não os dois");
         }
         Money desconto = valor != null
                 ? valor
                 : bruto.percentual(percentual.divide(CEM, 6, RoundingMode.HALF_UP));
         if (desconto.ehNegativo()) {
-            throw new ErroDeDominio(Erros.DESCONTO_INVALIDO, "desconto negativo é acréscimo");
+            throw new ErroDeDominio(ErrosDoAtendimento.DESCONTO_INVALIDO, "desconto negativo é acréscimo");
         }
         if (desconto.maiorQue(bruto)) {
             // Passar do valor do item produziria total negativo — e um item que devolve dinheiro
             // é estorno, não desconto. O `check (valor_total >= 0)` também barraria, com uma
             // mensagem de constraint que não diz nada a quem chamou.
-            throw new ErroDeDominio(Erros.DESCONTO_INVALIDO,
+            throw new ErroDeDominio(ErrosDoAtendimento.DESCONTO_INVALIDO,
                     "o desconto passa do valor do item (" + bruto + ")");
         }
         return desconto;
@@ -180,7 +139,7 @@ public class AplicarDescontoUseCase {
                 .multiply(CEM)
                 .divide(bruto.valor(), 4, RoundingMode.HALF_UP);
         if (pedido.compareTo(new BigDecimal(teto)) > 0) {
-            throw new ErroDeDominio(Erros.DESCONTO_ACIMA_DO_LIMITE,
+            throw new ErroDeDominio(ErrosDoAtendimento.DESCONTO_ACIMA_DO_LIMITE,
                     "desconto de " + pedido.setScale(2, RoundingMode.HALF_UP)
                             + "% pedido; seu limite é " + teto + "%");
         }

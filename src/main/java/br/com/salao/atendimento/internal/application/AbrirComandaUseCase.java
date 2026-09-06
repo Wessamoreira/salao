@@ -3,6 +3,7 @@ package br.com.salao.atendimento.internal.application;
 import br.com.salao.agenda.api.AgendaApi;
 import br.com.salao.agenda.api.AgendamentoResumo;
 import br.com.salao.agenda.api.StatusAgendamento;
+import br.com.salao.atendimento.api.ErrosDoAtendimento;
 import br.com.salao.atendimento.api.AberturaDeComanda;
 import br.com.salao.atendimento.api.ComandaResumo;
 import br.com.salao.atendimento.api.OrigemDaComanda;
@@ -11,7 +12,6 @@ import br.com.salao.cliente.api.ClienteApi;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.Permissao;
 import br.com.salao.iam.api.RegistroDeAuditoria;
-import br.com.salao.shared.erro.CodigoDeErro;
 import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.shared.seguranca.UsuarioAtual;
 import br.com.salao.shared.tempo.Relogio;
@@ -21,7 +21,6 @@ import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,29 +48,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class AbrirComandaUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(AbrirComandaUseCase.class);
-
-    public enum Erros implements CodigoDeErro {
-        CLIENTE_NAO_ENCONTRADO("ER-ATD-CLIENTE_NAO_ENCONTRADO", HttpStatus.UNPROCESSABLE_ENTITY,
-                "Cliente não encontrado"),
-        AGENDAMENTO_NAO_ENCONTRADO("ER-ATD-AGENDAMENTO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
-                "Agendamento não encontrado"),
-        AGENDAMENTO_CANCELADO("ER-ATD-AGENDAMENTO_CANCELADO", HttpStatus.UNPROCESSABLE_ENTITY,
-                "Este agendamento foi cancelado");
-
-        private final String codigo;
-        private final HttpStatus status;
-        private final String titulo;
-
-        Erros(String codigo, HttpStatus status, String titulo) {
-            this.codigo = codigo;
-            this.status = status;
-            this.titulo = titulo;
-        }
-
-        @Override public String codigo() { return codigo; }
-        @Override public HttpStatus status() { return status; }
-        @Override public String titulo() { return titulo; }
-    }
 
     private final ComandasJdbc comandas;
     private final ClienteApi clientes;
@@ -103,10 +79,10 @@ public class AbrirComandaUseCase {
     @Transactional
     public AberturaDeComanda doAgendamento(UUID agendamentoId) {
         AgendamentoResumo agendamento = agenda.porId(agendamentoId)
-                .orElseThrow(() -> new ErroDeDominio(Erros.AGENDAMENTO_NAO_ENCONTRADO,
+                .orElseThrow(() -> new ErroDeDominio(ErrosDoAtendimento.AGENDAMENTO_NAO_ENCONTRADO,
                         "agendamento " + agendamentoId + " não encontrado"));
         if (agendamento.status() == StatusAgendamento.CANCELADO) {
-            throw new ErroDeDominio(Erros.AGENDAMENTO_CANCELADO,
+            throw new ErroDeDominio(ErrosDoAtendimento.AGENDAMENTO_CANCELADO,
                     "não se abre comanda de agendamento cancelado");
         }
         return abrir(agendamento.clienteId(), OrigemDaComanda.AGENDAMENTO);
@@ -117,7 +93,7 @@ public class AbrirComandaUseCase {
     @Transactional
     public AberturaDeComanda avulsa(UUID clienteId) {
         if (!clientes.existe(clienteId)) {
-            throw new ErroDeDominio(Erros.CLIENTE_NAO_ENCONTRADO,
+            throw new ErroDeDominio(ErrosDoAtendimento.CLIENTE_NAO_ENCONTRADO,
                     "cliente " + clienteId + " não encontrado neste salão");
         }
         return abrir(clienteId, OrigemDaComanda.AVULSA);

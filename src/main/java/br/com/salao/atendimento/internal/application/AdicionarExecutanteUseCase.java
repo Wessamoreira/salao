@@ -1,12 +1,12 @@
 package br.com.salao.atendimento.internal.application;
 
+import br.com.salao.atendimento.api.ErrosDoAtendimento;
 import br.com.salao.atendimento.api.ComandaDetalhada;
 import br.com.salao.atendimento.api.ComandaResumo;
 import br.com.salao.atendimento.api.ExecutanteDoItem;
 import br.com.salao.atendimento.api.ItemDaComanda;
 import br.com.salao.atendimento.api.OrigemDaComissao;
 import br.com.salao.atendimento.api.PapelDoExecutante;
-import br.com.salao.atendimento.api.StatusDaComanda;
 import br.com.salao.atendimento.api.TipoDeItem;
 import br.com.salao.atendimento.internal.infra.ComandasJdbc;
 import br.com.salao.equipe.api.ProfissionalApi;
@@ -15,7 +15,6 @@ import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.api.Permissao;
 import br.com.salao.iam.api.RegistroDeAuditoria;
-import br.com.salao.shared.erro.CodigoDeErro;
 import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.shared.tenant.TenantContext;
 import java.math.BigDecimal;
@@ -23,7 +22,6 @@ import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,37 +60,6 @@ public class AdicionarExecutanteUseCase {
 
     private static final BigDecimal CEM = new BigDecimal("100");
 
-    public enum Erros implements CodigoDeErro {
-        ITEM_NAO_ENCONTRADO("ER-ATD-ITEM_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
-                "Item não encontrado"),
-        COMANDA_NAO_ESTA_ABERTA("ER-ATD-COMANDA_NAO_ESTA_ABERTA", HttpStatus.CONFLICT,
-                "Esta comanda não está aberta"),
-        ITEM_NAO_E_SERVICO("ER-ATD-ITEM_NAO_E_SERVICO", HttpStatus.UNPROCESSABLE_ENTITY,
-                "Produto não tem executante"),
-        PROFISSIONAL_NAO_ENCONTRADO("ER-ATD-PROFISSIONAL_NAO_ENCONTRADO",
-                HttpStatus.UNPROCESSABLE_ENTITY, "Profissional não encontrado ou inativo"),
-        JA_ESTA_NO_ITEM("ER-ATD-JA_ESTA_NO_ITEM", HttpStatus.CONFLICT,
-                "Esta pessoa já está neste item"),
-        PERCENTUAL_INVALIDO("ER-ATD-PERCENTUAL_INVALIDO", HttpStatus.UNPROCESSABLE_ENTITY,
-                "Percentual inválido"),
-        COMISSAO_PASSA_DE_CEM("ER-ATD-COMISSAO_PASSA_DE_CEM", HttpStatus.UNPROCESSABLE_ENTITY,
-                "As comissões do item passariam de 100%");
-
-        private final String codigo;
-        private final HttpStatus status;
-        private final String titulo;
-
-        Erros(String codigo, HttpStatus status, String titulo) {
-            this.codigo = codigo;
-            this.status = status;
-            this.titulo = titulo;
-        }
-
-        @Override public String codigo() { return codigo; }
-        @Override public HttpStatus status() { return status; }
-        @Override public String titulo() { return titulo; }
-    }
-
     private final ComandasJdbc comandas;
     private final ProfissionalApi profissionais;
     private final EstabelecimentoApi estabelecimentos;
@@ -112,19 +79,19 @@ public class AdicionarExecutanteUseCase {
     public ComandaDetalhada executar(UUID comandaId, UUID itemId, UUID profissionalId,
                                      BigDecimal percentual) {
         UUID tenant = TenantContext.obrigatorio();
-        ComandaResumo comanda = comandaAberta(comandaId);
+        ComandaResumo comanda = ComandaEmEdicao.exigirAberta(comandas, comandaId);
         ItemDaComanda item = itemDeServico(comandaId, itemId);
         percentualValido(percentual);
         cabeNoItem(item, percentual);
 
         ProfissionalResumo assistente = profissionais.porId(profissionalId)
                 .filter(ProfissionalResumo::ativo)
-                .orElseThrow(() -> new ErroDeDominio(Erros.PROFISSIONAL_NAO_ENCONTRADO,
+                .orElseThrow(() -> new ErroDeDominio(ErrosDoAtendimento.PROFISSIONAL_NAO_ENCONTRADO,
                         "profissional " + profissionalId + " não encontrado ou inativo"));
         if (item.executantes().stream().anyMatch(e -> e.profissionalId().equals(profissionalId))) {
             // O índice único também barraria, com uma mensagem de constraint que não diz nada a
             // quem chamou — e o caso comum é clicar duas vezes, não fraude.
-            throw new ErroDeDominio(Erros.JA_ESTA_NO_ITEM,
+            throw new ErroDeDominio(ErrosDoAtendimento.JA_ESTA_NO_ITEM,
                     assistente.comoChamar() + " já está neste item");
         }
 
@@ -143,24 +110,10 @@ public class AdicionarExecutanteUseCase {
                 comandas.itensDe(comandaId));
     }
 
-    private ComandaResumo comandaAberta(UUID comandaId) {
-        ComandaResumo comanda = comandas.porId(comandaId)
-                .orElseThrow(() -> new ErroDeDominio(Erros.ITEM_NAO_ENCONTRADO,
-                        "comanda " + comandaId + " não encontrada"));
-        if (comanda.status() != StatusDaComanda.ABERTA) {
-            throw new ErroDeDominio(Erros.COMANDA_NAO_ESTA_ABERTA,
-                    "a comanda " + comanda.numero() + " está " + comanda.status());
-        }
-        return comanda;
-    }
-
     private ItemDaComanda itemDeServico(UUID comandaId, UUID itemId) {
-        ItemDaComanda item = comandas.itensDe(comandaId).stream()
-                .filter(i -> i.id().equals(itemId)).findFirst()
-                .orElseThrow(() -> new ErroDeDominio(Erros.ITEM_NAO_ENCONTRADO,
-                        "item " + itemId + " não é da comanda " + comandaId));
+        ItemDaComanda item = ComandaEmEdicao.exigirItem(comandas, comandaId, itemId);
         if (item.tipo() != TipoDeItem.SERVICO) {
-            throw new ErroDeDominio(Erros.ITEM_NAO_E_SERVICO,
+            throw new ErroDeDominio(ErrosDoAtendimento.ITEM_NAO_E_SERVICO,
                     "produto não tem quem o execute");
         }
         return item;
@@ -169,7 +122,7 @@ public class AdicionarExecutanteUseCase {
     private void percentualValido(BigDecimal percentual) {
         if (percentual == null || percentual.signum() < 0
                 || percentual.compareTo(CEM) > 0) {
-            throw new ErroDeDominio(Erros.PERCENTUAL_INVALIDO,
+            throw new ErroDeDominio(ErrosDoAtendimento.PERCENTUAL_INVALIDO,
                     "percentual precisa estar entre 0 e 100; veio " + percentual);
         }
     }
@@ -186,7 +139,7 @@ public class AdicionarExecutanteUseCase {
                 .map(ExecutanteDoItem::percentualComissao)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         if (jaComprometido.add(percentual).compareTo(CEM) > 0) {
-            throw new ErroDeDominio(Erros.COMISSAO_PASSA_DE_CEM,
+            throw new ErroDeDominio(ErrosDoAtendimento.COMISSAO_PASSA_DE_CEM,
                     "o item já compromete " + jaComprometido + "%; somando "
                             + percentual + "% passaria de 100%");
         }

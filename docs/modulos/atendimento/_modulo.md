@@ -8,7 +8,8 @@
 
 ## Fronteira
 
-Expõe `ComandaResumo`, `AberturaDeComanda`, `StatusDaComanda` e `OrigemDaComanda`.
+Expõe `ComandaResumo`, `ComandaDetalhada`, `ItemDaComanda`, `ExecutanteDoItem`,
+`AberturaDeComanda`, os enums de estado e `ErrosDoAtendimento`.
 
 A comanda é o documento em que o serviço vira dinheiro. Ela é o **único** lugar onde o valor de um
 atendimento é somado — e, a partir de RT-ATD-006, o único que congela esse valor.
@@ -36,9 +37,10 @@ precisa exibir, e o que não é carregado não vaza em log.
 - `agenda` — `AgendaApi.porId` (de quem é o horário, e se ele ainda vale)
 - `catalogo` — `ServicoApi` (o que é, e quanto custava hoje)
 - `equipe` — `ProfissionalApi` (quem executa o quê, e com que percentual)
+- `estoque` — `ProdutoApi` (o que é, e se está à venda)
 - `iam` — `Permissao`, `AuditoriaApi`, `EstabelecimentoApi`, `LimitesDoUsuarioApi`, `UsuarioAtual`
 
-**Cinco, e o teto de três não vale aqui.** RT-ATD-001 registrou "três, que é o teto que a agenda
+**Seis, e o teto de três não vale aqui.** RT-ATD-001 registrou "três, que é o teto que a agenda
 segue"; RT-ATD-002 estourou, e a correção é da frase, não do módulo.
 
 O teto da `agenda` existe porque ela **decide** — se um horário está livre —, e um módulo que
@@ -61,6 +63,7 @@ foi rompida — não quando a sexta dependência entrar.
 |---|---|
 | [RT-ATD-001](RT-ATD-001-abrir-comanda.md) — abrir comanda, do agendamento ou avulsa | implementada |
 | [RT-ATD-002](RT-ATD-002-item-de-servico.md) — item de serviço + executantes | implementada |
+| [RT-ATD-003](RT-ATD-003-item-de-produto.md) — item de produto | implementada |
 | [RT-ATD-004](RT-ATD-004-desconto.md) — desconto com permissão e limite por perfil | implementada |
 | [RT-ATD-005](RT-ATD-005-executante-adicional.md) — executante adicional (assistente) | implementada |
 
@@ -72,6 +75,7 @@ foi rompida — não quando a sexta dependência entrar.
 | `GET /api/v1/comandas/abertas` | a barra do balcão (R-UX-07), da mais antiga para a mais nova |
 | `GET /api/v1/comandas/{id}` | a comanda com os itens — a tela de fechamento |
 | `POST /api/v1/comandas/{id}/itens` | lança um serviço; devolve a **comanda inteira**, com o total novo |
+| `POST /api/v1/comandas/{id}/produtos` | lança um produto — rota própria, porque produto não tem executante |
 | `DELETE /api/v1/comandas/{id}/itens/{itemId}` | tira uma linha lançada errada |
 | `PUT /api/v1/comandas/{id}/itens/{itemId}/desconto` | define o desconto da linha; zero remove |
 | `POST /api/v1/comandas/{id}/itens/{itemId}/executantes` | acrescenta um assistente ao item |
@@ -79,4 +83,6 @@ foi rompida — não quando a sexta dependência entrar.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-ATD-001 a RN-ATD-016.
+Ver [regras.md](regras.md) — RN-ATD-001 a RN-ATD-018.
+
+Todos os códigos de erro do módulo vivem em `ErrosDoAtendimento`, um enum só: eles estavam declarados em seis enums, e `ER-ATD-COMANDA_NAO_ESTA_ABERTA` aparecia em cinco deles.

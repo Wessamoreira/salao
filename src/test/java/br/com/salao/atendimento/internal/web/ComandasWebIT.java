@@ -7,6 +7,10 @@ import br.com.salao.catalogo.internal.application.CadastrarServicoUseCase;
 import br.com.salao.catalogo.internal.application.DefinirPrecoUseCase;
 import br.com.salao.catalogo.internal.application.EtapaBruta;
 import br.com.salao.equipe.api.TipoDeVinculo;
+import br.com.salao.estoque.api.FinalidadeDoProduto;
+import br.com.salao.estoque.api.UnidadeDeMedida;
+import br.com.salao.estoque.internal.application.CadastrarProdutoUseCase;
+import br.com.salao.estoque.internal.application.DadosDoProduto;
 import br.com.salao.equipe.internal.application.CadastrarProfissionalUseCase;
 import br.com.salao.equipe.internal.application.DadosDoProfissional;
 import br.com.salao.iam.api.Perfil;
@@ -57,6 +61,7 @@ class ComandasWebIT extends AbstractPostgresIT {
     @Autowired private CadastrarProfissionalUseCase cadastrarProfissional;
     @Autowired private CadastrarServicoUseCase cadastrarServico;
     @Autowired private DefinirPrecoUseCase definirPreco;
+    @Autowired private CadastrarProdutoUseCase cadastrarProduto;
 
     private UUID tenant;
 
@@ -179,7 +184,9 @@ class ComandasWebIT extends AbstractPostgresIT {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken("dona", null, List.of(
                         new SimpleGrantedAuthority(Permissao.CONFIG_GERENCIAR),
-                        new SimpleGrantedAuthority(Permissao.USUARIO_GERENCIAR))));
+                        new SimpleGrantedAuthority(Permissao.USUARIO_GERENCIAR),
+                        new SimpleGrantedAuthority(Permissao.ESTOQUE_ESCREVER),
+                        new SimpleGrantedAuthority(Permissao.PRODUTO_PRECO_ESCREVER))));
         try {
             return TenantContext.obter(tenant, acao::get);
         } finally {
@@ -313,6 +320,40 @@ class ComandasWebIT extends AbstractPostgresIT {
                 "{\"valor\":5,\"percentual\":10}", token).statusCode()).isIn(400, 422);
     }
 
+
+
+    private UUID umShampooDe45() {
+        return comoDono(() -> cadastrarProduto.executar(new DadosDoProduto(
+                "Shampoo", null, FinalidadeDoProduto.VENDA, UnidadeDeMedida.UN,
+                Money.de("45")))).id();
+    }
+
+    @Test
+    @DisplayName("produto entra por rota própria, sem executante")
+    void produto_na_comanda() throws Exception {
+        // Rota separada da de serviço porque os dois pedem coisas diferentes: um corpo só teria
+        // metade dos campos ignorados conforme o tipo, e a validação viraria um if.
+        String token = entrar();
+        String comanda = abrirComandaDe(umaCliente(token), token);
+
+        var resposta = post("/api/v1/comandas/" + comanda + "/produtos",
+                "{\"produtoId\":\"" + umShampooDe45() + "\",\"quantidade\":2}", token);
+
+        assertThat(resposta.statusCode()).isEqualTo(201);
+        assertThat(resposta.body()).contains("\"tipo\":\"PRODUTO\"").contains("Shampoo")
+                .contains("90.0000").contains("\"executantes\":[]");
+    }
+
+    @Test
+    @DisplayName("quantidade zero para na borda")
+    void produto_quantidade_zero() throws Exception {
+        String token = entrar();
+        String comanda = abrirComandaDe(umaCliente(token), token);
+
+        assertThat(post("/api/v1/comandas/" + comanda + "/produtos",
+                "{\"produtoId\":\"" + umShampooDe45() + "\",\"quantidade\":0}", token)
+                .statusCode()).isIn(400, 422);
+    }
 
     private UUID umaAssistente() {
         return comoDono(() -> cadastrarProfissional.executar(new DadosDoProfissional(

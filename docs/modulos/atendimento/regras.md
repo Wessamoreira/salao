@@ -335,3 +335,46 @@ repasse não bate e ninguém sabe qual das trezentas linhas está errada.
 **Onde é garantida.** `AdicionarExecutanteUseCase.cabeNoItem`.
 **Rotinas.** RT-ATD-005 · **Teste.** `AdicionarExecutanteIT.nao_passa_de_cem`
 **Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-017 — Produto só entra na comanda se estiver à venda, ativo e com preço
+
+**Enunciado.** Lançar produto exige que ele exista, esteja ativo, tenha finalidade que permita
+venda e tenha preço. Cada falha tem código próprio: `PRODUTO_NAO_ENCONTRADO`,
+`PRODUTO_NAO_E_VENDAVEL`, `PRODUTO_SEM_PRECO`.
+
+**Motivo.** São três correções diferentes para quem está no balcão com a cliente esperando: procurar
+outro produto, desistir porque é tinta, ou chamar quem pode precificar. Um "não deu" só serviria
+para as três e faria a recepção adivinhar.
+
+Sem preço é recusa e não zero, como no serviço (RN-ATD-005): zero é um brinde, e a falha de cadastro
+viraria faturamento perdido silencioso.
+
+**Onde é garantida.** `AdicionarItemDeProdutoUseCase.vendavel` · `ProdutoResumo.vendavel`.
+**Rotinas.** RT-ATD-003 · **Teste.** `AdicionarItemDeProdutoIT.produto_inexistente`,
+`AdicionarItemDeProdutoIT.consumo_interno_nao_vende`,
+`AdicionarItemDeProdutoIT.produto_desativado`, `AdicionarItemDeProdutoIT.produto_sem_preco`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-018 — Item de produto não tem executante, e não mexe no estoque
+
+**Enunciado.** Item de tipo `PRODUTO` não recebe linha de `executante`. Lançá-lo **não** baixa
+saldo de estoque, e `custo_medio_unitario` fica nulo.
+
+**Motivo.** Produto paga 0% de comissão por padrão (pergunta 3 de `13-perguntas-em-aberto`), e com
+zero a linha de executante seria uma comissão de nada para alguém que ninguém escolheu. O preço é
+não registrar quem vendeu — real, e listado nas pendências.
+
+A baixa acontece no fechamento (RT-ATD-006), junto com pagamento e comissão, numa transação só:
+comanda aberta é intenção, e item lançado por engano seria estoque baixado por engano. O custo vem
+de lá também, porque é a baixa que sabe de qual lote a unidade saiu — preenchê-lo agora com o custo
+de hoje faria a margem de uma venda antiga mudar quando a próxima caixa chegasse mais cara.
+
+**Onde é garantida.** `AdicionarItemDeProdutoUseCase` não insere executante ·
+`AdicionarExecutanteUseCase` recusa item de produto (`ER-ATD-ITEM_NAO_E_SERVICO`).
+**Rotinas.** RT-ATD-003 · **Teste.** `AdicionarItemDeProdutoIT.produto_nao_tem_executante`,
+`AdicionarExecutanteIT.produto_nao_tem_executante`
+**Configurável?** Não · **Origem.** 2026-09-05

@@ -4,6 +4,7 @@ import br.com.salao.atendimento.api.AberturaDeComanda;
 import br.com.salao.atendimento.api.ComandaDetalhada;
 import br.com.salao.shared.dinheiro.Money;
 import br.com.salao.atendimento.internal.application.AbrirComandaUseCase;
+import br.com.salao.atendimento.internal.application.AdicionarItemDeProdutoUseCase;
 import br.com.salao.atendimento.internal.application.AdicionarItemDeServicoUseCase;
 import br.com.salao.atendimento.internal.application.AdicionarExecutanteUseCase;
 import br.com.salao.atendimento.internal.application.AplicarDescontoUseCase;
@@ -42,6 +43,7 @@ public class ComandasController {
     private final AbrirComandaUseCase abrir;
     private final ListarComandasAbertasUseCase abertas;
     private final AdicionarItemDeServicoUseCase adicionarServico;
+    private final AdicionarItemDeProdutoUseCase adicionarProduto;
     private final RemoverItemUseCase removerItem;
     private final AplicarDescontoUseCase aplicarDesconto;
     private final AdicionarExecutanteUseCase adicionarExecutante;
@@ -50,6 +52,7 @@ public class ComandasController {
 
     public ComandasController(AbrirComandaUseCase abrir, ListarComandasAbertasUseCase abertas,
                               AdicionarItemDeServicoUseCase adicionarServico,
+                              AdicionarItemDeProdutoUseCase adicionarProduto,
                               RemoverItemUseCase removerItem, ConsultarComandaUseCase consultar,
                               AplicarDescontoUseCase aplicarDesconto,
                               AdicionarExecutanteUseCase adicionarExecutante,
@@ -57,6 +60,7 @@ public class ComandasController {
         this.abrir = abrir;
         this.abertas = abertas;
         this.adicionarServico = adicionarServico;
+        this.adicionarProduto = adicionarProduto;
         this.removerItem = removerItem;
         this.consultar = consultar;
         this.aplicarDesconto = aplicarDesconto;
@@ -186,5 +190,27 @@ public class ComandasController {
     public ComandaDetalhada removerExecutante(@PathVariable UUID id, @PathVariable UUID itemId,
                                               @PathVariable UUID executanteId) {
         return removerExecutante.executar(id, itemId, executanteId);
+    }
+
+    // ------------------------------------------------------------------ RT-ATD-003
+
+    public record ItemDeProdutoRequest(
+            @jakarta.validation.constraints.NotNull UUID produtoId,
+            @jakarta.validation.constraints.Positive BigDecimal quantidade) {
+    }
+
+    /**
+     * Rota separada da de serviço, e não um campo {@code tipo} no mesmo corpo.
+     *
+     * <p>Os dois pedem coisas diferentes — serviço exige quem executou, produto não tem executante
+     * — e um corpo só teria metade dos campos ignorados conforme o tipo, com a validação virando
+     * {@code if}. Duas rotas dizem no endereço o que cada uma precisa.
+     */
+    @PostMapping("/{id}/produtos")
+    public ResponseEntity<ComandaDetalhada> adicionarProduto(
+            @PathVariable UUID id, @Valid @RequestBody ItemDeProdutoRequest req) {
+        ComandaDetalhada comanda = adicionarProduto.executar(id, req.produtoId(),
+                req.quantidade());
+        return ResponseEntity.created(URI.create("/api/v1/comandas/" + id)).body(comanda);
     }
 }

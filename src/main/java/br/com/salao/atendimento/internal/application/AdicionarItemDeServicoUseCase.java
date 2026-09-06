@@ -3,11 +3,11 @@ package br.com.salao.atendimento.internal.application;
 import br.com.salao.agenda.api.AgendaApi;
 import br.com.salao.agenda.api.AgendamentoResumo;
 import br.com.salao.agenda.api.StatusAgendamento;
+import br.com.salao.atendimento.api.ErrosDoAtendimento;
 import br.com.salao.atendimento.api.ComandaDetalhada;
 import br.com.salao.atendimento.api.ComandaResumo;
 import br.com.salao.atendimento.api.OrigemDaComissao;
 import br.com.salao.atendimento.api.PapelDoExecutante;
-import br.com.salao.atendimento.api.StatusDaComanda;
 import br.com.salao.atendimento.internal.infra.ComandasJdbc;
 import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.catalogo.api.ServicoResumo;
@@ -18,7 +18,6 @@ import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.api.Permissao;
 import br.com.salao.iam.api.RegistroDeAuditoria;
 import br.com.salao.shared.dinheiro.Money;
-import br.com.salao.shared.erro.CodigoDeErro;
 import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.shared.tempo.Relogio;
 import br.com.salao.shared.tenant.TenantContext;
@@ -27,7 +26,6 @@ import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -56,43 +54,6 @@ public class AdicionarItemDeServicoUseCase {
 
     private static final Logger log =
             LoggerFactory.getLogger(AdicionarItemDeServicoUseCase.class);
-
-    public enum Erros implements CodigoDeErro {
-        COMANDA_NAO_ENCONTRADA("ER-ATD-COMANDA_NAO_ENCONTRADA", HttpStatus.NOT_FOUND,
-                "Comanda não encontrada"),
-        COMANDA_NAO_ESTA_ABERTA("ER-ATD-COMANDA_NAO_ESTA_ABERTA", HttpStatus.CONFLICT,
-                "Esta comanda não está aberta"),
-        SERVICO_NAO_ENCONTRADO("ER-ATD-SERVICO_NAO_ENCONTRADO", HttpStatus.UNPROCESSABLE_ENTITY,
-                "Serviço não encontrado"),
-        SERVICO_FORA_DO_CARDAPIO("ER-ATD-SERVICO_FORA_DO_CARDAPIO",
-                HttpStatus.UNPROCESSABLE_ENTITY, "Este serviço não está mais no cardápio"),
-        SERVICO_SEM_PRECO("ER-ATD-SERVICO_SEM_PRECO", HttpStatus.UNPROCESSABLE_ENTITY,
-                "Este serviço não tem preço definido"),
-        PROFISSIONAL_NAO_ENCONTRADO("ER-ATD-PROFISSIONAL_NAO_ENCONTRADO",
-                HttpStatus.UNPROCESSABLE_ENTITY, "Profissional não encontrado ou inativo"),
-        NAO_EXECUTA_O_SERVICO("ER-ATD-NAO_EXECUTA_O_SERVICO", HttpStatus.UNPROCESSABLE_ENTITY,
-                "Este profissional não executa este serviço"),
-        QUANTIDADE_INVALIDA("ER-ATD-QUANTIDADE_INVALIDA", HttpStatus.UNPROCESSABLE_ENTITY,
-                "A quantidade precisa ser maior que zero"),
-        AGENDAMENTO_NAO_ENCONTRADO("ER-ATD-AGENDAMENTO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
-                "Agendamento não encontrado"),
-        AGENDAMENTO_DE_OUTRA_CLIENTE("ER-ATD-AGENDAMENTO_DE_OUTRA_CLIENTE",
-                HttpStatus.UNPROCESSABLE_ENTITY, "Este horário é de outra cliente");
-
-        private final String codigo;
-        private final HttpStatus status;
-        private final String titulo;
-
-        Erros(String codigo, HttpStatus status, String titulo) {
-            this.codigo = codigo;
-            this.status = status;
-            this.titulo = titulo;
-        }
-
-        @Override public String codigo() { return codigo; }
-        @Override public HttpStatus status() { return status; }
-        @Override public String titulo() { return titulo; }
-    }
 
     private final ComandasJdbc comandas;
     private final ServicoApi servicos;
@@ -124,22 +85,22 @@ public class AdicionarItemDeServicoUseCase {
     public ComandaDetalhada executar(UUID comandaId, UUID servicoId, UUID profissionalId,
                                      BigDecimal quantidade, UUID agendamentoId) {
         UUID tenant = TenantContext.obrigatorio();
-        ComandaResumo comanda = comandaAberta(comandaId);
-        BigDecimal quantas = quantidadeValida(quantidade);
+        ComandaResumo comanda = ComandaEmEdicao.exigirAberta(comandas, comandaId);
+        BigDecimal quantas = ComandaEmEdicao.quantidadeValida(quantidade);
 
         ServicoResumo servico = servicos.porId(servicoId)
-                .orElseThrow(() -> new ErroDeDominio(Erros.SERVICO_NAO_ENCONTRADO,
+                .orElseThrow(() -> new ErroDeDominio(ErrosDoAtendimento.SERVICO_NAO_ENCONTRADO,
                         "serviço " + servicoId + " não encontrado"));
         if (!servico.ativo()) {
             // Fora do cardápio é decisão do salão de não vender mais aquilo. Aceitar aqui faria a
             // desativação valer só para quem marca horário, e não para quem cobra.
-            throw new ErroDeDominio(Erros.SERVICO_FORA_DO_CARDAPIO,
+            throw new ErroDeDominio(ErrosDoAtendimento.SERVICO_FORA_DO_CARDAPIO,
                     "o serviço " + servico.nome() + " está desativado");
         }
 
         Money precoUnitario = servicos
                 .precoEm(servicoId, relogio.hojeEm(estabelecimentos.fusoDe(tenant)))
-                .orElseThrow(() -> new ErroDeDominio(Erros.SERVICO_SEM_PRECO,
+                .orElseThrow(() -> new ErroDeDominio(ErrosDoAtendimento.SERVICO_SEM_PRECO,
                         "o serviço " + servico.nome() + " não tem preço definido para hoje"));
 
         ProfissionalResumo executante = profissionalQueExecuta(profissionalId, servicoId,
@@ -168,26 +129,6 @@ public class AdicionarItemDeServicoUseCase {
                 comandas.itensDe(comandaId));
     }
 
-    private ComandaResumo comandaAberta(UUID comandaId) {
-        ComandaResumo comanda = comandas.porId(comandaId)
-                .orElseThrow(() -> new ErroDeDominio(Erros.COMANDA_NAO_ENCONTRADA,
-                        "comanda " + comandaId + " não encontrada"));
-        if (comanda.status() != StatusDaComanda.ABERTA) {
-            throw new ErroDeDominio(Erros.COMANDA_NAO_ESTA_ABERTA,
-                    "a comanda " + comanda.numero() + " está " + comanda.status());
-        }
-        return comanda;
-    }
-
-    private BigDecimal quantidadeValida(BigDecimal quantidade) {
-        BigDecimal quantas = quantidade == null ? BigDecimal.ONE : quantidade;
-        if (quantas.signum() <= 0) {
-            throw new ErroDeDominio(Erros.QUANTIDADE_INVALIDA,
-                    "quantidade informada: " + quantas);
-        }
-        return quantas;
-    }
-
     /**
      * Quem executa precisa ter a habilidade — a mesma exigência de RN-AGD-001.
      *
@@ -199,10 +140,10 @@ public class AdicionarItemDeServicoUseCase {
                                                       String nomeDoServico) {
         ProfissionalResumo profissional = profissionais.porId(profissionalId)
                 .filter(ProfissionalResumo::ativo)
-                .orElseThrow(() -> new ErroDeDominio(Erros.PROFISSIONAL_NAO_ENCONTRADO,
+                .orElseThrow(() -> new ErroDeDominio(ErrosDoAtendimento.PROFISSIONAL_NAO_ENCONTRADO,
                         "profissional " + profissionalId + " não encontrado ou inativo"));
         if (!profissionais.executa(profissionalId, servicoId)) {
-            throw new ErroDeDominio(Erros.NAO_EXECUTA_O_SERVICO,
+            throw new ErroDeDominio(ErrosDoAtendimento.NAO_EXECUTA_O_SERVICO,
                     profissional.comoChamar() + " não executa " + nomeDoServico);
         }
         return profissional;
@@ -219,14 +160,14 @@ public class AdicionarItemDeServicoUseCase {
             return null;
         }
         AgendamentoResumo horario = agenda.porId(agendamentoId)
-                .orElseThrow(() -> new ErroDeDominio(Erros.AGENDAMENTO_NAO_ENCONTRADO,
+                .orElseThrow(() -> new ErroDeDominio(ErrosDoAtendimento.AGENDAMENTO_NAO_ENCONTRADO,
                         "agendamento " + agendamentoId + " não encontrado"));
         if (!horario.clienteId().equals(comanda.clienteId())) {
-            throw new ErroDeDominio(Erros.AGENDAMENTO_DE_OUTRA_CLIENTE,
+            throw new ErroDeDominio(ErrosDoAtendimento.AGENDAMENTO_DE_OUTRA_CLIENTE,
                     "o horário é de outra cliente");
         }
         if (horario.status() == StatusAgendamento.CANCELADO) {
-            throw new ErroDeDominio(Erros.AGENDAMENTO_NAO_ENCONTRADO,
+            throw new ErroDeDominio(ErrosDoAtendimento.AGENDAMENTO_NAO_ENCONTRADO,
                     "o horário foi cancelado");
         }
         return agendamentoId;
