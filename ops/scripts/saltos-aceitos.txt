@@ -15,3 +15,8 @@ RT-ATD-004  # 2026-09-05 — RT-ATD-003 (item de produto) depende de RT-EST-001,
             # ATD-003 declara "ATD-001, EST-001" como dependência, e EST-001 não está na Fase 2.
             # O desconto depende só de ATD-002, e a tela de fechamento (ATD-008) depende do
             # desconto — deixá-lo para depois do estoque atrasaria a única tela que fecha dinheiro.
+
+RT-ATD-005  # 2026-09-05 — mesmo motivo de RT-ATD-004: quem está na frente é RT-ATD-003, travada
+            # por RT-EST-001 (Fase 3). Enquanto ela não vier, toda rotina da Fase 2 vai passar por
+            # aqui — e o remédio é antecipar EST-001, não continuar acrescentando linhas nesta
+            # lista.

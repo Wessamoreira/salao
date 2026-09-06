@@ -30,7 +30,7 @@ resposta muda com o tempo de qualquer forma.
 | # | Pergunta | Por que bloqueia |
 |---|---|---|
 | 4 | Existe vale/adiantamento no meio do período? | `RT-FIN-005`; muda o cálculo do repasse |
-| 6 | Assistente que lava entra na comanda com percentual próprio? | Resolvido pelo modelo `executante`; falta saber o percentual usual |
+| 6 | Assistente que lava entra na comanda com percentual próprio? | **Em código desde RT-ATD-005** — entra como `ASSISTENTE`, sem exigir habilidade. Continua faltando o percentual usual: hoje é digitado no item, e `regra_origem` grava `INFORMADA_NO_ITEM` para dizer isso |
 | — | Existe fiado? Como é cobrado depois? | `forma = FIADO` já existe; falta a rotina de cobrança |
 | — | Cortesia sai de onde — do salão ou da comissão do profissional? | Afeta o razão e o extrato |
 

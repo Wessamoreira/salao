@@ -313,6 +313,49 @@ class ComandasWebIT extends AbstractPostgresIT {
                 "{\"valor\":5,\"percentual\":10}", token).statusCode()).isIn(400, 422);
     }
 
+
+    private UUID umaAssistente() {
+        return comoDono(() -> cadastrarProfissional.executar(new DadosDoProfissional(
+                "Bia Nunes", "Bia", "52998224725", TipoDeVinculo.EMPREGADO, null, null,
+                new BigDecimal("45.00"), null, null, null))).id();
+    }
+
+    @Test
+    @DisplayName("o assistente entra e sai do item pela mesma comanda")
+    void assistente_entra_e_sai() throws Exception {
+        String token = entrar();
+        String comanda = abrirComandaDe(umaCliente(token), token);
+        String item = comandaComItemDe80(comanda, token);
+
+        var entrada = post("/api/v1/comandas/" + comanda + "/itens/" + item + "/executantes",
+                "{\"profissionalId\":\"" + umaAssistente() + "\",\"percentual\":10}", token);
+
+        assertThat(entrada.statusCode()).isEqualTo(201);
+        assertThat(entrada.body()).contains("ASSISTENTE").contains("INFORMADA_NO_ITEM");
+
+        var achado = Pattern.compile("\\{\"id\":\"([^\"]+)\",\"profissionalId\":\"[^\"]+\","
+                + "\"papel\":\"ASSISTENTE\"").matcher(entrada.body());
+        assertThat(achado.find()).as("o assistente veio na resposta").isTrue();
+        String executante = achado.group(1);
+        var saida = delete("/api/v1/comandas/" + comanda + "/itens/" + item
+                + "/executantes/" + executante, token);
+
+        assertThat(saida.statusCode()).isEqualTo(200);
+        assertThat(saida.body()).doesNotContain("ASSISTENTE");
+    }
+
+    @Test
+    @DisplayName("assistente sem percentual para na borda")
+    void assistente_sem_percentual() throws Exception {
+        String token = entrar();
+        String comanda = abrirComandaDe(umaCliente(token), token);
+        String item = comandaComItemDe80(comanda, token);
+
+        assertThat(post("/api/v1/comandas/" + comanda + "/itens/" + item + "/executantes",
+                "{\"profissionalId\":\"" + umaAssistente() + "\"}", token).statusCode())
+                .isIn(400, 422);
+    }
+
     private HttpResponse<String> put(String caminho, String corpo, String token) throws Exception {
         var b = HttpRequest.newBuilder(URI.create("http://localhost:" + porta + caminho))
                 .header("Content-Type", "application/json")

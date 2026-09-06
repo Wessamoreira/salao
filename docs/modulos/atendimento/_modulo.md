@@ -62,6 +62,7 @@ foi rompida — não quando a sexta dependência entrar.
 | [RT-ATD-001](RT-ATD-001-abrir-comanda.md) — abrir comanda, do agendamento ou avulsa | implementada |
 | [RT-ATD-002](RT-ATD-002-item-de-servico.md) — item de serviço + executantes | implementada |
 | [RT-ATD-004](RT-ATD-004-desconto.md) — desconto com permissão e limite por perfil | implementada |
+| [RT-ATD-005](RT-ATD-005-executante-adicional.md) — executante adicional (assistente) | implementada |
 
 ## Rotas
 
@@ -73,7 +74,9 @@ foi rompida — não quando a sexta dependência entrar.
 | `POST /api/v1/comandas/{id}/itens` | lança um serviço; devolve a **comanda inteira**, com o total novo |
 | `DELETE /api/v1/comandas/{id}/itens/{itemId}` | tira uma linha lançada errada |
 | `PUT /api/v1/comandas/{id}/itens/{itemId}/desconto` | define o desconto da linha; zero remove |
+| `POST /api/v1/comandas/{id}/itens/{itemId}/executantes` | acrescenta um assistente ao item |
+| `DELETE /api/v1/comandas/{id}/itens/{itemId}/executantes/{execId}` | tira o assistente; o principal não sai |
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-ATD-001 a RN-ATD-013.
+Ver [regras.md](regras.md) — RN-ATD-001 a RN-ATD-016.

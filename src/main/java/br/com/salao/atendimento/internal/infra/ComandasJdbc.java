@@ -156,16 +156,24 @@ public class ComandasJdbc {
                 .single();
     }
 
+    /**
+     * Insere o executante com base e comissão zeradas; quem as preenche é
+     * {@link #recalcularComissoesDoItem}, sempre.
+     *
+     * <p>Zerar e recalcular parece um passo a mais, e é de propósito: a base depende de
+     * {@code descontoAfetaComissao}, e essa fórmula já vive no SQL do recálculo. Calculá-la
+     * também aqui seria a mesma conta em dois lugares — que é o defeito que RN-ATD-008 existe
+     * para impedir, uma camada acima.
+     */
     @Transactional
     public void inserirExecutante(UUID estabelecimentoId, UUID itemId, UUID profissionalId,
                                   PapelDoExecutante papel, BigDecimal percentual,
-                                  OrigemDaComissao origem, Money base, Money comissao) {
+                                  OrigemDaComissao origem) {
         jdbc.sql("""
                 insert into executante (estabelecimento_id, item_comanda_id, profissional_id,
                                         papel, percentual_comissao, regra_origem,
                                         base_calculo, valor_comissao)
-                values (:estabelecimento, :item, :profissional, :papel, :percentual, :origem,
-                        :base, :comissao)
+                values (:estabelecimento, :item, :profissional, :papel, :percentual, :origem, 0, 0)
                 """)
                 .param("estabelecimento", estabelecimentoId)
                 .param("item", itemId)
@@ -173,9 +181,21 @@ public class ComandasJdbc {
                 .param("papel", papel.name())
                 .param("percentual", percentual)
                 .param("origem", origem.name())
-                .param("base", base.valor())
-                .param("comissao", comissao.valor())
                 .update();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<UUID> itemDoExecutante(UUID executanteId) {
+        return jdbc.sql("select item_comanda_id from executante where id = :id")
+                .param("id", executanteId)
+                .query(UUID.class)
+                .optional();
+    }
+
+    @Transactional
+    public int removerExecutante(UUID executanteId) {
+        return jdbc.sql("delete from executante where id = :id")
+                .param("id", executanteId).update();
     }
 
     /**

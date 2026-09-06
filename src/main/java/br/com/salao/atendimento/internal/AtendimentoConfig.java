@@ -3,7 +3,9 @@ package br.com.salao.atendimento.internal;
 import br.com.salao.agenda.api.AgendaApi;
 import br.com.salao.atendimento.internal.application.AbrirComandaUseCase;
 import br.com.salao.atendimento.internal.application.AdicionarItemDeServicoUseCase;
+import br.com.salao.atendimento.internal.application.AdicionarExecutanteUseCase;
 import br.com.salao.atendimento.internal.application.AplicarDescontoUseCase;
+import br.com.salao.atendimento.internal.application.RemoverExecutanteUseCase;
 import br.com.salao.atendimento.internal.application.ConsultarComandaUseCase;
 import br.com.salao.atendimento.internal.application.RemoverItemUseCase;
 import br.com.salao.atendimento.internal.application.ListarComandasAbertasUseCase;
@@ -50,6 +52,19 @@ public class AtendimentoConfig {
             ComandasJdbc comandas, LimitesDoUsuarioApi limites,
             EstabelecimentoApi estabelecimentos, AuditoriaApi auditoria) {
         return new AplicarDescontoUseCase(comandas, limites, estabelecimentos, auditoria);
+    }
+
+    @Bean
+    public AdicionarExecutanteUseCase adicionarExecutanteUseCase(
+            ComandasJdbc comandas, ProfissionalApi profissionais,
+            EstabelecimentoApi estabelecimentos, AuditoriaApi auditoria) {
+        return new AdicionarExecutanteUseCase(comandas, profissionais, estabelecimentos, auditoria);
+    }
+
+    @Bean
+    public RemoverExecutanteUseCase removerExecutanteUseCase(ComandasJdbc comandas,
+                                                             AuditoriaApi auditoria) {
+        return new RemoverExecutanteUseCase(comandas, auditoria);
     }
 
     @Bean

@@ -5,7 +5,9 @@ import br.com.salao.atendimento.api.ComandaDetalhada;
 import br.com.salao.shared.dinheiro.Money;
 import br.com.salao.atendimento.internal.application.AbrirComandaUseCase;
 import br.com.salao.atendimento.internal.application.AdicionarItemDeServicoUseCase;
+import br.com.salao.atendimento.internal.application.AdicionarExecutanteUseCase;
 import br.com.salao.atendimento.internal.application.AplicarDescontoUseCase;
+import br.com.salao.atendimento.internal.application.RemoverExecutanteUseCase;
 import br.com.salao.atendimento.internal.application.ConsultarComandaUseCase;
 import br.com.salao.atendimento.internal.application.RemoverItemUseCase;
 import br.com.salao.atendimento.internal.application.ListarComandasAbertasUseCase;
@@ -42,18 +44,24 @@ public class ComandasController {
     private final AdicionarItemDeServicoUseCase adicionarServico;
     private final RemoverItemUseCase removerItem;
     private final AplicarDescontoUseCase aplicarDesconto;
+    private final AdicionarExecutanteUseCase adicionarExecutante;
+    private final RemoverExecutanteUseCase removerExecutante;
     private final ConsultarComandaUseCase consultar;
 
     public ComandasController(AbrirComandaUseCase abrir, ListarComandasAbertasUseCase abertas,
                               AdicionarItemDeServicoUseCase adicionarServico,
                               RemoverItemUseCase removerItem, ConsultarComandaUseCase consultar,
-                              AplicarDescontoUseCase aplicarDesconto) {
+                              AplicarDescontoUseCase aplicarDesconto,
+                              AdicionarExecutanteUseCase adicionarExecutante,
+                              RemoverExecutanteUseCase removerExecutante) {
         this.abrir = abrir;
         this.abertas = abertas;
         this.adicionarServico = adicionarServico;
         this.removerItem = removerItem;
         this.consultar = consultar;
         this.aplicarDesconto = aplicarDesconto;
+        this.adicionarExecutante = adicionarExecutante;
+        this.removerExecutante = removerExecutante;
     }
 
     /**
@@ -151,5 +159,32 @@ public class ComandasController {
                                             @Valid @RequestBody DescontoRequest req) {
         return aplicarDesconto.executar(id, itemId,
                 req.valor() == null ? null : new Money(req.valor()), req.percentual());
+    }
+
+    // ------------------------------------------------------------------ RT-ATD-005
+
+    /**
+     * @param percentual em pontos percentuais ({@code 10} é 10%). Obrigatório: o assistente não
+     *                   tem percentual de cadastro para herdar — ver o caso de uso
+     */
+    public record ExecutanteRequest(
+            @jakarta.validation.constraints.NotNull UUID profissionalId,
+            @jakarta.validation.constraints.NotNull BigDecimal percentual) {
+    }
+
+    /** Acrescenta um assistente ao item. O principal entra com o item (RT-ATD-002). */
+    @PostMapping("/{id}/itens/{itemId}/executantes")
+    public ResponseEntity<ComandaDetalhada> adicionarExecutante(
+            @PathVariable UUID id, @PathVariable UUID itemId,
+            @Valid @RequestBody ExecutanteRequest req) {
+        ComandaDetalhada comanda = adicionarExecutante.executar(id, itemId, req.profissionalId(),
+                req.percentual());
+        return ResponseEntity.created(URI.create("/api/v1/comandas/" + id)).body(comanda);
+    }
+
+    @DeleteMapping("/{id}/itens/{itemId}/executantes/{executanteId}")
+    public ComandaDetalhada removerExecutante(@PathVariable UUID id, @PathVariable UUID itemId,
+                                              @PathVariable UUID executanteId) {
+        return removerExecutante.executar(id, itemId, executanteId);
     }
 }

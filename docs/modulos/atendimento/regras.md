@@ -277,3 +277,61 @@ de `executante`.
 **Rotinas.** RT-ATD-004 · **Teste.** `AplicarDescontoIT.desconto_nao_afeta_comissao`,
 `AplicarDescontoIT.desconto_afeta_comissao`, `AplicarDescontoIT.percentual_continua_snapshot`
 **Configurável?** Sim — `descontoAfetaComissao` · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-014 — O assistente não precisa executar o serviço; o principal precisa
+
+**Enunciado.** O executante `PRINCIPAL` tem de ter a habilidade do serviço (RN-ATD-007). O
+`ASSISTENTE` não — basta estar ativo.
+
+**Motivo.** Quem lava o cabelo não está executando a coloração; está ajudando quem executa. É a
+mesma pergunta com respostas diferentes porque os papéis são diferentes, e é disso que o campo
+`papel` serve.
+
+Exigir a habilidade obrigaria o salão a cadastrar toda assistente como colorista — e aí a agenda
+passaria a oferecê-la para marcar coloração **sozinha**. O cadastro feito para pagar comissão
+mudaria quem o sistema acha que pode atender.
+
+**Onde é garantida.** `AdicionarExecutanteUseCase` não chama `ProfissionalApi.executa`, e o
+javadoc diz por quê.
+**Rotinas.** RT-ATD-005 · **Teste.** `AdicionarExecutanteIT.assistente_dispensa_habilidade`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-015 — Um principal por item, e ele não sai
+
+**Enunciado.** Todo item de serviço tem exatamente um executante `PRINCIPAL`. Ele não pode ser
+removido; trocar quem executou é remover o item e lançá-lo de novo.
+
+**Motivo.** Dois principais pagam duas comissões cheias pelo mesmo trabalho, e as duas linhas
+parecem certas olhando a comanda — o erro só aparece quando o repasse do mês não bate.
+
+Nenhum principal é pior: o item continuaria faturando e pararia de pagar alguém, sem nada acusar.
+
+Quem executou é parte do que a linha **afirma**, não um campo dela. Refazer o item é mais trabalho e
+é o trabalho certo.
+
+**Onde é garantida.** Índice único parcial `um_principal_por_item` ·
+`RemoverExecutanteUseCase` recusa o principal.
+**Rotinas.** RT-ATD-005 · **Teste.** `AdicionarExecutanteIT.o_indice_recusa_dois_principais`,
+`AdicionarExecutanteIT.principal_nao_sai`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-016 — As comissões de um item não passam de 100%
+
+**Enunciado.** A soma dos percentuais dos executantes de um item é no máximo 100. Acrescentar
+alguém que estouraria o total é recusado (`ER-ATD-COMISSAO_PASSA_DE_CEM`).
+
+**Motivo.** Acima disso o item paga mais em comissão do que rendeu, e o jeito de chegar lá é
+digitar **90** onde se queria **9**.
+
+O erro não aparece na comanda — ela fecha normalmente. Vira problema no fechamento do mês, quando o
+repasse não bate e ninguém sabe qual das trezentas linhas está errada.
+
+**Onde é garantida.** `AdicionarExecutanteUseCase.cabeNoItem`.
+**Rotinas.** RT-ATD-005 · **Teste.** `AdicionarExecutanteIT.nao_passa_de_cem`
+**Configurável?** Não · **Origem.** 2026-09-05

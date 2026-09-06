@@ -67,6 +67,7 @@ class AplicarDescontoIT extends AbstractPostgresIT {
     @Autowired private AbrirComandaUseCase abrir;
     @Autowired private AdicionarItemDeServicoUseCase adicionar;
     @Autowired private AplicarDescontoUseCase desconto;
+    @Autowired private AdicionarExecutanteUseCase adicionarExecutante;
 
     private UUID tenant;
     private UUID usuario;
@@ -254,6 +255,34 @@ class AplicarDescontoIT extends AbstractPostgresIT {
 
         assertThat(executante.percentualComissao()).isEqualByComparingTo("40.00");
         assertThat(executante.valorComissao()).isEqualTo(Money.de("32"));
+    }
+
+    @Test
+    @DisplayName("o desconto alcança também a comissão do assistente")
+    void desconto_alcanca_o_assistente() throws SQLException {
+        // O recálculo é do ITEM, não do executante principal: quem ajudou entra na mesma base, e
+        // uma conta que só refizesse a do principal deixaria o assistente com número velho.
+        cenario(Perfil.GERENTE);
+        UUID bia = TenantContext.obter(tenant, () -> cadastrarProfissional.executar(
+                new DadosDoProfissional("Bia Nunes", null, "52998224725",
+                        TipoDeVinculo.EMPREGADO, null, null, BigDecimal.ZERO,
+                        null, null, null))).id();
+        TenantContext.executar(tenant, () -> adicionarExecutante.executar(
+                comanda, item, bia, new BigDecimal("10")));
+        var atual = TenantContext.obter(tenant,
+                () -> estabelecimentos.configuracao(tenant)).orElseThrow();
+        TenantContext.executar(tenant, () -> atualizarConfiguracao.executar(
+                new ConfiguracaoCommand(atual.nome(), null, atual.fuso().getId(), atual.moeda(),
+                        atual.baseComissao(), true, atual.periodicidadeDeFechamento(),
+                        atual.dddPadrao())));
+
+        var executantes = descontar(null, new BigDecimal("50")).itens().get(0).executantes();
+
+        assertThat(executantes).hasSize(2);
+        assertThat(executantes).allSatisfy(e ->
+                assertThat(e.baseCalculo()).isEqualTo(Money.de("40")));
+        assertThat(executantes.stream().filter(e -> e.profissionalId().equals(bia)).findFirst()
+                .orElseThrow().valorComissao()).isEqualTo(Money.de("4"));
     }
 
     // ------------------------------------------------------------------ o que é recusado

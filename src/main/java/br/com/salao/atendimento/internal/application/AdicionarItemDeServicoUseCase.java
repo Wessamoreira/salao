@@ -57,8 +57,6 @@ public class AdicionarItemDeServicoUseCase {
     private static final Logger log =
             LoggerFactory.getLogger(AdicionarItemDeServicoUseCase.class);
 
-    private static final BigDecimal CEM = new BigDecimal("100");
-
     public enum Erros implements CodigoDeErro {
         COMANDA_NAO_ENCONTRADA("ER-ATD-COMANDA_NAO_ENCONTRADA", HttpStatus.NOT_FOUND,
                 "Comanda não encontrada"),
@@ -152,10 +150,12 @@ public class AdicionarItemDeServicoUseCase {
         UUID itemId = comandas.inserirItemDeServico(tenant, comandaId, servicoId, horario,
                 servico.nome(), quantas, precoUnitario, valorTotal, relogio.agora());
 
-        BigDecimal percentual = executante.comissaoPercentual();
         comandas.inserirExecutante(tenant, itemId, profissionalId, PapelDoExecutante.PRINCIPAL,
-                percentual, OrigemDaComissao.PROFISSIONAL, valorTotal,
-                valorTotal.percentual(percentual.divide(CEM)));
+                executante.comissaoPercentual(), OrigemDaComissao.PROFISSIONAL);
+        // Quem calcula base e comissão é sempre o recálculo, nunca este caso de uso: a fórmula
+        // depende de descontoAfetaComissao e já vive no SQL. Duas contas divergem.
+        comandas.recalcularComissoesDoItem(itemId, estabelecimentos.configuracao(tenant)
+                .orElseThrow().descontoAfetaComissao());
         comandas.recalcularTotais(comandaId);
 
         auditoria.registrar(RegistroDeAuditoria.criacao("item_comanda", itemId,
