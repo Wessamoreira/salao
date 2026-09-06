@@ -6,6 +6,7 @@ import br.com.salao.iam.internal.application.AutenticarUseCase;
 import br.com.salao.iam.internal.application.AbridorDeSessao;
 import br.com.salao.iam.internal.application.AlterarPerfilDoUsuarioUseCase;
 import br.com.salao.iam.internal.application.ConsultarCapacidadesUseCase;
+import br.com.salao.iam.internal.application.LimitesDoUsuario;
 import br.com.salao.iam.internal.application.CriarUsuarioUseCase;
 import br.com.salao.iam.internal.application.DefinirAtivacaoDoUsuarioUseCase;
 import br.com.salao.iam.internal.application.ListarUsuariosUseCase;
@@ -193,6 +194,11 @@ public class IamConfig {
     public ConsultarCapacidadesUseCase consultarCapacidadesUseCase(
             CredenciaisJdbc credenciais, EstabelecimentoApi estabelecimentos) {
         return new ConsultarCapacidadesUseCase(credenciais, estabelecimentos);
+    }
+
+    @Bean
+    public LimitesDoUsuario limitesDoUsuario(CredenciaisJdbc credenciais) {
+        return new LimitesDoUsuario(credenciais);
     }
 
     @Bean

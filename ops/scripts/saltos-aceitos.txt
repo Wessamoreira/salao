@@ -9,3 +9,9 @@ RT-INF-005  # 2026-08-29 — a fundação técnica (idempotência, outbox, cache
 RT-INF-006  # foi construída antes do bloco RT-IAM-003..008 por engano meu, não por decisão.
 RT-INF-007  # Nada quebrou porque nenhuma delas depende de autorização, mas o risco era real:
 RT-INF-008  # caso de uso de negócio escrito antes da autorização precisa ser escrito duas vezes.
+
+RT-ATD-004  # 2026-09-05 — RT-ATD-003 (item de produto) depende de RT-EST-001, que é da Fase 3.
+            # Esperar por ela pararia a Fase 2 inteira num item que o plano já pôs fora de ordem:
+            # ATD-003 declara "ATD-001, EST-001" como dependência, e EST-001 não está na Fase 2.
+            # O desconto depende só de ATD-002, e a tela de fechamento (ATD-008) depende do
+            # desconto — deixá-lo para depois do estoque atrasaria a única tela que fecha dinheiro.

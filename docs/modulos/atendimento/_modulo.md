@@ -21,6 +21,9 @@ momento da venda (RN-ATD-010) — não uma consulta que muda de resposta quando 
 **Quem faz o quê.** Habilidade é da `equipe`. Este módulo pergunta se a pessoa executa o serviço; a
 resposta, e a regra por trás dela, são de lá.
 
+**Quanto cada um pode descontar.** Alçada é do `iam`, e este módulo pergunta o **teto**, não o
+perfil — saber que alçada se decide por perfil o faria repetir a tabela do lado de fora.
+
 **Quando o atendimento aconteceu.** É da `agenda`. A comanda registra que aconteceu, não em que
 horário estava marcado.
 
@@ -33,7 +36,7 @@ precisa exibir, e o que não é carregado não vaza em log.
 - `agenda` — `AgendaApi.porId` (de quem é o horário, e se ele ainda vale)
 - `catalogo` — `ServicoApi` (o que é, e quanto custava hoje)
 - `equipe` — `ProfissionalApi` (quem executa o quê, e com que percentual)
-- `iam` — `Permissao`, `AuditoriaApi`, `EstabelecimentoApi`, `UsuarioAtual`
+- `iam` — `Permissao`, `AuditoriaApi`, `EstabelecimentoApi`, `LimitesDoUsuarioApi`, `UsuarioAtual`
 
 **Cinco, e o teto de três não vale aqui.** RT-ATD-001 registrou "três, que é o teto que a agenda
 segue"; RT-ATD-002 estourou, e a correção é da frase, não do módulo.
@@ -58,6 +61,7 @@ foi rompida — não quando a sexta dependência entrar.
 |---|---|
 | [RT-ATD-001](RT-ATD-001-abrir-comanda.md) — abrir comanda, do agendamento ou avulsa | implementada |
 | [RT-ATD-002](RT-ATD-002-item-de-servico.md) — item de serviço + executantes | implementada |
+| [RT-ATD-004](RT-ATD-004-desconto.md) — desconto com permissão e limite por perfil | implementada |
 
 ## Rotas
 
@@ -68,7 +72,8 @@ foi rompida — não quando a sexta dependência entrar.
 | `GET /api/v1/comandas/{id}` | a comanda com os itens — a tela de fechamento |
 | `POST /api/v1/comandas/{id}/itens` | lança um serviço; devolve a **comanda inteira**, com o total novo |
 | `DELETE /api/v1/comandas/{id}/itens/{itemId}` | tira uma linha lançada errada |
+| `PUT /api/v1/comandas/{id}/itens/{itemId}/desconto` | define o desconto da linha; zero remove |
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-ATD-001 a RN-ATD-010.
+Ver [regras.md](regras.md) — RN-ATD-001 a RN-ATD-013.

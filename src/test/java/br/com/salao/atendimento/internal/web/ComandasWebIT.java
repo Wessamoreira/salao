@@ -262,6 +262,67 @@ class ComandasWebIT extends AbstractPostgresIT {
                 .isEqualTo(404);
     }
 
+
+    /** Abre a comanda e lança um serviço de R$ 80,00. Devolve o id do item. */
+    private String comandaComItemDe80(String comanda, String token) throws Exception {
+        var resposta = post("/api/v1/comandas/" + comanda + "/itens",
+                "{\"servicoId\":\"" + umServicoDe80() + "\",\"profissionalId\":\""
+                        + umaProfissional() + "\"}", token);
+        return resposta.body().replaceAll(
+                "(?s).*\"itens\":\\[\\{\"id\":\"([^\"]+)\".*", "$1");
+    }
+
+    @Test
+    @DisplayName("a recepção desconta dentro do teto dela")
+    void desconto_dentro_do_teto() throws Exception {
+        String token = entrar();
+        String comanda = abrirComandaDe(umaCliente(token), token);
+        String item = comandaComItemDe80(comanda, token);
+
+        var resposta = put("/api/v1/comandas/" + comanda + "/itens/" + item + "/desconto",
+                "{\"percentual\":10}", token);
+
+        assertThat(resposta.statusCode()).isEqualTo(200);
+        assertThat(resposta.body()).contains("72.0000");
+    }
+
+    @Test
+    @DisplayName("acima do teto o servidor recusa com 403, mesmo o front sabendo o limite")
+    void desconto_acima_do_teto() throws Exception {
+        // Capacidades já entrega descontoMaximoPercentual ao front, que esconde o campo. Isso é
+        // usabilidade — quem chama a rota direto continua tendo de passar por aqui.
+        String token = entrar();
+        String comanda = abrirComandaDe(umaCliente(token), token);
+        String item = comandaComItemDe80(comanda, token);
+
+        var resposta = put("/api/v1/comandas/" + comanda + "/itens/" + item + "/desconto",
+                "{\"percentual\":40}", token);
+
+        assertThat(resposta.statusCode()).isEqualTo(403);
+        assertThat(resposta.body()).contains("ER-ATD-DESCONTO_ACIMA_DO_LIMITE");
+    }
+
+    @Test
+    @DisplayName("valor e percentual juntos param na borda")
+    void desconto_ambiguo() throws Exception {
+        String token = entrar();
+        String comanda = abrirComandaDe(umaCliente(token), token);
+        String item = comandaComItemDe80(comanda, token);
+
+        assertThat(put("/api/v1/comandas/" + comanda + "/itens/" + item + "/desconto",
+                "{\"valor\":5,\"percentual\":10}", token).statusCode()).isIn(400, 422);
+    }
+
+    private HttpResponse<String> put(String caminho, String corpo, String token) throws Exception {
+        var b = HttpRequest.newBuilder(URI.create("http://localhost:" + porta + caminho))
+                .header("Content-Type", "application/json")
+                .PUT(HttpRequest.BodyPublishers.ofString(corpo));
+        if (token != null) {
+            b.header("Authorization", "Bearer " + token);
+        }
+        return http.send(b.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
     private HttpResponse<String> delete(String caminho, String token) throws Exception {
         var b = HttpRequest.newBuilder(URI.create("http://localhost:" + porta + caminho)).DELETE();
         if (token != null) {

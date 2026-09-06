@@ -3,6 +3,7 @@ package br.com.salao.atendimento.internal;
 import br.com.salao.agenda.api.AgendaApi;
 import br.com.salao.atendimento.internal.application.AbrirComandaUseCase;
 import br.com.salao.atendimento.internal.application.AdicionarItemDeServicoUseCase;
+import br.com.salao.atendimento.internal.application.AplicarDescontoUseCase;
 import br.com.salao.atendimento.internal.application.ConsultarComandaUseCase;
 import br.com.salao.atendimento.internal.application.RemoverItemUseCase;
 import br.com.salao.atendimento.internal.application.ListarComandasAbertasUseCase;
@@ -12,6 +13,7 @@ import br.com.salao.cliente.api.ClienteApi;
 import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
+import br.com.salao.iam.api.LimitesDoUsuarioApi;
 import br.com.salao.shared.tempo.Relogio;
 import javax.sql.DataSource;
 import org.springframework.context.annotation.Bean;
@@ -41,6 +43,13 @@ public class AtendimentoConfig {
             Relogio relogio) {
         return new AdicionarItemDeServicoUseCase(comandas, servicos, profissionais, agenda,
                 estabelecimentos, auditoria, relogio);
+    }
+
+    @Bean
+    public AplicarDescontoUseCase aplicarDescontoUseCase(
+            ComandasJdbc comandas, LimitesDoUsuarioApi limites,
+            EstabelecimentoApi estabelecimentos, AuditoriaApi auditoria) {
+        return new AplicarDescontoUseCase(comandas, limites, estabelecimentos, auditoria);
     }
 
     @Bean

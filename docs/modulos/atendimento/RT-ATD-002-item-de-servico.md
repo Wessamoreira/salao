@@ -111,9 +111,6 @@ confirmação para tirar uma linha errada é atrito onde não há risco.
 
 - [ ] **Produto não existe.** A tabela nasce inteira, com a metade de `PRODUTO` que só RT-ATD-003
       vai preencher — `produto_id` e `custo_medio_unitario` são colunas que ninguém escreve ainda
-- [ ] **Desconto é sempre zero.** A coluna existe e o total já a subtrai; quem a preenche é
-      RT-ATD-004, e é lá que `base_calculo` do executante precisa ser recalculada — hoje ela é
-      sempre o valor cheio do item
 - [ ] **Só há executante `PRINCIPAL`.** O assistente que lava é RT-ATD-005; o enum e o `check` já
       o preveem
 - [ ] **A cascata de comissão tem um nível só.** `OrigemDaComissao.PROFISSIONAL` é o único valor, e

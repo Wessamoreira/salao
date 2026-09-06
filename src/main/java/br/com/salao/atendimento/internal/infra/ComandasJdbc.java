@@ -293,6 +293,55 @@ public class ComandasJdbc {
         return porItem;
     }
 
+    // ------------------------------------------------------------------ RT-ATD-004
+
+    /**
+     * Grava o desconto e refaz o total da linha na mesma frase.
+     *
+     * <p>{@code valor_total} é derivado de {@code preco_unitario * quantidade - desconto}, e
+     * calculá-lo aqui — e não na aplicação — é o que impede as duas contas de divergirem no dia em
+     * que alguém arredondar diferente. É a mesma razão de {@link #recalcularTotais}.
+     */
+    @Transactional
+    public void aplicarDescontoNoItem(UUID itemId, Money desconto) {
+        jdbc.sql("""
+                update item_comanda
+                   set desconto = :desconto,
+                       valor_total = preco_unitario * quantidade - :desconto
+                 where id = :id
+                """)
+                .param("id", itemId)
+                .param("desconto", desconto.valor())
+                .update();
+    }
+
+    /**
+     * Refaz a base e o valor da comissão de todos os executantes do item.
+     *
+     * <p>{@code descontoAfetaComissao} é configuração do salão (pergunta 2 de
+     * {@code 13-perguntas-em-aberto}), e é ela que decide sobre qual valor o percentual incide:
+     * o total já descontado, ou o valor cheio do serviço. A diferença é quem paga o desconto — o
+     * salão ou o profissional —, e é decisão de negócio, não de código.
+     *
+     * <p>O percentual não entra na conta vindo da ficha: vem da própria linha, que é o snapshot
+     * gravado no lançamento (RN-ATD-010). Reler a ficha aqui apagaria o snapshot em silêncio.
+     */
+    @Transactional
+    public void recalcularComissoesDoItem(UUID itemId, boolean descontoAfetaComissao) {
+        jdbc.sql("""
+                update executante e
+                   set base_calculo = b.base,
+                       valor_comissao = b.base * e.percentual_comissao / 100
+                  from (select case when :afeta then i.valor_total
+                                    else i.preco_unitario * i.quantidade end as base
+                          from item_comanda i where i.id = :item) b
+                 where e.item_comanda_id = :item
+                """)
+                .param("item", itemId)
+                .param("afeta", descontoAfetaComissao)
+                .update();
+    }
+
     private static ComandaResumo mapear(ResultSet rs, int linha) throws SQLException {
         OffsetDateTime fechada = rs.getObject("fechada_em", OffsetDateTime.class);
         return new ComandaResumo(

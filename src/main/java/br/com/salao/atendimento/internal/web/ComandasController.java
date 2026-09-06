@@ -2,8 +2,10 @@ package br.com.salao.atendimento.internal.web;
 
 import br.com.salao.atendimento.api.AberturaDeComanda;
 import br.com.salao.atendimento.api.ComandaDetalhada;
+import br.com.salao.shared.dinheiro.Money;
 import br.com.salao.atendimento.internal.application.AbrirComandaUseCase;
 import br.com.salao.atendimento.internal.application.AdicionarItemDeServicoUseCase;
+import br.com.salao.atendimento.internal.application.AplicarDescontoUseCase;
 import br.com.salao.atendimento.internal.application.ConsultarComandaUseCase;
 import br.com.salao.atendimento.internal.application.RemoverItemUseCase;
 import br.com.salao.atendimento.internal.application.ListarComandasAbertasUseCase;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,16 +41,19 @@ public class ComandasController {
     private final ListarComandasAbertasUseCase abertas;
     private final AdicionarItemDeServicoUseCase adicionarServico;
     private final RemoverItemUseCase removerItem;
+    private final AplicarDescontoUseCase aplicarDesconto;
     private final ConsultarComandaUseCase consultar;
 
     public ComandasController(AbrirComandaUseCase abrir, ListarComandasAbertasUseCase abertas,
                               AdicionarItemDeServicoUseCase adicionarServico,
-                              RemoverItemUseCase removerItem, ConsultarComandaUseCase consultar) {
+                              RemoverItemUseCase removerItem, ConsultarComandaUseCase consultar,
+                              AplicarDescontoUseCase aplicarDesconto) {
         this.abrir = abrir;
         this.abertas = abertas;
         this.adicionarServico = adicionarServico;
         this.removerItem = removerItem;
         this.consultar = consultar;
+        this.aplicarDesconto = aplicarDesconto;
     }
 
     /**
@@ -121,5 +127,29 @@ public class ComandasController {
     @DeleteMapping("/{id}/itens/{itemId}")
     public ComandaDetalhada removerItem(@PathVariable UUID id, @PathVariable UUID itemId) {
         return removerItem.executar(id, itemId);
+    }
+
+    /**
+     * Valor <strong>ou</strong> percentual — são duas formas de dizer a mesma coisa, e aceitar as
+     * duas juntas deixaria a resposta para a ordem do {@code if}.
+     */
+    public record DescontoRequest(BigDecimal valor, BigDecimal percentual) {
+
+        @jakarta.validation.constraints.AssertTrue(
+                message = "informe o desconto em valor ou em percentual, não os dois")
+        public boolean isExatamenteUm() {
+            return (valor == null) != (percentual == null);
+        }
+    }
+
+    /**
+     * {@code PUT} porque define o desconto da linha, e não o acumula: mandar duas vezes o mesmo
+     * valor deixa a comanda no mesmo estado. Zero remove.
+     */
+    @PutMapping("/{id}/itens/{itemId}/desconto")
+    public ComandaDetalhada aplicarDesconto(@PathVariable UUID id, @PathVariable UUID itemId,
+                                            @Valid @RequestBody DescontoRequest req) {
+        return aplicarDesconto.executar(id, itemId,
+                req.valor() == null ? null : new Money(req.valor()), req.percentual());
     }
 }

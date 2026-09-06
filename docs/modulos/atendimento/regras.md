@@ -207,3 +207,73 @@ colunas `descricao`, `preco_unitario`, `percentual_comissao`, `regra_origem`.
 **Rotinas.** RT-ATD-002, RT-ATD-006 · **Teste.** `AdicionarItemDeServicoIT.preco_e_snapshot`,
 `AdicionarItemDeServicoIT.percentual_e_snapshot`
 **Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-011 — O desconto é do item, nunca da comanda
+
+**Enunciado.** Desconto é aplicado a uma linha da comanda. Não existe desconto de comanda.
+
+**Motivo.** Um desconto no total teria de ser rateado entre os itens para chegar às comissões — e o
+rateio decidiria, sozinho, **de quem** sai o desconto. Numa comanda com corte da Ana e coloração da
+Bia, "vinte reais" tiraria dinheiro das duas sem ninguém escolher.
+
+Aplicar no item obriga a escolha a ser feita por quem dá o desconto, que é quem sabe por que está
+dando. É atrito de propósito, no único lugar onde ele evita uma conta errada no bolso de outra
+pessoa.
+
+**Onde é garantida.** `AplicarDescontoUseCase.executar` recebe o item · a coluna vive em
+`item_comanda`, e `comanda.valor_desconto` é a soma.
+**Rotinas.** RT-ATD-004 · **Teste.** `AplicarDescontoIT.recepcao_dentro_do_teto`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-012 — O teto de desconto é do usuário, sempre percentual, e zero sem identidade
+
+**Enunciado.** Quem tem `comanda:discount` pode descontar até o teto do seu perfil
+(`LimitesDoUsuarioApi`). A conferência é **percentual sobre o valor cheio do item**, mesmo quando o
+desconto foi digitado em dinheiro. Sem usuário identificado, o teto é zero.
+
+**Motivo.** A permissão responde "pode dar desconto?"; o teto responde "de quanto?". São perguntas
+diferentes, e separá-las é o que permite dar alçada sem dar o poder inteiro.
+
+Num item de R$ 80,00, "50%" e "R$ 40,00" são o mesmo desconto — um limite que só olhasse o campo
+percentual recusaria o primeiro e aceitaria o segundo, e o furo não precisaria de má-fé: bastaria
+digitar do jeito que a recepção já digita.
+
+O perfil vem do **banco**, não do token: token é autocontido e vale até expirar, então um
+rebaixamento no meio do expediente ainda apareceria como alçada antiga — e a trilha registraria a
+permissão que a pessoa já não tinha.
+
+Zero sem identidade porque job agendado e consumidor de evento agem sem ninguém logado. Falha
+fechada: quem não tem rosto não dá desconto.
+
+**Onde é garantida.** `AplicarDescontoUseCase.conferirTeto` · `LimitesDoUsuario` lê o perfil do
+banco · `MapaDePermissoes.descontoMaximoPercentual`.
+**Rotinas.** RT-ATD-004 · **Teste.** `AplicarDescontoIT.recepcao_acima_do_teto`,
+`AplicarDescontoIT.teto_nao_e_contornavel_por_valor`,
+`AplicarDescontoIT.sem_identidade_nao_desconta`, `ComandasWebIT.desconto_acima_do_teto`
+**Configurável?** O teto por perfil, em `MapaDePermissoes` · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-013 — Quem paga o desconto é configuração; o percentual continua snapshot
+
+**Enunciado.** `descontoAfetaComissao` decide a base da comissão: `false` (padrão) mantém a base no
+valor cheio do serviço, `true` usa o total já descontado. O `percentual_comissao` do executante
+**não** é relido da ficha ao recalcular.
+
+**Motivo.** Quem paga o desconto — o salão ou o profissional — é a pergunta 2 de
+`13-perguntas-em-aberto`, e a resposta muda de salão para salão. O padrão é `false` porque é o que
+não surpreende: o profissional executou o serviço inteiro, e a decisão de baixar o preço foi de
+outra pessoa.
+
+Recalcular a comissão é refazer a **conta**, não a **regra**. Reler a ficha aqui apagaria o
+snapshot de RN-ATD-010 em silêncio, e o efeito só apareceria no repasse, meses depois.
+
+**Onde é garantida.** `ComandasJdbc.recalcularComissoesDoItem` — o percentual sai da própria linha
+de `executante`.
+**Rotinas.** RT-ATD-004 · **Teste.** `AplicarDescontoIT.desconto_nao_afeta_comissao`,
+`AplicarDescontoIT.desconto_afeta_comissao`, `AplicarDescontoIT.percentual_continua_snapshot`
+**Configurável?** Sim — `descontoAfetaComissao` · **Origem.** 2026-09-05

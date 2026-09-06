@@ -26,6 +26,15 @@ Quem é o estabelecimento, quem são os usuários e o que cada um pode fazer.
 | Catálogo de permissões | `Permissao.*` (constantes) | todos, no `@PreAuthorize` |
 | Trilha de auditoria | `AuditoriaApi.registrar(RegistroDeAuditoria)` | todos os módulos |
 | Perfil e token | `Perfil`, `TokenDeAcesso` | `web`, `conversacional` |
+| Teto de alçada | `LimitesDoUsuarioApi.descontoMaximoPercentual(UUID)` | `atendimento` (RT-ATD-004) |
+
+> `LimitesDoUsuarioApi` devolve o **teto**, nunca o perfil. Quem consome não deve saber que alçada
+> se decide por perfil — sabendo, repetiria a tabela do lado de fora, e a segunda cópia é a que
+> continua autorizando depois que a primeira mudar.
+>
+> O perfil sai do **banco**, não do token: o token é autocontido e vale até expirar, então um
+> rebaixamento no meio do expediente ainda apareceria como alçada antiga. Para desenhar menu isso
+> passa; para autorizar dinheiro, não.
 
 `ConfiguracaoDoEstabelecimento`, `BaseDeComissao`, `PeriodicidadeDeFechamento` e `ErrosDoIam` são
 parte do contrato. Nenhum módulo consulta a tabela `estabelecimento` diretamente.
