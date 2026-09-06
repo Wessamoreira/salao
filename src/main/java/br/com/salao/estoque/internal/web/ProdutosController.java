@@ -1,6 +1,7 @@
 package br.com.salao.estoque.internal.web;
 
 import br.com.salao.estoque.api.FinalidadeDoProduto;
+import br.com.salao.estoque.api.LoteResumo;
 import br.com.salao.estoque.api.ProdutoResumo;
 import br.com.salao.estoque.api.UnidadeDeMedida;
 import br.com.salao.estoque.internal.application.AtualizarProdutoUseCase;
@@ -8,7 +9,10 @@ import br.com.salao.estoque.internal.application.CadastrarProdutoUseCase;
 import br.com.salao.estoque.internal.application.DadosDoProduto;
 import br.com.salao.estoque.internal.application.DefinirAtivacaoDoProdutoUseCase;
 import br.com.salao.estoque.internal.application.DefinirPrecoDeVendaUseCase;
+import br.com.salao.estoque.internal.application.DadosDaEntrada;
+import br.com.salao.estoque.internal.application.ListarLotesUseCase;
 import br.com.salao.estoque.internal.application.ListarProdutosUseCase;
+import br.com.salao.estoque.internal.application.RegistrarEntradaDeLoteUseCase;
 import br.com.salao.shared.dinheiro.Money;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -16,6 +20,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.net.URI;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -45,16 +50,22 @@ public class ProdutosController {
     private final DefinirPrecoDeVendaUseCase definirPreco;
     private final DefinirAtivacaoDoProdutoUseCase definirAtivacao;
     private final ListarProdutosUseCase listar;
+    private final RegistrarEntradaDeLoteUseCase registrarEntrada;
+    private final ListarLotesUseCase listarLotes;
 
     public ProdutosController(CadastrarProdutoUseCase cadastrar, AtualizarProdutoUseCase atualizar,
                               DefinirPrecoDeVendaUseCase definirPreco,
                               DefinirAtivacaoDoProdutoUseCase definirAtivacao,
-                              ListarProdutosUseCase listar) {
+                              ListarProdutosUseCase listar,
+                              RegistrarEntradaDeLoteUseCase registrarEntrada,
+                              ListarLotesUseCase listarLotes) {
         this.cadastrar = cadastrar;
         this.atualizar = atualizar;
         this.definirPreco = definirPreco;
         this.definirAtivacao = definirAtivacao;
         this.listar = listar;
+        this.registrarEntrada = registrarEntrada;
+        this.listarLotes = listarLotes;
     }
 
     /**
@@ -144,5 +155,46 @@ public class ProdutosController {
             @RequestParam(defaultValue = "false") boolean somenteVendaveis) {
         return listar.executar(somenteAtivos, somenteVendaveis).stream()
                 .map(ProdutoResponse::de).toList();
+    }
+
+    // ------------------------------------------------------------------ RT-EST-002
+
+    /**
+     * @param custoUnitario zero é válido: amostra e brinde do fornecedor chegam sem custar nada
+     * @param validade      nula quando o produto não tem validade impressa
+     * @param recebidoEm    nula vira hoje — a nota costuma ser lançada dias depois
+     */
+    public record EntradaRequest(
+            @NotNull @jakarta.validation.constraints.Positive BigDecimal quantidade,
+            @NotNull @jakarta.validation.constraints.PositiveOrZero BigDecimal custoUnitario,
+            @Size(max = 60) String codigo,
+            LocalDate validade,
+            LocalDate recebidoEm) {
+
+        DadosDaEntrada paraDados() {
+            return new DadosDaEntrada(quantidade, new Money(custoUnitario), codigo, validade,
+                    recebidoEm);
+        }
+    }
+
+    /** A caixa chegou: cria o lote e o movimento de entrada, numa transação. */
+    @PostMapping("/{id}/lotes")
+    public ResponseEntity<LoteResumo> registrarEntrada(@PathVariable UUID id,
+                                                       @Valid @RequestBody EntradaRequest req) {
+        LoteResumo lote = registrarEntrada.executar(id, req.paraDados());
+        return ResponseEntity.created(URI.create("/api/v1/produtos/" + id + "/lotes"))
+                .body(lote);
+    }
+
+    /**
+     * Os lotes, <strong>na ordem do FEFO</strong> — vence primeiro, sai primeiro.
+     *
+     * @param somenteComSaldo padrão {@code true}; {@code false} traz também os zerados, que
+     *                        explicam de onde saiu o que já foi vendido
+     */
+    @GetMapping("/{id}/lotes")
+    public List<LoteResumo> lotes(@PathVariable UUID id,
+                                  @RequestParam(defaultValue = "true") boolean somenteComSaldo) {
+        return listarLotes.executar(id, somenteComSaldo);
     }
 }

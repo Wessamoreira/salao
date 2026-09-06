@@ -147,6 +147,58 @@ class ProdutosWebIT extends AbstractPostgresIT {
         assertThat(get("/api/v1/produtos", null).statusCode()).isIn(401, 403);
     }
 
+
+    @Test
+    @DisplayName("a caixa entra e o lote já nasce com saldo")
+    void entrada_de_lote() throws Exception {
+        String token = entrar();
+        String id = idDe(post("/api/v1/produtos", """
+                {"nome":"Shampoo","finalidade":"VENDA","unidade":"UN"}
+                """, token));
+
+        var entrada = post("/api/v1/produtos/" + id + "/lotes", """
+                {"quantidade":10,"custoUnitario":20,"codigo":"L-778","validade":"2027-01-31"}
+                """, token);
+
+        assertThat(entrada.statusCode()).isEqualTo(201);
+        assertThat(entrada.body()).contains("\"quantidade\":10.000").contains("L-778");
+    }
+
+    @Test
+    @DisplayName("os lotes vêm na ordem do FEFO")
+    void lotes_em_ordem_fefo() throws Exception {
+        String token = entrar();
+        String id = idDe(post("/api/v1/produtos", """
+                {"nome":"Shampoo","finalidade":"VENDA","unidade":"UN"}
+                """, token));
+        post("/api/v1/produtos/" + id + "/lotes",
+                "{\"quantidade\":1,\"custoUnitario\":20,\"codigo\":\"VENCE-DEPOIS\","
+                        + "\"validade\":\"2028-01-31\"}", token);
+        post("/api/v1/produtos/" + id + "/lotes",
+                "{\"quantidade\":1,\"custoUnitario\":20,\"codigo\":\"VENCE-ANTES\","
+                        + "\"validade\":\"2026-12-31\"}", token);
+
+        var lotes = get("/api/v1/produtos/" + id + "/lotes", token);
+
+        assertThat(lotes.statusCode()).isEqualTo(200);
+        assertThat(lotes.body().indexOf("VENCE-ANTES"))
+                .as("vence primeiro, sai primeiro")
+                .isLessThan(lotes.body().indexOf("VENCE-DEPOIS"));
+    }
+
+    @Test
+    @DisplayName("quantidade zero na entrada para na borda")
+    void entrada_invalida() throws Exception {
+        String token = entrar();
+        String id = idDe(post("/api/v1/produtos", """
+                {"nome":"Shampoo","finalidade":"VENDA","unidade":"UN"}
+                """, token));
+
+        assertThat(post("/api/v1/produtos/" + id + "/lotes", """
+                {"quantidade":0,"custoUnitario":20}
+                """, token).statusCode()).isIn(400, 422);
+    }
+
     private String entrar() throws Exception {
         var resposta = post("/api/v1/auth/login",
                 "{\"email\":\"ana@salao.test\",\"senha\":\"" + SENHA + "\"}", null);

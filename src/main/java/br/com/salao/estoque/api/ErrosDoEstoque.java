@@ -26,6 +26,18 @@ public enum ErrosDoEstoque implements CodigoDeErro {
             HttpStatus.UNPROCESSABLE_ENTITY, "Produto de consumo interno não tem preço de venda"),
 
     /**
+     * RT-EST-002 — entrada de lote com quantidade que não entra.
+     *
+     * <p>Código próprio porque a correção é do número digitado, e não do produto: zero não move
+     * nada, e negativo é saída — que é outra rotina, com motivo obrigatório (RT-EST-005).
+     */
+    QUANTIDADE_INVALIDA("ER-EST-QUANTIDADE_INVALIDA", HttpStatus.UNPROCESSABLE_ENTITY,
+            "A quantidade de entrada precisa ser maior que zero"),
+
+    PRODUTO_INATIVO("ER-EST-PRODUTO_INATIVO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Produto desativado não recebe entrada"),
+
+    /**
      * Alguém salvou por cima de uma tela velha.
      *
      * <p>O bloqueio otimista existe aqui porque preço e finalidade são editados por pessoas

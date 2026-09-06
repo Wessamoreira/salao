@@ -4,9 +4,15 @@ import br.com.salao.estoque.internal.application.AtualizarProdutoUseCase;
 import br.com.salao.estoque.internal.application.CadastrarProdutoUseCase;
 import br.com.salao.estoque.internal.application.DefinirAtivacaoDoProdutoUseCase;
 import br.com.salao.estoque.internal.application.DefinirPrecoDeVendaUseCase;
+import br.com.salao.estoque.internal.application.ListarLotesUseCase;
 import br.com.salao.estoque.internal.application.ListarProdutosUseCase;
+import br.com.salao.estoque.internal.application.RegistrarEntradaDeLoteUseCase;
+import br.com.salao.estoque.api.ProdutoApi;
+import br.com.salao.estoque.internal.infra.LotesJdbc;
 import br.com.salao.estoque.internal.infra.ProdutosJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
+import br.com.salao.iam.api.EstabelecimentoApi;
+import br.com.salao.shared.tempo.Relogio;
 import javax.sql.DataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -43,6 +49,24 @@ public class EstoqueConfig {
     public DefinirAtivacaoDoProdutoUseCase definirAtivacaoDoProdutoUseCase(
             ProdutosJdbc produtos, AuditoriaApi auditoria) {
         return new DefinirAtivacaoDoProdutoUseCase(produtos, auditoria);
+    }
+
+    @Bean
+    public LotesJdbc lotesJdbc(DataSource dataSource) {
+        return new LotesJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public RegistrarEntradaDeLoteUseCase registrarEntradaDeLoteUseCase(
+            LotesJdbc lotes, ProdutoApi produtos, EstabelecimentoApi estabelecimentos,
+            AuditoriaApi auditoria, Relogio relogio) {
+        return new RegistrarEntradaDeLoteUseCase(lotes, produtos, estabelecimentos, auditoria,
+                relogio);
+    }
+
+    @Bean
+    public ListarLotesUseCase listarLotesUseCase(LotesJdbc lotes) {
+        return new ListarLotesUseCase(lotes);
     }
 
     @Bean

@@ -96,3 +96,70 @@ justamente porque a linha precisa continuar legível, mas o saldo e o custo não
 `idx_produto_ativo`.
 **Rotinas.** RT-EST-001 · **Teste.** `CadastroDeProdutoIT.lista_de_cadastro`
 **Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-EST-006 — Movimento é imutável; saldo é projeção
+
+**Enunciado.** Não existe coluna de saldo. O saldo de um lote é `sum(quantidade)` dos movimentos
+dele. Movimento nunca é alterado nem apagado: correção é movimento novo, de sinal contrário
+(RT-EST-005).
+
+**Motivo.** Mesma disciplina do livro-razão. Sem coluna, não há saldo que desande: nenhuma gravação
+concorrente perde uma baixa, e nenhum valor errado precisa de script para consertar — se a soma dos
+movimentos está certa, o saldo está certo por construção.
+
+E alterar um movimento mudaria o passado: o custo de uma venda já feita passaria a ser outro, e a
+margem do mês fechado mudaria sozinha.
+
+O preço é uma agregação em toda leitura de lote, e é barato — um salão tem dezenas de lotes por
+produto.
+
+**Onde é garantida.** Ausência de coluna de saldo em `lote` · `LotesJdbc.CAMPOS` calcula a projeção ·
+nenhum `update`/`delete` em `movimento_estoque` no código.
+**Rotinas.** RT-EST-002 · **Teste.** `EntradaDeLoteIT.saldo_e_projecao`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-EST-007 — O sinal da quantidade distingue entrada de saída; o tipo é rótulo
+
+**Enunciado.** `movimento_estoque.quantidade` é positiva na entrada e negativa na saída, e nunca
+zero. O campo `tipo` classifica, mas não participa da soma.
+
+**Motivo.** Se o tipo decidisse o sinal, toda consulta de saldo precisaria conhecer a lista de
+tipos que somam e a dos que subtraem — e a primeira que esquecesse um tipo novo daria um número
+plausível e errado, que é a pior espécie.
+
+Zero fica fora porque movimento de zero não move nada e só polui a projeção.
+
+**Onde é garantida.** `check (quantidade <> 0)` · a projeção soma sem olhar o tipo ·
+`TipoDeMovimento` documenta que é rótulo.
+**Rotinas.** RT-EST-002 · **Teste.** `EntradaDeLoteIT.entrada_cria_lote_e_movimento`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-EST-008 — O custo é do lote, e a ordem de saída é a do FEFO
+
+**Enunciado.** Cada lote guarda o próprio `custo_unitario` e a própria `validade`. A listagem de
+lotes de um produto vem ordenada por `validade nulls last, recebido_em` — vence primeiro, sai
+primeiro. Lote vencido **entra**; produto desativado **não** recebe entrada.
+
+**Motivo.** A mesma prateleira tem unidades que custaram vinte e unidades que custaram vinte e
+cinco: custo no produto perderia a diferença, e com ela a margem de cada venda.
+
+A ordem vem pronta do banco porque é a que RT-EST-004 vai consumir — deixar cada chamador
+reinventá-la é como metade das implementações de FEFO erra, e o erro só aparece quando alguma coisa
+vence no armário. O que não tem validade sai por último: não corre risco de perder.
+
+Caixa vencida entra porque é o caso que mais precisa de registro — ela chegou assim e vai voltar
+para o fornecedor. Já produto desativado recebendo mercadoria é quase sempre o cadastro errado
+escolhido na tela, e descobrir isso depois custa um inventário.
+
+**Onde é garantida.** `lote.custo_unitario` · `idx_lote_fefo` · `LotesJdbc.doProduto` ordena ·
+`RegistrarEntradaDeLoteUseCase` recusa produto inativo.
+**Rotinas.** RT-EST-002 · **Teste.** `EntradaDeLoteIT.dois_lotes`, `EntradaDeLoteIT.ordem_fefo`,
+`EntradaDeLoteIT.vencida_entra`, `EntradaDeLoteIT.produto_inativo`,
+`ProdutosWebIT.lotes_em_ordem_fefo`
+**Configurável?** Não · **Origem.** 2026-09-05
