@@ -14,6 +14,7 @@ import br.com.salao.atendimento.internal.application.AplicarDescontoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverExecutanteUseCase;
 import br.com.salao.atendimento.internal.application.ConsultarComandaUseCase;
 import br.com.salao.atendimento.internal.application.ConsultarContaUseCase;
+import br.com.salao.atendimento.internal.application.FecharComandaUseCase;
 import br.com.salao.atendimento.internal.application.RegistrarPagamentoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverPagamentoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverItemUseCase;
@@ -53,6 +54,7 @@ public class ComandasController {
     private final RegistrarPagamentoUseCase registrarPagamento;
     private final RemoverPagamentoUseCase removerPagamento;
     private final ConsultarContaUseCase consultarConta;
+    private final FecharComandaUseCase fecharComanda;
     private final RemoverItemUseCase removerItem;
     private final AplicarDescontoUseCase aplicarDesconto;
     private final AdicionarExecutanteUseCase adicionarExecutante;
@@ -68,7 +70,8 @@ public class ComandasController {
                               RemoverExecutanteUseCase removerExecutante,
                               RegistrarPagamentoUseCase registrarPagamento,
                               RemoverPagamentoUseCase removerPagamento,
-                              ConsultarContaUseCase consultarConta) {
+                              ConsultarContaUseCase consultarConta,
+                              FecharComandaUseCase fecharComanda) {
         this.abrir = abrir;
         this.abertas = abertas;
         this.adicionarServico = adicionarServico;
@@ -81,6 +84,7 @@ public class ComandasController {
         this.registrarPagamento = registrarPagamento;
         this.removerPagamento = removerPagamento;
         this.consultarConta = consultarConta;
+        this.fecharComanda = fecharComanda;
     }
 
     /**
@@ -274,5 +278,20 @@ public class ComandasController {
     @GetMapping("/{id}/conta")
     public ResponseEntity<ContaDaComanda> conta(@PathVariable UUID id) {
         return ResponseEntity.of(consultarConta.executar(id));
+    }
+
+    // ------------------------------------------------------------------ RT-ATD-006
+
+    /**
+     * Fecha a comanda: confere o pagamento, baixa o estoque e publica o evento — tudo numa
+     * transação.
+     *
+     * <p>Sem corpo: não há o que informar. O que decide o fechamento já está na comanda — os itens,
+     * os descontos e os pagamentos. {@code POST} num sub-recurso, e não {@code PATCH} de status,
+     * porque fechar não é editar um campo: é um ato, com efeitos em três módulos.
+     */
+    @PostMapping("/{id}/fechamento")
+    public ComandaDetalhada fechar(@PathVariable UUID id) {
+        return fecharComanda.executar(id);
     }
 }

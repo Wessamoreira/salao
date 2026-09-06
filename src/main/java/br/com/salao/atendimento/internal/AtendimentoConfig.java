@@ -9,6 +9,7 @@ import br.com.salao.atendimento.internal.application.AplicarDescontoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverExecutanteUseCase;
 import br.com.salao.atendimento.internal.application.ConsultarComandaUseCase;
 import br.com.salao.atendimento.internal.application.ConsultarContaUseCase;
+import br.com.salao.atendimento.internal.application.FecharComandaUseCase;
 import br.com.salao.atendimento.internal.application.RegistrarPagamentoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverPagamentoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverItemUseCase;
@@ -17,12 +18,14 @@ import br.com.salao.atendimento.internal.infra.ComandasJdbc;
 import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.cliente.api.ClienteApi;
 import br.com.salao.equipe.api.ProfissionalApi;
+import br.com.salao.estoque.api.EstoqueApi;
 import br.com.salao.estoque.api.ProdutoApi;
 import br.com.salao.financeiro.api.PagamentoApi;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.api.LimitesDoUsuarioApi;
 import br.com.salao.shared.tempo.Relogio;
+import org.springframework.context.ApplicationEventPublisher;
 import javax.sql.DataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -87,6 +90,14 @@ public class AtendimentoConfig {
     @Bean
     public ConsultarComandaUseCase consultarComandaUseCase(ComandasJdbc comandas) {
         return new ConsultarComandaUseCase(comandas);
+    }
+
+    @Bean
+    public FecharComandaUseCase fecharComandaUseCase(
+            ComandasJdbc comandas, PagamentoApi pagamentos, EstoqueApi estoque,
+            AuditoriaApi auditoria, ApplicationEventPublisher eventos, Relogio relogio) {
+        return new FecharComandaUseCase(comandas, pagamentos, estoque, auditoria, eventos,
+                relogio);
     }
 
     @Bean

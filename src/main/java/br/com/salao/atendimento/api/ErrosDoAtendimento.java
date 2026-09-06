@@ -117,6 +117,17 @@ public enum ErrosDoAtendimento implements CodigoDeErro {
     PAGAMENTO_NAO_E_DESTA_COMANDA("ER-ATD-PAGAMENTO_NAO_E_DESTA_COMANDA", HttpStatus.NOT_FOUND,
             "Pagamento não encontrado nesta comanda"),
 
+    /**
+     * RT-ATD-006 — ainda falta receber.
+     *
+     * <p>A mensagem diz <strong>quanto</strong> falta. Fechar com saldo aberto faria a comanda
+     * afirmar que o atendimento foi pago quando não foi — e o faturamento do dia passaria a
+     * incluir dinheiro que ninguém recebeu. Quem quer registrar que não vai receber agora tem
+     * {@code FIADO}; quem vai dar de graça tem {@code CORTESIA}. As duas quitam.
+     */
+    COMANDA_COM_SALDO_ABERTO("ER-ATD-COMANDA_COM_SALDO_ABERTO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Ainda falta receber nesta comanda"),
+
     // ------------------------------------------------------------------ desconto
 
     DESCONTO_INVALIDO("ER-ATD-DESCONTO_INVALIDO", HttpStatus.UNPROCESSABLE_ENTITY,

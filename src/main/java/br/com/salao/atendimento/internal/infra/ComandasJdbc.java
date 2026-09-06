@@ -393,6 +393,46 @@ public class ComandasJdbc {
                 .update();
     }
 
+    // ------------------------------------------------------------------ RT-ATD-006
+
+    /**
+     * Fecha a comanda, <strong>se ela ainda estiver aberta</strong>.
+     *
+     * <p>O {@code where status = 'ABERTA'} é o que serializa dois fechamentos simultâneos: quem
+     * chega depois muda zero linhas e sabe que perdeu. Ler o status antes e decidir deixaria a
+     * janela entre a leitura e a escrita — a mesma janela que a condição fecha.
+     *
+     * <p>E o fechamento vem <strong>antes</strong> da baixa de estoque na ordem do caso de uso:
+     * assim duas tentativas simultâneas não chegam as duas ao FEFO, e o estoque não é baixado
+     * duas vezes pela mesma venda.
+     */
+    @Transactional
+    public int fechar(UUID comandaId, Instant fechadaEm) {
+        return jdbc.sql("""
+                update comanda
+                   set status = 'FECHADA', fechada_em = :quando, versao = versao + 1
+                 where id = :id and status = 'ABERTA'
+                """)
+                .param("id", comandaId)
+                .param("quando", OffsetDateTime.ofInstant(fechadaEm, ZoneOffset.UTC))
+                .update();
+    }
+
+    /**
+     * Grava o custo com que as unidades saíram — a média da retirada (RN-EST-012).
+     *
+     * <p>Só no fechamento, porque é a baixa que sabe de qual lote cada unidade veio. Preenchê-lo
+     * no lançamento com o custo médio do produto faria a margem daquela venda mudar quando a
+     * próxima caixa chegasse mais cara.
+     */
+    @Transactional
+    public void definirCustoDoItem(UUID itemId, Money custoMedioUnitario) {
+        jdbc.sql("update item_comanda set custo_medio_unitario = :custo where id = :id")
+                .param("id", itemId)
+                .param("custo", custoMedioUnitario.valor())
+                .update();
+    }
+
     private static ComandaResumo mapear(ResultSet rs, int linha) throws SQLException {
         OffsetDateTime fechada = rs.getObject("fechada_em", OffsetDateTime.class);
         return new ComandaResumo(

@@ -378,3 +378,67 @@ de hoje faria a margem de uma venda antiga mudar quando a próxima caixa chegass
 **Rotinas.** RT-ATD-003 · **Teste.** `AdicionarItemDeProdutoIT.produto_nao_tem_executante`,
 `AdicionarExecutanteIT.produto_nao_tem_executante`
 **Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-019 — Comanda com saldo aberto não fecha
+
+**Enunciado.** Fechar exige que a soma dos pagamentos alcance o valor líquido. A recusa
+(`ER-ATD-COMANDA_COM_SALDO_ABERTO`) informa quanto falta. Comanda **vazia** fecha.
+
+**Motivo.** Fechar devendo faria a comanda afirmar que o atendimento foi pago quando não foi, e o
+faturamento do dia passaria a incluir dinheiro que ninguém recebeu.
+
+Quem não vai receber agora tem `FIADO`; quem vai dar de graça tem `CORTESIA`. As duas quitam
+(RN-FIN-003), e é por isso que a exigência não atrapalha nenhum caso real.
+
+Comanda vazia é exceção porque RN-ATD-001 dá uma aberta por cliente: uma vazia esquecida bloquearia
+a próxima daquela cliente para sempre e ficaria na barra do balcão sem nunca sair.
+
+**Onde é garantida.** `FecharComandaUseCase` compara o total pago com o líquido.
+**Rotinas.** RT-ATD-006 · **Teste.** `FecharComandaIT.saldo_aberto_nao_fecha`,
+`FecharComandaIT.fiado_fecha`, `FecharComandaIT.comanda_vazia_fecha`,
+`ComandasWebIT.fechamento_pelo_http`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-020 — O fechamento é atômico, e falha inteiro
+
+**Enunciado.** Conferir pagamento, marcar `FECHADA`, baixar o estoque de cada produto e publicar o
+evento acontecem numa transação. Qualquer falha desfaz tudo, inclusive o fechamento. O `update` do
+status usa `where status = 'ABERTA'` e vem **antes** da baixa.
+
+**Motivo.** Comanda fechada com estoque não baixado é a pior combinação possível: o dinheiro entrou,
+o produto saiu, e o sistema acha que ele ainda está no armário.
+
+A ordem importa por concorrência: com o fechamento primeiro, dois fechamentos simultâneos não
+chegam os dois ao FEFO — quem perde a corrida muda zero linhas e aborta antes de tocar o estoque.
+
+**Onde é garantida.** `@Transactional` em `FecharComandaUseCase` · `ComandasJdbc.fechar` com a
+condição de status · a baixa depois do fechamento.
+**Rotinas.** RT-ATD-006 · **Teste.** `FecharComandaIT.falha_na_baixa_desfaz_o_fechamento`,
+`FecharComandaIT.fechar_duas_vezes`, `FecharComandaIT.estoque_insuficiente_recusa`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-021 — O custo do item vem da baixa; a comissão congela por parar de mudar
+
+**Enunciado.** `item_comanda.custo_medio_unitario` é preenchido no fechamento, com a média da
+retirada devolvida pela baixa FEFO. Não existe passo de "congelar comissão": os valores param
+porque a comanda fechada não aceita mais alteração.
+
+**Motivo.** Quem sabe de qual lote cada unidade saiu é a baixa (RN-EST-012). Preencher o custo no
+lançamento com o custo médio do produto faria a margem daquela venda mudar quando a próxima caixa
+chegasse mais cara — o oposto do que o snapshot existe para garantir.
+
+E um passo de congelamento copiaria valores que já estão certos para as colunas que já os contêm:
+`percentual_comissao` e `regra_origem` são snapshot desde o lançamento (RN-ATD-010), e
+`base_calculo`/`valor_comissao` acompanham o desconto só enquanto a comanda está aberta.
+
+**Onde é garantida.** `FecharComandaUseCase.baixarProdutos` · `ComandasJdbc.definirCustoDoItem` ·
+RN-ATD-006 impedindo alteração depois de fechada.
+**Rotinas.** RT-ATD-006 · **Teste.** `FecharComandaIT.custo_chega_ao_item`,
+`FecharComandaIT.fechada_nao_muda_mais`, `FecharComandaIT.so_servico_nao_mexe_no_estoque`
+**Configurável?** Não · **Origem.** 2026-09-05

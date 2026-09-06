@@ -39,6 +39,7 @@ precisa exibir, e o que não é carregado não vaza em log.
 - `equipe` — `ProfissionalApi` (quem executa o quê, e com que percentual)
 - `estoque` — `ProdutoApi` (o que é, e se está à venda)
 - `financeiro` — `PagamentoApi` (quanto já foi pago nesta comanda)
+- `estoque` — `EstoqueApi.baixar` (tirar do armário o que foi vendido)
 - `iam` — `Permissao`, `AuditoriaApi`, `EstabelecimentoApi`, `LimitesDoUsuarioApi`, `UsuarioAtual`
 
 **Sete, e o teto de três não vale aqui.** RT-ATD-001 registrou "três, que é o teto que a agenda
@@ -69,6 +70,7 @@ foi rompida — não quando a sexta dependência entrar.
 | [RT-ATD-003](RT-ATD-003-item-de-produto.md) — item de produto | implementada |
 | [RT-ATD-004](RT-ATD-004-desconto.md) — desconto com permissão e limite por perfil | implementada |
 | [RT-ATD-005](RT-ATD-005-executante-adicional.md) — executante adicional (assistente) | implementada |
+| [RT-ATD-006](RT-ATD-006-fechar-comanda.md) — **fechar comanda**, transacional | implementada |
 
 ## Rotas
 
@@ -82,13 +84,20 @@ foi rompida — não quando a sexta dependência entrar.
 | `POST /api/v1/comandas/{id}/pagamentos` | registra uma forma; devolve **quanto falta** |
 | `DELETE /api/v1/comandas/{id}/pagamentos/{pagId}` | desfaz um pagamento digitado errado |
 | `GET /api/v1/comandas/{id}/conta` | o que já entrou e o que falta — a tela de fechamento |
+| `POST /api/v1/comandas/{id}/fechamento` | **fecha**: confere o pago, baixa o estoque, publica o evento |
 | `DELETE /api/v1/comandas/{id}/itens/{itemId}` | tira uma linha lançada errada |
 | `PUT /api/v1/comandas/{id}/itens/{itemId}/desconto` | define o desconto da linha; zero remove |
 | `POST /api/v1/comandas/{id}/itens/{itemId}/executantes` | acrescenta um assistente ao item |
 | `DELETE /api/v1/comandas/{id}/itens/{itemId}/executantes/{execId}` | tira o assistente; o principal não sai |
 
+## Eventos publicados
+
+| ID | Evento | Quando | Consumidores |
+|---|---|---|---|
+| EV-ATD-001 | `ComandaFechada` | fechamento (RT-ATD-006) | `agenda` (planejado), `financeiro` (RT-FIN-003), comprovante (RT-FIN-008) — **nenhum existe ainda** |
+
 ## Regras
 
-Ver [regras.md](regras.md) — RN-ATD-001 a RN-ATD-018.
+Ver [regras.md](regras.md) — RN-ATD-001 a RN-ATD-021.
 
 Todos os códigos de erro do módulo vivem em `ErrosDoAtendimento`, um enum só: eles estavam declarados em seis enums, e `ER-ATD-COMANDA_NAO_ESTA_ABERTA` aparecia em cinco deles.

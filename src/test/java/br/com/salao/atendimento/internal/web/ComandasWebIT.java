@@ -10,7 +10,9 @@ import br.com.salao.equipe.api.TipoDeVinculo;
 import br.com.salao.estoque.api.FinalidadeDoProduto;
 import br.com.salao.estoque.api.UnidadeDeMedida;
 import br.com.salao.estoque.internal.application.CadastrarProdutoUseCase;
+import br.com.salao.estoque.internal.application.DadosDaEntrada;
 import br.com.salao.estoque.internal.application.DadosDoProduto;
+import br.com.salao.estoque.internal.application.RegistrarEntradaDeLoteUseCase;
 import br.com.salao.equipe.internal.application.CadastrarProfissionalUseCase;
 import br.com.salao.equipe.internal.application.DadosDoProfissional;
 import br.com.salao.iam.api.Perfil;
@@ -62,6 +64,7 @@ class ComandasWebIT extends AbstractPostgresIT {
     @Autowired private CadastrarServicoUseCase cadastrarServico;
     @Autowired private DefinirPrecoUseCase definirPreco;
     @Autowired private CadastrarProdutoUseCase cadastrarProduto;
+    @Autowired private RegistrarEntradaDeLoteUseCase entradaDeLote;
 
     private UUID tenant;
 
@@ -322,10 +325,19 @@ class ComandasWebIT extends AbstractPostgresIT {
 
 
 
+    /**
+     * Um shampoo de R$ 45,00 <strong>com estoque</strong>.
+     *
+     * <p>A entrada de lote faz parte do fixture desde que RT-ATD-006 passou a baixar no
+     * fechamento: sem ela o produto é vendável e não fecha, porque não há o que tirar do armário.
+     */
     private UUID umShampooDe45() {
-        return comoDono(() -> cadastrarProduto.executar(new DadosDoProduto(
+        UUID produto = comoDono(() -> cadastrarProduto.executar(new DadosDoProduto(
                 "Shampoo", null, FinalidadeDoProduto.VENDA, UnidadeDeMedida.UN,
                 Money.de("45")))).id();
+        comoDono(() -> entradaDeLote.executar(produto, new DadosDaEntrada(
+                new BigDecimal("50"), Money.de("20"), null, null, null)));
+        return produto;
     }
 
     @Test
@@ -393,6 +405,28 @@ class ComandasWebIT extends AbstractPostgresIT {
 
         assertThat(resposta.statusCode()).isEqualTo(422);
         assertThat(resposta.body()).contains("ER-ATD-PAGAMENTO_PASSA_DO_TOTAL");
+    }
+
+
+    @Test
+    @DisplayName("fechar responde a comanda FECHADA; com saldo aberto, 422")
+    void fechamento_pelo_http() throws Exception {
+        String token = entrar();
+        String comanda = abrirComandaDe(umaCliente(token), token);
+        post("/api/v1/comandas/" + comanda + "/produtos",
+                "{\"produtoId\":\"" + umShampooDe45() + "\",\"quantidade\":1}", token);
+
+        var semPagar = post("/api/v1/comandas/" + comanda + "/fechamento", "", token);
+        assertThat(semPagar.statusCode()).isEqualTo(422);
+        assertThat(semPagar.body()).contains("ER-ATD-COMANDA_COM_SALDO_ABERTO");
+
+        post("/api/v1/comandas/" + comanda + "/pagamentos",
+                "{\"forma\":\"DINHEIRO\",\"valor\":45}", token);
+        var fechada = post("/api/v1/comandas/" + comanda + "/fechamento", "", token);
+
+        assertThat(fechada.statusCode()).isEqualTo(200);
+        assertThat(fechada.body()).contains("\"status\":\"FECHADA\"");
+        assertThat(get("/api/v1/comandas/abertas", token).body()).contains("[]");
     }
 
     private UUID umaAssistente() {
