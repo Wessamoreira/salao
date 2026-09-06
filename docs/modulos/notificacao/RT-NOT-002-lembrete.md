@@ -88,7 +88,20 @@ Quando lembrar é regra de agenda. Como mandar é de notificacao.
       lembrada** · daqui a uma semana ainda não é · daqui a duas horas já passou · **cancelado não
       é lembrado** · cliente sem telefone não quebra o lote · o laço atravessa mais de um salão
 
-## 8. Pendências
+## 8. O teste dependia da hora do dia
+
+Descoberto em RT-ATD-001, quando o build quebrou às nove da noite sem que nada tivesse mudado:
+`perto_demais_nao_lembra` marcava "daqui a duas horas" contra uma jornada que ia até as 23h. Rodando
+de manhã, o horário caía dentro; rodando à noite, caía fora — e o erro que aparecia era
+*"o trecho está fora da jornada"*, que não tem nada a ver com o que o teste afirma.
+
+Cenário montado com horário **relativo ao agora** herda a hora em que o build roda. A correção é a
+jornada cobrir o dia inteiro: o que este teste mede é a janela do lembrete, não o expediente.
+
+Vale para qualquer teste que use `daquiA(...)` — e é o tipo de defeito que três execuções verdes
+seguidas não pegam, porque as três rodam no mesmo horário.
+
+## 9. Pendências
 
 - [ ] **Nada sai de fato.** O mensageiro de hoje só registra (RT-NOT-001): o lembrete é enfileirado
       corretamente e nunca chega à cliente. É a pendência que separa "a rotina funciona" de "o

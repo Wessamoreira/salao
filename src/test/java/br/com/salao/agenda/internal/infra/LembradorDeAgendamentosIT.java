@@ -66,10 +66,14 @@ class LembradorDeAgendamentosIT extends AbstractPostgresIT {
         ana = TenantContext.obter(tenant, () -> cadastrarProfissional.executar(
                 new DadosDoProfissional("Ana Ribeiro", "Ana", "11144477735",
                         TipoDeVinculo.EMPREGADO, null, null, null, null, null, null))).id();
-        // Jornada larga em todos os dias: o teste marca em datas variadas.
+        // Jornada de 24 horas em todos os dias, e não "larga": o teste marca em horários
+        // RELATIVOS AO AGORA, então o horário escolhido depende da hora em que o build roda.
+        // Com jornada até as 23h, rodar por volta das 21h punha o agendamento de "daqui a duas
+        // horas" às 23h — fora da jornada por 45 minutos. O build passava o dia inteiro e
+        // quebrava à noite, sem que nada tivesse mudado no código.
         var semana = new HashMap<DayOfWeek, List<PeriodoBruto>>();
         for (DayOfWeek dia : DayOfWeek.values()) {
-            semana.put(dia, List.of(new PeriodoBruto(LocalTime.of(6, 0), LocalTime.of(23, 0))));
+            semana.put(dia, List.of(new PeriodoBruto(LocalTime.MIDNIGHT, LocalTime.of(23, 59))));
         }
         TenantContext.executar(tenant, () -> definirJornada.executar(ana, semana));
         marilda = TenantContext.obter(tenant, () -> cadastrarCliente.executar(
