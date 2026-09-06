@@ -105,6 +105,13 @@ public class FecharComandaUseCase {
             throw new ErroDeDominio(ErrosDoAtendimento.COMANDA_COM_SALDO_ABERTO,
                     "faltam " + restante + " para fechar a comanda " + comanda.numero());
         }
+        if (restante.ehNegativo()) {
+            // Só acontece depois de reabrir e tirar item (RT-ATD-007): enquanto aberta, nenhum
+            // pagamento passa do que falta. Fechar assim registraria faturamento maior do que o
+            // atendimento, e o troco devido ficaria sem rastro nenhum.
+            throw new ErroDeDominio(ErrosDoAtendimento.COMANDA_PAGA_A_MAIS,
+                    "há " + restante.negado() + " pagos a mais; remova ou ajuste um pagamento");
+        }
 
         Instant agora = relogio.agora();
         if (comandas.fechar(comandaId, agora) == 0) {

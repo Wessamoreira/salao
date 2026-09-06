@@ -27,4 +27,21 @@ public interface EstoqueApi {
      */
     BaixaDeEstoque baixar(UUID produtoId, BigDecimal quantidade, TipoDeMovimento tipo,
                           String origemTipo, UUID origemId);
+
+    /**
+     * RT-ATD-007 — devolve ao estoque tudo o que saiu por uma origem, <strong>nos lotes de
+     * onde saiu</strong>.
+     *
+     * <p>Não é "somar de volta a quantidade": as unidades saíram de lotes específicos, com custos e
+     * validades específicos, e devolvê-las a um lote genérico faria o custo e o FEFO mentirem a
+     * partir dali.
+     *
+     * <p><strong>Idempotente por construção.</strong> Ela olha o saldo líquido daquela origem em
+     * cada lote e só devolve o que ainda está negativo — chamar duas vezes não devolve duas vezes.
+     * Isso importa porque quem chama são rotinas que mexem em dinheiro fechado, e repetir uma
+     * chamada é o tipo de coisa que acontece.
+     *
+     * @return quantas unidades voltaram, somadas
+     */
+    java.math.BigDecimal devolver(String origemTipo, UUID origemId);
 }

@@ -71,6 +71,7 @@ foi rompida — não quando a sexta dependência entrar.
 | [RT-ATD-004](RT-ATD-004-desconto.md) — desconto com permissão e limite por perfil | implementada |
 | [RT-ATD-005](RT-ATD-005-executante-adicional.md) — executante adicional (assistente) | implementada |
 | [RT-ATD-006](RT-ATD-006-fechar-comanda.md) — **fechar comanda**, transacional | implementada |
+| [RT-ATD-007](RT-ATD-007-estornar-reabrir.md) — estornar / reabrir | implementada |
 
 ## Rotas
 
@@ -85,6 +86,8 @@ foi rompida — não quando a sexta dependência entrar.
 | `DELETE /api/v1/comandas/{id}/pagamentos/{pagId}` | desfaz um pagamento digitado errado |
 | `GET /api/v1/comandas/{id}/conta` | o que já entrou e o que falta — a tela de fechamento |
 | `POST /api/v1/comandas/{id}/fechamento` | **fecha**: confere o pago, baixa o estoque, publica o evento |
+| `POST /api/v1/comandas/{id}/reabertura` | volta a `ABERTA` e devolve o estoque — `comanda:reopen` |
+| `POST /api/v1/comandas/{id}/estorno` | `ESTORNADA`, terminal, com motivo na linha — `comanda:reopen` |
 | `DELETE /api/v1/comandas/{id}/itens/{itemId}` | tira uma linha lançada errada |
 | `PUT /api/v1/comandas/{id}/itens/{itemId}/desconto` | define o desconto da linha; zero remove |
 | `POST /api/v1/comandas/{id}/itens/{itemId}/executantes` | acrescenta um assistente ao item |
@@ -95,9 +98,17 @@ foi rompida — não quando a sexta dependência entrar.
 | ID | Evento | Quando | Consumidores |
 |---|---|---|---|
 | EV-ATD-001 | `ComandaFechada` | fechamento (RT-ATD-006) | `agenda` (planejado), `financeiro` (RT-FIN-003), comprovante (RT-FIN-008) — **nenhum existe ainda** |
+| EV-ATD-002 | `ComandaReaberta` | reabertura (RT-ATD-007) | quem apurar sobre o fechamento precisa desfazer |
+| EV-ATD-003 | `ComandaEstornada` | estorno (RT-ATD-007) | idem, e o razão (RT-FIN-007) |
+
+> EV-ATD-002 e EV-ATD-003 são publicados **sem consumidor**, ao contrário do que foi decidido para
+> `ComandaAberta` em RT-ATD-001. A diferença é concreta: reabrir e fechar de novo publica
+> `ComandaFechada` uma segunda vez, e sem estes eventos no meio a apuração de comissão contaria em
+> dobro sem nada avisar. Publicá-los agora é o que torna a compensação possível; não publicá-los
+> seria deixar uma armadilha silenciosa para a próxima rotina.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-ATD-001 a RN-ATD-021.
+Ver [regras.md](regras.md) — RN-ATD-001 a RN-ATD-024.
 
 Todos os códigos de erro do módulo vivem em `ErrosDoAtendimento`, um enum só: eles estavam declarados em seis enums, e `ER-ATD-COMANDA_NAO_ESTA_ABERTA` aparecia em cinco deles.

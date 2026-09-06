@@ -129,4 +129,32 @@ public class BaixaFefo implements EstoqueApi {
         return new BaixaDeEstoque(produtoId, quantidade, custoMedio, custoTotal,
                 List.copyOf(parcelas));
     }
+
+    /**
+     * Devolve ao estoque o que saiu por uma origem, nos lotes de onde saiu.
+     *
+     * <p>Movimento novo, de sinal contrário — nunca {@code delete} do movimento original. É o que
+     * RN-EST-006 promete: o razão de estoque não é reescrito, ele ganha a linha que corrige.
+     *
+     * <p>E é <strong>idempotente</strong> porque olha o saldo líquido da origem em cada lote: o
+     * que já voltou soma zero e não aparece na lista de pendentes. Não há marca de "já devolvido"
+     * para manter em dia — o próprio razão responde.
+     */
+    @Override
+    @Transactional
+    public BigDecimal devolver(String origemTipo, UUID origemId) {
+        UUID tenant = TenantContext.obrigatorio();
+        BigDecimal total = BigDecimal.ZERO;
+        for (LotesJdbc.PendenteDaOrigem pendente : lotes.pendentesDaOrigem(origemTipo, origemId)) {
+            lotes.inserirMovimento(tenant, pendente.produtoId(), pendente.loteId(),
+                    TipoDeMovimento.DEVOLUCAO, pendente.quantidade(), pendente.custoUnitario(),
+                    origemTipo, origemId, "devolução por " + origemTipo, relogio.agora(),
+                    UsuarioAtual.idOuNulo());
+            total = total.add(pendente.quantidade());
+        }
+        if (total.signum() > 0) {
+            log.info("Devolvidas {} unidade(s) ao estoque por {} {}", total, origemTipo, origemId);
+        }
+        return total;
+    }
 }

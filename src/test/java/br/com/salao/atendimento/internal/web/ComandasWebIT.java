@@ -429,6 +429,39 @@ class ComandasWebIT extends AbstractPostgresIT {
         assertThat(get("/api/v1/comandas/abertas", token).body()).contains("[]");
     }
 
+
+    @Test
+    @DisplayName("a recepção fecha e NÃO reabre: desfazer fechamento não é operação de balcão")
+    void recepcao_nao_reabre() throws Exception {
+        // comanda:reopen não está no perfil de recepção. Desfazer um fechamento mexe em
+        // faturamento, comissão e estoque de uma vez.
+        String token = entrar();
+        String comanda = abrirComandaDe(umaCliente(token), token);
+        post("/api/v1/comandas/" + comanda + "/produtos",
+                "{\"produtoId\":\"" + umShampooDe45() + "\",\"quantidade\":1}", token);
+        post("/api/v1/comandas/" + comanda + "/pagamentos",
+                "{\"forma\":\"DINHEIRO\",\"valor\":45}", token);
+        post("/api/v1/comandas/" + comanda + "/fechamento", "", token);
+
+        var reabertura = post("/api/v1/comandas/" + comanda + "/reabertura",
+                "{\"motivo\":\"errei o item\"}", token);
+        var estorno = post("/api/v1/comandas/" + comanda + "/estorno",
+                "{\"motivo\":\"cliente desistiu\"}", token);
+
+        assertThat(reabertura.statusCode()).isEqualTo(403);
+        assertThat(estorno.statusCode()).isEqualTo(403);
+    }
+
+    @Test
+    @DisplayName("reabertura sem motivo para na borda")
+    void reabertura_sem_motivo() throws Exception {
+        String token = entrar();
+        String comanda = abrirComandaDe(umaCliente(token), token);
+
+        assertThat(post("/api/v1/comandas/" + comanda + "/reabertura", "{}", token).statusCode())
+                .isIn(400, 422);
+    }
+
     private UUID umaAssistente() {
         return comoDono(() -> cadastrarProfissional.executar(new DadosDoProfissional(
                 "Bia Nunes", "Bia", "52998224725", TipoDeVinculo.EMPREGADO, null, null,

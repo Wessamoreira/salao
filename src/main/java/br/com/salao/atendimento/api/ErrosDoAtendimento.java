@@ -128,6 +128,30 @@ public enum ErrosDoAtendimento implements CodigoDeErro {
     COMANDA_COM_SALDO_ABERTO("ER-ATD-COMANDA_COM_SALDO_ABERTO", HttpStatus.UNPROCESSABLE_ENTITY,
             "Ainda falta receber nesta comanda"),
 
+    /**
+     * RT-ATD-007 — pagaram mais do que a comanda vale.
+     *
+     * <p>Só acontece depois de reabrir e tirar item: enquanto aberta, nenhum pagamento passa do que
+     * falta (RN-FIN-003). Fechar assim registraria um faturamento maior do que o atendimento — e o
+     * troco devido ficaria sem rastro nenhum.
+     */
+    COMANDA_PAGA_A_MAIS("ER-ATD-COMANDA_PAGA_A_MAIS", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Há mais pago do que o valor da comanda"),
+
+    /** RT-ATD-007 — reabrir e estornar só valem para comanda fechada. */
+    COMANDA_NAO_ESTA_FECHADA("ER-ATD-COMANDA_NAO_ESTA_FECHADA", HttpStatus.CONFLICT,
+            "Esta comanda não está fechada"),
+
+    /**
+     * RT-ATD-007 — mexer em dinheiro fechado sem dizer por quê.
+     *
+     * <p>O motivo é o que separa a correção legítima do desfazimento silencioso. Sem ele, a
+     * trilha registra quem e quando, e a pergunta que o dono faz — <em>por que esta comanda de
+     * trezentos reais foi estornada?</em> — fica sem resposta.
+     */
+    MOTIVO_OBRIGATORIO("ER-ATD-MOTIVO_OBRIGATORIO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Informe o motivo"),
+
     // ------------------------------------------------------------------ desconto
 
     DESCONTO_INVALIDO("ER-ATD-DESCONTO_INVALIDO", HttpStatus.UNPROCESSABLE_ENTITY,

@@ -433,6 +433,48 @@ public class ComandasJdbc {
                 .update();
     }
 
+    // ------------------------------------------------------------------ RT-ATD-007
+
+    /**
+     * Reabre, <strong>se estiver fechada</strong>.
+     *
+     * <p>A condição de status é o que serializa duas reaberturas simultâneas — e, junto com a de
+     * {@link #fechar}, garante que devolver o estoque aconteça uma vez só.
+     */
+    @Transactional
+    public int reabrir(UUID comandaId) {
+        return jdbc.sql("""
+                update comanda
+                   set status = 'ABERTA', fechada_em = null, versao = versao + 1
+                 where id = :id and status = 'FECHADA'
+                """)
+                .param("id", comandaId)
+                .update();
+    }
+
+    @Transactional
+    public int estornar(UUID comandaId, String motivo) {
+        return jdbc.sql("""
+                update comanda
+                   set status = 'ESTORNADA', motivo_estorno = :motivo, versao = versao + 1
+                 where id = :id and status = 'FECHADA'
+                """)
+                .param("id", comandaId)
+                .param("motivo", motivo)
+                .update();
+    }
+
+    /** Limpa o custo gravado no fechamento: as unidades voltaram, e ele não vale mais. */
+    @Transactional
+    public void limparCustoDosItens(UUID comandaId) {
+        jdbc.sql("""
+                update item_comanda set custo_medio_unitario = null
+                 where comanda_id = :comanda and tipo = 'PRODUTO'
+                """)
+                .param("comanda", comandaId)
+                .update();
+    }
+
     private static ComandaResumo mapear(ResultSet rs, int linha) throws SQLException {
         OffsetDateTime fechada = rs.getObject("fechada_em", OffsetDateTime.class);
         return new ComandaResumo(

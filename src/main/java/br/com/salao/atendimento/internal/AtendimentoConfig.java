@@ -9,7 +9,9 @@ import br.com.salao.atendimento.internal.application.AplicarDescontoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverExecutanteUseCase;
 import br.com.salao.atendimento.internal.application.ConsultarComandaUseCase;
 import br.com.salao.atendimento.internal.application.ConsultarContaUseCase;
+import br.com.salao.atendimento.internal.application.EstornarComandaUseCase;
 import br.com.salao.atendimento.internal.application.FecharComandaUseCase;
+import br.com.salao.atendimento.internal.application.ReabrirComandaUseCase;
 import br.com.salao.atendimento.internal.application.RegistrarPagamentoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverPagamentoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverItemUseCase;
@@ -98,6 +100,20 @@ public class AtendimentoConfig {
             AuditoriaApi auditoria, ApplicationEventPublisher eventos, Relogio relogio) {
         return new FecharComandaUseCase(comandas, pagamentos, estoque, auditoria, eventos,
                 relogio);
+    }
+
+    @Bean
+    public ReabrirComandaUseCase reabrirComandaUseCase(
+            ComandasJdbc comandas, EstoqueApi estoque, AuditoriaApi auditoria,
+            ApplicationEventPublisher eventos, Relogio relogio) {
+        return new ReabrirComandaUseCase(comandas, estoque, auditoria, eventos, relogio);
+    }
+
+    @Bean
+    public EstornarComandaUseCase estornarComandaUseCase(
+            ComandasJdbc comandas, EstoqueApi estoque, AuditoriaApi auditoria,
+            ApplicationEventPublisher eventos, Relogio relogio) {
+        return new EstornarComandaUseCase(comandas, estoque, auditoria, eventos, relogio);
     }
 
     @Bean

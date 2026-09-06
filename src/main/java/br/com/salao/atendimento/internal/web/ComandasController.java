@@ -14,7 +14,9 @@ import br.com.salao.atendimento.internal.application.AplicarDescontoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverExecutanteUseCase;
 import br.com.salao.atendimento.internal.application.ConsultarComandaUseCase;
 import br.com.salao.atendimento.internal.application.ConsultarContaUseCase;
+import br.com.salao.atendimento.internal.application.EstornarComandaUseCase;
 import br.com.salao.atendimento.internal.application.FecharComandaUseCase;
+import br.com.salao.atendimento.internal.application.ReabrirComandaUseCase;
 import br.com.salao.atendimento.internal.application.RegistrarPagamentoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverPagamentoUseCase;
 import br.com.salao.atendimento.internal.application.RemoverItemUseCase;
@@ -55,6 +57,8 @@ public class ComandasController {
     private final RemoverPagamentoUseCase removerPagamento;
     private final ConsultarContaUseCase consultarConta;
     private final FecharComandaUseCase fecharComanda;
+    private final ReabrirComandaUseCase reabrirComanda;
+    private final EstornarComandaUseCase estornarComanda;
     private final RemoverItemUseCase removerItem;
     private final AplicarDescontoUseCase aplicarDesconto;
     private final AdicionarExecutanteUseCase adicionarExecutante;
@@ -71,7 +75,9 @@ public class ComandasController {
                               RegistrarPagamentoUseCase registrarPagamento,
                               RemoverPagamentoUseCase removerPagamento,
                               ConsultarContaUseCase consultarConta,
-                              FecharComandaUseCase fecharComanda) {
+                              FecharComandaUseCase fecharComanda,
+                              ReabrirComandaUseCase reabrirComanda,
+                              EstornarComandaUseCase estornarComanda) {
         this.abrir = abrir;
         this.abertas = abertas;
         this.adicionarServico = adicionarServico;
@@ -85,6 +91,8 @@ public class ComandasController {
         this.removerPagamento = removerPagamento;
         this.consultarConta = consultarConta;
         this.fecharComanda = fecharComanda;
+        this.reabrirComanda = reabrirComanda;
+        this.estornarComanda = estornarComanda;
     }
 
     /**
@@ -293,5 +301,35 @@ public class ComandasController {
     @PostMapping("/{id}/fechamento")
     public ComandaDetalhada fechar(@PathVariable UUID id) {
         return fecharComanda.executar(id);
+    }
+
+    // ------------------------------------------------------------------ RT-ATD-007
+
+    /** O motivo é obrigatório nos dois atos: é o que separa correção de desfazimento silencioso. */
+    public record MotivoRequest(
+            @jakarta.validation.constraints.NotBlank
+            @jakarta.validation.constraints.Size(max = 500) String motivo) {
+    }
+
+    /**
+     * Reabre para corrigir: devolve as unidades aos lotes de onde saíram e volta a aceitar
+     * alteração. Os pagamentos ficam — o dinheiro foi recebido de verdade.
+     */
+    @PostMapping("/{id}/reabertura")
+    public ComandaDetalhada reabrir(@PathVariable UUID id,
+                                    @Valid @RequestBody MotivoRequest req) {
+        return reabrirComanda.executar(id, req.motivo());
+    }
+
+    /**
+     * Estorna: estado terminal. Itens e pagamentos ficam como registro; o estoque volta.
+     *
+     * <p>Rota separada da reabertura, e não um campo {@code status}, porque são atos diferentes com
+     * efeitos diferentes — e um deles não tem volta.
+     */
+    @PostMapping("/{id}/estorno")
+    public ComandaDetalhada estornar(@PathVariable UUID id,
+                                     @Valid @RequestBody MotivoRequest req) {
+        return estornarComanda.executar(id, req.motivo());
     }
 }

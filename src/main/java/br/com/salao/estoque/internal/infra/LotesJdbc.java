@@ -247,6 +247,39 @@ public class LotesJdbc {
                 .list();
     }
 
+    /**
+     * Quanto ainda está "fora" por causa de uma origem, lote a lote.
+     *
+     * <p>Soma os movimentos daquela origem por lote. Negativo significa que saiu e não voltou; zero
+     * significa que já foi devolvido. É o que torna a devolução idempotente sem precisar de marca
+     * nenhuma: o próprio razão de estoque responde se ainda há o que devolver.
+     */
+    @Transactional(readOnly = true)
+    public List<PendenteDaOrigem> pendentesDaOrigem(String origemTipo, UUID origemId) {
+        return jdbc.sql("""
+                select m.lote_id, m.produto_id, sum(m.quantidade) as saldo,
+                       max(m.custo_unitario) as custo_unitario
+                  from movimento_estoque m
+                 where m.origem_tipo = :origemTipo and m.origem_id = :origemId
+                 group by m.lote_id, m.produto_id
+                having sum(m.quantidade) < 0
+                 order by m.lote_id
+                """)
+                .param("origemTipo", origemTipo)
+                .param("origemId", origemId)
+                .query((rs, i) -> new PendenteDaOrigem(
+                        rs.getObject("lote_id", UUID.class),
+                        rs.getObject("produto_id", UUID.class),
+                        rs.getBigDecimal("saldo").negate(),
+                        new Money(rs.getBigDecimal("custo_unitario"))))
+                .list();
+    }
+
+    /** O que saiu por uma origem e ainda não voltou, num lote. */
+    public record PendenteDaOrigem(UUID loteId, UUID produtoId, BigDecimal quantidade,
+                                   Money custoUnitario) {
+    }
+
     private static LoteResumo mapear(ResultSet rs, int linha) throws SQLException {
         Date validade = rs.getDate("validade");
         return new LoteResumo(

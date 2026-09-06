@@ -383,8 +383,9 @@ de hoje faria a margem de uma venda antiga mudar quando a próxima caixa chegass
 
 ### RN-ATD-019 — Comanda com saldo aberto não fecha
 
-**Enunciado.** Fechar exige que a soma dos pagamentos alcance o valor líquido. A recusa
-(`ER-ATD-COMANDA_COM_SALDO_ABERTO`) informa quanto falta. Comanda **vazia** fecha.
+**Enunciado.** Fechar exige que a soma dos pagamentos seja **exatamente** o valor líquido. Menos
+recusa com `ER-ATD-COMANDA_COM_SALDO_ABERTO`, informando quanto falta; mais recusa com
+`ER-ATD-COMANDA_PAGA_A_MAIS`. Comanda **vazia** fecha.
 
 **Motivo.** Fechar devendo faria a comanda afirmar que o atendimento foi pago quando não foi, e o
 faturamento do dia passaria a incluir dinheiro que ninguém recebeu.
@@ -395,10 +396,14 @@ Quem não vai receber agora tem `FIADO`; quem vai dar de graça tem `CORTESIA`. 
 Comanda vazia é exceção porque RN-ATD-001 dá uma aberta por cliente: uma vazia esquecida bloquearia
 a próxima daquela cliente para sempre e ficaria na barra do balcão sem nunca sair.
 
+**O lado "pago a mais" foi acrescentado por RT-ATD-007** e não existia antes: enquanto aberta,
+nenhum pagamento passa do que falta. Só reabrir e tirar item produz essa situação — e fechar assim
+registraria faturamento maior do que o atendimento, com o troco devido sem rastro nenhum.
+
 **Onde é garantida.** `FecharComandaUseCase` compara o total pago com o líquido.
-**Rotinas.** RT-ATD-006 · **Teste.** `FecharComandaIT.saldo_aberto_nao_fecha`,
+**Rotinas.** RT-ATD-006, RT-ATD-007 · **Teste.** `FecharComandaIT.saldo_aberto_nao_fecha`,
 `FecharComandaIT.fiado_fecha`, `FecharComandaIT.comanda_vazia_fecha`,
-`ComandasWebIT.fechamento_pelo_http`
+`ComandasWebIT.fechamento_pelo_http`, `ReabrirEEstornarIT.pago_a_mais_nao_fecha`
 **Configurável?** Não · **Origem.** 2026-09-05
 
 ---
@@ -441,4 +446,71 @@ E um passo de congelamento copiaria valores que já estão certos para as coluna
 RN-ATD-006 impedindo alteração depois de fechada.
 **Rotinas.** RT-ATD-006 · **Teste.** `FecharComandaIT.custo_chega_ao_item`,
 `FecharComandaIT.fechada_nao_muda_mais`, `FecharComandaIT.so_servico_nao_mexe_no_estoque`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-022 — Desfazer devolve as unidades ao lote de onde saíram, por movimento contrário
+
+**Enunciado.** Reabrir e estornar devolvem ao estoque o que a comanda tirou, **nos lotes de
+origem**, gravando movimento de tipo `DEVOLUCAO` com sinal contrário. O movimento da baixa não é
+apagado. A operação é idempotente.
+
+**Motivo.** As unidades saíram de lotes com custos e validades diferentes; devolvê-las a um lote
+genérico faria o custo médio e o FEFO mentirem a partir dali.
+
+E movimento não se reescreve (RN-EST-006) — é aqui que essa promessa é cobrada pela primeira vez: o
+razão de estoque ganha a linha que corrige, e as duas continuam legíveis.
+
+A idempotência vem da própria soma: a devolução olha o saldo líquido daquela origem em cada lote e
+só devolve o que ainda está negativo. Não há marca de "já devolvido" para manter em dia — o razão
+responde. Isso importa porque quem chama são rotinas que mexem em dinheiro fechado, e repetir uma
+chamada é o tipo de coisa que acontece.
+
+**Onde é garantida.** `EstoqueApi.devolver` · `LotesJdbc.pendentesDaOrigem` (o `having sum < 0`) ·
+`ReabrirComandaUseCase` e `EstornarComandaUseCase`.
+**Rotinas.** RT-ATD-007 · **Teste.** `ReabrirEEstornarIT.devolve_ao_lote_certo`,
+`ReabrirEEstornarIT.devolucao_e_movimento_novo`, `ReabrirEEstornarIT.devolucao_idempotente`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-023 — Reabrir e estornar exigem motivo; estornar guarda o dele na comanda
+
+**Enunciado.** Os dois atos exigem motivo não vazio (`ER-ATD-MOTIVO_OBRIGATORIO`). O do estorno é
+gravado em `comanda.motivo_estorno`; o da reabertura fica só na auditoria.
+
+**Motivo.** O motivo separa a correção legítima do desfazimento silencioso. Sem ele a trilha diz
+quem e quando, e a pergunta do dono — *por que esta comanda de trezentos reais foi estornada?* —
+fica sem resposta. É a mesma exigência de RT-AGD-005 para cancelar agendamento.
+
+A assimetria é deliberada: `ESTORNADA` é terminal, e a linha vai ficar ali para sempre afirmando que
+um atendimento pago foi desfeito — *por quê* faz parte do que ela afirma, e a tela da comanda
+precisa mostrar. Reabrir é transitório: a comanda volta à vida normal, e o que sobra é trilha, que é
+da auditoria.
+
+**Onde é garantida.** `MotivoDoAto.exigir` · coluna `comanda.motivo_estorno` (V38) ·
+`@NotBlank` na borda.
+**Rotinas.** RT-ATD-007 · **Teste.** `ReabrirEEstornarIT.motivo_obrigatorio`,
+`ReabrirEEstornarIT.estorno_guarda_motivo`, `ComandasWebIT.reabertura_sem_motivo`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-024 — Estornar não apaga; e estornada é terminal
+
+**Enunciado.** O estorno muda o status e mantém itens e pagamentos. De `ESTORNADA` não se reabre nem
+se estorna de novo. Reabrir e estornar só valem para comanda `FECHADA`.
+
+**Motivo.** Apagar as linhas faria sumir a única explicação de por que o caixa do dia tem um buraco —
+e é justamente ela que alguém vai procurar. A comanda estornada continua contando o que aconteceu;
+o que ela deixa de ser é faturamento.
+
+Terminal porque desfazer um desfazimento é a porta para o histórico virar rascunho. Se o estorno foi
+errado, o registro certo é um atendimento novo — não a ressurreição do antigo.
+
+**Onde é garantida.** `ComandasJdbc.estornar` e `reabrir` com `where status = 'FECHADA'` ·
+nenhum caminho sai de `ESTORNADA`.
+**Rotinas.** RT-ATD-007 · **Teste.** `ReabrirEEstornarIT.estorno_nao_apaga`,
+`ReabrirEEstornarIT.estornada_e_terminal`, `ReabrirEEstornarIT.aberta_nao_reabre`
 **Configurável?** Não · **Origem.** 2026-09-05
