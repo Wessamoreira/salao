@@ -6,12 +6,14 @@ import br.com.salao.agenda.api.StatusAgendamento;
 import br.com.salao.atendimento.api.ErrosDoAtendimento;
 import br.com.salao.atendimento.api.ComandaDetalhada;
 import br.com.salao.atendimento.api.ComandaResumo;
-import br.com.salao.atendimento.api.OrigemDaComissao;
+import br.com.salao.financeiro.api.OrigemDaComissao;
 import br.com.salao.atendimento.api.PapelDoExecutante;
 import br.com.salao.atendimento.internal.infra.ComandasJdbc;
 import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.catalogo.api.ServicoResumo;
 import br.com.salao.equipe.api.ProfissionalApi;
+import br.com.salao.financeiro.api.ComissaoApi;
+import br.com.salao.financeiro.api.ComissaoResolvida;
 import br.com.salao.equipe.api.ProfissionalResumo;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
@@ -56,6 +58,7 @@ public class AdicionarItemDeServicoUseCase {
             LoggerFactory.getLogger(AdicionarItemDeServicoUseCase.class);
 
     private final ComandasJdbc comandas;
+    private final ComissaoApi comissoes;
     private final ServicoApi servicos;
     private final ProfissionalApi profissionais;
     private final AgendaApi agenda;
@@ -63,11 +66,13 @@ public class AdicionarItemDeServicoUseCase {
     private final AuditoriaApi auditoria;
     private final Relogio relogio;
 
-    public AdicionarItemDeServicoUseCase(ComandasJdbc comandas, ServicoApi servicos,
+    public AdicionarItemDeServicoUseCase(ComandasJdbc comandas, ComissaoApi comissoes,
+                                         ServicoApi servicos,
                                          ProfissionalApi profissionais, AgendaApi agenda,
                                          EstabelecimentoApi estabelecimentos,
                                          AuditoriaApi auditoria, Relogio relogio) {
         this.comandas = comandas;
+        this.comissoes = comissoes;
         this.servicos = servicos;
         this.profissionais = profissionais;
         this.agenda = agenda;
@@ -111,8 +116,13 @@ public class AdicionarItemDeServicoUseCase {
         UUID itemId = comandas.inserirItemDeServico(tenant, comandaId, servicoId, horario,
                 servico.nome(), quantas, precoUnitario, valorTotal, relogio.agora());
 
+        // O percentual vem da CASCATA (RT-FIN-002), não da ficha: a ficha é só um dos níveis, e
+        // quem sabe qual deles vence é o financeiro. Ler a ficha aqui reescreveria a regra de
+        // alçada do outro lado da fronteira — e a segunda cópia é a que continua pagando errado
+        // depois que a primeira mudar.
+        ComissaoResolvida comissao = comissoes.resolver(profissionalId, servicoId);
         comandas.inserirExecutante(tenant, itemId, profissionalId, PapelDoExecutante.PRINCIPAL,
-                executante.comissaoPercentual(), OrigemDaComissao.PROFISSIONAL);
+                comissao.percentual(), comissao.origem());
         // Quem calcula base e comissão é sempre o recálculo, nunca este caso de uso: a fórmula
         // depende de descontoAfetaComissao e já vive no SQL. Duas contas divergem.
         comandas.recalcularComissoesDoItem(itemId, estabelecimentos.configuracao(tenant)

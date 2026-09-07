@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import br.com.salao.atendimento.api.ComandaDetalhada;
-import br.com.salao.atendimento.api.OrigemDaComissao;
+import br.com.salao.financeiro.api.OrigemDaComissao;
 import br.com.salao.atendimento.api.PapelDoExecutante;
 import br.com.salao.atendimento.internal.infra.ComandasJdbc;
 import br.com.salao.catalogo.api.TipoDeBloco;

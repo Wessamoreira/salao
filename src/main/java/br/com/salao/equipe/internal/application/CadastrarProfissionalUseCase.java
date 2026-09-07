@@ -80,7 +80,10 @@ public class CadastrarProfissionalUseCase {
             // (mesma razão de RN-CLI-007). O vínculo e a comissão entram porque são a decisão
             // administrativa que alguém pode precisar justificar depois.
             auditoria.registrar(RegistroDeAuditoria.criacao("profissional", id,
-                    Map.of("vinculo", dados.vinculo().name(), "comissao", comissao.toPlainString())));
+                    Map.of("vinculo", dados.vinculo().name(),
+                            // Nulo é "usa a cascata" (RT-FIN-002), e a trilha precisa
+                            // dizer isso — não pode virar "0" no registro.
+                            "comissao", String.valueOf(comissao))));
             log.info("Profissional cadastrado: {} ({})", id, dados.vinculo());
 
             return profissionais.porId(id).orElseThrow();
@@ -111,8 +114,20 @@ public class CadastrarProfissionalUseCase {
         }
     }
 
+    /**
+     * Nulo continua nulo (RT-FIN-002).
+     *
+     * <p>Antes ele virava zero, e isso fazia a cascata de comissão nascer decorativa: com todo
+     * profissional tendo percentual, o nível "padrão do salão" nunca alcançaria ninguém.
+     *
+     * <p>Zero é uma comissão — a de quem trabalha por salário fixo. "Ninguém configurou" é outra
+     * coisa, e agora é nulo.
+     */
     private BigDecimal comissaoValida(BigDecimal informada) {
-        BigDecimal comissao = informada == null ? BigDecimal.ZERO : informada;
+        BigDecimal comissao = informada;
+        if (comissao == null) {
+            return null;
+        }
         if (comissao.signum() < 0 || comissao.compareTo(new BigDecimal("100")) > 0) {
             throw new ErroDeDominio(ErrosDaEquipe.DADOS_INVALIDOS,
                     "a comissão precisa estar entre 0 e 100", Map.of(),

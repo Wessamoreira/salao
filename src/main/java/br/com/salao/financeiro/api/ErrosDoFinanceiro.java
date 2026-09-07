@@ -12,6 +12,9 @@ public enum ErrosDoFinanceiro implements CodigoDeErro {
     PAGAMENTO_NAO_ENCONTRADO("ER-FIN-PAGAMENTO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
             "Pagamento não encontrado"),
 
+    REGRA_NAO_ENCONTRADA("ER-FIN-REGRA_NAO_ENCONTRADA", HttpStatus.NOT_FOUND,
+            "Regra de comissão não encontrada"),
+
     /**
      * Parcelamento informado para uma forma que não parcela.
      *

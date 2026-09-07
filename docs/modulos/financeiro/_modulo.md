@@ -8,8 +8,9 @@
 
 ## Fronteira
 
-Expõe `PagamentoApi`, `PagamentoResumo`, `DadosDoPagamento`, `FormaDePagamento`,
-`StatusDeConciliacao` e `ErrosDoFinanceiro`.
+Expõe `PagamentoApi`, `ComissaoApi`, `PagamentoResumo`, `DadosDoPagamento`, `FormaDePagamento`,
+`StatusDeConciliacao`, `EscopoDaRegra`, `RegraDeComissao`, `ComissaoResolvida`,
+`OrigemDaComissao` e `ErrosDoFinanceiro`.
 
 ## O que ele **não** sabe
 
@@ -28,22 +29,37 @@ Isso não é omissão — é a direção da dependência, e ela precisa ser esta
 
 ## Depende de
 
-- `shared` — `Money`, `Relogio`, `TenantContext`, `UsuarioAtual`
+- `equipe` — `ProfissionalApi` (o percentual da ficha é um nível da cascata)
+- `catalogo` — `ServicoApi` (conferir que o serviço da regra existe neste salão)
+- `iam` — `Permissao`, `AuditoriaApi`, `UsuarioAtual`
 
-Nenhum módulo de negócio, e é de propósito. Um módulo que registra dinheiro e depende de meia dúzia
-de outros é um módulo que vai virar o centro de um ciclo.
+**RT-FIN-001 dizia "nenhum módulo de negócio, e é de propósito".** RT-FIN-002 desfez isso, e a frase
+é que estava larga demais: o que precisa valer é que **ninguém depende do financeiro para decidir**
+— `atendimento` depende dele para perguntar quanto pagar, e é uma seta só. Depender de `equipe` e
+`catalogo`, que são folhas, não aproxima o módulo de virar centro de ciclo.
+
+O que continua valendo, e é o que importa: o financeiro **não conhece a comanda**. `comandaId` é id
+de origem opaco (RN-FIN-002), e é isso que impede o ciclo com `atendimento`.
 
 ## Rotinas
 
 | Rotina | Situação |
 |---|---|
 | [RT-FIN-001](RT-FIN-001-registrar-pagamento.md) — registrar pagamento, 1:N com split | implementada |
+| [RT-FIN-002](RT-FIN-002-cascata-de-comissao.md) — cascata de comissão + snapshot | implementada |
 
 ## Rotas
 
-Nenhuma própria. O pagamento é registrado pela rota da comanda
+| Rota | O que faz | Permissão |
+|---|---|---|
+| `PUT /api/v1/regras-de-comissao` | define um nível da cascata (substitui se já existir) | `config:manage` |
+| `GET /api/v1/regras-de-comissao` | as regras, na ordem da cascata | `financeiro:read:all` |
+| `DELETE /api/v1/regras-de-comissao/{id}` | tira um nível | `config:manage` |
+| `GET /api/v1/regras-de-comissao/simulacao` | quanto esta pessoa ganharia neste serviço, e por quê | `financeiro:read:all` |
+
+O **pagamento** não tem rota própria: é registrado pela rota da comanda
 (`POST /api/v1/comandas/{id}/pagamentos`), porque é lá que a regra de "quanto falta" existe.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-FIN-001 a RN-FIN-004.
+Ver [regras.md](regras.md) — RN-FIN-001 a RN-FIN-007.

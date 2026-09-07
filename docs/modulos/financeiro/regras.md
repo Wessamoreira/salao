@@ -89,3 +89,74 @@ contrato do adquirente ainda.
 **Rotinas.** RT-FIN-001 · **Teste.** `RegistrarPagamentoIT.status_de_conciliacao`,
 `RegistrarPagamentoIT.so_credito_parcela`, `RegistrarPagamentoIT.taxa_ainda_nao_existe`
 **Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-FIN-005 — Comissão nula é "usa a cascata"; zero é uma comissão de zero
+
+**Enunciado.** `profissional.comissao_percentual` é anulável. Nulo significa que a ficha não decide
+e a cascata continua; zero significa comissão de zero por cento, decidida.
+
+**Motivo.** Enquanto a coluna era `not null default 0` e o cadastro convertia nulo em zero, todo
+profissional tinha percentual — e o nível "padrão do salão" nunca alcançaria ninguém. A cascata
+nasceria decorativa.
+
+É a mesma distinção de `precoEm` (*"zero é um preço"*), de `taxa_prevista` (*"zero seria taxa
+isenta"*) e de `custoMedio` (*"zero significaria unidades que não custaram nada"*). Aqui: zero é a
+comissão de quem trabalha por salário fixo.
+
+Linhas existentes não foram convertidas: um zero gravado pode ter sido deliberado, e reescrever
+intenção alheia é pior do que deixar como está.
+
+**Onde é garantida.** V39 relaxa a coluna · `CadastrarProfissionalUseCase.comissaoValida` não
+coage mais · a auditoria registra `null`, não `0`.
+**Rotinas.** RT-FIN-002 · **Teste.** `CascataDeComissaoIT.sem_regra`,
+`CascataDeComissaoIT.zero_configurado`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-FIN-006 — A cascata: par, serviço, ficha, salão — nessa ordem
+
+**Enunciado.** O percentual de um executante é resolvido, do mais específico para o mais geral:
+regra do par profissional × serviço, regra do serviço, percentual da ficha do profissional, padrão
+do salão. Nada configurado devolve zero com origem `SEM_REGRA`.
+
+**Motivo.** O ponto discutível é o serviço vencer a ficha, e ele tem duas razões: sem isso o nível
+seria decoração — toda profissional tem percentual na ficha, então uma regra por serviço só
+alcançaria quem estivesse com o campo vazio; e a regra de serviço existe para proteger a margem de
+um serviço caro, que é onde trabalham as pessoas com percentual alto. Se a ficha vencesse, a
+proteção falharia exatamente para quem precisa alcançar.
+
+A exceção tem o nível mais específico, que existe para isso.
+
+`SEM_REGRA` é distinto de um zero configurado: sem a distinção, "por que não recebi comissão?"
+teria a mesma resposta para a decisão do salão e para o cadastro esquecido.
+
+**Onde é garantida.** `CascataDeComissao.resolver` · a ordem no `order by` de
+`RegrasDeComissaoJdbc.candidatas`, conferida contra `EscopoDaRegra.peso` por teste.
+**Rotinas.** RT-FIN-002 · **Teste.** `CascataDeComissaoIT.servico_vence_a_ficha`,
+`CascataDeComissaoIT.par_vence_tudo`, `CascataDeComissaoIT.ficha_vence_o_padrao`,
+`CascataDeComissaoIT.ordem_do_sql_bate_com_o_peso`
+**Configurável?** As regras, sim · **Origem.** 2026-09-05
+
+---
+
+### RN-FIN-007 — Quem decide o percentual é o financeiro, e o snapshot sobrevive à regra
+
+**Enunciado.** `atendimento` pergunta o percentual ao `ComissaoApi` e grava o par
+(percentual, origem) no executante. Não lê a ficha do profissional. Alterar ou remover a regra
+depois não muda nada já lançado.
+
+**Motivo.** Ler a ficha do lado do atendimento reescreveria, fora da fronteira, a regra que só o
+financeiro conhece — e a segunda cópia é a que continua pagando errado depois que a primeira mudar.
+Pela mesma razão `OrigemDaComissao` mudou de módulo: o enum pertence a quem decide.
+
+E o snapshot (RN-ATD-010) é o que faz *"por que a minha comissão foi 30%?"* continuar tendo resposta
+depois que a regra deixou de existir.
+
+**Onde é garantida.** `AdicionarItemDeServicoUseCase` chama `ComissaoApi.resolver` ·
+`OrigemDaComissao` vive em `financeiro.api` · nada recalcula executante já gravado.
+**Rotinas.** RT-FIN-002 · **Teste.** `CascataDeComissaoIT.item_usa_a_cascata`,
+`CascataDeComissaoIT.snapshot_sobrevive_a_mudanca`
+**Configurável?** Não · **Origem.** 2026-09-05

@@ -22,6 +22,7 @@ import br.com.salao.cliente.api.ClienteApi;
 import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.estoque.api.EstoqueApi;
 import br.com.salao.estoque.api.ProdutoApi;
+import br.com.salao.financeiro.api.ComissaoApi;
 import br.com.salao.financeiro.api.PagamentoApi;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
@@ -51,11 +52,11 @@ public class AtendimentoConfig {
 
     @Bean
     public AdicionarItemDeServicoUseCase adicionarItemDeServicoUseCase(
-            ComandasJdbc comandas, ServicoApi servicos, ProfissionalApi profissionais,
-            AgendaApi agenda, EstabelecimentoApi estabelecimentos, AuditoriaApi auditoria,
-            Relogio relogio) {
-        return new AdicionarItemDeServicoUseCase(comandas, servicos, profissionais, agenda,
-                estabelecimentos, auditoria, relogio);
+            ComandasJdbc comandas, ComissaoApi comissoes, ServicoApi servicos,
+            ProfissionalApi profissionais, AgendaApi agenda,
+            EstabelecimentoApi estabelecimentos, AuditoriaApi auditoria, Relogio relogio) {
+        return new AdicionarItemDeServicoUseCase(comandas, comissoes, servicos, profissionais,
+                agenda, estabelecimentos, auditoria, relogio);
     }
 
     @Bean

@@ -5,7 +5,7 @@ import br.com.salao.atendimento.api.ComandaDetalhada;
 import br.com.salao.atendimento.api.ComandaResumo;
 import br.com.salao.atendimento.api.ExecutanteDoItem;
 import br.com.salao.atendimento.api.ItemDaComanda;
-import br.com.salao.atendimento.api.OrigemDaComissao;
+import br.com.salao.financeiro.api.OrigemDaComissao;
 import br.com.salao.atendimento.api.PapelDoExecutante;
 import br.com.salao.atendimento.api.TipoDeItem;
 import br.com.salao.atendimento.internal.infra.ComandasJdbc;
