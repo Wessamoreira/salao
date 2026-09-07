@@ -5,7 +5,6 @@ import br.com.salao.financeiro.api.Lancamento;
 import br.com.salao.financeiro.api.RazaoApi;
 import br.com.salao.financeiro.api.TipoDeLancamento;
 import br.com.salao.financeiro.internal.infra.LancamentosJdbc;
-import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.shared.dinheiro.Money;
 import br.com.salao.shared.seguranca.UsuarioAtual;
 import br.com.salao.shared.tempo.Relogio;
@@ -23,16 +22,18 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <h2>Receita entra positiva; comissão, negativa</h2>
  *
- * <p>O sinal é o que define débito e crédito, e é o que permite que "quanto sobrou" seja
- * {@code sum(valor)} sem lista de tipos. Uma comanda de R$ 200,00 com 30% de comissão vira duas
- * linhas: +200 de receita e −60 de comissão, e o salão fica com 140 sem ninguém precisar saber
- * quais tipos somam.
+ * <p>O sinal é o que define débito e crédito, e é o que permite somar sem lista de tipos. Uma
+ * comanda de R$ 200,00 com 30% de comissão vira duas linhas: +200 de receita e −60 de comissão.
+ *
+ * <p><strong>Isso não faz da soma global o lucro do salão</strong>, e a primeira versão deste
+ * comentário dizia que fazia. Desde RT-FIN-005 há linhas de caixa no razão — o vale entra positivo
+ * na conta da pessoa sem ser receita de ninguém. O que vale é o que RN-FIN-008 sempre disse: saldo
+ * é soma <em>filtrada</em>, por contraparte.
  *
  * <h2>A competência é o dia do salão, não o do servidor</h2>
  *
- * <p>A comanda fechada às 23h50 de 31 de março, num salão em Manaus, pertence a março — e o
- * servidor em UTC já está em 1º de abril. Errar isso joga faturamento para o mês seguinte, e é o
- * tipo de erro que só aparece quando o dono compara com o caderno.
+ * <p>Quem responde é {@link Competencia}, e o enunciado mora lá — o vale (RT-FIN-005) precisa da
+ * mesma resposta, e uma regra com dois donos diverge no primeiro conserto.
  *
  * <h2>Sem {@code @PreAuthorize}</h2>
  *
@@ -46,13 +47,12 @@ public class Razao implements RazaoApi {
     private static final String ORIGEM_COMANDA = "COMANDA";
 
     private final LancamentosJdbc lancamentos;
-    private final EstabelecimentoApi estabelecimentos;
+    private final Competencia competencia;
     private final Relogio relogio;
 
-    public Razao(LancamentosJdbc lancamentos, EstabelecimentoApi estabelecimentos,
-                 Relogio relogio) {
+    public Razao(LancamentosJdbc lancamentos, Competencia competencia, Relogio relogio) {
         this.lancamentos = lancamentos;
-        this.estabelecimentos = estabelecimentos;
+        this.competencia = competencia;
         this.relogio = relogio;
     }
 
@@ -67,7 +67,7 @@ public class Razao implements RazaoApi {
             return 0;
         }
 
-        LocalDate competencia = relogio.hojeEm(estabelecimentos.fusoDe(tenant));
+        LocalDate competencia = this.competencia.hoje();
         Instant agora = relogio.agora();
         UUID por = UsuarioAtual.idOuNulo();
         int escritas = 0;
@@ -114,7 +114,7 @@ public class Razao implements RazaoApi {
     @Transactional
     public int estornarOrigem(String origemTipo, UUID origemId, String motivo) {
         UUID tenant = TenantContext.obrigatorio();
-        LocalDate competencia = relogio.hojeEm(estabelecimentos.fusoDe(tenant));
+        LocalDate competencia = this.competencia.hoje();
         Instant agora = relogio.agora();
         UUID por = UsuarioAtual.idOuNulo();
 

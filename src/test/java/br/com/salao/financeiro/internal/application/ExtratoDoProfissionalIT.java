@@ -126,7 +126,8 @@ class ExtratoDoProfissionalIT extends AbstractPostgresIT {
 
         var linha = doMes().linhas().get(0);
 
-        assertThat(linha.comandaId()).isEqualTo(comanda);
+        assertThat(linha.origemId()).isEqualTo(comanda);
+        assertThat(linha.origemTipo()).isEqualTo("COMANDA");
         assertThat(linha.descricao()).contains("Coloração").contains("30")
                 .contains("PROFISSIONAL");
     }

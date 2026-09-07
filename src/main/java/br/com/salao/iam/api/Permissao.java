@@ -30,6 +30,16 @@ public final class Permissao {
 
     public static final String FINANCEIRO_LER_PROPRIO = "financeiro:read:own";
     public static final String FINANCEIRO_LER_TODOS = "financeiro:read:all";
+    /**
+     * Entregar adiantamento (RT-FIN-005).
+     *
+     * <p>Separada de {@code financeiro:close} porque são atos distintos: fechar o período é
+     * apurar o que já aconteceu; adiantar é <strong>tirar dinheiro do caixa hoje</strong>. Hoje as
+     * duas caem nos mesmos perfis, e é justamente por isso que separá-las custa uma constante — no
+     * dia em que um salão quiser que a recepção adiante e não feche, a permissão já existe.
+     */
+    public static final String FINANCEIRO_ADIANTAR = "financeiro:advance";
+
     public static final String FINANCEIRO_FECHAR = "financeiro:close";
     public static final String FINANCEIRO_CONCILIAR = "financeiro:reconcile";
 

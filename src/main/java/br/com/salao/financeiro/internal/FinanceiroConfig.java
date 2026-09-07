@@ -2,8 +2,13 @@ package br.com.salao.financeiro.internal;
 
 import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.catalogo.api.ServicoApi;
+import br.com.salao.financeiro.api.RazaoApi;
+import br.com.salao.financeiro.internal.application.CancelarValeUseCase;
 import br.com.salao.financeiro.internal.application.CascataDeComissao;
+import br.com.salao.financeiro.internal.application.Competencia;
 import br.com.salao.financeiro.internal.application.ConsultarExtratoUseCase;
+import br.com.salao.financeiro.internal.application.ListarValesUseCase;
+import br.com.salao.financeiro.internal.application.RegistrarValeUseCase;
 import br.com.salao.financeiro.internal.application.DefinirRegraDeComissaoUseCase;
 import br.com.salao.financeiro.internal.application.ListarRegrasDeComissaoUseCase;
 import br.com.salao.financeiro.internal.application.RemoverRegraDeComissaoUseCase;
@@ -14,6 +19,8 @@ import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.financeiro.internal.application.Pagamentos;
 import br.com.salao.financeiro.internal.infra.RegrasDeComissaoJdbc;
 import br.com.salao.financeiro.internal.infra.PagamentosJdbc;
+import br.com.salao.financeiro.internal.infra.ValesJdbc;
+import br.com.salao.shared.idempotencia.Idempotencia;
 import br.com.salao.shared.tempo.Relogio;
 import javax.sql.DataSource;
 import org.springframework.context.annotation.Bean;
@@ -40,9 +47,39 @@ public class FinanceiroConfig {
     }
 
     @Bean
-    public Razao razao(LancamentosJdbc lancamentos, EstabelecimentoApi estabelecimentos,
-                       Relogio relogio) {
-        return new Razao(lancamentos, estabelecimentos, relogio);
+    public Competencia competencia(EstabelecimentoApi estabelecimentos, Relogio relogio) {
+        return new Competencia(estabelecimentos, relogio);
+    }
+
+    @Bean
+    public Razao razao(LancamentosJdbc lancamentos, Competencia competencia, Relogio relogio) {
+        return new Razao(lancamentos, competencia, relogio);
+    }
+
+    @Bean
+    public ValesJdbc valesJdbc(DataSource dataSource) {
+        return new ValesJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public RegistrarValeUseCase registrarValeUseCase(ValesJdbc vales, LancamentosJdbc lancamentos,
+                                                     ProfissionalApi profissionais,
+                                                     Competencia competencia,
+                                                     AuditoriaApi auditoria,
+                                                     Idempotencia idempotencia, Relogio relogio) {
+        return new RegistrarValeUseCase(vales, lancamentos, profissionais, competencia, auditoria,
+                idempotencia, relogio);
+    }
+
+    @Bean
+    public CancelarValeUseCase cancelarValeUseCase(ValesJdbc vales, RazaoApi razao,
+                                                   AuditoriaApi auditoria) {
+        return new CancelarValeUseCase(vales, razao, auditoria);
+    }
+
+    @Bean
+    public ListarValesUseCase listarValesUseCase(ValesJdbc vales) {
+        return new ListarValesUseCase(vales);
     }
 
     @Bean

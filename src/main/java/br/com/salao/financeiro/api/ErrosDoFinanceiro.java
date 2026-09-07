@@ -15,6 +15,9 @@ public enum ErrosDoFinanceiro implements CodigoDeErro {
     REGRA_NAO_ENCONTRADA("ER-FIN-REGRA_NAO_ENCONTRADA", HttpStatus.NOT_FOUND,
             "Regra de comissão não encontrada"),
 
+    VALE_NAO_ENCONTRADO("ER-FIN-VALE_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
+            "Vale não encontrado"),
+
     /**
      * Parcelamento informado para uma forma que não parcela.
      *

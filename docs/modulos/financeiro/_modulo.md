@@ -11,8 +11,8 @@
 Expõe `PagamentoApi`, `ComissaoApi`, `RazaoApi`, `ExtratoDoProfissional`, `PagamentoResumo`,
 `DadosDoPagamento`,
 `FormaDePagamento`, `StatusDeConciliacao`, `EscopoDaRegra`, `RegraDeComissao`,
-`ComissaoResolvida`, `OrigemDaComissao`, `Lancamento`, `TipoDeLancamento`, `ApuracaoDaComanda` e
-`ErrosDoFinanceiro`.
+`ComissaoResolvida`, `OrigemDaComissao`, `Lancamento`, `TipoDeLancamento`, `ApuracaoDaComanda`,
+`Vale`, `FormaDoVale` e `ErrosDoFinanceiro`.
 
 ## O que ele **não** sabe
 
@@ -31,7 +31,8 @@ Isso não é omissão — é a direção da dependência, e ela precisa ser esta
 
 ## Depende de
 
-- `equipe` — `ProfissionalApi` (o percentual da ficha é um nível da cascata)
+- `equipe` — `ProfissionalApi` (o percentual da ficha é um nível da cascata; e o nome de quem
+  recebeu o vale)
 - `catalogo` — `ServicoApi` (conferir que o serviço da regra existe neste salão)
 - `iam` — `Permissao`, `AuditoriaApi`, `UsuarioAtual`
 
@@ -51,6 +52,7 @@ de origem opaco (RN-FIN-002), e é isso que impede o ciclo com `atendimento`.
 | [RT-FIN-002](RT-FIN-002-cascata-de-comissao.md) — cascata de comissão + snapshot | implementada |
 | [RT-FIN-003](RT-FIN-003-apurar-comissao.md) — apurar comissão no fechamento | implementada |
 | [RT-FIN-004](RT-FIN-004-extrato-do-profissional.md) — extrato do profissional, item a item | implementada |
+| [RT-FIN-005](RT-FIN-005-vale.md) — vale / adiantamento | implementada |
 
 ## Rotas
 
@@ -61,10 +63,13 @@ de origem opaco (RN-FIN-002), e é isso que impede o ciclo com `atendimento`.
 | `DELETE /api/v1/regras-de-comissao/{id}` | tira um nível | `config:manage` |
 | `GET /api/v1/regras-de-comissao/simulacao` | quanto esta pessoa ganharia neste serviço, e por quê | `financeiro:read:all` |
 | `GET /api/v1/extratos/{profissionalId}?de&ate` | o extrato, item a item | `financeiro:read:all` ou `:own` |
+| `POST /api/v1/vales` | registra um adiantamento (aceita `Idempotency-Key`) | `financeiro:advance` |
+| `POST /api/v1/vales/{id}/cancelamento` | estorna o vale; motivo obrigatório | `financeiro:advance` |
+| `GET /api/v1/vales?profissionalId&de&ate` | os vales do período; sem o id, do salão inteiro | `financeiro:read:all` ou `:own` |
 
 O **pagamento** não tem rota própria: é registrado pela rota da comanda
 (`POST /api/v1/comandas/{id}/pagamentos`), porque é lá que a regra de "quanto falta" existe.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-FIN-001 a RN-FIN-011.
+Ver [regras.md](regras.md) — RN-FIN-001 a RN-FIN-015.

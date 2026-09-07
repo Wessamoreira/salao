@@ -80,7 +80,8 @@ Permissões no formato `recurso:acao:escopo`:
 ```
 agenda:read:own       agenda:read:all       agenda:write:own      agenda:write:all
 comanda:open          comanda:close         comanda:discount      comanda:reopen
-financeiro:read:own   financeiro:read:all   financeiro:close      financeiro:reconcile
+financeiro:read:own   financeiro:read:all   financeiro:advance    financeiro:close
+financeiro:reconcile
 estoque:read          estoque:write         produto:price:write
 cliente:read          cliente:write         cliente:ficha:read    (dado sensível, separado)
 usuario:manage        config:manage         relatorio:read
@@ -88,6 +89,10 @@ usuario:manage        config:manage         relatorio:read
 
 `cliente:ficha:read` é separado de propósito: histórico de química e alergia são dado de saúde.
 Recepção precisa do cadastro do cliente, não da ficha técnica.
+
+`financeiro:advance` (RT-FIN-005) é separado de `financeiro:close` pela mesma lógica: fechar o
+período é apurar o que já aconteceu; adiantar é **tirar dinheiro do caixa hoje**. Hoje as duas caem
+nos mesmos perfis — e é por isso que separá-las custou uma constante, e não uma migração.
 
 Regras:
 - `@PreAuthorize` no **caso de uso**, não no controller. Controller é transporte.

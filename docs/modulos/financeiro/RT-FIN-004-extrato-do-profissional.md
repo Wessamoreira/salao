@@ -55,6 +55,12 @@ Ver o próprio extrato exige saber **qual profissional** é o usuário logado �
 `iam`. Hoje quem tem só a permissão própria consegue ler o extrato de qualquer um, porque não há
 como amarrar a permissão a uma pessoa — está nas pendências, e é a mais séria desta rotina.
 
+## 5b. Um campo mudou de nome em RT-FIN-005
+
+`LinhaDoExtrato.comandaId` virou o par `origemTipo` / `origemId`. O nome estava certo enquanto
+comanda era a única origem possível; com o vale, um id de vale guardado num campo chamado "comanda"
+é o tipo de coisa que ninguém percebe até a tela abrir a comanda errada.
+
 ## 6. Testes
 
 - [x] `ExtratoDoProfissionalIT` — 9: **a comissão aparece positiva, invertida uma vez** · cada linha
@@ -68,11 +74,11 @@ como amarrar a permissão a uma pessoa — está nas pendências, e é a mais s�
 - [ ] **`financeiro:read:own` não amarra ninguém.** Quem tem só a permissão própria lê o extrato de
       qualquer profissional, porque o usuário não tem `profissional_id`. É a lacuna do `iam` que já
       bloqueava `agenda:read:own` — e aqui ela expõe salário alheio, o que é pior
-- [ ] **Não há total por tipo.** O extrato soma tudo num número; "quanto foi comissão, quanto foi
-      vale" só se vê linha a linha
-- [ ] **Vale e repasse não existem.** As linhas de `VALE` (RT-FIN-005) e `REPASSE` (RT-FIN-006) vão
-      entrar neste mesmo extrato, e a conta muda de "a receber" para "a receber menos o que já foi
-      adiantado"
+- [x] ~~**Não há total por tipo.**~~ Resolvida em RT-FIN-005: o extrato traz `totais`, uma linha
+      por tipo. Virou necessária no mesmo dia em que o vale passou a entrar na conta — RN-FIN-015
+- [x] ~~**Vale não existe.**~~ Entregue em RT-FIN-005: as linhas de `VALE` entram neste extrato e a
+      conta passou a ser "a receber **menos o que já foi adiantado**". `REPASSE` continua faltando
+      (RT-FIN-006)
 - [ ] **Não há tela.** A rota existe e o front não a usa — e é a tela que o profissional mais quer
 - [ ] **Sem paginação.** Um mês de salão movimentado passa de cem linhas; a rotina devolve todas
 - [ ] **Não há exportação.** O repasse é conferido no papel, e não há como imprimir

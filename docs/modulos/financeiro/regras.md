@@ -250,3 +250,104 @@ períodos diferentes, cada uma concluindo que a outra está errada.
 `ExtratoDoProfissionalIT.estorno_aparece`, `ExtratoDoProfissionalIT.reaberta_e_refechada`,
 `ExtratoDoProfissionalIT.periodo_invertido`
 **Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-FIN-012 — Vale entra positivo na conta do profissional, e a soma global deixa de ser lucro
+
+**Enunciado.** O lançamento de um vale tem `tipo = VALE`, contraparte `PROFISSIONAL` e valor
+**positivo**. O extrato o inverte junto com todo o resto (RN-FIN-011) e ele aparece negativo, como
+a pessoa espera. A partir daqui, `sum(valor)` sobre o razão inteiro **não** é o resultado do salão.
+
+**Motivo.** No razão a comissão é negativa porque sai do salão; o vale é positivo na mesma conta
+porque devolve ao salão parte do que ele devia. Não há inversão nova a lembrar: a única inversão
+continua sendo a do ponto de leitura.
+
+A consequência precisa ficar escrita porque duas versões deste projeto afirmaram o contrário — o
+javadoc de `Razao` e `04-modelo-de-dados` diziam que a soma global era o lucro. Era, enquanto só
+existiam receita e comissão. O vale é **movimento de caixa, não resultado**, e o repasse
+(RT-FIN-006) será igual. O que sempre valeu é RN-FIN-008: saldo é soma **filtrada**, por
+contraparte.
+
+**Onde é garantida.** `RegistrarValeUseCase.registrar` insere o valor sem negar ·
+`ConsultarExtratoUseCase` nega uma vez, no ponto de leitura.
+**Rotinas.** RT-FIN-005 · **Teste.** `ValeIT.vale_reduz_o_a_receber`,
+`ValeIT.vale_maior_que_o_saldo`
+**Configurável?** Não · **Origem.** 2026-09-07
+
+---
+
+### RN-FIN-013 — O vale é imutável e não tem status; cancelar é estornar
+
+**Enunciado.** `vale` recebe apenas `INSERT` e `SELECT` da role da aplicação. Não há coluna
+`cancelado`: um vale cancelado é um vale com lançamento `ESTORNO` apontando para ele
+(`origem_tipo = 'VALE'`). Cancelar exige motivo e é idempotente.
+
+**Motivo.** Uma coluna de status seria uma segunda verdade sobre o mesmo fato, e as duas
+divergiriam no primeiro caminho que esquecesse de escrever numa delas — enquanto o razão, que é a
+verdade que paga, continuaria certo e ignorado. Sem a coluna, a idempotência sai de graça: quem já
+foi estornado tem uma linha apontando para si.
+
+E o vale errado continua visível de propósito. *"Por que a Ana recebeu R$ 300 em março?"* precisa
+continuar tendo resposta depois de o registro ser desfeito; um vale apagado responderia "não
+recebeu".
+
+Cancelar duas vezes devolve o mesmo estado em vez de recusar: quem repete quer o mesmo resultado
+final, e a recusa obrigaria a tela a distinguir "não deu certo" de "já estava".
+
+**Onde é garantida.** V41: `revoke update, delete on vale from salao_app` · `ValesJdbc` calcula
+`cancelado` por `exists` sobre o razão · `CancelarValeUseCase` delega a `RazaoApi.estornarOrigem`.
+**Rotinas.** RT-FIN-005 · **Teste.** `ValeIT.cancelar_devolve_o_saldo`,
+`ValeIT.cancelar_e_idempotente`, `ValeIT.cancelar_exige_motivo`, `ValeIT.update_em_vale_falha`,
+`ValeIT.delete_em_vale_falha`
+**Configurável?** Não · **Origem.** 2026-09-07
+
+---
+
+### RN-FIN-014 — O vale não tem teto, e a competência não vem de fora
+
+**Enunciado.** O valor precisa ser positivo (`check (valor > 0)` no banco, recusa com frase no caso
+de uso) e não é comparado com saldo nenhum. A `data_competencia` é o dia do salão, do relógio, no
+fuso do estabelecimento — nunca informada por quem chama.
+
+**Motivo.** Adiantar mais do que a pessoa já ganhou é o que *adiantamento* significa; recusar
+inventaria uma regra que o salão não tem, e a recepção a contornaria com dois vales menores. O
+saldo negativo é legítimo e atravessa para o período seguinte.
+
+Comparar com um saldo exigiria **escolher um período**, e escolher no lugar de quem pergunta é o
+que RT-FIN-004 recusou fazer no extrato, pela razão que continua valendo: duas telas com períodos
+diferentes, cada uma parecendo errada para a outra.
+
+Aceitar a data de fora pareceria flexível e abriria um buraco: um vale empurrado para dentro de um
+período já fechado, depois de o repasse ter sido pago.
+
+**Onde é garantida.** V41 `check (valor > 0)` · `RegistrarValeUseCase.valorValido` ·
+`NovoVale` não tem campo de data · `Competencia.hoje()`.
+**Rotinas.** RT-FIN-005 · **Teste.** `ValeIT.valor_precisa_ser_positivo`,
+`ValeIT.banco_recusa_valor_nao_positivo`, `ValeIT.vale_maior_que_o_saldo`
+**Configurável?** O teto, não — não existe · **Origem.** 2026-09-07
+
+---
+
+### RN-FIN-015 — O extrato abre o total por tipo, porque o líquido passou a misturar duas coisas
+
+**Enunciado.** `ExtratoDoProfissional` traz `totais`, uma linha por `TipoDeLancamento` presente no
+período, com o mesmo sinal das linhas. `aReceber` continua sendo a soma de tudo.
+
+**Motivo.** Até RT-FIN-004, `aReceber` significava "quanto a pessoa ganhou". Com o vale, significa
+"quanto ganhou menos o que já levou" — e os dois números têm conversas completamente diferentes
+atrás deles. Quem ganhou R$ 600 e adiantou R$ 550 lê **R$ 50** e conclui que trabalhou por R$ 50,
+que é a mesma conversa que o extrato existe para encerrar, voltando pela outra porta.
+
+Lista e não mapa: a ordem é a de aparição no período, estável e conferível contra a lista de
+linhas; um `Map` com chave de enum chegaria ao JSON em ordem arbitrária.
+
+Junto com isso, `LinhaDoExtrato.comandaId` virou `origemTipo` / `origemId`. O nome antigo estava
+certo enquanto comanda era a única origem; com o vale, um id de vale num campo chamado "comanda" é
+o tipo de erro que ninguém percebe até a tela abrir a comanda errada.
+
+**Onde é garantida.** `ConsultarExtratoUseCase.totaisPorTipo` ·
+`ExtratoDoProfissional.TotalPorTipo`.
+**Rotinas.** RT-FIN-004, RT-FIN-005 · **Teste.** `ValeIT.totais_por_tipo`,
+`ExtratoDoProfissionalIT.linha_explica_de_onde_veio`
+**Configurável?** Não · **Origem.** 2026-09-07

@@ -235,7 +235,8 @@ create table lancamento (
   tipo text not null check (tipo in
     ('RECEITA_SERVICO','RECEITA_PRODUTO','COMISSAO','TAXA_ADQUIRENTE',
      'VALE','REPASSE','AJUSTE','ESTORNO')),
-  origem_tipo text not null check (origem_tipo in ('COMANDA','PAGAMENTO','FECHAMENTO','MANUAL')),
+  origem_tipo text not null check (origem_tipo in
+    ('COMANDA','PAGAMENTO','FECHAMENTO','MANUAL','VALE')),   -- VALE desde RT-FIN-005
   origem_id uuid not null,
   contraparte_tipo text check (contraparte_tipo in ('PROFISSIONAL','CLIENTE','SALAO','ADQUIRENTE')),
   contraparte_id uuid,
@@ -252,8 +253,34 @@ create index on lancamento (estabelecimento_id, origem_tipo, origem_id);
 
 **Imutabilidade não é convenção, é permissão.** A role da aplicação recebe apenas
 `GRANT INSERT, SELECT ON lancamento`. Sem `UPDATE`, sem `DELETE`. Teste
-`LancamentoImutavelIT.update_em_lancamento_falha` prova. Saldo é sempre `sum(valor)` filtrado —
+`ApuracaoDeComissaoIT.update_em_lancamento_falha` prova. Saldo é sempre `sum(valor)` filtrado —
 nunca uma coluna. Estorno é linha nova apontando para a original.
+
+> **A soma global do razão não é o lucro do salão**, e as primeiras versões desta seção sugeriam
+> que fosse. Desde RT-FIN-005 há linhas de caixa aqui: o vale entra positivo na conta do
+> profissional sem ser receita de ninguém. O que vale é o que está escrito acima — saldo é soma
+> **filtrada**, por contraparte.
+
+```sql
+create table vale (                            -- RT-FIN-005
+  id uuid primary key default gen_random_uuid(),
+  estabelecimento_id uuid not null,
+  profissional_id uuid not null,               -- sem FK: outro módulo
+  valor numeric(19,4) not null check (valor > 0),
+  forma text not null check (forma in ('DINHEIRO','PIX','TRANSFERENCIA')),
+  data_competencia date not null,              -- o dia do SALÃO, não o do servidor
+  motivo text,
+  criado_em timestamptz not null,
+  criado_por uuid
+);
+
+create index on vale (estabelecimento_id, profissional_id, data_competencia);
+```
+
+**Sem coluna de status.** Vale cancelado é vale com um `ESTORNO` no razão apontando para ele
+(`origem_tipo = 'VALE'`). Uma coluna `cancelado` seria uma segunda verdade sobre o mesmo fato, e as
+duas divergiriam no primeiro caminho que esquecesse de escrever numa delas. `INSERT, SELECT` e mais
+nada, como o razão.
 
 ## Estoque
 

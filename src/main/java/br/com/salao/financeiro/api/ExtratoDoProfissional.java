@@ -15,6 +15,8 @@ import java.util.UUID;
  * disso ao ler a tela.
  *
  * @param aReceber soma do período já invertida. Positivo é o salão devendo
+ * @param totais   o mesmo número aberto por tipo — desde RT-FIN-005 o líquido mistura o que foi
+ *                 ganho com o que já foi adiantado, e um número só não distingue os dois
  * @param linhas   uma por lançamento, na ordem em que aconteceram — é o "item a item" que a rotina
  *                 promete, e o que permite conferir contra a comanda
  */
@@ -24,18 +26,38 @@ public record ExtratoDoProfissional(
         LocalDate de,
         LocalDate ate,
         Money aReceber,
+        List<TotalPorTipo> totais,
         List<LinhaDoExtrato> linhas) {
 
     /**
-     * @param valor    já invertido: comissão aparece positiva, estorno negativo
-     * @param descricao carrega o item e o percentual com a origem da regra (RT-FIN-003) — é o que
-     *                  responde "por que 30%?" sem consultar regra nenhuma
+     * RT-FIN-005 — quanto do líquido veio de cada tipo, já com o sinal do extrato.
+     *
+     * <p>Existe porque o vale muda a natureza do total: até RT-FIN-004, {@code aReceber} era
+     * "quanto a pessoa ganhou"; agora é "quanto ela ganhou menos o que já levou". Sem a abertura,
+     * quem recebeu R$ 600 e adiantou R$ 550 lê "R$ 50" e conclui que trabalhou por R$ 50.
+     *
+     * <p>Lista e não mapa: a ordem é a dos tipos, estável, e um {@code Map} com chave de enum
+     * chegaria ao JSON em ordem arbitrária.
+     */
+    public record TotalPorTipo(TipoDeLancamento tipo, Money valor) {
+    }
+
+    /**
+     * @param valor      já invertido: comissão aparece positiva, vale e estorno negativos
+     * @param descricao  carrega o item e o percentual com a origem da regra (RT-FIN-003) — é o que
+     *                   responde "por que 30%?" sem consultar regra nenhuma
+     * @param origemTipo de onde a linha veio: {@code COMANDA}, {@code VALE}, {@code FECHAMENTO}.
+     *                   Este par se chamava {@code comandaId} até RT-FIN-004, quando comanda era a
+     *                   única origem possível — e o vale tornou o nome mentira. Um id de vale
+     *                   guardado num campo chamado "comanda" é o tipo de coisa que ninguém percebe
+     *                   até a tela abrir a comanda errada
      */
     public record LinhaDoExtrato(
             LocalDate data,
             TipoDeLancamento tipo,
             String descricao,
             Money valor,
-            UUID comandaId) {
+            String origemTipo,
+            UUID origemId) {
     }
 }
