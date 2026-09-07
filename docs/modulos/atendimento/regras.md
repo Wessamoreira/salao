@@ -514,3 +514,24 @@ nenhum caminho sai de `ESTORNADA`.
 **Rotinas.** RT-ATD-007 · **Teste.** `ReabrirEEstornarIT.estorno_nao_apaga`,
 `ReabrirEEstornarIT.estornada_e_terminal`, `ReabrirEEstornarIT.aberta_nao_reabre`
 **Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-025 — A tela de fechamento não calcula dinheiro
+
+**Enunciado.** Total, desconto e restante são exibidos como vieram do servidor. Toda ação da tela
+(lançar, remover, descontar, pagar) devolve a comanda ou a conta inteira, e a tela substitui o que
+mostra. O front não soma, não subtrai e não arredonda.
+
+**Motivo.** É RN-ATD-008 vista do outro lado. Duas somas — a da tela e a do banco — divergem no dia
+em que alguém arredondar diferente, e a divergência aparece como um centavo que impede o fechamento,
+com a cliente esperando.
+
+A única conta que a tela faz é "há quantas horas esta comanda está aberta", para o alerta de R-UX-07:
+ela não decide dinheiro, e o dado que a responde já veio.
+
+**Onde é garantida.** `Comandas.tsx` só lê `valorLiquido`, `totalPago` e `restante` ·
+as mutações devolvem `ComandaDetalhada`/`ContaDaComanda` e a tela invalida as três consultas juntas.
+**Rotinas.** RT-ATD-008 · **Teste.** `Comandas.test.tsx` — "mostra o que falta receber sem calcular
+nada", "libera o fechamento quando a conta zera"
+**Configurável?** Não · **Origem.** 2026-09-05

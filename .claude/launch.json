@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "frontend", "run", "previa:agenda"],
       "port": 5174
+    },
+    {
+      "name": "previa-comandas",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "frontend", "run", "previa:comandas"],
+      "port": 5174
     }
   ]
 }

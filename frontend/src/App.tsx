@@ -9,6 +9,7 @@ import { SegundoFator } from './telas/SegundoFator';
 import { Agenda } from './telas/agenda/Agenda';
 import { Painel } from './telas/agenda/Painel';
 import { Clientes } from './telas/clientes/Clientes';
+import { Comandas } from './telas/comandas/Comandas';
 import { Configuracao } from './telas/config/Configuracao';
 import { EmBreve } from './telas/EmBreve';
 
@@ -50,7 +51,7 @@ export function App() {
             {/* As telas de negócio chegam nas rotinas das fases 1 a 3. A casca existe
                 para que cada uma entre sem mexer em rota, sessão ou permissão. */}
             <Route path="/agenda" element={<Agenda />} />
-            <Route path="/comandas" element={<EmBreve titulo="Atendimento" rotina="RT-ATD-008" />} />
+            <Route path="/comandas" element={<Comandas />} />
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/estoque" element={<EmBreve titulo="Estoque" rotina="RT-EST-001" />} />
             <Route path="/financeiro" element={<EmBreve titulo="Financeiro" rotina="RT-FIN-004" />} />

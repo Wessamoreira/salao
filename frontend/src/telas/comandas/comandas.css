@@ -1,0 +1,456 @@
+/*
+ * RT-ATD-008 — tela de fechamento.
+ *
+ * Todo valor vem dos tokens (design/tokens.css). Número solto aqui é bug de rigor.
+ *
+ * A tela tem estado em quase tudo — seleção, foco, comanda esquecida, comanda quitada —
+ * e estado inline não existe. É por isso que ela é arquivo, e não `style={{}}`.
+ */
+
+.cmd-tela {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) 1fr;
+  gap: var(--e-8);
+  height: 100%;
+  align-content: start;
+}
+
+/* ---------------------------------------------------------------------------
+ * A barra de comandas abertas (R-UX-07).
+ *
+ * Coluna fixa à esquerda, sempre presente: "comanda aberta esquecida é dinheiro
+ * que sai pela porta". Escondê-la atrás de um menu seria o mesmo que não tê-la.
+ * ------------------------------------------------------------------------- */
+
+.cmd-barra {
+  border-right: 1px solid var(--regua);
+  padding-right: var(--e-5);
+}
+
+.cmd-barra-topo {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e-2);
+  padding-bottom: var(--e-4);
+}
+
+.cmd-barra-titulo {
+  font-family: var(--fonte);
+  font-size: var(--t-12);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+  margin: 0;
+}
+
+.cmd-barra-contador {
+  font-size: var(--t-14);
+  font-variant-numeric: var(--numerais);
+  color: var(--tinta-fraca);
+}
+
+.cmd-barra-vazia {
+  font-size: var(--t-12);
+  color: var(--tinta-fraca);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.cmd-barra-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+}
+
+.cmd-linha {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--e-1) var(--e-3);
+  width: 100%;
+  padding: var(--e-3);
+  border: 1px solid transparent;
+  border-radius: var(--raio-2);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: var(--tinta);
+  transition: background var(--mov-imediato) ease;
+}
+
+.cmd-linha:hover { background: var(--papel-afundado); }
+.cmd-linha:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
+
+.cmd-linha.selecionada {
+  background: var(--papel);
+  border-color: var(--regua-forte);
+}
+
+.cmd-linha-numero {
+  font-variant-numeric: var(--numerais);
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+}
+
+.cmd-linha-nome {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--t-14);
+}
+
+.cmd-linha-valor {
+  font-variant-numeric: var(--numerais);
+  font-size: var(--t-14);
+}
+
+/*
+ * O alerta de comanda esquecida (R-UX-07) é cor E texto.
+ *
+ * Só a cor deixaria de fora quem não a distingue — e este aviso é sobre dinheiro
+ * ficando para trás, que é justamente o que ninguém pode perder.
+ */
+.cmd-linha-aviso {
+  grid-column: 1 / -1;
+  font-size: var(--t-10);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--status-falta);
+}
+
+.cmd-linha.esquecida { border-left: 2px solid var(--status-falta); }
+
+/* ------------------------------------------------------------------ a conta */
+
+.cmd-vazio { padding-top: var(--e-10); max-width: 42ch; }
+
+.cmd-vazio-titulo {
+  font-size: var(--t-20);
+  font-weight: 500;
+  margin: 0 0 var(--e-2);
+}
+
+.cmd-vazio-texto { color: var(--tinta-fraca); font-size: var(--t-14); margin: 0; }
+
+/*
+ * Largura máxima em pixel, e não da escala de espaçamento: a escala governa
+ * espaçamento (§4), e isto é medida de linha — a conta fica ilegível esticada na
+ * largura de um monitor de balcão.
+ */
+.cmd-conta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-6);
+  max-width: 780px;
+}
+
+.cmd-conta-topo {
+  display: flex;
+  align-items: baseline;
+  gap: var(--e-3);
+}
+
+/*
+ * Sans, não serifa.
+ *
+ * O design system reserva a Instrument Serif a dois lugares — identidade do
+ * estabelecimento e TOTAIS —, e "Comanda #128" é texto operacional. A primeira versão
+ * desta tela usava serifa aqui e sans nos totais: exatamente o inverso.
+ */
+.cmd-conta-titulo {
+  font-size: var(--t-20);
+  font-weight: 500;
+  margin: 0;
+}
+
+.cmd-conta-numero { font-variant-numeric: var(--numerais); }
+
+.cmd-selo {
+  font-size: var(--t-10);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: var(--e-1) var(--e-2);
+  border-radius: var(--raio-1);
+}
+
+.cmd-selo-aberta { background: var(--status-atendendo-fundo); color: var(--status-atendendo); }
+.cmd-selo-fechada { background: var(--status-confirmado-fundo); color: var(--status-confirmado); }
+.cmd-selo-estornada { background: var(--status-falta-fundo); color: var(--status-falta); }
+
+.cmd-erro {
+  margin: 0;
+  padding: var(--e-3) var(--e-4);
+  border-left: 2px solid var(--status-falta);
+  background: var(--status-falta-fundo);
+  color: var(--tinta);
+  font-size: var(--t-14);
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------------ lançar */
+
+.cmd-lancar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--e-5);
+  padding: var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--regua);
+  border-radius: var(--raio-2);
+}
+
+.cmd-lancar-bloco {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--e-2) var(--e-3);
+  align-items: end;
+}
+
+.cmd-lancar-bloco .cmd-rotulo { grid-column: 1 / -1; }
+.cmd-lancar-bloco .cmd-campo { grid-column: 1; }
+.cmd-lancar-bloco .cmd-botao { grid-column: 1 / -1; justify-self: start; }
+
+.cmd-rotulo {
+  font-size: var(--t-10);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+}
+
+.cmd-campo {
+  font: inherit;
+  font-size: var(--t-14);
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  background: var(--papel);
+  color: var(--tinta);
+  width: 100%;
+}
+
+.cmd-campo:focus-visible { outline: 2px solid var(--tinta); outline-offset: 1px; }
+
+.cmd-botao {
+  font: inherit;
+  font-size: var(--t-12);
+  padding: var(--e-2) var(--e-4);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  background: var(--papel);
+  color: var(--tinta);
+  cursor: pointer;
+}
+
+.cmd-botao:hover:not(:disabled) { background: var(--papel-afundado); }
+.cmd-botao:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
+.cmd-botao:disabled { color: var(--tinta-tenue); cursor: not-allowed; }
+
+.cmd-botao-primario {
+  background: var(--tinta);
+  color: var(--papel);
+  border-color: var(--tinta);
+  font-size: var(--t-14);
+  padding: var(--e-3) var(--e-6);
+}
+
+.cmd-botao-primario:disabled { background: var(--papel-afundado); border-color: var(--regua-forte); }
+
+/* ------------------------------------------------------------------ itens */
+
+.cmd-itens {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-14);
+}
+
+.cmd-itens th, .cmd-itens td {
+  padding: var(--e-3) var(--e-2);
+  border-bottom: 1px solid var(--regua);
+  text-align: left;
+  vertical-align: top;
+}
+
+.cmd-itens thead th {
+  font-size: var(--t-10);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+  font-weight: 500;
+  border-bottom-color: var(--regua-forte);
+}
+
+.cmd-num { text-align: right; font-variant-numeric: var(--numerais); }
+
+.cmd-item-nome { font-weight: 400; display: flex; flex-direction: column; gap: var(--e-1); }
+
+.cmd-item-tipo, .cmd-item-executante {
+  font-size: var(--t-10);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+}
+
+.cmd-item-total { font-weight: 500; }
+
+.cmd-itens-vazio {
+  font-size: var(--t-14);
+  color: var(--tinta-fraca);
+  padding: var(--e-6) 0;
+  margin: 0;
+}
+
+.cmd-desconto { display: flex; justify-content: flex-end; }
+
+.cmd-desconto-campo {
+  font: inherit;
+  font-size: var(--t-12);
+  font-variant-numeric: var(--numerais);
+  text-align: right;
+  width: 6ch;
+  padding: var(--e-1) var(--e-2);
+  border: 1px solid var(--regua);
+  border-radius: var(--raio-1);
+  background: var(--papel-afundado);
+  color: var(--tinta);
+}
+
+.cmd-desconto-campo:focus-visible { outline: 2px solid var(--tinta); outline-offset: 1px; }
+
+.cmd-acoes { text-align: right; }
+
+.cmd-remover {
+  font: inherit;
+  font-size: var(--t-10);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: none;
+  border: none;
+  padding: var(--e-1);
+  color: var(--tinta-fraca);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cmd-remover:hover { color: var(--status-falta); }
+.cmd-remover:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
+
+/* ------------------------------------------------------------------ totais */
+
+.cmd-totais {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--e-8);
+}
+
+.cmd-total { display: flex; flex-direction: column; align-items: flex-end; gap: var(--e-1); }
+
+.cmd-total-rotulo {
+  font-size: var(--t-10);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+}
+
+.cmd-total-valor { font-size: var(--t-16); font-variant-numeric: var(--numerais); }
+
+/*
+ * O total é um dos DOIS lugares onde a serifa entra (16-design-system §3).
+ *
+ * "O negócio é beleza — um gesto editorial se justifica." E é aqui que ele cabe: o
+ * número que a cliente vai pagar é o momento da tela, não mais uma linha de tabela.
+ */
+.cmd-total.forte .cmd-total-valor {
+  font-family: var(--fonte-identidade);
+  font-size: var(--t-30);
+}
+
+/* ------------------------------------------------------------------ pagamento */
+
+.cmd-pagamentos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+  padding: var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--regua);
+  border-radius: var(--raio-2);
+}
+
+.cmd-pagos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+
+.cmd-pago {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: var(--e-4);
+  align-items: baseline;
+  padding: var(--e-2) 0;
+  border-bottom: 1px solid var(--regua);
+  font-size: var(--t-14);
+}
+
+.cmd-pago-parcelas { color: var(--tinta-fraca); font-size: var(--t-12); }
+.cmd-pago-valor { font-variant-numeric: var(--numerais); }
+
+.cmd-forma {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: var(--e-2) var(--e-3);
+  align-items: end;
+}
+
+.cmd-forma .cmd-rotulo { grid-row: 1; }
+.cmd-forma .cmd-campo { grid-row: 2; }
+.cmd-forma .cmd-botao { grid-row: 2; }
+
+/* ------------------------------------------------------------------ fechar */
+
+.cmd-fechar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-6);
+  padding-top: var(--e-5);
+  border-top: 1px solid var(--regua-forte);
+}
+
+.cmd-restante { display: flex; flex-direction: column; gap: var(--e-1); }
+
+.cmd-restante-rotulo {
+  font-size: var(--t-10);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+}
+
+/*
+ * O número que a tela inteira existe para mostrar (R-UX-08).
+ *
+ * Ele é o maior da tela junto com o total, e muda de cor quando zera — mas o que
+ * diz "pode fechar" não é a cor: é o botão deixar de estar desabilitado.
+ */
+.cmd-restante-valor {
+  font-family: var(--fonte-identidade);
+  font-size: var(--t-30);
+  font-variant-numeric: var(--numerais);
+}
+
+.cmd-restante-valor.quitada { color: var(--status-confirmado); }
+
+/* Acessível a leitor de tela, invisível na página. */
+.cmd-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

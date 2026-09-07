@@ -72,6 +72,7 @@ foi rompida — não quando a sexta dependência entrar.
 | [RT-ATD-005](RT-ATD-005-executante-adicional.md) — executante adicional (assistente) | implementada |
 | [RT-ATD-006](RT-ATD-006-fechar-comanda.md) — **fechar comanda**, transacional | implementada |
 | [RT-ATD-007](RT-ATD-007-estornar-reabrir.md) — estornar / reabrir | implementada |
+| [RT-ATD-008](RT-ATD-008-tela-de-fechamento.md) — tela de fechamento em um passo | implementada |
 
 ## Rotas
 
@@ -109,6 +110,6 @@ foi rompida — não quando a sexta dependência entrar.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-ATD-001 a RN-ATD-024.
+Ver [regras.md](regras.md) — RN-ATD-001 a RN-ATD-025.
 
 Todos os códigos de erro do módulo vivem em `ErrosDoAtendimento`, um enum só: eles estavam declarados em seis enums, e `ER-ATD-COMANDA_NAO_ESTA_ABERTA` aparecia em cinco deles.
