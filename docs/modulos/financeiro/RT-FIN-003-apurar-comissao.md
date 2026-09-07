@@ -54,6 +54,11 @@ entrada e saída, a primeira consulta que esquecesse um tipo novo daria um núme
 **Saldo é sempre soma, nunca coluna** — como no estoque (RN-EST-009). Não existe "recalcular o
 razão".
 
+> **Corrigido em RT-FIN-004.** A frase acima sugere que a soma global do razão é o resultado do
+> salão. Isso vale só enquanto `VALE` e `REPASSE` não existem: os dois são movimento de caixa, não
+> resultado, e entram na conta do profissional reduzindo a dívida. A soma que sempre vale é a
+> **filtrada por contraparte**, como RN-FIN-008 já dizia.
+
 ## 4. A competência é o dia do salão
 
 A comanda fechada às 23h50 de 31 de março num salão em Manaus pertence a **março** — e o servidor,

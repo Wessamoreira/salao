@@ -225,3 +225,28 @@ dia. É a mesma forma da devolução de estoque (RN-ATD-022).
 **Rotinas.** RT-FIN-003 · **Teste.** `ApuracaoDeComissaoIT.reabrir_anula`,
 `ApuracaoDeComissaoIT.estorno_idempotente`, `ApuracaoDeComissaoIT.refechar_apura_de_novo`
 **Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-FIN-011 — O extrato inverte o sinal e mostra tudo, inclusive o estorno
+
+**Enunciado.** O extrato de um profissional lista os lançamentos da conta dele no período, com o
+**sinal invertido** (comissão positiva, estorno negativo), e soma o total a receber. Nenhuma linha é
+escondida. O período é obrigatório.
+
+**Motivo.** No razão a comissão é negativa porque sai do salão; na conta da pessoa ela entra. A
+inversão acontece uma vez, no ponto de leitura, para ninguém precisar lembrar disso ao ler a tela.
+
+Esconder estornos faria o total não bater com nada que a pessoa consiga conferir contra as próprias
+comandas — e "recebi menos esse mês" é exatamente a conversa que este extrato existe para encerrar.
+Um total sozinho obriga a acreditar.
+
+Período obrigatório porque um padrão de "mês corrente" produziria duas pessoas olhando telas com
+períodos diferentes, cada uma concluindo que a outra está errada.
+
+**Onde é garantida.** `ConsultarExtratoUseCase` nega o valor de cada linha ·
+`LancamentosJdbc.daContraparte` traz todos os tipos.
+**Rotinas.** RT-FIN-004 · **Teste.** `ExtratoDoProfissionalIT.comissao_positiva`,
+`ExtratoDoProfissionalIT.estorno_aparece`, `ExtratoDoProfissionalIT.reaberta_e_refechada`,
+`ExtratoDoProfissionalIT.periodo_invertido`
+**Configurável?** Não · **Origem.** 2026-09-05

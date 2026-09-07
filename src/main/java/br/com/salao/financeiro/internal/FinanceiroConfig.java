@@ -3,6 +3,7 @@ package br.com.salao.financeiro.internal;
 import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.financeiro.internal.application.CascataDeComissao;
+import br.com.salao.financeiro.internal.application.ConsultarExtratoUseCase;
 import br.com.salao.financeiro.internal.application.DefinirRegraDeComissaoUseCase;
 import br.com.salao.financeiro.internal.application.ListarRegrasDeComissaoUseCase;
 import br.com.salao.financeiro.internal.application.RemoverRegraDeComissaoUseCase;
@@ -42,6 +43,12 @@ public class FinanceiroConfig {
     public Razao razao(LancamentosJdbc lancamentos, EstabelecimentoApi estabelecimentos,
                        Relogio relogio) {
         return new Razao(lancamentos, estabelecimentos, relogio);
+    }
+
+    @Bean
+    public ConsultarExtratoUseCase consultarExtratoUseCase(LancamentosJdbc lancamentos,
+                                                           ProfissionalApi profissionais) {
+        return new ConsultarExtratoUseCase(lancamentos, profissionais);
     }
 
     @Bean

@@ -100,6 +100,29 @@ public class LancamentosJdbc {
                 .list();
     }
 
+    /**
+     * As linhas de uma contraparte no período, em ordem de competência.
+     *
+     * <p>Todas, inclusive os estornos: uma comanda reaberta e refechada deixa seis lançamentos, e
+     * esconder quatro faria o total não bater com nada que a pessoa consiga conferir.
+     */
+    @Transactional(readOnly = true)
+    public List<Lancamento> daContraparte(String contraparteTipo, UUID contraparteId,
+                                          LocalDate de, LocalDate ate) {
+        return jdbc.sql("select " + CAMPOS + """
+                  from lancamento
+                 where contraparte_tipo = :tipo and contraparte_id = :id
+                   and data_competencia between :de and :ate
+                 order by data_competencia, criado_em, id
+                """)
+                .param("tipo", contraparteTipo)
+                .param("id", contraparteId)
+                .param("de", Date.valueOf(de))
+                .param("ate", Date.valueOf(ate))
+                .query(LancamentosJdbc::mapear)
+                .list();
+    }
+
     /** O saldo de uma contraparte no período. Sempre soma, nunca coluna. */
     @Transactional(readOnly = true)
     public Money saldoDaContraparte(String contraparteTipo, UUID contraparteId,

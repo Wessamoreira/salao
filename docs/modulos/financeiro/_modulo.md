@@ -8,7 +8,8 @@
 
 ## Fronteira
 
-Expõe `PagamentoApi`, `ComissaoApi`, `RazaoApi`, `PagamentoResumo`, `DadosDoPagamento`,
+Expõe `PagamentoApi`, `ComissaoApi`, `RazaoApi`, `ExtratoDoProfissional`, `PagamentoResumo`,
+`DadosDoPagamento`,
 `FormaDePagamento`, `StatusDeConciliacao`, `EscopoDaRegra`, `RegraDeComissao`,
 `ComissaoResolvida`, `OrigemDaComissao`, `Lancamento`, `TipoDeLancamento`, `ApuracaoDaComanda` e
 `ErrosDoFinanceiro`.
@@ -49,6 +50,7 @@ de origem opaco (RN-FIN-002), e é isso que impede o ciclo com `atendimento`.
 | [RT-FIN-001](RT-FIN-001-registrar-pagamento.md) — registrar pagamento, 1:N com split | implementada |
 | [RT-FIN-002](RT-FIN-002-cascata-de-comissao.md) — cascata de comissão + snapshot | implementada |
 | [RT-FIN-003](RT-FIN-003-apurar-comissao.md) — apurar comissão no fechamento | implementada |
+| [RT-FIN-004](RT-FIN-004-extrato-do-profissional.md) — extrato do profissional, item a item | implementada |
 
 ## Rotas
 
@@ -58,10 +60,11 @@ de origem opaco (RN-FIN-002), e é isso que impede o ciclo com `atendimento`.
 | `GET /api/v1/regras-de-comissao` | as regras, na ordem da cascata | `financeiro:read:all` |
 | `DELETE /api/v1/regras-de-comissao/{id}` | tira um nível | `config:manage` |
 | `GET /api/v1/regras-de-comissao/simulacao` | quanto esta pessoa ganharia neste serviço, e por quê | `financeiro:read:all` |
+| `GET /api/v1/extratos/{profissionalId}?de&ate` | o extrato, item a item | `financeiro:read:all` ou `:own` |
 
 O **pagamento** não tem rota própria: é registrado pela rota da comanda
 (`POST /api/v1/comandas/{id}/pagamentos`), porque é lá que a regra de "quanto falta" existe.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-FIN-001 a RN-FIN-010.
+Ver [regras.md](regras.md) — RN-FIN-001 a RN-FIN-011.
