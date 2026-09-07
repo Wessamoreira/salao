@@ -39,7 +39,8 @@ precisa exibir, e o que não é carregado não vaza em log.
 - `equipe` — `ProfissionalApi` (quem executa o quê, e com que percentual)
 - `estoque` — `ProdutoApi` (o que é, e se está à venda)
 - `financeiro` — `PagamentoApi` (quanto já foi pago nesta comanda)
-- `estoque` — `EstoqueApi.baixar` (tirar do armário o que foi vendido)
+- `estoque` — `EstoqueApi` (baixar no fechamento, devolver ao desfazer)
+- `financeiro` — também `ComissaoApi` (quanto pagar) e `RazaoApi` (apurar ao fechar)
 - `iam` — `Permissao`, `AuditoriaApi`, `EstabelecimentoApi`, `LimitesDoUsuarioApi`, `UsuarioAtual`
 
 **Sete, e o teto de três não vale aqui.** RT-ATD-001 registrou "três, que é o teto que a agenda
@@ -102,11 +103,15 @@ foi rompida — não quando a sexta dependência entrar.
 | EV-ATD-002 | `ComandaReaberta` | reabertura (RT-ATD-007) | quem apurar sobre o fechamento precisa desfazer |
 | EV-ATD-003 | `ComandaEstornada` | estorno (RT-ATD-007) | idem, e o razão (RT-FIN-007) |
 
-> EV-ATD-002 e EV-ATD-003 são publicados **sem consumidor**, ao contrário do que foi decidido para
-> `ComandaAberta` em RT-ATD-001. A diferença é concreta: reabrir e fechar de novo publica
-> `ComandaFechada` uma segunda vez, e sem estes eventos no meio a apuração de comissão contaria em
-> dobro sem nada avisar. Publicá-los agora é o que torna a compensação possível; não publicá-los
-> seria deixar uma armadilha silenciosa para a próxima rotina.
+> **Os três seguem sem consumidor, e a justificativa original caiu.** Em RT-ATD-007 publiquei
+> EV-ATD-002 e EV-ATD-003 dizendo que eram o que tornaria possível compensar a apuração de
+> comissão. RT-FIN-003 mostrou que a apuração não pode ouvir evento nenhum — ela é chamada dentro
+> da transação do fechamento, porque o financeiro lendo a comanda fecharia um ciclo de módulos.
+>
+> O que os sustenta hoje é outra coisa: o comprovante (RT-FIN-008) precisa saber que um fechamento
+> deixou de valer, e o `_modulo.md` da agenda declara consumir `ComandaFechada`. Se nenhuma das duas
+> se concretizar, os três devem ser apagados — "evento sem consumidor é peso morto" continua
+> valendo.
 
 ## Regras
 

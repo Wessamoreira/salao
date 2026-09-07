@@ -4,13 +4,16 @@ import br.com.salao.atendimento.api.ComandaDetalhada;
 import br.com.salao.atendimento.api.ComandaFechada;
 import br.com.salao.atendimento.api.ComandaResumo;
 import br.com.salao.atendimento.api.ErrosDoAtendimento;
+import br.com.salao.atendimento.api.ExecutanteDoItem;
 import br.com.salao.atendimento.api.ItemDaComanda;
 import br.com.salao.atendimento.api.TipoDeItem;
 import br.com.salao.atendimento.internal.infra.ComandasJdbc;
 import br.com.salao.estoque.api.BaixaDeEstoque;
 import br.com.salao.estoque.api.EstoqueApi;
 import br.com.salao.estoque.api.TipoDeMovimento;
+import br.com.salao.financeiro.api.ApuracaoDaComanda;
 import br.com.salao.financeiro.api.PagamentoApi;
+import br.com.salao.financeiro.api.RazaoApi;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.Permissao;
 import br.com.salao.iam.api.RegistroDeAuditoria;
@@ -19,6 +22,8 @@ import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.shared.tempo.Relogio;
 import br.com.salao.shared.tenant.TenantContext;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -80,16 +85,18 @@ public class FecharComandaUseCase {
     private final ComandasJdbc comandas;
     private final PagamentoApi pagamentos;
     private final EstoqueApi estoque;
+    private final RazaoApi razao;
     private final AuditoriaApi auditoria;
     private final ApplicationEventPublisher eventos;
     private final Relogio relogio;
 
     public FecharComandaUseCase(ComandasJdbc comandas, PagamentoApi pagamentos,
-                                EstoqueApi estoque, AuditoriaApi auditoria,
+                                EstoqueApi estoque, RazaoApi razao, AuditoriaApi auditoria,
                                 ApplicationEventPublisher eventos, Relogio relogio) {
         this.comandas = comandas;
         this.pagamentos = pagamentos;
         this.estoque = estoque;
+        this.razao = razao;
         this.auditoria = auditoria;
         this.eventos = eventos;
         this.relogio = relogio;
@@ -122,11 +129,12 @@ public class FecharComandaUseCase {
         }
 
         int produtosBaixados = baixarProdutos(comandaId);
+        int lancamentos = razao.apurar(apuracaoDe(comanda));
 
         auditoria.registrar(RegistroDeAuditoria.alteracao("COMANDA_FECHADA", "comanda", comandaId,
                 Map.of("status", "ABERTA"),
                 Map.of("status", "FECHADA", "valorLiquido", comanda.valorLiquido().toString(),
-                        "produtosBaixados", produtosBaixados)));
+                        "produtosBaixados", produtosBaixados, "lancamentos", lancamentos)));
         eventos.publishEvent(new ComandaFechada(TenantContext.obrigatorio(), comandaId,
                 comanda.clienteId(), comanda.numero(), comanda.valorLiquido().valor(), agora));
 
@@ -134,6 +142,39 @@ public class FecharComandaUseCase {
                 comanda.valorLiquido(), produtosBaixados);
         return new ComandaDetalhada(comandas.porId(comandaId).orElseThrow(),
                 comandas.itensDe(comandaId));
+    }
+
+    /**
+     * O que esta comanda gerou, do ponto de vista do razão.
+     *
+     * <p>Quem monta é o atendimento, que tem os itens; quem decide em que linhas isso vira é o
+     * financeiro (RT-FIN-003). Este caso de uso não sabe que comissão entra com sinal negativo nem
+     * a que mês a linha pertence — e não deveria.
+     *
+     * <p>É por isso que a apuração é uma <strong>chamada</strong> e não um ouvinte do evento: se o
+     * financeiro buscasse os itens, ele dependeria do atendimento, que já depende dele. Seria
+     * ciclo.
+     */
+    private ApuracaoDaComanda apuracaoDe(ComandaResumo comanda) {
+        Money servicos = Money.ZERO;
+        Money produtos = Money.ZERO;
+        List<ApuracaoDaComanda.ComissaoAApurar> comissoes = new ArrayList<>();
+
+        for (ItemDaComanda item : comandas.itensDe(comanda.id())) {
+            if (item.tipo() == TipoDeItem.SERVICO) {
+                servicos = servicos.somar(item.valorTotal());
+            } else {
+                produtos = produtos.somar(item.valorTotal());
+            }
+            for (ExecutanteDoItem executante : item.executantes()) {
+                comissoes.add(new ApuracaoDaComanda.ComissaoAApurar(
+                        executante.profissionalId(), executante.valorComissao(),
+                        executante.percentualComissao(), executante.origem(),
+                        item.descricao()));
+            }
+        }
+        return new ApuracaoDaComanda(comanda.id(), comanda.numero(), servicos, produtos,
+                List.copyOf(comissoes));
     }
 
     /**

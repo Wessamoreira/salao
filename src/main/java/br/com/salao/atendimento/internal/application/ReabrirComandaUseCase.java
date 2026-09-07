@@ -9,6 +9,7 @@ import br.com.salao.atendimento.api.StatusDaComanda;
 import br.com.salao.atendimento.api.TipoDeItem;
 import br.com.salao.atendimento.internal.infra.ComandasJdbc;
 import br.com.salao.estoque.api.EstoqueApi;
+import br.com.salao.financeiro.api.RazaoApi;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.Permissao;
 import br.com.salao.iam.api.RegistroDeAuditoria;
@@ -57,15 +58,17 @@ public class ReabrirComandaUseCase {
 
     private final ComandasJdbc comandas;
     private final EstoqueApi estoque;
+    private final RazaoApi livroRazao;
     private final AuditoriaApi auditoria;
     private final ApplicationEventPublisher eventos;
     private final Relogio relogio;
 
-    public ReabrirComandaUseCase(ComandasJdbc comandas, EstoqueApi estoque,
+    public ReabrirComandaUseCase(ComandasJdbc comandas, EstoqueApi estoque, RazaoApi livroRazao,
                                  AuditoriaApi auditoria, ApplicationEventPublisher eventos,
                                  Relogio relogio) {
         this.comandas = comandas;
         this.estoque = estoque;
+        this.livroRazao = livroRazao;
         this.auditoria = auditoria;
         this.eventos = eventos;
         this.relogio = relogio;
@@ -89,12 +92,16 @@ public class ReabrirComandaUseCase {
 
         BigDecimal devolvidas = devolverOEstoque(comandaId);
         comandas.limparCustoDosItens(comandaId);
+        // O que foi apurado no fechamento deixa de valer — e é anulado por linha nova, nunca
+        // apagado: a role da aplicação não tem `delete` no razão (RT-FIN-003).
+        int anulados = livroRazao.estornarOrigem("COMANDA", comandaId, "reabertura: " + razao);
 
         Instant agora = relogio.agora();
         auditoria.registrar(RegistroDeAuditoria.alteracao("COMANDA_REABERTA", "comanda", comandaId,
                 Map.of("status", "FECHADA"),
                 Map.of("status", "ABERTA", "motivo", razao,
-                        "unidadesDevolvidas", devolvidas.toPlainString())));
+                        "unidadesDevolvidas", devolvidas.toPlainString(),
+                        "lancamentosAnulados", anulados)));
         eventos.publishEvent(new ComandaReaberta(TenantContext.obrigatorio(), comandaId,
                 comanda.numero(), agora));
 

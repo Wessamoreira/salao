@@ -8,9 +8,10 @@
 
 ## Fronteira
 
-Expõe `PagamentoApi`, `ComissaoApi`, `PagamentoResumo`, `DadosDoPagamento`, `FormaDePagamento`,
-`StatusDeConciliacao`, `EscopoDaRegra`, `RegraDeComissao`, `ComissaoResolvida`,
-`OrigemDaComissao` e `ErrosDoFinanceiro`.
+Expõe `PagamentoApi`, `ComissaoApi`, `RazaoApi`, `PagamentoResumo`, `DadosDoPagamento`,
+`FormaDePagamento`, `StatusDeConciliacao`, `EscopoDaRegra`, `RegraDeComissao`,
+`ComissaoResolvida`, `OrigemDaComissao`, `Lancamento`, `TipoDeLancamento`, `ApuracaoDaComanda` e
+`ErrosDoFinanceiro`.
 
 ## O que ele **não** sabe
 
@@ -47,6 +48,7 @@ de origem opaco (RN-FIN-002), e é isso que impede o ciclo com `atendimento`.
 |---|---|
 | [RT-FIN-001](RT-FIN-001-registrar-pagamento.md) — registrar pagamento, 1:N com split | implementada |
 | [RT-FIN-002](RT-FIN-002-cascata-de-comissao.md) — cascata de comissão + snapshot | implementada |
+| [RT-FIN-003](RT-FIN-003-apurar-comissao.md) — apurar comissão no fechamento | implementada |
 
 ## Rotas
 
@@ -62,4 +64,4 @@ O **pagamento** não tem rota própria: é registrado pela rota da comanda
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-FIN-001 a RN-FIN-007.
+Ver [regras.md](regras.md) — RN-FIN-001 a RN-FIN-010.

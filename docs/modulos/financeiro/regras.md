@@ -160,3 +160,68 @@ depois que a regra deixou de existir.
 **Rotinas.** RT-FIN-002 · **Teste.** `CascataDeComissaoIT.item_usa_a_cascata`,
 `CascataDeComissaoIT.snapshot_sobrevive_a_mudanca`
 **Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-FIN-008 — O razão é append-only, e isso é permissão do banco
+
+**Enunciado.** `lancamento` recebe apenas `INSERT` e `SELECT` da role da aplicação. Correção é linha
+nova; estorno é linha nova apontando para a original (`estorna_lancamento_id`). Saldo é sempre
+`sum(valor)` filtrado, nunca coluna.
+
+**Motivo.** *"Imutabilidade não é convenção, é permissão"* — o `update` não é recusado por
+disciplina de quem escreve o código, é recusado pelo banco, para quem escrever o código errado
+amanhã. Mesma decisão da auditoria (V3).
+
+E sem coluna de saldo não existe "recalcular o razão", pelo mesmo motivo que não existe "recalcular
+o estoque" (RN-EST-009).
+
+**Onde é garantida.** V40: `revoke update, delete on lancamento from salao_app` ·
+`LancamentosJdbc` não tem método de alteração.
+**Rotinas.** RT-FIN-003 · **Teste.** `ApuracaoDeComissaoIT.update_em_lancamento_falha`,
+`ApuracaoDeComissaoIT.delete_em_lancamento_falha`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-FIN-009 — Quem traz o que apurar é o atendimento; quem decide as linhas é o financeiro
+
+**Enunciado.** O fechamento da comanda chama `RazaoApi.apurar` passando receitas e comissões já
+calculadas. O financeiro decide tipo, sinal, contraparte e competência. A apuração acontece **na
+transação do fechamento**.
+
+**Motivo.** Se o financeiro buscasse os itens da comanda, dependeria de `atendimento` — que já
+depende dele para pagamento e comissão. Seria ciclo, e o build reprovaria.
+
+Enfeitar o evento seria a outra saída, e é pior: o payload de `event_publication` não tem RLS, e a
+apuração ficaria assíncrona quando o plano a pediu transacional junto com estoque e pagamento.
+
+O atendimento não sabe que comissão entra negativa nem a que mês a linha pertence — e não deveria.
+
+**Onde é garantida.** `RazaoApi.apurar` recebe `ApuracaoDaComanda` ·
+`FecharComandaUseCase.apuracaoDe` monta · `Razao` decide tipo, sinal e competência.
+**Rotinas.** RT-FIN-003 · **Teste.** `ApuracaoDeComissaoIT.receita_e_comissao` ·
+`ArquiteturaTest.modulos_respeitam_fronteiras`
+**Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-FIN-010 — A competência é o dia do salão, e desfazer é anular
+
+**Enunciado.** `data_competencia` sai do relógio no fuso do estabelecimento. Reabrir e estornar
+comanda escrevem linhas `ESTORNO` de sinal contrário para tudo que ainda não foi anulado —
+operação idempotente.
+
+**Motivo.** A comanda fechada às 23h50 de 31 de março num salão em Manaus pertence a março, e o
+servidor em UTC já está em abril. Errar isso joga faturamento para o mês seguinte, e só aparece
+quando o dono compara com o caderno.
+
+E anular em vez de apagar não é escolha: a role não tem `delete` (RN-FIN-008). A idempotência vem do
+próprio razão — quem já foi estornado tem uma linha apontando para si —, sem marca para manter em
+dia. É a mesma forma da devolução de estoque (RN-ATD-022).
+
+**Onde é garantida.** `Razao.apurar` usa `relogio.hojeEm(estabelecimentos.fusoDe(tenant))` ·
+`Razao.estornarOrigem` · `LancamentosJdbc.pendentesDeEstorno`.
+**Rotinas.** RT-FIN-003 · **Teste.** `ApuracaoDeComissaoIT.reabrir_anula`,
+`ApuracaoDeComissaoIT.estorno_idempotente`, `ApuracaoDeComissaoIT.refechar_apura_de_novo`
+**Configurável?** Não · **Origem.** 2026-09-05

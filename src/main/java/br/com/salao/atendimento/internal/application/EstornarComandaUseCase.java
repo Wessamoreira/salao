@@ -9,6 +9,7 @@ import br.com.salao.atendimento.api.StatusDaComanda;
 import br.com.salao.atendimento.api.TipoDeItem;
 import br.com.salao.atendimento.internal.infra.ComandasJdbc;
 import br.com.salao.estoque.api.EstoqueApi;
+import br.com.salao.financeiro.api.RazaoApi;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.Permissao;
 import br.com.salao.iam.api.RegistroDeAuditoria;
@@ -57,15 +58,17 @@ public class EstornarComandaUseCase {
 
     private final ComandasJdbc comandas;
     private final EstoqueApi estoque;
+    private final RazaoApi livroRazao;
     private final AuditoriaApi auditoria;
     private final ApplicationEventPublisher eventos;
     private final Relogio relogio;
 
-    public EstornarComandaUseCase(ComandasJdbc comandas, EstoqueApi estoque,
+    public EstornarComandaUseCase(ComandasJdbc comandas, EstoqueApi estoque, RazaoApi livroRazao,
                                   AuditoriaApi auditoria, ApplicationEventPublisher eventos,
                                   Relogio relogio) {
         this.comandas = comandas;
         this.estoque = estoque;
+        this.livroRazao = livroRazao;
         this.auditoria = auditoria;
         this.eventos = eventos;
         this.relogio = relogio;
@@ -94,12 +97,15 @@ public class EstornarComandaUseCase {
             }
         }
 
+        int anulados = livroRazao.estornarOrigem("COMANDA", comandaId, "estorno: " + razao);
+
         Instant agora = relogio.agora();
         auditoria.registrar(RegistroDeAuditoria.alteracao("COMANDA_ESTORNADA", "comanda",
                 comandaId, Map.of("status", "FECHADA"),
                 Map.of("status", "ESTORNADA", "motivo", razao,
                         "valorLiquido", comanda.valorLiquido().toString(),
-                        "unidadesDevolvidas", devolvidas.toPlainString())));
+                        "unidadesDevolvidas", devolvidas.toPlainString(),
+                        "lancamentosAnulados", anulados)));
         eventos.publishEvent(new ComandaEstornada(TenantContext.obrigatorio(), comandaId,
                 comanda.clienteId(), comanda.numero(), comanda.valorLiquido().valor(), agora));
 

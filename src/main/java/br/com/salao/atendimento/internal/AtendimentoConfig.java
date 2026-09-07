@@ -24,6 +24,7 @@ import br.com.salao.estoque.api.EstoqueApi;
 import br.com.salao.estoque.api.ProdutoApi;
 import br.com.salao.financeiro.api.ComissaoApi;
 import br.com.salao.financeiro.api.PagamentoApi;
+import br.com.salao.financeiro.api.RazaoApi;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.api.LimitesDoUsuarioApi;
@@ -97,24 +98,24 @@ public class AtendimentoConfig {
 
     @Bean
     public FecharComandaUseCase fecharComandaUseCase(
-            ComandasJdbc comandas, PagamentoApi pagamentos, EstoqueApi estoque,
+            ComandasJdbc comandas, PagamentoApi pagamentos, EstoqueApi estoque, RazaoApi razao,
             AuditoriaApi auditoria, ApplicationEventPublisher eventos, Relogio relogio) {
-        return new FecharComandaUseCase(comandas, pagamentos, estoque, auditoria, eventos,
+        return new FecharComandaUseCase(comandas, pagamentos, estoque, razao, auditoria, eventos,
                 relogio);
     }
 
     @Bean
     public ReabrirComandaUseCase reabrirComandaUseCase(
-            ComandasJdbc comandas, EstoqueApi estoque, AuditoriaApi auditoria,
+            ComandasJdbc comandas, EstoqueApi estoque, RazaoApi razao, AuditoriaApi auditoria,
             ApplicationEventPublisher eventos, Relogio relogio) {
-        return new ReabrirComandaUseCase(comandas, estoque, auditoria, eventos, relogio);
+        return new ReabrirComandaUseCase(comandas, estoque, razao, auditoria, eventos, relogio);
     }
 
     @Bean
     public EstornarComandaUseCase estornarComandaUseCase(
-            ComandasJdbc comandas, EstoqueApi estoque, AuditoriaApi auditoria,
+            ComandasJdbc comandas, EstoqueApi estoque, RazaoApi razao, AuditoriaApi auditoria,
             ApplicationEventPublisher eventos, Relogio relogio) {
-        return new EstornarComandaUseCase(comandas, estoque, auditoria, eventos, relogio);
+        return new EstornarComandaUseCase(comandas, estoque, razao, auditoria, eventos, relogio);
     }
 
     @Bean

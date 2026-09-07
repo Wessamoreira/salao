@@ -6,7 +6,10 @@ import br.com.salao.financeiro.internal.application.CascataDeComissao;
 import br.com.salao.financeiro.internal.application.DefinirRegraDeComissaoUseCase;
 import br.com.salao.financeiro.internal.application.ListarRegrasDeComissaoUseCase;
 import br.com.salao.financeiro.internal.application.RemoverRegraDeComissaoUseCase;
+import br.com.salao.financeiro.internal.application.Razao;
+import br.com.salao.financeiro.internal.infra.LancamentosJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
+import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.financeiro.internal.application.Pagamentos;
 import br.com.salao.financeiro.internal.infra.RegrasDeComissaoJdbc;
 import br.com.salao.financeiro.internal.infra.PagamentosJdbc;
@@ -28,6 +31,17 @@ public class FinanceiroConfig {
     @Bean
     public Pagamentos pagamentos(PagamentosJdbc pagamentos, Relogio relogio) {
         return new Pagamentos(pagamentos, relogio);
+    }
+
+    @Bean
+    public LancamentosJdbc lancamentosJdbc(DataSource dataSource) {
+        return new LancamentosJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public Razao razao(LancamentosJdbc lancamentos, EstabelecimentoApi estabelecimentos,
+                       Relogio relogio) {
+        return new Razao(lancamentos, estabelecimentos, relogio);
     }
 
     @Bean
