@@ -132,8 +132,10 @@ public class FecharPeriodoUseCase {
                         "movimento", posicao.movimento().toString(),
                         "repassado", posicao.aRepassar().toString())));
 
+                // `estornadoEm` nulo: acabou de nascer, e nasce vigente.
                 feitos.add(new FechamentoDoProfissional(id, posicao.profissionalId(), de, ate,
-                        posicao.saldoAnterior(), posicao.movimento(), posicao.aRepassar(), agora));
+                        posicao.saldoAnterior(), posicao.movimento(), posicao.aRepassar(), agora,
+                        null));
             }
         } catch (DataIntegrityViolationException e) {
             String detalhe = e.getMostSpecificCause().getMessage();

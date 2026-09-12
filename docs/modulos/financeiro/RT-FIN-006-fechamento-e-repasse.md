@@ -282,7 +282,7 @@ O log não contém nome, documento, telefone nem salário individual.
 
 ## 18. Pendências
 
-- [ ] Estorno de fechamento e liberação do período pertencem à RT-FIN-007.
+- [x] ~~Estorno de fechamento e liberação do período~~ — entregues em RT-FIN-007, com `GRANT UPDATE` por coluna: o documento fica e só a reivindicação do período sai.
 - [ ] `periodicidade_fechamento` ainda não sugere as datas na tela.
 - [ ] Não há fechamento parcial por profissional.
 - [ ] Criar o vínculo `usuario` → `profissional` para habilitar `financeiro:read:own` com segurança.

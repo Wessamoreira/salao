@@ -13,6 +13,7 @@ import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Transactional;
@@ -64,6 +65,31 @@ public class LancamentosJdbc {
                 .param("por", criadoPor)
                 .query(UUID.class)
                 .single();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Lancamento> porId(UUID id) {
+        return jdbc.sql("select " + CAMPOS + " from lancamento where id = :id")
+                .param("id", id)
+                .query(LancamentosJdbc::mapear)
+                .optional();
+    }
+
+    /**
+     * Se esta linha já tem uma anulação apontando para si.
+     *
+     * <p>É o que torna o estorno idempotente sem marca nenhuma na linha original — a mesma forma
+     * de {@link #pendentesDeEstorno}, aplicada a um lançamento só.
+     */
+    @Transactional(readOnly = true)
+    public boolean jaEstornado(UUID lancamentoId) {
+        return Boolean.TRUE.equals(jdbc.sql("""
+                select exists (select 1 from lancamento
+                                where estorna_lancamento_id = :id)
+                """)
+                .param("id", lancamentoId)
+                .query(Boolean.class)
+                .single());
     }
 
     @Transactional(readOnly = true)

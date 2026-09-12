@@ -4,6 +4,7 @@ import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.equipe.api.ProfissionalResumo;
 import br.com.salao.financeiro.api.FechamentoDoProfissional;
 import br.com.salao.financeiro.api.PreviaDoFechamento;
+import br.com.salao.financeiro.internal.application.EstornarFechamentoUseCase;
 import br.com.salao.financeiro.internal.application.FecharPeriodoUseCase;
 import br.com.salao.financeiro.internal.application.ListarFechamentosUseCase;
 import br.com.salao.financeiro.internal.application.PreverFechamentoUseCase;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -44,13 +46,16 @@ public class FechamentosController {
 
     private final PreverFechamentoUseCase prever;
     private final FecharPeriodoUseCase fechar;
+    private final EstornarFechamentoUseCase estornar;
     private final ListarFechamentosUseCase listar;
     private final ProfissionalApi profissionais;
 
     public FechamentosController(PreverFechamentoUseCase prever, FecharPeriodoUseCase fechar,
+                                 EstornarFechamentoUseCase estornar,
                                  ListarFechamentosUseCase listar, ProfissionalApi profissionais) {
         this.prever = prever;
         this.fechar = fechar;
+        this.estornar = estornar;
         this.listar = listar;
         this.profissionais = profissionais;
     }
@@ -89,7 +94,9 @@ public class FechamentosController {
             Money saldoAnterior,
             Money movimentoDoPeriodo,
             Money valorRepassado,
-            Money saldoATransportar) {
+            Money saldoATransportar,
+            /** Nulo enquanto o documento vale. Preenchido, ele é histórico. */
+            java.time.Instant estornadoEm) {
     }
 
     /**
@@ -120,6 +127,25 @@ public class FechamentosController {
         return comNomes(fechar.executar(req.de(), req.ate(), req.versaoDaPrevia()));
     }
 
+    /**
+     * Desfaz um fechamento: anula o repasse e devolve o período.
+     *
+     * <p>{@code POST} num sub-recurso, e não {@code DELETE}: o documento fica. Ele passa a contar
+     * que em tal dia pagou-se e depois anulou-se — que é justamente o que explica o dinheiro que
+     * saiu da conta.
+     *
+     * <p>Repetir devolve o mesmo documento, sem sobrescrever a data do primeiro estorno.
+     */
+    @PostMapping("/{id}/estorno")
+    public FechamentoResponse estornar(@PathVariable UUID id,
+                                       @Valid @RequestBody MotivoRequest req) {
+        return comNomes(List.of(estornar.executar(id, req.motivo()))).getFirst();
+    }
+
+    /** O motivo é o que separa correção de desfazimento silencioso. */
+    public record MotivoRequest(@NotBlank @Size(max = 500) String motivo) {
+    }
+
     /** Sem {@code profissionalId}, os contracheques de todo mundo no intervalo. */
     @GetMapping
     public List<FechamentoResponse> listar(
@@ -136,7 +162,7 @@ public class FechamentosController {
                 .map(f -> new FechamentoResponse(f.id(), f.profissionalId(),
                         nomes.get(f.profissionalId()), f.periodoInicio(), f.periodoFim(),
                         f.saldoAnterior(), f.movimentoDoPeriodo(), f.valorRepassado(),
-                        f.saldoATransportar()))
+                        f.saldoATransportar(), f.estornadoEm()))
                 .toList();
     }
 

@@ -464,3 +464,85 @@ pago, a quem e por qual período; correções futuras são novos lançamentos, n
 **Rotinas.** RT-FIN-006 · **Teste.** `FechamentoDePeriodoIT.contracheque_congelado`,
 `FechamentoDePeriodoIT.update_em_fechamento_falha`
 **Configurável?** Não · **Origem.** 2026-09-07
+
+---
+
+### RN-FIN-021 — A anulação nasce na competência da linha que ela anula
+
+**Enunciado.** O estorno de um lançamento específico e o estorno de um fechamento escrevem a linha
+`ESTORNO` com a **`data_competencia` da linha original**, não com o dia corrente. O estorno por
+origem (`RazaoApi.estornarOrigem`, usado por reabertura de comanda e cancelamento de vale) continua
+usando o dia do salão.
+
+**Motivo.** São dois atos diferentes. Reabrir uma comanda ou cancelar um vale é **fato de negócio
+que acontece hoje**: a cliente voltou, o dinheiro foi devolvido no balcão — a anulação é evento
+novo e pertence ao dia em que aconteceu (RN-FIN-010). Anular uma linha errada é dizer que ela
+**nunca deveria ter existido**; jogar a correção em outro mês deixaria o mês do erro errado e
+contaminaria um mês inocente.
+
+E há um caso em que a competência original é **obrigatória**: o estorno de um `REPASSE`.
+RN-FIN-017 dá ao repasse uma competência *escolhida* — o fim do período que ele liquida. Anulá-lo
+em outra data liberaria o período com a soma acumulada até o fim dele ainda contando o repasse
+original, e refechar pagaria **zero**: a liberação não liberaria nada.
+
+A regra que unifica: *a anulação de uma linha cuja competência foi escolhida herda essa
+competência.*
+
+**Onde é garantida.** `Anulacao.escrever` passa `original.dataCompetencia()` ·
+`EstornarLancamentoUseCase` · `EstornarFechamentoUseCase`.
+**Rotinas.** RT-FIN-007 · **Teste.** `EstornoIT.estorno_volta_na_competencia_do_periodo`,
+`EstornoIT.anulacao_herda_a_competencia`, `EstornoIT.periodo_estornado_e_refechavel`
+**Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-FIN-022 — O contracheque estornado fica; o que sai é a reivindicação do período
+
+**Enunciado.** Estornar um fechamento **não apaga** o documento: ele preenche `estornado_em` e
+passa a ser histórico. A constraint de sobreposição ignora estornados, então o período volta a
+poder ser fechado. `ultimoFim` também ignora estornados. A role da aplicação recebe
+`UPDATE (estornado_em)` — **uma coluna** — e nada mais.
+
+**Motivo.** As três alternativas são piores. Apagar a linha perde o registro de que o pagamento
+existiu, que é justamente o que explica o dinheiro que saiu da conta. Tirar o `EXCLUDE` e checar em
+Java troca uma garantia do banco por uma trava que não resiste a duas instâncias. Dar `UPDATE` na
+tabela inteira quebra RN-FIN-020 e abre a porta para alguém "corrigir" um `valor_repassado` já pago.
+
+O `GRANT` por coluna do PostgreSQL resolve os três: a imutabilidade do contracheque não foi
+relaxada, ficou **precisa**. E a coluna existe porque `EXCLUDE` só enxerga a própria tabela — não
+para guardar um status que o razão já tem.
+
+Ela responde, aliás, uma pergunta **diferente** da do razão. Um fechamento de repasse zero não tem
+linha de `REPASSE`: estorná-lo não anula lançamento nenhum, e ainda assim libera o período. O razão
+responde "o dinheiro voltou?"; a coluna responde "este documento ainda ocupa o período?".
+
+**Onde é garantida.** V43: `grant update (estornado_em)`, `EXCLUDE ... where (estornado_em is
+null)`, índice parcial `idx_fechamento_vigente` · `FechamentosJdbc.marcarEstornado` com
+`where estornado_em is null` · `FechamentoDoProfissional.vigente()`.
+**Rotinas.** RT-FIN-007 · **Teste.** `EstornoIT.grant_de_coluna_e_preciso`,
+`EstornoIT.documento_estornado_fica`, `EstornoIT.estornado_nao_barra_o_proximo`,
+`EstornoIT.estorno_de_fechamento_e_idempotente`,
+`FechamentoDePeriodoIT.update_em_fechamento_falha`
+**Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-FIN-023 — Um estorno não se estorna
+
+**Enunciado.** Estornar uma linha de tipo `ESTORNO` é recusado com
+`ER-FIN-ESTORNO_DE_ESTORNO`. Estornar duas vezes a mesma linha é idempotente e devolve zero
+anulações. Todo estorno exige motivo.
+
+**Motivo.** Anular uma anulação é **reaplicar** o valor original, e reaplicar dinheiro não pode
+acontecer por engano de clique. O pedido é ambíguo — quem quer o valor de volta faz um lançamento
+novo, com motivo e rastro próprio —, e adivinhar a intenção sairia caro.
+
+A idempotência vem do próprio razão, sem marca na linha original: quem já foi anulado tem uma linha
+apontando para si. Mesma forma de RN-FIN-010 e RN-FIN-013.
+
+**Onde é garantida.** `EstornarLancamentoUseCase` recusa `TipoDeLancamento.ESTORNO` ·
+`LancamentosJdbc.jaEstornado`.
+**Rotinas.** RT-FIN-007 · **Teste.** `EstornoIT.estorno_de_estorno_recusado`,
+`EstornoIT.estorno_de_lancamento_e_idempotente`,
+`EstornoIT.estorno_de_fechamento_exige_motivo`
+**Configurável?** Não · **Origem.** 2026-09-12

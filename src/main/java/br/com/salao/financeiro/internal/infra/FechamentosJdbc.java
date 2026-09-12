@@ -26,7 +26,7 @@ public class FechamentosJdbc {
 
     private static final String CAMPOS = """
             id, profissional_id, periodo_inicio, periodo_fim, saldo_anterior,
-            movimento_do_periodo, valor_repassado, criado_em
+            movimento_do_periodo, valor_repassado, criado_em, estornado_em
             """;
 
     private final JdbcClient jdbc;
@@ -100,8 +100,43 @@ public class FechamentosJdbc {
      * 31 de março não enxergaria o repasse de abril, e pagaria março de novo.
      */
     @Transactional(readOnly = true)
+    public Optional<FechamentoDoProfissional> porId(UUID id) {
+        return jdbc.sql("select " + CAMPOS + " from fechamento where id = :id")
+                .param("id", id)
+                .query(FechamentosJdbc::mapear)
+                .optional();
+    }
+
+    /**
+     * Anula o documento e devolve o período.
+     *
+     * <p>O único {@code update} que esta tabela aceita, e ele alcança UMA coluna: a V43 concede
+     * {@code update (estornado_em)} e mais nada. Tentar mexer em {@code valor_repassado} continua
+     * sendo recusado pelo banco (RN-FIN-020) — não por disciplina de quem escreve o código.
+     *
+     * <p>O {@code where estornado_em is null} torna a operação idempotente no próprio SQL:
+     * estornar duas vezes não sobrescreve a data do primeiro estorno.
+     */
+    @Transactional
+    public int marcarEstornado(UUID id, Instant quando) {
+        return jdbc.sql("""
+                update fechamento set estornado_em = :quando
+                 where id = :id and estornado_em is null
+                """)
+                .param("quando", OffsetDateTime.ofInstant(quando, ZoneOffset.UTC))
+                .param("id", id)
+                .update();
+    }
+
+    /**
+     * A data final do último fechamento VIGENTE do salão.
+     *
+     * <p>Estornado não conta. Se contasse, um fechamento anulado continuaria impedindo o período
+     * de ser refeito — e a liberação não liberaria nada.
+     */
+    @Transactional(readOnly = true)
     public Optional<LocalDate> ultimoFim() {
-        return jdbc.sql("select max(periodo_fim) from fechamento")
+        return jdbc.sql("select max(periodo_fim) from fechamento where estornado_em is null")
                 .query(Date.class)
                 .optional()
                 .map(Date::toLocalDate);
@@ -133,6 +168,9 @@ public class FechamentosJdbc {
                 new Money(rs.getBigDecimal("saldo_anterior")),
                 new Money(rs.getBigDecimal("movimento_do_periodo")),
                 new Money(rs.getBigDecimal("valor_repassado")),
-                rs.getObject("criado_em", OffsetDateTime.class).toInstant());
+                rs.getObject("criado_em", OffsetDateTime.class).toInstant(),
+                // Anulável: `getObject` devolve null direto, sem a armadilha do `wasNull`.
+                Optional.ofNullable(rs.getObject("estornado_em", OffsetDateTime.class))
+                        .map(OffsetDateTime::toInstant).orElse(null));
     }
 }

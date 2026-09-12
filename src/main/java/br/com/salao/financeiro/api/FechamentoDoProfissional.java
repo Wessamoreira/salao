@@ -27,7 +27,16 @@ public record FechamentoDoProfissional(
         Money saldoAnterior,
         Money movimentoDoPeriodo,
         Money valorRepassado,
-        Instant criadoEm) {
+        Instant criadoEm,
+        /**
+         * RT-FIN-007 — quando o documento foi anulado, ou {@code null} se ainda vale.
+         *
+         * <p>Responde uma pergunta diferente da do razão. O razão diz se o dinheiro voltou;
+         * isto diz se o documento <strong>ainda ocupa o período</strong>. Um fechamento de
+         * repasse zero não tem linha de {@code REPASSE} para anular, e mesmo assim estorná-lo
+         * libera o período.
+         */
+        Instant estornadoEm) {
 
     /**
      * O que sobra para o próximo período — zero quando tudo foi pago, negativo quando a pessoa
@@ -36,6 +45,11 @@ public record FechamentoDoProfissional(
      * <p>Derivado e não coluna: é aritmética dos três números que já estão gravados, e uma quarta
      * coluna seria a que discorda das outras três depois de alguém corrigir uma delas.
      */
+    /** Se o documento ainda vale. Estornado, ele é histórico e não ocupa mais o período. */
+    public boolean vigente() {
+        return estornadoEm == null;
+    }
+
     public Money saldoATransportar() {
         return saldoAnterior.somar(movimentoDoPeriodo).subtrair(valorRepassado);
     }

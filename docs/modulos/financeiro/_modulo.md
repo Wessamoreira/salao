@@ -54,6 +54,8 @@ de origem opaco (RN-FIN-002), e é isso que impede o ciclo com `atendimento`.
 | [RT-FIN-003](RT-FIN-003-apurar-comissao.md) — apurar comissão no fechamento | implementada |
 | [RT-FIN-004](RT-FIN-004-extrato-do-profissional.md) — extrato do profissional, item a item | implementada |
 | [RT-FIN-005](RT-FIN-005-vale.md) — vale / adiantamento | implementada |
+| [RT-FIN-006](RT-FIN-006-fechamento-e-repasse.md) — fechamento de período e repasse | implementada |
+| [RT-FIN-007](RT-FIN-007-estorno-de-lancamento.md) — estorno de lançamento e de fechamento | implementada |
 | [RT-FIN-006](RT-FIN-006-fechamento-e-repasse.md) — fechamento de período e repasse | em validação |
 
 ## Rotas
@@ -77,4 +79,4 @@ O **pagamento** não tem rota própria: é registrado pela rota da comanda
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-FIN-001 a RN-FIN-020.
+Ver [regras.md](regras.md) — RN-FIN-001 a RN-FIN-023.

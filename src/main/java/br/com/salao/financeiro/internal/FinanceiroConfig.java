@@ -7,7 +7,10 @@ import br.com.salao.financeiro.internal.application.CancelarValeUseCase;
 import br.com.salao.financeiro.internal.application.CascataDeComissao;
 import br.com.salao.financeiro.internal.application.Competencia;
 import br.com.salao.financeiro.internal.application.ConsultarExtratoUseCase;
+import br.com.salao.financeiro.internal.application.Anulacao;
 import br.com.salao.financeiro.internal.application.ContasDoPeriodo;
+import br.com.salao.financeiro.internal.application.EstornarFechamentoUseCase;
+import br.com.salao.financeiro.internal.application.EstornarLancamentoUseCase;
 import br.com.salao.financeiro.internal.application.FecharPeriodoUseCase;
 import br.com.salao.financeiro.internal.application.ListarFechamentosUseCase;
 import br.com.salao.financeiro.internal.application.ListarValesUseCase;
@@ -118,6 +121,26 @@ public class FinanceiroConfig {
                                                      AuditoriaApi auditoria, Relogio relogio) {
         return new FecharPeriodoUseCase(fechamentos, lancamentos, contas, periodo, auditoria,
                 relogio);
+    }
+
+    @Bean
+    public Anulacao anulacao(LancamentosJdbc lancamentos, Relogio relogio) {
+        return new Anulacao(lancamentos, relogio);
+    }
+
+    @Bean
+    public EstornarFechamentoUseCase estornarFechamentoUseCase(FechamentosJdbc fechamentos,
+                                                               Anulacao anulacao,
+                                                               AuditoriaApi auditoria,
+                                                               Relogio relogio) {
+        return new EstornarFechamentoUseCase(fechamentos, anulacao, auditoria, relogio);
+    }
+
+    @Bean
+    public EstornarLancamentoUseCase estornarLancamentoUseCase(LancamentosJdbc lancamentos,
+                                                               Anulacao anulacao,
+                                                               AuditoriaApi auditoria) {
+        return new EstornarLancamentoUseCase(lancamentos, anulacao, auditoria);
     }
 
     @Bean

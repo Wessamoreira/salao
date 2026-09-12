@@ -18,6 +18,23 @@ public enum ErrosDoFinanceiro implements CodigoDeErro {
     VALE_NAO_ENCONTRADO("ER-FIN-VALE_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
             "Vale não encontrado"),
 
+    FECHAMENTO_NAO_ENCONTRADO("ER-FIN-FECHAMENTO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
+            "Fechamento não encontrado"),
+
+    LANCAMENTO_NAO_ENCONTRADO("ER-FIN-LANCAMENTO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
+            "Lançamento não encontrado"),
+
+    /**
+     * Tentativa de estornar um estorno.
+     *
+     * <p>Código próprio porque a intenção de quem pediu é ambígua, e adivinhar sairia caro:
+     * anular uma anulação é reaplicar o valor original, e reaplicar dinheiro nunca deve
+     * acontecer por engano de clique. Quem quer o valor de volta lança um {@code AJUSTE} com
+     * motivo — um ato deliberado, com rastro próprio.
+     */
+    ESTORNO_DE_ESTORNO("ER-FIN-ESTORNO_DE_ESTORNO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Um estorno não se estorna"),
+
     /**
      * Período já fechado, ou anterior a um já fechado.
      *
