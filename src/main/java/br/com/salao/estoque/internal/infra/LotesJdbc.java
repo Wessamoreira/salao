@@ -1,5 +1,6 @@
 package br.com.salao.estoque.internal.infra;
 
+import br.com.salao.estoque.api.AlertasDeEstoque;
 import br.com.salao.estoque.api.LoteResumo;
 import br.com.salao.estoque.api.SaldoDoProduto;
 import br.com.salao.estoque.api.UnidadeDeMedida;
@@ -290,5 +291,103 @@ public class LotesJdbc {
                 rs.getBigDecimal("quantidade"),
                 validade == null ? null : validade.toLocalDate(),
                 rs.getDate("recebido_em").toLocalDate());
+    }
+
+    /**
+     * RT-EST-008 — produtos abaixo do mínimo definido.
+     *
+     * <p>{@code estoque_minimo is not null} no {@code where}, e não um {@code coalesce(...,0)}:
+     * quem não tem mínimo definido não entra na lista. Um alerta que ninguém lê ocupa o lugar do
+     * que importa, e com o default em zero todo produto nasceria alertando ao zerar.
+     */
+    @Transactional(readOnly = true)
+    public List<AlertasDeEstoque.ProdutoEmFalta> abaixoDoMinimo() {
+        // Consulta própria e não reuso de `SALDO`: aquela constante tem lista de colunas fixa e
+        // não traz `estoque_minimo`. Concatenar um `where` que referencia coluna ausente do
+        // `select` daria erro só em runtime.
+        return jdbc.sql("""
+                with saldo_por_lote as (
+                  select l.produto_id,
+                         l.custo_unitario,
+                         coalesce((select sum(m.quantidade) from movimento_estoque m
+                                    where m.lote_id = l.id), 0) as saldo
+                    from lote l
+                )
+                select p.id as produto_id, p.nome, p.unidade, p.estoque_minimo,
+                       coalesce(sum(s.saldo), 0) as quantidade,
+                       case when sum(case when s.saldo > 0 then s.saldo end) > 0
+                            then sum(case when s.saldo > 0
+                                          then s.saldo * s.custo_unitario end)
+                               / sum(case when s.saldo > 0 then s.saldo end)
+                       end as custo_medio
+                  from produto p
+                  left join saldo_por_lote s on s.produto_id = p.id
+                 where p.ativo and p.estoque_minimo is not null
+                 group by p.id, p.nome, p.unidade, p.estoque_minimo
+                having coalesce(sum(s.saldo), 0) <= p.estoque_minimo
+                 order by coalesce(sum(s.saldo), 0) - p.estoque_minimo, lower(p.nome)
+                """)
+                .query(LotesJdbc::mapearFalta)
+                .list();
+    }
+
+    /**
+     * RT-EST-008 — lotes que vencem dentro da janela, e os já vencidos.
+     *
+     * <p>Vencido entra na mesma lista porque a ação é a mesma: tirar da prateleira. Lote sem
+     * validade nunca vence e não aparece — é o caso do produto que não tem prazo.
+     *
+     * <p>Só com saldo positivo: um lote esgotado que vai vencer não é problema de ninguém.
+     */
+    @Transactional(readOnly = true)
+    public List<AlertasDeEstoque.LoteVencendo> vencendoEm(int dias) {
+        return jdbc.sql("""
+                select l.id, l.produto_id, p.nome as produto, l.codigo, l.validade,
+                       l.custo_unitario,
+                       coalesce(sum(m.quantidade), 0) as quantidade,
+                       (l.validade - current_date) as dias_restantes
+                  from lote l
+                  join produto p on p.id = l.produto_id
+                  left join movimento_estoque m on m.lote_id = l.id
+                 where l.validade is not null
+                   and l.validade <= current_date + cast(:dias as integer)
+                 group by l.id, l.produto_id, p.nome, l.codigo, l.validade, l.custo_unitario
+                having coalesce(sum(m.quantidade), 0) > 0
+                 order by l.validade, lower(p.nome)
+                """)
+                .param("dias", dias)
+                .query(LotesJdbc::mapearVencendo)
+                .list();
+    }
+
+    private static AlertasDeEstoque.ProdutoEmFalta mapearFalta(ResultSet rs, int linha)
+            throws SQLException {
+        BigDecimal quantidade = rs.getBigDecimal("quantidade");
+        BigDecimal custoMedio = rs.getBigDecimal("custo_medio");
+        Money valor = custoMedio == null || quantidade.signum() <= 0
+                ? Money.ZERO
+                : new Money(custoMedio).multiplicar(quantidade);
+        return new AlertasDeEstoque.ProdutoEmFalta(
+                rs.getObject("produto_id", UUID.class),
+                rs.getString("nome"),
+                UnidadeDeMedida.valueOf(rs.getString("unidade")),
+                quantidade,
+                rs.getBigDecimal("estoque_minimo"),
+                valor);
+    }
+
+    private static AlertasDeEstoque.LoteVencendo mapearVencendo(ResultSet rs, int linha)
+            throws SQLException {
+        BigDecimal quantidade = rs.getBigDecimal("quantidade");
+        Money custo = new Money(rs.getBigDecimal("custo_unitario"));
+        return new AlertasDeEstoque.LoteVencendo(
+                rs.getObject("id", UUID.class),
+                rs.getObject("produto_id", UUID.class),
+                rs.getString("produto"),
+                rs.getString("codigo"),
+                quantidade,
+                rs.getDate("validade").toLocalDate(),
+                rs.getLong("dias_restantes"),
+                custo.multiplicar(quantidade));
     }
 }

@@ -528,3 +528,56 @@ barato e mais correto do que decidir do lado de fora**.
 `EstornarComandaUseCase` · `BaixaFefo.devolver` (idempotente por construção, RN-ATD-022).
 **Rotinas.** RT-EST-007 · **Teste.** `FichaTecnicaIT.reabrir_devolve_o_consumo`
 **Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-EST-024 — Estoque mínimo nulo não alerta; zero alerta ao zerar
+
+**Enunciado.** `produto.estoque_minimo` é anulável. **Nulo** significa "ninguém definiu mínimo" e o
+produto não entra na lista de alertas. **Zero** significa "avise quando acabar". Produto exatamente
+no mínimo já alerta.
+
+**Motivo.** Quinta aplicação da mesma distinção neste projeto — `preco_venda` ("zero é um preço"),
+`taxa_prevista` ("zero seria taxa isenta"), `custo_medio` ("zero seriam unidades que não custaram
+nada"), `comissao_percentual` (RN-FIN-005) — e aqui ela muda o produto de verdade.
+
+Com `not null default 0`, todo produto nasceria com "avise quando acabar" e a tela de alertas
+viraria uma lista de cem linhas. **Um alerta que ninguém lê é pior que nenhum**, porque ocupa o
+lugar do que importa.
+
+E no mínimo já é hora de comprar: o mínimo é o piso, não o alarme de incêndio.
+
+**Onde é garantida.** V48: coluna anulável, `check (… is null or … >= 0)` e índice parcial
+`where estoque_minimo is not null` · `LotesJdbc.abaixoDoMinimo` filtra por
+`estoque_minimo is not null`, e não por `coalesce(…, 0)`.
+**Rotinas.** RT-EST-008 · **Teste.** `AlertasDeEstoqueIT.sem_minimo_nao_alerta`,
+`AlertasDeEstoqueIT.minimo_zero_alerta_ao_zerar`, `AlertasDeEstoqueIT.limite_do_minimo`,
+`AlertasDeEstoqueIT.remover_o_minimo`
+**Configurável?** O mínimo é a configuração · **Origem.** 2026-09-12
+
+---
+
+### RN-EST-025 — Vencido entra na mesma lista do vencendo; lote esgotado não entra
+
+**Enunciado.** O alerta de validade traz lotes com `validade` dentro da janela (30 dias por padrão)
+**e os já vencidos**, com `diasRestantes` negativo. Lote sem validade nunca vence. Lote com saldo
+zerado não aparece. Cada linha carrega o **custo em risco**.
+
+**Motivo.** Vencido e vencendo entram juntos porque a ação é a mesma: tirar da prateleira. Duas
+listas garantiriam que uma delas nunca fosse aberta.
+
+Lote esgotado que vai vencer não é problema de ninguém — alertar sobre ele treina a pessoa a
+ignorar a lista.
+
+E o custo em risco é o número que faz o dono agir: *"R$ 200 vão virar lixo em 10 dias"* move; *"3
+lotes vencendo"* não.
+
+Trinta dias porque é o prazo em que dá para usar ou devolver ao fornecedor (RT-EST-005). Sete seria
+tarde para devolver; noventa encheria a lista com o que ainda não é problema.
+
+**Onde é garantida.** `LotesJdbc.vencendoEm` com `having sum(quantidade) > 0` e
+`validade is not null` · `ConsultarAlertasUseCase.DIAS_DE_AVISO_PADRAO`.
+**Rotinas.** RT-EST-008 · **Teste.** `AlertasDeEstoqueIT.lote_vencendo`,
+`AlertasDeEstoqueIT.lote_vencido`, `AlertasDeEstoqueIT.fora_da_janela`,
+`AlertasDeEstoqueIT.sem_validade`, `AlertasDeEstoqueIT.lote_esgotado_nao_alerta`
+**Configurável?** A janela é parâmetro; o padrão, não · **Origem.** 2026-09-12

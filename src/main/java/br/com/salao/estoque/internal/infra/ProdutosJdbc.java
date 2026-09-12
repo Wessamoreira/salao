@@ -84,6 +84,22 @@ public class ProdutosJdbc implements ProdutoApi {
                 .update();
     }
 
+    /**
+     * Define ou remove o mínimo. {@code null} remove — e remover é diferente de pôr zero.
+     *
+     * <p>Nulo significa "sem mínimo definido" e não alerta; zero significa "avise quando acabar",
+     * que é uma decisão comum para o produto de vitrine. Ver V48.
+     */
+    @Transactional
+    public int definirEstoqueMinimo(UUID id, java.math.BigDecimal minimo) {
+        return jdbc.sql("""
+                update produto set estoque_minimo = :minimo, versao = versao + 1 where id = :id
+                """)
+                .param("id", id)
+                .param("minimo", minimo)
+                .update();
+    }
+
     @Transactional
     public int definirAtivacao(UUID id, boolean ativo) {
         return jdbc.sql("update produto set ativo = :ativo, versao = versao + 1 where id = :id")

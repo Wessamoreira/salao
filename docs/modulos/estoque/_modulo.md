@@ -48,6 +48,7 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 | [RT-EST-005](RT-EST-005-perda-ajuste-devolucao.md) — perda, ajuste e devolução com motivo | implementada |
 | [RT-EST-006](RT-EST-006-inventario.md) — inventário: contagem, divergência, ajuste | implementada |
 | [RT-EST-007](RT-EST-007-ficha-tecnica.md) — ficha técnica e consumo interno | implementada |
+| [RT-EST-008](RT-EST-008-alertas.md) — alertas de mínimo e de validade | implementada |
 
 ## Rotas
 
@@ -65,4 +66,4 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-EST-001 a RN-EST-023.
+Ver [regras.md](regras.md) — RN-EST-001 a RN-EST-025.

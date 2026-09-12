@@ -14,6 +14,8 @@ import br.com.salao.estoque.internal.application.DefinirItemDaFichaUseCase;
 import br.com.salao.estoque.internal.application.RemoverItemDaFichaUseCase;
 import br.com.salao.estoque.internal.infra.FichasJdbc;
 import br.com.salao.catalogo.api.ServicoApi;
+import br.com.salao.estoque.internal.application.ConsultarAlertasUseCase;
+import br.com.salao.estoque.internal.application.DefinirEstoqueMinimoUseCase;
 import br.com.salao.estoque.internal.application.BaixaFefo;
 import br.com.salao.estoque.internal.application.DevolverAoFornecedorUseCase;
 import br.com.salao.estoque.internal.application.MovimentoComMotivo;
@@ -84,6 +86,17 @@ public class EstoqueConfig {
     @Bean
     public ListarLotesUseCase listarLotesUseCase(LotesJdbc lotes) {
         return new ListarLotesUseCase(lotes);
+    }
+
+    @Bean
+    public DefinirEstoqueMinimoUseCase definirEstoqueMinimoUseCase(ProdutosJdbc produtos,
+                                                                   AuditoriaApi auditoria) {
+        return new DefinirEstoqueMinimoUseCase(produtos, auditoria);
+    }
+
+    @Bean
+    public ConsultarAlertasUseCase consultarAlertasUseCase(LotesJdbc lotes) {
+        return new ConsultarAlertasUseCase(lotes);
     }
 
     @Bean
