@@ -1,5 +1,8 @@
 package br.com.salao.atendimento.internal.web;
 
+import br.com.salao.atendimento.internal.application.EmitirComprovanteUseCase;
+import br.com.salao.atendimento.internal.application.EnviarComprovanteUseCase;
+import br.com.salao.atendimento.api.ComprovanteDeAtendimento;
 import br.com.salao.atendimento.api.AberturaDeComanda;
 import br.com.salao.atendimento.api.ComandaDetalhada;
 import br.com.salao.atendimento.api.ContaDaComanda;
@@ -25,6 +28,7 @@ import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -56,6 +60,8 @@ public class ComandasController {
     private final RegistrarPagamentoUseCase registrarPagamento;
     private final RemoverPagamentoUseCase removerPagamento;
     private final ConsultarContaUseCase consultarConta;
+    private final EmitirComprovanteUseCase emitirComprovante;
+    private final EnviarComprovanteUseCase enviarComprovante;
     private final FecharComandaUseCase fecharComanda;
     private final ReabrirComandaUseCase reabrirComanda;
     private final EstornarComandaUseCase estornarComanda;
@@ -77,7 +83,11 @@ public class ComandasController {
                               ConsultarContaUseCase consultarConta,
                               FecharComandaUseCase fecharComanda,
                               ReabrirComandaUseCase reabrirComanda,
-                              EstornarComandaUseCase estornarComanda) {
+                              EstornarComandaUseCase estornarComanda,
+                              EmitirComprovanteUseCase emitirComprovante,
+                              EnviarComprovanteUseCase enviarComprovante) {
+        this.emitirComprovante = emitirComprovante;
+        this.enviarComprovante = enviarComprovante;
         this.abrir = abrir;
         this.abertas = abertas;
         this.adicionarServico = adicionarServico;
@@ -301,6 +311,47 @@ public class ComandasController {
     @PostMapping("/{id}/fechamento")
     public ComandaDetalhada fechar(@PathVariable UUID id) {
         return fecharComanda.executar(id);
+    }
+
+    // ------------------------------------------------------------------ RT-FIN-008
+
+    /**
+     * O comprovante da comanda fechada.
+     *
+     * <p>Dois formatos na mesma rotina, e é de propósito: o JSON para a tela desenhar, o texto de
+     * 48 colunas para a impressora térmica do balcão. A mesma projeção nos dois, então o papel e a
+     * tela nunca discordam.
+     *
+     * <p>{@code GET}: nada é gravado. O comprovante se monta do que já está na comanda, com o
+     * snapshot de preço de RN-ATD-010 — dois pedidos devolvem o mesmo documento.
+     */
+    @GetMapping("/{id}/comprovante")
+    public ComprovanteDeAtendimento comprovante(@PathVariable UUID id) {
+        return emitirComprovante.executar(id);
+    }
+
+    /**
+     * O mesmo comprovante em texto de largura fixa, pronto para a térmica de 80mm.
+     *
+     * <p>Texto e não bytes de ESC/POS: a impressora é do salão e todo salão tem outro modelo.
+     * Quem fala com ela é o front, na máquina onde ela está ligada.
+     */
+    @GetMapping(value = "/{id}/comprovante/texto", produces = "text/plain;charset=UTF-8")
+    public String comprovanteEmTexto(@PathVariable UUID id) {
+        return emitirComprovante.texto(id);
+    }
+
+    /**
+     * Manda o comprovante pela mensagem. Segundo clique não manda segunda mensagem.
+     *
+     * <p>A lista do que a cliente consumiu <strong>não</strong> vai por aqui — ver
+     * {@code EnviarComprovanteUseCase}. Minimização de dado, não limitação técnica.
+     */
+    @PostMapping("/{id}/comprovante/envio")
+    public Map<String, UUID> enviarComprovante(@PathVariable UUID id) {
+        UUID cliente = consultar.executar(id).orElseThrow().comanda().clienteId();
+        return Map.of("mensagemId", enviarComprovante.executar(id, cliente),
+                "comandaId", id);
     }
 
     // ------------------------------------------------------------------ RT-ATD-007

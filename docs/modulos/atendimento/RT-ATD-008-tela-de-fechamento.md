@@ -9,7 +9,7 @@ depende_de: [RT-ATD-006, RT-INF-010]
 permissoes: [comanda:open, comanda:close, comanda:discount]
 eventos: []
 regras: [RN-ATD-025]
-atualizado_em: 2026-09-05
+atualizado_em: 2026-09-11
 ---
 
 # RT-ATD-008 — Tela de fechamento
@@ -64,7 +64,8 @@ veio.
 
 ## 7. A serifa estava no lugar errado
 
-O design system reserva a Instrument Serif a **dois** lugares: identidade do estabelecimento e
+O design system reserva a fonte serifada de identidade (pilha Bodoni/Didot) a **dois** lugares:
+identidade do estabelecimento e
 **totais** — *"o negócio é beleza; um gesto editorial se justifica. Em texto operacional, nunca."*
 
 A primeira versão desta tela fez o inverso: serifa em "Comanda #128" e em "Nenhuma comanda
@@ -103,5 +104,8 @@ encontrou, e ele não aparece em teste nenhum.
       desconto em reais existem na API e não na tela — só o desconto percentual está lá
 - [ ] **Reabrir e estornar não têm botão.** São de `comanda:reopen`, e a tela não mostra nada para
       quem tem a permissão
-- [ ] **Nada é responsivo abaixo de ~900px.** O balcão usa monitor; o celular do dono (R-UX-19) é
-      outra tela
+- [x] **A tela agora responde abaixo de 900px.** No celular, comandas abertas viram uma faixa
+      horizontal, lançamento de serviço e produto empilha, a tabela de itens ganha região de
+      rolagem identificada para teclado/leitor de tela e o fechamento ocupa a largura disponível.
+      A alteração recebeu revisão estática; a validação visual no navegador ficou adiada a pedido
+      do responsável pelo projeto

@@ -535,3 +535,82 @@ as mutações devolvem `ComandaDetalhada`/`ContaDaComanda` e a tela invalida as 
 **Rotinas.** RT-ATD-008 · **Teste.** `Comandas.test.tsx` — "mostra o que falta receber sem calcular
 nada", "libera o fechamento quando a conta zera"
 **Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-ATD-026 — O comprovante é projeção de comanda fechada, e só dela
+
+**Enunciado.** O comprovante se monta dos itens, descontos e pagamentos já gravados na comanda —
+nada é persistido. Ele é emitido **apenas** para comanda `FECHADA`: aberta, reaberta ou estornada,
+a emissão é recusada com `ER-ATD-COMPROVANTE_EXIGE_FECHADA` (409).
+
+**Motivo.** Guardar o comprovante criaria uma segunda cópia dos mesmos números, e a cópia é a que
+discorda depois de um estorno. Como projeção sobre o snapshot de preço de RN-ATD-010, ele é
+reprodutível: dois comprovantes da mesma comanda são idênticos, sempre.
+
+E o recorte temporal não é rigor: comanda aberta ainda vai mudar, e um recibo impresso agora seria
+desmentido no próximo item. Reaberta ou estornada, o papel que a cliente tem na mão **deixou de
+valer** — emitir outro fingindo que está tudo certo é pior do que recusar. É a pendência que
+RT-ATD-007 registrou, agora com resposta.
+
+**Onde é garantida.** `EmitirComprovanteUseCase` confere `StatusDaComanda.FECHADA` · nenhuma
+tabela nova (V44 não cria nada) · `EnviarComprovanteUseCase` passa pelo emissor, então a recusa
+vale para os dois caminhos de saída.
+**Rotinas.** RT-FIN-008 · **Teste.** `ComprovanteIT.aberta_nao_tem_comprovante`,
+`ComprovanteIT.reabrir_invalida`, `ComprovanteIT.envio_exige_fechada`,
+`ComprovanteIT.comprovante_e_reproduzivel`
+**Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-ATD-027 — O papel leva os itens; a mensagem leva só valor e data
+
+**Enunciado.** O texto de 48 colunas para a térmica traz item a item. A mensagem
+(`comprovante-de-atendimento`) traz salão, data, número e total — **sem a lista do que a cliente
+consumiu**. Os dois avisam que não é documento fiscal.
+
+**Motivo.** Minimização de dado (LGPD art. 6, III), não limitação técnica. O papel fica na mão da
+cliente; a mensagem atravessa provedor de terceiro e fica no histórico de um aparelho que pode ser
+compartilhado. "Coloração, progressiva" é informação sobre o corpo de alguém, e não é necessária
+para o que a mensagem serve — confirmar valor e data. Quem quer o detalhe pede o papel.
+
+E o aviso de "não é documento fiscal" está nos **dois**: R-UX-16 exige que o comprovante diga o que
+não é, e avisar só na bobina avisa para metade das clientes. No texto, a frase mora no
+renderizador, não em quem chama — assim ela não pode ser esquecida num caminho de saída.
+
+**Onde é garantida.** `TextoDoComprovante.render` imprime a frase sempre ·
+`CatalogoDeModelos` registra o modelo sem `{itens}` · `EnviarComprovanteUseCase` monta só quatro
+parâmetros.
+**Rotinas.** RT-FIN-008 · **Teste.** `TextoDoComprovanteTest.avisa_que_nao_e_fiscal`,
+`ComprovanteIT.texto_pronto_para_a_termica`
+**Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-ATD-028 — 48 colunas, valor à direita, corte seco
+
+**Enunciado.** O texto do comprovante tem largura fixa de 48 colunas (fonte A de uma térmica de
+80mm). Toda linha que carrega valor fecha exatamente na coluna 48. Nome que não cabe é cortado
+**sem reticências**. O detalhe do item é recuado; o rótulo de total, não.
+
+**Motivo.** A térmica não quebra linha — ela **corta**. Uma linha de 50 colunas perde os dois
+últimos caracteres, que é exatamente onde o valor está.
+
+Em largura fixa é o alinhamento que transforma uma lista de valores em coluna somável; sem ele o
+olho reprocessa cada linha, pelo mesmo motivo de `tnum` na tela. E não há negrito nem tamanho: o
+**recuo** é a única hierarquia disponível.
+
+Reticências gastariam três colunas para dizer que faltou espaço — em 48 colunas, três caracteres
+são uma palavra, e quem lê o recibo já sabe o que comprou.
+
+> **A primeira versão tinha duas bordas direitas.** O preenchimento era calculado sobre o rótulo
+> original, não sobre o cortado, e `corta` também removia o recuo: os itens fechavam na coluna 46 e
+> os totais na 48. O teste que existia olhava só as linhas de total e passou. Agora ele exige a
+> coluna 48 em **toda** linha com valor — o defeito só apareceu ao imprimir a amostra e medir.
+
+**Onde é garantida.** `TextoDoComprovante.colunas` mede o rótulo já cortado ·
+`corta` usa `stripTrailing`, preservando o recuo.
+**Rotinas.** RT-FIN-008 · **Teste.** `TextoDoComprovanteTest.cabe_na_bobina`,
+`TextoDoComprovanteTest.dinheiro_alinhado_a_direita`,
+`TextoDoComprovanteTest.hierarquia_pelo_recuo`, `TextoDoComprovanteTest.corte_seco`
+**Configurável?** A largura, não — 58mm é pendência · **Origem.** 2026-09-12

@@ -107,6 +107,6 @@ Não há o que informar: o que decide o fechamento já está na comanda. `POST` 
 - [ ] **Não há razão nem faturamento consolidado.** "Quanto entrou hoje" é uma soma de pagamentos
 - [ ] **Não se desfaz.** Reabrir e estornar é RT-ATD-007 — e vai precisar devolver as unidades ao
       lote de onde saíram, informação que só existe nos movimentos
-- [ ] **Fechar não avisa a cliente.** O comprovante é RT-FIN-008
+- [x] ~~**Fechar não avisa a cliente.**~~ O comprovante existe (RT-FIN-008); falta a tela de fechamento oferecê-lo no mesmo passo
 - [ ] **Não há tela.** A de fechamento em um passo é RT-ATD-008 — e é ela que torna tudo isto
       utilizável por quem está no balcão

@@ -99,7 +99,7 @@ foi rompida — não quando a sexta dependência entrar.
 
 | ID | Evento | Quando | Consumidores |
 |---|---|---|---|
-| EV-ATD-001 | `ComandaFechada` | fechamento (RT-ATD-006) | `agenda` (planejado), `financeiro` (RT-FIN-003), comprovante (RT-FIN-008) — **nenhum existe ainda** |
+| EV-ATD-001 | `ComandaFechada` | fechamento (RT-ATD-006) | `agenda` (planejado), `financeiro` (RT-FIN-003), comprovante ([RT-FIN-008](RT-FIN-008-comprovante.md), entregue) |
 | EV-ATD-002 | `ComandaReaberta` | reabertura (RT-ATD-007) | quem apurar sobre o fechamento precisa desfazer |
 | EV-ATD-003 | `ComandaEstornada` | estorno (RT-ATD-007) | idem, e o razão (RT-FIN-007) |
 

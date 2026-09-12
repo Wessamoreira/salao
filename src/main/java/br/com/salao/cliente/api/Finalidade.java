@@ -27,7 +27,20 @@ public enum Finalidade {
      * projeto não fez, e invocá-lo sem fazê-lo é uma base legal de fachada. Consentimento é a
      * escolha conservadora e defensável enquanto esse trabalho não existir.
      */
-    PESQUISA_DE_SATISFACAO(BaseLegal.CONSENTIMENTO);
+    PESQUISA_DE_SATISFACAO(BaseLegal.CONSENTIMENTO),
+
+    /**
+     * "Seu comprovante do atendimento de hoje." (RT-FIN-008)
+     *
+     * <p>Execução de contrato, e não consentimento: a cliente <strong>pediu</strong> o
+     * comprovante do serviço que acabou de pagar. Exigir opt-in para entregar o recibo do que ela
+     * comprou seria transformar a LGPD em obstáculo ao próprio contrato — e o efeito prático
+     * seria a recepção mandando pelo WhatsApp pessoal, fora de qualquer registro.
+     *
+     * <p>O que continua valendo é o resto: sem telefone não sai, e a revogação total da cliente
+     * (RT-CLI-005) alcança isto como alcança tudo.
+     */
+    COMPROVANTE_DE_ATENDIMENTO(BaseLegal.EXECUCAO_DE_CONTRATO);
 
     private final BaseLegal baseLegal;
 

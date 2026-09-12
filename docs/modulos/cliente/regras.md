@@ -534,3 +534,25 @@ de sair caçando. O custo é declarado — a trilha responde "quem alterou o tel
 **Rotinas.** RT-CLI-007, RT-CLI-005 · **Teste.** `EdicaoDeClienteIT.trilha_sem_dado_pessoal`
 **Configurável?** Não
 **Origem.** 2026-08-30
+
+---
+
+### RN-CLI-031 — Comprovante é execução de contrato, não consentimento
+
+**Enunciado.** `Finalidade.COMPROVANTE_DE_ATENDIMENTO` tem base legal `EXECUCAO_DE_CONTRATO`, e
+portanto é permitida sem registro de decisão da cliente.
+
+**Motivo.** A cliente **pediu** o recibo do serviço que acabou de pagar. Exigir opt-in para
+entregar o comprovante do que ela comprou transformaria a LGPD em obstáculo ao próprio contrato — e
+o efeito prático seria a recepção mandando pelo WhatsApp pessoal, fora de qualquer registro, o que
+é pior para a cliente em todos os sentidos.
+
+O que continua valendo é o resto: sem telefone não sai, a anonimização (RT-CLI-005) alcança isto
+como alcança tudo, e quem decide se pode enviar continua sendo o `notificacao`, contra o
+`ClienteApi` — a rotina do comprovante não repete a pergunta.
+
+**Onde é garantida.** `Finalidade.COMPROVANTE_DE_ATENDIMENTO(BaseLegal.EXECUCAO_DE_CONTRATO)` ·
+V44 estende o `check` de `cliente_consentimento` **e** o de `mensagem`.
+**Rotinas.** RT-FIN-008 · **Teste.** `ConsentimentoIT` percorre `Finalidade.values()` contra o
+`check` do banco · `ComprovanteIT.envio_e_idempotente`
+**Configurável?** Não · **Origem.** 2026-09-12

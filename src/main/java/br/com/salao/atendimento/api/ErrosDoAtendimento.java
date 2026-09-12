@@ -29,6 +29,17 @@ public enum ErrosDoAtendimento implements CodigoDeErro {
      * <p>É o erro mais compartilhado do módulo — lançar item, remover, descontar e mexer em
      * executante param todos aqui —, e é por isso que ele precisa de uma declaração só.
      */
+    /**
+     * Comprovante pedido para uma comanda que não está fechada (RT-FIN-008).
+     *
+     * <p>Código próprio porque a recusa é temporal, não de dado: aberta, ela ainda vai mudar;
+     * reaberta ou estornada, o comprovante que a cliente tem na mão deixou de valer. Um recibo de
+     * comanda aberta seria impresso e desmentido cinco minutos depois.
+     */
+    COMPROVANTE_EXIGE_FECHADA("ER-ATD-COMPROVANTE_EXIGE_FECHADA",
+            org.springframework.http.HttpStatus.CONFLICT,
+            "O comprovante existe só para comanda fechada"),
+
     COMANDA_NAO_ESTA_ABERTA("ER-ATD-COMANDA_NAO_ESTA_ABERTA", HttpStatus.CONFLICT,
             "Esta comanda não está aberta"),
 

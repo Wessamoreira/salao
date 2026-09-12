@@ -1,6 +1,8 @@
 package br.com.salao.atendimento.internal;
 
 import br.com.salao.agenda.api.AgendaApi;
+import br.com.salao.atendimento.internal.application.EnviarComprovanteUseCase;
+import br.com.salao.atendimento.internal.application.EmitirComprovanteUseCase;
 import br.com.salao.atendimento.internal.application.AbrirComandaUseCase;
 import br.com.salao.atendimento.internal.application.AdicionarItemDeProdutoUseCase;
 import br.com.salao.atendimento.internal.application.AdicionarItemDeServicoUseCase;
@@ -94,6 +96,21 @@ public class AtendimentoConfig {
     @Bean
     public ConsultarComandaUseCase consultarComandaUseCase(ComandasJdbc comandas) {
         return new ConsultarComandaUseCase(comandas);
+    }
+
+    @Bean
+    public EmitirComprovanteUseCase emitirComprovanteUseCase(
+            ConsultarComandaUseCase comandas, PagamentoApi pagamentos,
+            br.com.salao.cliente.api.ClienteApi clientes,
+            br.com.salao.iam.api.EstabelecimentoApi estabelecimentos) {
+        return new EmitirComprovanteUseCase(comandas, pagamentos, clientes, estabelecimentos);
+    }
+
+    @Bean
+    public EnviarComprovanteUseCase enviarComprovanteUseCase(
+            EmitirComprovanteUseCase emitir,
+            br.com.salao.notificacao.api.NotificacaoApi notificacoes) {
+        return new EnviarComprovanteUseCase(emitir, notificacoes);
     }
 
     @Bean
