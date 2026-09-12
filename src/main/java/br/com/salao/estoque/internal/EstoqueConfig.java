@@ -4,6 +4,11 @@ import br.com.salao.estoque.internal.application.AtualizarProdutoUseCase;
 import br.com.salao.estoque.internal.application.CadastrarProdutoUseCase;
 import br.com.salao.estoque.internal.application.DefinirAtivacaoDoProdutoUseCase;
 import br.com.salao.estoque.internal.application.DefinirPrecoDeVendaUseCase;
+import br.com.salao.estoque.internal.application.AbrirInventarioUseCase;
+import br.com.salao.estoque.internal.application.AplicarInventarioUseCase;
+import br.com.salao.estoque.internal.application.CancelarInventarioUseCase;
+import br.com.salao.estoque.internal.application.ConsultarInventarioUseCase;
+import br.com.salao.estoque.internal.application.ContarLoteUseCase;
 import br.com.salao.estoque.internal.application.BaixaFefo;
 import br.com.salao.estoque.internal.application.DevolverAoFornecedorUseCase;
 import br.com.salao.estoque.internal.application.MovimentoComMotivo;
@@ -14,6 +19,7 @@ import br.com.salao.estoque.internal.application.ListarLotesUseCase;
 import br.com.salao.estoque.internal.application.ListarProdutosUseCase;
 import br.com.salao.estoque.internal.application.RegistrarEntradaDeLoteUseCase;
 import br.com.salao.estoque.api.ProdutoApi;
+import br.com.salao.estoque.internal.infra.InventariosJdbc;
 import br.com.salao.estoque.internal.infra.LotesJdbc;
 import br.com.salao.estoque.internal.infra.ProdutosJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
@@ -78,6 +84,43 @@ public class EstoqueConfig {
     @Bean
     public BaixaFefo baixaFefo(LotesJdbc lotes, Relogio relogio) {
         return new BaixaFefo(lotes, relogio);
+    }
+
+    @Bean
+    public InventariosJdbc inventariosJdbc(DataSource dataSource) {
+        return new InventariosJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public AbrirInventarioUseCase abrirInventarioUseCase(InventariosJdbc inventarios,
+                                                         Relogio relogio) {
+        return new AbrirInventarioUseCase(inventarios, relogio);
+    }
+
+    @Bean
+    public ContarLoteUseCase contarLoteUseCase(InventariosJdbc inventarios, LotesJdbc lotes,
+                                               Relogio relogio) {
+        return new ContarLoteUseCase(inventarios, lotes, relogio);
+    }
+
+    @Bean
+    public ConsultarInventarioUseCase consultarInventarioUseCase(InventariosJdbc inventarios) {
+        return new ConsultarInventarioUseCase(inventarios);
+    }
+
+    @Bean
+    public AplicarInventarioUseCase aplicarInventarioUseCase(
+            InventariosJdbc inventarios, MovimentoComMotivo movimentos,
+            EstabelecimentoApi estabelecimentos, AuditoriaApi auditoria, Relogio relogio) {
+        return new AplicarInventarioUseCase(inventarios, movimentos, estabelecimentos,
+                auditoria, relogio);
+    }
+
+    @Bean
+    public CancelarInventarioUseCase cancelarInventarioUseCase(InventariosJdbc inventarios,
+                                                               AuditoriaApi auditoria,
+                                                               Relogio relogio) {
+        return new CancelarInventarioUseCase(inventarios, auditoria, relogio);
     }
 
     @Bean

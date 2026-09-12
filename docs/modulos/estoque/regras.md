@@ -371,3 +371,89 @@ custo do próprio lote · o lock e a releitura em comando separado repetem o cui
 `PerdaAjusteDevolucaoIT.ajuste_positivo_usa_o_custo_do_lote`,
 `PerdaAjusteDevolucaoIT.ajuste_nao_fica_negativo`
 **Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-EST-018 — O esperado do inventário congela no instante da contagem, e o ajuste é um delta
+
+**Enunciado.** Cada linha de `inventario_item` guarda `quantidade_esperada` — o saldo do lote **no
+momento em que aquele lote foi contado**. Ao aplicar, o movimento de `AJUSTE` é
+`contada − esperada`. Linha que bateu não vira movimento.
+
+**Motivo.** As duas alternativas estragam o resultado.
+
+**Congelar ao abrir o inventário** faria uma venda durante a contagem virar divergência falsa: o
+sistema esperava 10, venderam 2, você contou 7, e o ajuste sairia −3 quando a divergência real é
+−1. Num salão a contagem leva horas e não se para de vender.
+
+**Recalcular ao aplicar** faria o número confirmado não ser o número visto — a confirmação deixaria
+de confirmar coisa alguma. É o mesmo defeito que a versão da prévia resolve no fechamento
+(RN-FIN-019).
+
+Congelando por linha, o ajuste é um **delta** e não um "passe a valer o contado": movimento
+legítimo depois da contagem continua valendo em cima da correção — 10 − 2 − 3 dá 5, que é
+exatamente 7 − 2. A janela de erro fica do tamanho de uma prateleira, não do inventário inteiro.
+
+E contar o mesmo lote de novo é **recontar**: substitui a linha, com o esperado do novo instante.
+Quem recontou está corrigindo a própria contagem, não achando mais unidades.
+
+**Onde é garantida.** `ContarLoteUseCase` grava `lote.quantidade()` do instante ·
+`inventario_item` com `unique (inventario_id, lote_id)` e `on conflict do update` ·
+`ItemContado.divergencia()`.
+**Rotinas.** RT-EST-006 · **Teste.** `InventarioIT.venda_durante_a_contagem`,
+`InventarioIT.recontar_substitui`, `InventarioIT.linha_que_bateu`
+**Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-EST-019 — Um inventário aberto por salão, e aplicar é tudo ou nada
+
+**Enunciado.** Existe no máximo **um** inventário `ABERTO` por estabelecimento, garantido por
+índice único parcial. Aplicar escreve todos os ajustes numa transação: se um lote não aceitar o
+seu, o inventário inteiro é recusado, nada é escrito e ele **continua aberto**.
+
+**Motivo.** Dois inventários abertos contariam o mesmo lote com esperados diferentes, e aplicar os
+dois somaria duas correções para uma única divergência — o estoque ficaria pior do que antes da
+contagem. O índice é parcial para o histórico de encerrados ficar; é a mesma forma do `EXCLUDE`
+parcial do fechamento (RN-FIN-022).
+
+E aplicar parcialmente deixaria o estoque corrigido pela metade sem ninguém saber qual metade. A
+recusa **nomeia o produto e o lote**: com dez lotes conferidos, "saldo insuficiente" sozinho não
+diz o que recontar.
+
+Lote não contado **não aparece** na folha, e não é tratado como zero: um zero implícito faria um
+inventário parcial zerar o estoque que ninguém olhou.
+
+**Onde é garantida.** V46: índice `um_inventario_aberto_por_salao` ·
+`AbrirInventarioUseCase` traduz a violação em frase · `AplicarInventarioUseCase` numa transação,
+com `InventariosJdbc.travar` e `encerrar` condicionado a `status = 'ABERTO'`.
+**Rotinas.** RT-EST-006 · **Teste.** `InventarioIT.um_aberto_por_salao`,
+`InventarioIT.ajuste_que_nao_cabe`, `InventarioIT.aplicar_duas_vezes`,
+`InventarioIT.aplicar_libera`, `InventarioIT.cancelar_libera`
+**Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-EST-020 — O inventário é documento de trabalho; o movimento que ele produz, não
+
+**Enunciado.** `inventario` e `inventario_item` aceitam `UPDATE` — recontar corrige a linha. Nenhum
+dos dois aceita `DELETE`. O movimento de `AJUSTE` que sai da aplicação é imutável (RN-EST-015).
+Inventário `APLICADO` não se cancela: desfazer é lançar o ajuste contrário.
+
+**Motivo.** A separação é o ponto. Quem recontou uma prateleira precisa corrigir a contagem; quem
+aplicou precisa não poder mexer no movimento. Misturar as duas coisas numa tabela só obrigaria a
+escolher entre contagem imutável (que não serve) e movimento mutável (que apaga a explicação).
+
+Sem `DELETE` porque uma contagem apagada é uma prateleira que ninguém sabe se foi contada. Recontar
+sobrescreve; desistir cancela o inventário inteiro — e a contagem descartada **fica**, porque é
+informação, especialmente se a recontagem der outro número.
+
+O motivo do `AJUSTE` é o próprio inventário ("Inventário de 12/09/2026"), o que satisfaz RN-EST-014
+com algo mais útil que texto livre por linha: ele amarra o movimento ao documento que tem a
+contagem, o esperado e quem contou.
+
+**Onde é garantida.** V46: `revoke delete` nas duas tabelas ·
+`CancelarInventarioUseCase` recusa `APLICADO` · `AplicarInventarioUseCase` monta o motivo.
+**Rotinas.** RT-EST-006 · **Teste.** `InventarioIT.aplicado_nao_cancela`,
+`InventarioIT.cancelar_libera`, `InventarioIT.ajuste_leva_motivo`
+**Configurável?** Não · **Origem.** 2026-09-12

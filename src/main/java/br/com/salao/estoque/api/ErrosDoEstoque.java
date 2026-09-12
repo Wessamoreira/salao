@@ -44,6 +44,23 @@ public enum ErrosDoEstoque implements CodigoDeErro {
      * o que resta ou se troca o produto, e "saldo insuficiente" sozinho não responde nenhuma das
      * duas.
      */
+    INVENTARIO_NAO_ENCONTRADO("ER-EST-INVENTARIO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
+            "Inventário não encontrado"),
+
+    /**
+     * Já existe um inventário aberto neste salão (RT-EST-006).
+     *
+     * <p>{@code 409} e não {@code 422}: nada está errado no pedido, ele chegou na hora errada.
+     * Dois inventários abertos contariam o mesmo lote com esperados diferentes, e aplicar os dois
+     * somaria duas correções para uma divergência — o estoque ficaria pior que antes da contagem.
+     */
+    INVENTARIO_JA_ABERTO("ER-EST-INVENTARIO_JA_ABERTO", HttpStatus.CONFLICT,
+            "Já existe um inventário aberto"),
+
+    /** Contar ou aplicar um inventário que já foi encerrado. */
+    INVENTARIO_ENCERRADO("ER-EST-INVENTARIO_ENCERRADO", HttpStatus.CONFLICT,
+            "Este inventário já foi encerrado"),
+
     LOTE_NAO_ENCONTRADO("ER-EST-LOTE_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
             "Lote não encontrado"),
 

@@ -43,6 +43,8 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 | [RT-EST-002](RT-EST-002-entrada-de-lote.md) — entrada de lote com custo e validade | implementada |
 | [RT-EST-003](RT-EST-003-saldo-e-custo-medio.md) — saldo e custo médio ponderado | implementada |
 | [RT-EST-004](RT-EST-004-baixa-fefo.md) — baixa FEFO, venda e consumo interno | implementada |
+| [RT-EST-005](RT-EST-005-perda-ajuste-devolucao.md) — perda, ajuste e devolução com motivo | implementada |
+| [RT-EST-006](RT-EST-006-inventario.md) — inventário: contagem, divergência, ajuste | implementada |
 
 ## Rotas
 
@@ -60,4 +62,4 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-EST-001 a RN-EST-017.
+Ver [regras.md](regras.md) — RN-EST-001 a RN-EST-020.
