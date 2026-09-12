@@ -52,8 +52,8 @@ Ver o próprio extrato exige saber **qual profissional** é o usuário logado �
 `profissional_id`.
 
 É a mesma lacuna que impede `agenda:read:own` nas doze rotinas da agenda, e resolvê-la é rotina do
-`iam`. Hoje quem tem só a permissão própria consegue ler o extrato de qualquer um, porque não há
-como amarrar a permissão a uma pessoa — está nas pendências, e é a mais séria desta rotina.
+`iam`. Enquanto o vínculo não existe, a permissão própria falha fechada: ela não aceita um
+`profissionalId` escolhido pelo cliente e não expõe salário alheio.
 
 ## 5b. Um campo mudou de nome em RT-FIN-005
 
@@ -71,9 +71,8 @@ comanda era a única origem possível; com o vale, um id de vale guardado num ca
 
 ## 7. Pendências
 
-- [ ] **`financeiro:read:own` não amarra ninguém.** Quem tem só a permissão própria lê o extrato de
-      qualquer profissional, porque o usuário não tem `profissional_id`. É a lacuna do `iam` que já
-      bloqueava `agenda:read:own` — e aqui ela expõe salário alheio, o que é pior
+- [ ] **`financeiro:read:own` ainda não entrega o próprio extrato.** O acesso falha fechado até o
+      `iam` vincular usuário e profissional; ninguém escolhe um id e lê salário alheio
 - [x] ~~**Não há total por tipo.**~~ Resolvida em RT-FIN-005: o extrato traz `totais`, uma linha
       por tipo. Virou necessária no mesmo dia em que o vale passou a entrar na conta — RN-FIN-015
 - [x] ~~**Vale não existe.**~~ Entregue em RT-FIN-005: as linhas de `VALE` entram neste extrato e a

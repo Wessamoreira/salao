@@ -30,8 +30,8 @@ public class ListarValesUseCase {
         this.vales = vales;
     }
 
-    @PreAuthorize("hasAuthority('" + Permissao.FINANCEIRO_LER_TODOS + "')"
-            + " or hasAuthority('" + Permissao.FINANCEIRO_LER_PROPRIO + "')")
+    // Falha fechada até o IAM conseguir resolver qual profissional pertence ao usuário atual.
+    @PreAuthorize("hasAuthority('" + Permissao.FINANCEIRO_LER_TODOS + "')")
     @Transactional(readOnly = true)
     public List<Vale> executar(UUID profissionalId, LocalDate de, LocalDate ate) {
         if (de == null || ate == null || ate.isBefore(de)) {

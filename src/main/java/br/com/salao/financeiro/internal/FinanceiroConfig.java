@@ -7,7 +7,12 @@ import br.com.salao.financeiro.internal.application.CancelarValeUseCase;
 import br.com.salao.financeiro.internal.application.CascataDeComissao;
 import br.com.salao.financeiro.internal.application.Competencia;
 import br.com.salao.financeiro.internal.application.ConsultarExtratoUseCase;
+import br.com.salao.financeiro.internal.application.ContasDoPeriodo;
+import br.com.salao.financeiro.internal.application.FecharPeriodoUseCase;
+import br.com.salao.financeiro.internal.application.ListarFechamentosUseCase;
 import br.com.salao.financeiro.internal.application.ListarValesUseCase;
+import br.com.salao.financeiro.internal.application.PeriodoDeFechamento;
+import br.com.salao.financeiro.internal.application.PreverFechamentoUseCase;
 import br.com.salao.financeiro.internal.application.RegistrarValeUseCase;
 import br.com.salao.financeiro.internal.application.DefinirRegraDeComissaoUseCase;
 import br.com.salao.financeiro.internal.application.ListarRegrasDeComissaoUseCase;
@@ -19,6 +24,7 @@ import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.financeiro.internal.application.Pagamentos;
 import br.com.salao.financeiro.internal.infra.RegrasDeComissaoJdbc;
 import br.com.salao.financeiro.internal.infra.PagamentosJdbc;
+import br.com.salao.financeiro.internal.infra.FechamentosJdbc;
 import br.com.salao.financeiro.internal.infra.ValesJdbc;
 import br.com.salao.shared.idempotencia.Idempotencia;
 import br.com.salao.shared.tempo.Relogio;
@@ -80,6 +86,43 @@ public class FinanceiroConfig {
     @Bean
     public ListarValesUseCase listarValesUseCase(ValesJdbc vales) {
         return new ListarValesUseCase(vales);
+    }
+
+    @Bean
+    public FechamentosJdbc fechamentosJdbc(DataSource dataSource) {
+        return new FechamentosJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public ContasDoPeriodo contasDoPeriodo(LancamentosJdbc lancamentos) {
+        return new ContasDoPeriodo(lancamentos);
+    }
+
+    @Bean
+    public PeriodoDeFechamento periodoDeFechamento(FechamentosJdbc fechamentos,
+                                                   Competencia competencia) {
+        return new PeriodoDeFechamento(fechamentos, competencia);
+    }
+
+    @Bean
+    public PreverFechamentoUseCase preverFechamentoUseCase(ContasDoPeriodo contas,
+                                                           PeriodoDeFechamento periodo) {
+        return new PreverFechamentoUseCase(contas, periodo);
+    }
+
+    @Bean
+    public FecharPeriodoUseCase fecharPeriodoUseCase(FechamentosJdbc fechamentos,
+                                                     LancamentosJdbc lancamentos,
+                                                     ContasDoPeriodo contas,
+                                                     PeriodoDeFechamento periodo,
+                                                     AuditoriaApi auditoria, Relogio relogio) {
+        return new FecharPeriodoUseCase(fechamentos, lancamentos, contas, periodo, auditoria,
+                relogio);
+    }
+
+    @Bean
+    public ListarFechamentosUseCase listarFechamentosUseCase(FechamentosJdbc fechamentos) {
+        return new ListarFechamentosUseCase(fechamentos);
     }
 
     @Bean

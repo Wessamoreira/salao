@@ -58,8 +58,8 @@ public class ConsultarExtratoUseCase {
         this.profissionais = profissionais;
     }
 
-    @PreAuthorize("hasAuthority('" + Permissao.FINANCEIRO_LER_TODOS + "')"
-            + " or hasAuthority('" + Permissao.FINANCEIRO_LER_PROPRIO + "')")
+    // Falha fechada até o IAM conseguir resolver qual profissional pertence ao usuário atual.
+    @PreAuthorize("hasAuthority('" + Permissao.FINANCEIRO_LER_TODOS + "')")
     @Transactional(readOnly = true)
     public ExtratoDoProfissional executar(UUID profissionalId, LocalDate de, LocalDate ate) {
         if (de == null || ate == null || ate.isBefore(de)) {
@@ -83,8 +83,13 @@ public class ConsultarExtratoUseCase {
                 .map(ExtratoDoProfissional.LinhaDoExtrato::valor)
                 .reduce(Money.ZERO, Money::somar);
 
+        // Invertido pela mesma razão das linhas: no razão, o salão devendo soma negativo.
+        Money saldoAnterior = lancamentos
+                .saldoAcumuladoAte("PROFISSIONAL", profissionalId, de.minusDays(1))
+                .negado();
+
         return new ExtratoDoProfissional(profissionalId, profissional.comoChamar(), de, ate,
-                aReceber, totaisPorTipo(linhas), linhas);
+                saldoAnterior, aReceber, totaisPorTipo(linhas), linhas);
     }
 
     /**

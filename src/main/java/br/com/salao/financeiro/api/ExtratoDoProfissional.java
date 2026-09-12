@@ -14,6 +14,11 @@ import java.util.UUID;
  * que <em>entra</em>. O extrato inverte o sinal uma vez, aqui, para que ninguém precise lembrar
  * disso ao ler a tela.
  *
+ * @param saldoAnterior o acumulado de <strong>tudo</strong> antes de {@code de}, positivo quando o
+ *                      salão já devia. Existe desde RT-FIN-006: quem adiantou mais do que ganhou
+ *                      atravessa o mês devendo, e um extrato que só olhasse o período mostraria um
+ *                      "a receber" maior do que o repasse — que é a conversa que ele existe para
+ *                      encerrar, voltando pela terceira porta
  * @param aReceber soma do período já invertida. Positivo é o salão devendo
  * @param totais   o mesmo número aberto por tipo — desde RT-FIN-005 o líquido mistura o que foi
  *                 ganho com o que já foi adiantado, e um número só não distingue os dois
@@ -25,9 +30,18 @@ public record ExtratoDoProfissional(
         String nome,
         LocalDate de,
         LocalDate ate,
+        Money saldoAnterior,
         Money aReceber,
         List<TotalPorTipo> totais,
         List<LinhaDoExtrato> linhas) {
+
+    /**
+     * A posição acumulada da pessoa ao fim do período. Pode ser negativa quando ela adiantou mais
+     * do que ganhou; o fechamento aplica o piso em zero somente ao calcular o repasse.
+     */
+    public Money saldoFinal() {
+        return saldoAnterior.somar(aReceber);
+    }
 
     /**
      * RT-FIN-005 — quanto do líquido veio de cada tipo, já com o sinal do extrato.

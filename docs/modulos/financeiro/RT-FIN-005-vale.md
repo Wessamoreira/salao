@@ -127,9 +127,8 @@ Os 70 testes de integração já existentes do módulo continuam verdes depois d
 
 - [ ] **Não há tela.** As rotas existem e o front não as usa. A tela natural do vale é a do extrato
       (pendência de RT-FIN-004), porque é lá que ele precisa aparecer para fazer sentido
-- [ ] **`financeiro:read:own` continua sem amarrar ninguém.** Quem tem só a permissão própria lista
-      o vale de qualquer profissional — mesma lacuna do `usuario` sem `profissional_id`, e aqui ela
-      expõe quanto cada um já pediu adiantado
+- [ ] **`financeiro:read:own` ainda não entrega os próprios vales.** A permissão falha fechada até
+      existir o vínculo `usuario` → `profissional`; não aceita um id escolhido pelo cliente
 - [ ] **O vale não sabe de período fechado.** Enquanto RT-FIN-006 não existe, nada impede registrar
       um vale de hoje depois de o repasse do mês ter sido pago. A competência não retroagir já
       limita o estrago a um dia, mas não o elimina

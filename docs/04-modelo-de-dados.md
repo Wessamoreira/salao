@@ -282,6 +282,33 @@ create index on vale (estabelecimento_id, profissional_id, data_competencia);
 duas divergiriam no primeiro caminho que esquecesse de escrever numa delas. `INSERT, SELECT` e mais
 nada, como o razão.
 
+```sql
+create table fechamento (                      -- RT-FIN-006
+  id uuid primary key default gen_random_uuid(),
+  estabelecimento_id uuid not null,
+  profissional_id uuid not null,                -- sem FK: outro módulo
+  periodo_inicio date not null,
+  periodo_fim date not null,
+  saldo_anterior numeric(19,4) not null,
+  movimento_do_periodo numeric(19,4) not null,
+  valor_repassado numeric(19,4) not null check (valor_repassado >= 0),
+  criado_em timestamptz not null,
+  criado_por uuid,
+  check (periodo_inicio <= periodo_fim),
+  exclude using gist (
+    estabelecimento_id with =,
+    profissional_id with =,
+    daterange(periodo_inicio, periodo_fim, '[]') with &&
+  )
+);
+```
+
+O fechamento é o documento congelado do que foi pago. A conta usa o saldo acumulado do razão e o
+repasse é uma nova linha de competência igual ao fim do período. A constraint impede sobreposição
+por profissional; um advisory lock transacional por estabelecimento serializa também períodos
+distintos que poderiam ler o mesmo saldo simultaneamente. A aplicação recebe apenas `INSERT` e
+`SELECT` nesta tabela.
+
 ## Estoque
 
 ```sql

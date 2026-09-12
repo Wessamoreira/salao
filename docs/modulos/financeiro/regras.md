@@ -351,3 +351,116 @@ o tipo de erro que ninguém percebe até a tela abrir a comanda errada.
 **Rotinas.** RT-FIN-004, RT-FIN-005 · **Teste.** `ValeIT.totais_por_tipo`,
 `ExtratoDoProfissionalIT.linha_explica_de_onde_veio`
 **Configurável?** Não · **Origem.** 2026-09-07
+
+---
+
+### RN-FIN-016 — O repasse liquida o saldo acumulado, com piso em zero
+
+**Enunciado.** O valor a repassar é `max(saldo acumulado até o fim do período, 0)`, no sinal de
+quem recebe. Comissões, vales, estornos e repasses anteriores participam da mesma soma. Quem deve
+ao salão recebe zero; a dívida permanece no razão e atravessa para o período seguinte.
+
+**Motivo.** Calcular apenas o movimento entre as datas faria um adiantamento maior que a comissão
+desaparecer no primeiro dia do período seguinte. Criar uma linha de transporte ou uma coluna de
+saldo acrescentaria uma segunda verdade que precisaria ser mantida. O razão append-only já contém
+tudo o que é necessário para liquidar a conta.
+
+**Onde é garantida.** `LancamentosJdbc.saldosAcumuladosAte` · `ContasDoPeriodo.Posicao.aRepassar`
+· `FecharPeriodoUseCase.executar`.
+**Rotinas.** RT-FIN-006 · **Teste.** `FechamentoDePeriodoIT.divida_atravessa`,
+`FechamentoDePeriodoIT.repasse_zera_a_conta`, `FechamentoDePeriodoIT.vale_e_descontado`
+**Configurável?** Não · **Origem.** 2026-09-07
+
+---
+
+### RN-FIN-017 — A competência do repasse é o fim do período liquidado
+
+**Enunciado.** A linha `REPASSE` usa `periodo_fim` como `data_competencia`, mesmo quando a operação
+é executada em outro dia.
+
+**Motivo.** O repasse pertence ao período que está liquidando. Se um fechamento de março feito em
+abril recebesse competência de abril, o extrato de março continuaria mostrando dinheiro a receber
+depois do pagamento e permitiria cobrar o mesmo valor novamente.
+
+**Onde é garantida.** `FecharPeriodoUseCase.executar` passa `ate` para
+`LancamentosJdbc.inserir`.
+**Rotinas.** RT-FIN-006 · **Teste.** `FechamentoDePeriodoIT.repasse_pertence_ao_periodo`
+**Configurável?** Não · **Origem.** 2026-09-07
+
+---
+
+### RN-FIN-018 — Fechamento é cronológico e não admite sobreposição
+
+**Enunciado.** Um período não pode terminar no futuro, começar depois de terminar, sobrepor outro
+fechamento do mesmo profissional nem começar antes ou no fim do último período já fechado pelo
+estabelecimento. Fechamentos são serializados por estabelecimento durante toda a transação.
+
+**Motivo.** Sobrepor paga duas vezes. Fechar um período antigo depois de um novo também pode pagar
+duas vezes, porque a soma antiga não enxerga o repasse futuro. A constraint `EXCLUDE` protege
+intervalos sobrepostos do mesmo profissional, mas não março e abril concorrentes: ambos poderiam
+ler o mesmo saldo acumulado. Por isso um advisory lock transacional por tenant vem antes da
+validação e do cálculo.
+
+**Onde é garantida.** `FechamentosJdbc.travarEstabelecimento`, anotado
+`@Transactional(propagation = MANDATORY)` — `pg_advisory_xact_lock` é liberado no commit, então
+chamado fora de uma transação ele seria adquirido e devolvido no mesmo instante, sem proteger nada
+e sem reclamar · `PeriodoDeFechamento.conferir` · constraint `fechamento_sem_sobreposicao` da V42.
+**Rotinas.** RT-FIN-006 · **Teste.** `FechamentoDePeriodoIT.nao_fecha_duas_vezes`,
+`FechamentoDePeriodoIT.nao_fecha_para_tras`, `FechamentoDePeriodoIT.nao_fecha_o_futuro`,
+`FechamentoDePeriodoIT.periodo_invertido`,
+`FechamentoDePeriodoIT.exclusao_de_periodos_sobrepostos`,
+`FechamentoDePeriodoIT.fechamentos_concorrentes_sao_serializados_por_salao`
+**Configurável?** Não · **Origem.** 2026-09-07
+
+---
+
+### RN-FIN-019 — Fechar exige a versão conferida e ao menos uma posição
+
+**Enunciado.** A prévia devolve uma versão SHA-256 dos números apresentados. O fechamento exige
+essa versão e, dentro do lock do estabelecimento, recalcula a posição. Se qualquer valor mudou,
+responde `ER-FIN-PREVIA_DESATUALIZADA`. Se não existe comissão, vale nem saldo anterior, responde
+`ER-FIN-SEM_POSICOES_PARA_FECHAR` e não finge criar um fechamento vazio.
+
+**A ordem das posições é parte do contrato.** O resumo é calculado sobre a lista ordenada por id
+de profissional, e `ContasDoPeriodo` impõe essa ordem em código.
+
+**Motivo.** Confirmação financeira só protege quando a pessoa confirma os mesmos valores que serão
+gravados. Um total que muda silenciosamente entre GET e POST torna a prévia decorativa. E um 201
+com lista vazia afirma que um período foi fechado sem persistir documento ou marco algum.
+
+E a ordem precisa ser imposta porque a lista nasce de dois `group by` **sem** `order by`, onde o
+PostgreSQL não promete ordem alguma: com `HashAggregate` ela depende do layout do hash, e o
+planejador troca de estratégia conforme estatística e `work_mem`. Prévia e confirmação são
+consultas separadas — sem ordem estável, o mesmo dado produz resumos diferentes e o fechamento
+recusa dizendo que os valores mudaram sem nada ter mudado. O dono atualizaria a tela para receber
+a mesma recusa, sem conseguir pagar ninguém.
+
+É um defeito que **passa em teste de integração**: com poucas linhas, o banco devolve ordenado por
+sorte. Por isso o guarda é unitário, com o repositório dublado devolvendo as chaves ao contrário.
+
+**Onde é garantida.** `VersaoDaPrevia` · `PreverFechamentoUseCase` ·
+`FecharPeriodoUseCase` · `FechamentosController.PeriodoRequest` ·
+`ContasDoPeriodo.em` ordena por id antes de devolver.
+**Rotinas.** RT-FIN-006 · **Teste.** `FechamentoDePeriodoIT.previa_desatualizada`,
+`FechamentoDePeriodoIT.periodo_sem_posicoes`,
+`FechamentoDePeriodoIT.versao_da_previa_e_estavel`,
+`ContasDoPeriodoTest.ordem_nao_depende_do_banco`
+**Configurável?** Não · **Origem.** 2026-09-07
+
+---
+
+### RN-FIN-020 — O contracheque é um documento imutável do pagamento realizado
+
+**Enunciado.** Cada profissional alcançado pelo fechamento recebe um documento com saldo anterior,
+movimento do período e valor repassado congelados no momento da operação. O saldo a transportar é
+derivado desses três valores. A role da aplicação não pode atualizar nem apagar o documento.
+
+**Motivo.** Recalcular meses depois pode incorporar lançamentos tardios e produzir um valor
+diferente do dinheiro que efetivamente saiu. O documento precisa continuar explicando quanto foi
+pago, a quem e por qual período; correções futuras são novos lançamentos, nunca edição do passado.
+
+**Onde é garantida.** tabela `fechamento` da V42 · `FechamentosJdbc` oferece apenas `INSERT` e
+`SELECT` · `FechamentoDoProfissional.saldoATransportar` deriva o restante.
+**Rotinas.** RT-FIN-006 · **Teste.** `FechamentoDePeriodoIT.contracheque_congelado`,
+`FechamentoDePeriodoIT.update_em_fechamento_falha`
+**Configurável?** Não · **Origem.** 2026-09-07

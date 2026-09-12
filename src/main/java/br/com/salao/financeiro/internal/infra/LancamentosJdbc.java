@@ -10,7 +10,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Transactional;
@@ -121,6 +123,73 @@ public class LancamentosJdbc {
                 .param("ate", Date.valueOf(ate))
                 .query(LancamentosJdbc::mapear)
                 .list();
+    }
+
+    /**
+     * O saldo <strong>acumulado</strong> de uma contraparte até uma data, do começo de tudo.
+     *
+     * <p>É a conta do fechamento (RT-FIN-006), e o "até" no lugar do "entre" é o que faz a dívida
+     * de quem adiantou demais atravessar o mês sem linha de transporte nenhuma: os {@code REPASSE}
+     * já feitos estão dentro da mesma soma, zerando o que já foi pago.
+     */
+    @Transactional(readOnly = true)
+    public Money saldoAcumuladoAte(String contraparteTipo, UUID contraparteId, LocalDate ate) {
+        return new Money(jdbc.sql("""
+                select coalesce(sum(valor), 0) from lancamento
+                 where contraparte_tipo = :tipo and contraparte_id = :id
+                   and data_competencia <= :ate
+                """)
+                .param("tipo", contraparteTipo)
+                .param("id", contraparteId)
+                .param("ate", Date.valueOf(ate))
+                .query(java.math.BigDecimal.class)
+                .single());
+    }
+
+    /**
+     * O saldo acumulado de <strong>todas</strong> as contrapartes de um tipo até uma data.
+     *
+     * <p>Uma consulta agrupada e não uma por pessoa: o fechamento pergunta pelo salão inteiro, e
+     * um laço de {@code saldoAcumuladoAte} seria N consultas para produzir a mesma tabela que o
+     * banco já sabe agrupar. É a mesma razão de {@code ProfissionalApi.intervalosEm(Collection,
+     * ...)}.
+     *
+     * <p>Quem não tem lançamento nenhum não aparece no mapa — ausente significa zero, e quem itera
+     * sobre as chaves já pula quem não tem posição.
+     */
+    @Transactional(readOnly = true)
+    public Map<UUID, Money> saldosAcumuladosAte(String contraparteTipo, LocalDate ate) {
+        return agrupar(jdbc.sql("""
+                select contraparte_id, coalesce(sum(valor), 0) as saldo from lancamento
+                 where contraparte_tipo = :tipo and contraparte_id is not null
+                   and data_competencia <= :ate
+                 group by contraparte_id
+                """)
+                .param("tipo", contraparteTipo)
+                .param("ate", Date.valueOf(ate)));
+    }
+
+    /** O mesmo agrupamento, restrito a um período. */
+    @Transactional(readOnly = true)
+    public Map<UUID, Money> saldosNoPeriodo(String contraparteTipo, LocalDate de, LocalDate ate) {
+        return agrupar(jdbc.sql("""
+                select contraparte_id, coalesce(sum(valor), 0) as saldo from lancamento
+                 where contraparte_tipo = :tipo and contraparte_id is not null
+                   and data_competencia between :de and :ate
+                 group by contraparte_id
+                """)
+                .param("tipo", contraparteTipo)
+                .param("de", Date.valueOf(de))
+                .param("ate", Date.valueOf(ate)));
+    }
+
+    private static Map<UUID, Money> agrupar(JdbcClient.StatementSpec consulta) {
+        Map<UUID, Money> saldos = new LinkedHashMap<>();
+        consulta.query((ResultSet rs) -> {
+            saldos.put(rs.getObject("contraparte_id", UUID.class),
+                    new Money(rs.getBigDecimal("saldo")));
+        });
+        return saldos;
     }
 
     /** O saldo de uma contraparte no período. Sempre soma, nunca coluna. */

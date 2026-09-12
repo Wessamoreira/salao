@@ -12,7 +12,8 @@ Expõe `PagamentoApi`, `ComissaoApi`, `RazaoApi`, `ExtratoDoProfissional`, `Paga
 `DadosDoPagamento`,
 `FormaDePagamento`, `StatusDeConciliacao`, `EscopoDaRegra`, `RegraDeComissao`,
 `ComissaoResolvida`, `OrigemDaComissao`, `Lancamento`, `TipoDeLancamento`, `ApuracaoDaComanda`,
-`Vale`, `FormaDoVale` e `ErrosDoFinanceiro`.
+`Vale`, `FormaDoVale`, `FechamentoDoProfissional`, `PreviaDoFechamento` e
+`ErrosDoFinanceiro`.
 
 ## O que ele **não** sabe
 
@@ -53,6 +54,7 @@ de origem opaco (RN-FIN-002), e é isso que impede o ciclo com `atendimento`.
 | [RT-FIN-003](RT-FIN-003-apurar-comissao.md) — apurar comissão no fechamento | implementada |
 | [RT-FIN-004](RT-FIN-004-extrato-do-profissional.md) — extrato do profissional, item a item | implementada |
 | [RT-FIN-005](RT-FIN-005-vale.md) — vale / adiantamento | implementada |
+| [RT-FIN-006](RT-FIN-006-fechamento-e-repasse.md) — fechamento de período e repasse | em validação |
 
 ## Rotas
 
@@ -66,10 +68,13 @@ de origem opaco (RN-FIN-002), e é isso que impede o ciclo com `atendimento`.
 | `POST /api/v1/vales` | registra um adiantamento (aceita `Idempotency-Key`) | `financeiro:advance` |
 | `POST /api/v1/vales/{id}/cancelamento` | estorna o vale; motivo obrigatório | `financeiro:advance` |
 | `GET /api/v1/vales?profissionalId&de&ate` | os vales do período; sem o id, do salão inteiro | `financeiro:read:all` ou `:own` |
+| `GET /api/v1/fechamentos/previa?de&ate` | valores e versão que precisam ser confirmados | `financeiro:close` |
+| `POST /api/v1/fechamentos` | fecha o período usando a versão da prévia | `financeiro:close` |
+| `GET /api/v1/fechamentos?profissionalId&de&ate` | documentos congelados do período | `financeiro:read:all` |
 
 O **pagamento** não tem rota própria: é registrado pela rota da comanda
 (`POST /api/v1/comandas/{id}/pagamentos`), porque é lá que a regra de "quanto falta" existe.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-FIN-001 a RN-FIN-015.
+Ver [regras.md](regras.md) — RN-FIN-001 a RN-FIN-020.
