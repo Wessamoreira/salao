@@ -9,6 +9,11 @@ import br.com.salao.estoque.internal.application.AplicarInventarioUseCase;
 import br.com.salao.estoque.internal.application.CancelarInventarioUseCase;
 import br.com.salao.estoque.internal.application.ConsultarInventarioUseCase;
 import br.com.salao.estoque.internal.application.ContarLoteUseCase;
+import br.com.salao.estoque.internal.application.ConsultarFichaUseCase;
+import br.com.salao.estoque.internal.application.DefinirItemDaFichaUseCase;
+import br.com.salao.estoque.internal.application.RemoverItemDaFichaUseCase;
+import br.com.salao.estoque.internal.infra.FichasJdbc;
+import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.estoque.internal.application.BaixaFefo;
 import br.com.salao.estoque.internal.application.DevolverAoFornecedorUseCase;
 import br.com.salao.estoque.internal.application.MovimentoComMotivo;
@@ -82,8 +87,31 @@ public class EstoqueConfig {
     }
 
     @Bean
-    public BaixaFefo baixaFefo(LotesJdbc lotes, Relogio relogio) {
-        return new BaixaFefo(lotes, relogio);
+    public FichasJdbc fichasJdbc(DataSource dataSource) {
+        return new FichasJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public BaixaFefo baixaFefo(LotesJdbc lotes, Relogio relogio, FichasJdbc fichas) {
+        return new BaixaFefo(lotes, relogio, fichas);
+    }
+
+    @Bean
+    public DefinirItemDaFichaUseCase definirItemDaFichaUseCase(
+            FichasJdbc fichas, ProdutosJdbc produtos, ServicoApi servicos,
+            AuditoriaApi auditoria, Relogio relogio) {
+        return new DefinirItemDaFichaUseCase(fichas, produtos, servicos, auditoria, relogio);
+    }
+
+    @Bean
+    public RemoverItemDaFichaUseCase removerItemDaFichaUseCase(FichasJdbc fichas,
+                                                               AuditoriaApi auditoria) {
+        return new RemoverItemDaFichaUseCase(fichas, auditoria);
+    }
+
+    @Bean
+    public ConsultarFichaUseCase consultarFichaUseCase(FichasJdbc fichas) {
+        return new ConsultarFichaUseCase(fichas);
     }
 
     @Bean

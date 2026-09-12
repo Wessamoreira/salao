@@ -186,6 +186,22 @@ public class FecharComandaUseCase {
     private int baixarProdutos(UUID comandaId) {
         int baixados = 0;
         for (ItemDaComanda item : comandas.itensDe(comandaId)) {
+            if (item.tipo() == TipoDeItem.SERVICO) {
+                /*
+                 * RT-EST-007 — o que o serviço gastou, pela ficha técnica.
+                 *
+                 * A origem é o item de comanda, a mesma do produto vendido: é isso que faz a
+                 * reabertura devolver o consumo sozinha, por `estoque.devolver("ITEM_COMANDA",
+                 * item.id())`, sem esta rotina precisar saber que a reabertura existe.
+                 *
+                 * E a falta de insumo NÃO interrompe o fechamento. O serviço já foi executado;
+                 * recusar aqui pararia o balcão com a cliente na cadeira por um motivo contábil.
+                 * Quem baixa decide isso (`EstoqueApi.consumirPorServico`), e quem tinha de
+                 * saber é o log.
+                 */
+                estoque.consumirPorServico(item.servicoId(), "ITEM_COMANDA", item.id());
+                continue;
+            }
             if (item.tipo() != TipoDeItem.PRODUTO) {
                 continue;
             }

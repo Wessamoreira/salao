@@ -115,9 +115,18 @@ public class ReabrirComandaUseCase {
     private BigDecimal devolverOEstoque(UUID comandaId) {
         BigDecimal total = BigDecimal.ZERO;
         for (ItemDaComanda item : comandas.itensDe(comandaId)) {
-            if (item.tipo() == TipoDeItem.PRODUTO) {
-                total = total.add(estoque.devolver("ITEM_COMANDA", item.id()));
-            }
+            /*
+             * TODO item, sem filtrar por tipo.
+             *
+             * Havia um `if (tipo == PRODUTO)` aqui, e ele passou a estar errado quando o serviço
+             * ganhou ficha técnica (RT-EST-007): a coloração consome tinta com a MESMA origem
+             * `ITEM_COMANDA`, e o filtro deixava a tinta baixada para trás na reabertura.
+             *
+             * O filtro também era um vazamento: saber se aquela origem gerou venda ou consumo é
+             * assunto do estoque. `devolver` é idempotente e devolve zero quando não há nada —
+             * então perguntar é mais barato e mais correto do que decidir aqui.
+             */
+            total = total.add(estoque.devolver("ITEM_COMANDA", item.id()));
         }
         return total;
     }

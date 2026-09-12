@@ -44,6 +44,19 @@ public enum ErrosDoEstoque implements CodigoDeErro {
      * o que resta ou se troca o produto, e "saldo insuficiente" sozinho não responde nenhuma das
      * duas.
      */
+    SERVICO_NAO_ENCONTRADO("ER-EST-SERVICO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
+            "Serviço não encontrado"),
+
+    /**
+     * Produto de venda posto numa ficha técnica (RT-EST-007).
+     *
+     * <p>Código próprio porque a correção não é no número: é no cadastro do produto. Um shampoo
+     * de prateleira usado no serviço precisa ter finalidade {@code AMBOS} — e essa decisão tem
+     * consequência de preço, então ela é do cadastro e não de um aceite silencioso aqui.
+     */
+    PRODUTO_NAO_E_CONSUMIVEL("ER-EST-PRODUTO_NAO_E_CONSUMIVEL", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Só produto de consumo interno entra na ficha técnica"),
+
     INVENTARIO_NAO_ENCONTRADO("ER-EST-INVENTARIO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
             "Inventário não encontrado"),
 

@@ -44,4 +44,24 @@ public interface EstoqueApi {
      * @return quantas unidades voltaram, somadas
      */
     java.math.BigDecimal devolver(String origemTipo, UUID origemId);
+
+    /**
+     * RT-EST-007 — baixa o que a ficha técnica do serviço manda, na medida do que existe.
+     *
+     * <p>É o que faz {@code CONSUMO_INTERNO} deixar de ser um tipo sem quem o escreva: o
+     * fechamento da comanda chama isto para cada item de serviço, e a ficha diz quanto de tinta e
+     * de ox aquele serviço gasta.
+     *
+     * <p><strong>Falta de insumo não é erro.</strong> O serviço já foi executado; recusar o
+     * fechamento por causa de uma inferência de estoque pararia o balcão com a cliente na cadeira,
+     * por motivo contábil. Baixa-se o que há e o resultado diz o que faltou. É diferente da venda
+     * de produto, onde alguém lançou o item e vender o que não existe é erro de operação.
+     *
+     * <p>Serviço sem ficha devolve lista vazia — e não ter ficha é o caso normal de corte, escova
+     * e manicure.
+     *
+     * @param origemTipo e {@code origemId} amarram a baixa ao item de comanda, o que faz a
+     *                   reabertura devolver o consumo sozinha (RN-ATD-022)
+     */
+    ConsumoDeServico consumirPorServico(UUID servicoId, String origemTipo, UUID origemId);
 }

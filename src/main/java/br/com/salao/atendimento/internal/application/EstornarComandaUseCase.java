@@ -92,9 +92,10 @@ public class EstornarComandaUseCase {
 
         BigDecimal devolvidas = BigDecimal.ZERO;
         for (ItemDaComanda item : comandas.itensDe(comandaId)) {
-            if (item.tipo() == TipoDeItem.PRODUTO) {
-                devolvidas = devolvidas.add(estoque.devolver("ITEM_COMANDA", item.id()));
-            }
+            // Todo item, sem filtrar por tipo — ver o comentário em `ReabrirComandaUseCase`:
+            // o serviço com ficha técnica consome pela mesma origem, e `devolver` já é
+            // idempotente e devolve zero quando não há o que devolver.
+            devolvidas = devolvidas.add(estoque.devolver("ITEM_COMANDA", item.id()));
         }
 
         int anulados = livroRazao.estornarOrigem("COMANDA", comandaId, "estorno: " + razao);

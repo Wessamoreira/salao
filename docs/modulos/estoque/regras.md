@@ -457,3 +457,74 @@ contagem, o esperado e quem contou.
 **Rotinas.** RT-EST-006 · **Teste.** `InventarioIT.aplicado_nao_cancela`,
 `InventarioIT.cancelar_libera`, `InventarioIT.ajuste_leva_motivo`
 **Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-EST-021 — A ficha técnica é previsão, e mora no estoque
+
+**Enunciado.** `ficha_tecnica` liga serviço a produto com a quantidade padrão consumida. Só produto
+de finalidade `CONSUMO_INTERNO` ou `AMBOS` entra. Definir é substituir: uma linha por par
+serviço × produto. Alterar a ficha **não** recalcula consumo já lançado.
+
+**Motivo.** A tabela precisa morar num dos dois módulos. No catálogo, ela obrigaria aquele módulo a
+conhecer unidade de medida, finalidade do produto e a regra de que só se consome o que é
+consumível — conceitos de estoque migrando para onde não moram. Aqui, o custo é uma chamada a
+`ServicoApi.porId`, exatamente o que `financeiro` já faz para a regra de comissão (RN-FIN-007).
+
+Produto só de venda é recusado com código próprio em vez de aceito em silêncio: um shampoo de
+prateleira usado no serviço precisa ter finalidade `AMBOS`, e essa decisão tem consequência de
+preço (produto de consumo interno não tem preço de venda), então ela é do cadastro.
+
+E a ficha é **configuração, não histórico** — ela diz o que o serviço consome de agora em diante.
+Mesma separação da regra de comissão, que muda sem recalcular o que já foi pago.
+
+**Onde é garantida.** V47: `unique (estabelecimento_id, servico_id, produto_id)` e
+`check (quantidade > 0)` · `DefinirItemDaFichaUseCase` confere serviço e finalidade.
+**Rotinas.** RT-EST-007 · **Teste.** `FichaTecnicaIT.definir_e_substituir`,
+`FichaTecnicaIT.produto_de_venda_recusado`, `FichaTecnicaIT.produto_ambos_entra`,
+`FichaTecnicaIT.servico_de_outro_salao`, `FichaTecnicaIT.ficha_nao_recalcula_o_passado`
+**Configurável?** A ficha é a configuração · **Origem.** 2026-09-12
+
+---
+
+### RN-EST-022 — Falta de insumo não impede o fechamento da comanda
+
+**Enunciado.** No fechamento, cada item de serviço consome o que a ficha manda, **até o
+disponível**. O que faltou é registrado em log e não interrompe nada. Serviço sem ficha não consome.
+
+**Motivo.** O serviço **já foi executado**. Se o sistema diz que não há tinta, ou o saldo está
+errado ou a profissional substituiu o produto — e nos dois casos o atendimento aconteceu. Recusar o
+fechamento pararia o balcão com a cliente na cadeira, por um motivo contábil.
+
+É diferente da venda de produto, onde alguém **lançou** o item: vender o que não existe é erro de
+operação, e ali a recusa está certa. Aqui ninguém lançou nada — a ficha inferiu.
+
+A diferença acumulada entre o previsto e o real é exatamente o que o inventário (RT-EST-006) existe
+para pegar, e é por isso que ele veio antes desta rotina.
+
+**Onde é garantida.** `BaixaFefo.baixarAteODisponivel` · `EstoqueApi.consumirPorServico` ·
+`ConsumoDeServico.incompletas()` alimenta o log.
+**Rotinas.** RT-EST-007 · **Teste.** `FichaTecnicaIT.falta_de_insumo_nao_trava_o_balcao`,
+`FichaTecnicaIT.sem_estoque_nenhum`, `FichaTecnicaIT.servico_sem_ficha`
+**Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-EST-023 — A devolução de estoque não filtra por tipo de item
+
+**Enunciado.** Reabrir e estornar comanda chamam `estoque.devolver("ITEM_COMANDA", item.id())` para
+**todo** item, sem olhar se ele é produto ou serviço.
+
+**Motivo.** Havia um `if (tipo == PRODUTO)` nos dois, e ele passou a estar errado no instante em que
+o serviço ganhou ficha técnica: a coloração consome tinta com a **mesma origem**, e o filtro deixava
+a tinta baixada para trás na reabertura — o estoque ficava permanentemente menor do que a realidade,
+e ninguém veria até o inventário.
+
+O filtro também era um vazamento: saber se aquela origem gerou venda ou consumo é assunto do
+estoque. `devolver` é idempotente e devolve zero quando não há nada, então **perguntar é mais
+barato e mais correto do que decidir do lado de fora**.
+
+**Onde é garantida.** `ReabrirComandaUseCase.devolverOEstoque` ·
+`EstornarComandaUseCase` · `BaixaFefo.devolver` (idempotente por construção, RN-ATD-022).
+**Rotinas.** RT-EST-007 · **Teste.** `FichaTecnicaIT.reabrir_devolve_o_consumo`
+**Configurável?** Não · **Origem.** 2026-09-12

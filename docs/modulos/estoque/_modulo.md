@@ -30,6 +30,8 @@ outra metade da margem.
 
 ## Depende de
 
+- `catalogo` — `ServicoApi` (a ficha técnica confere que o serviço existe neste salão)
+
 - `iam` — `Permissao`, `AuditoriaApi`, `UsuarioAtual`
 
 Uma só, e é o que se espera de um módulo de cadastro. Quando lote e movimento chegarem, o número
@@ -45,6 +47,7 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 | [RT-EST-004](RT-EST-004-baixa-fefo.md) — baixa FEFO, venda e consumo interno | implementada |
 | [RT-EST-005](RT-EST-005-perda-ajuste-devolucao.md) — perda, ajuste e devolução com motivo | implementada |
 | [RT-EST-006](RT-EST-006-inventario.md) — inventário: contagem, divergência, ajuste | implementada |
+| [RT-EST-007](RT-EST-007-ficha-tecnica.md) — ficha técnica e consumo interno | implementada |
 
 ## Rotas
 
@@ -62,4 +65,4 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-EST-001 a RN-EST-020.
+Ver [regras.md](regras.md) — RN-EST-001 a RN-EST-023.

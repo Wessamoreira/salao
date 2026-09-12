@@ -1,5 +1,8 @@
 package br.com.salao.estoque.internal.application;
 
+import br.com.salao.estoque.internal.infra.FichasJdbc;
+import br.com.salao.estoque.api.ItemDaFichaTecnica;
+import br.com.salao.estoque.api.ConsumoDeServico;
 import br.com.salao.estoque.api.BaixaDeEstoque;
 import br.com.salao.estoque.api.ErrosDoEstoque;
 import br.com.salao.estoque.api.EstoqueApi;
@@ -57,9 +60,11 @@ public class BaixaFefo implements EstoqueApi {
     private static final int CASAS = Money.ESCALA;
 
     private final LotesJdbc lotes;
+    private final FichasJdbc fichas;
     private final Relogio relogio;
 
-    public BaixaFefo(LotesJdbc lotes, Relogio relogio) {
+    public BaixaFefo(LotesJdbc lotes, Relogio relogio, FichasJdbc fichas) {
+        this.fichas = fichas;
         this.lotes = lotes;
         this.relogio = relogio;
     }
@@ -69,6 +74,47 @@ public class BaixaFefo implements EstoqueApi {
     public BaixaDeEstoque baixar(UUID produtoId, BigDecimal quantidade, TipoDeMovimento tipo,
                                  String origemTipo, UUID origemId) {
         return baixar(produtoId, quantidade, tipo, origemTipo, origemId, null);
+    }
+
+    /**
+     * Baixa o que existe, até o desejado, sem reclamar da falta.
+     *
+     * <h2>Por que a falta não é erro aqui</h2>
+     *
+     * <p>É o consumo interno de um serviço que <strong>já foi executado</strong> (RT-EST-007). Se o
+     * sistema diz que não há tinta, ou o saldo está errado ou a profissional substituiu o produto —
+     * nos dois casos, o serviço aconteceu. Recusar o fechamento da comanda por causa de uma
+     * inferência de estoque pararia o balcão com a cliente na cadeira, por um motivo contábil.
+     *
+     * <p>E não é a mesma coisa que a venda de um produto: ali alguém lançou o item, e vender o que
+     * não existe é erro de operação. Aqui ninguém lançou nada — a ficha técnica inferiu.
+     *
+     * <p>A diferença acumulada entre o previsto e o real é justamente o que o inventário
+     * (RT-EST-006) existe para pegar.
+     *
+     * @return o que efetivamente saiu; zero quando não havia nada
+     */
+    @Transactional
+    public BigDecimal baixarAteODisponivel(UUID produtoId, BigDecimal desejada,
+                                           TipoDeMovimento tipo, String origemTipo, UUID origemId,
+                                           String observacao) {
+        if (desejada == null || desejada.signum() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        // Trava antes de medir, e mede em comando separado — a armadilha de READ COMMITTED de
+        // sempre (ver `baixar`).
+        lotes.travarLotesDoProduto(produtoId);
+        BigDecimal disponivel = lotes.doProduto(produtoId, false).stream()
+                .map(LoteResumo::quantidade)
+                .filter(quantidade -> quantidade.signum() > 0)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal sai = disponivel.min(desejada);
+        if (sai.signum() <= 0) {
+            return BigDecimal.ZERO;
+        }
+        baixar(produtoId, sai, tipo, origemTipo, origemId, observacao);
+        return sai;
     }
 
     /**
@@ -170,5 +216,34 @@ public class BaixaFefo implements EstoqueApi {
             log.info("Devolvidas {} unidade(s) ao estoque por {} {}", total, origemTipo, origemId);
         }
         return total;
+    }
+
+    /**
+     * RT-EST-007 — o consumo interno de um serviço, pela ficha técnica.
+     *
+     * <p>Mora aqui, e não num caso de uso próprio, porque é uma BAIXA: quem sabe travar o lote,
+     * medir o disponível e repartir por FEFO é esta classe. Um caso de uso separado teria de
+     * reimplementar o cuidado de READ COMMITTED, que é justamente o que não se quer duplicar.
+     */
+    @Override
+    @Transactional
+    public ConsumoDeServico consumirPorServico(UUID servicoId, String origemTipo, UUID origemId) {
+        List<ConsumoDeServico.LinhaConsumida> linhas = new ArrayList<>();
+        for (ItemDaFichaTecnica item : fichas.doServico(servicoId)) {
+            BigDecimal baixada = baixarAteODisponivel(item.produtoId(), item.quantidade(),
+                    TipoDeMovimento.CONSUMO_INTERNO, origemTipo, origemId, null);
+            linhas.add(new ConsumoDeServico.LinhaConsumida(item.produtoId(), item.produto(),
+                    item.quantidade(), baixada));
+        }
+        ConsumoDeServico consumo = new ConsumoDeServico(servicoId, List.copyOf(linhas));
+        if (!consumo.incompletas().isEmpty()) {
+            // WARN porque é sintoma: ou o saldo está errado, ou alguém substituiu o insumo. Nos
+            // dois casos o dono quer saber, e nenhum dos dois impede o atendimento de ter
+            // acontecido.
+            consumo.incompletas().forEach(linha -> log.warn(
+                    "Consumo incompleto de {} no serviço {}: faltaram {}", linha.produto(),
+                    servicoId, linha.faltou().stripTrailingZeros().toPlainString()));
+        }
+        return consumo;
     }
 }
