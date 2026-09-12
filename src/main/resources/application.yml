@@ -113,6 +113,22 @@ app.cors:
   # origem cruzada é permitida.
   origens: ${CORS_ORIGENS:}
 
+app.whatsapp:
+  # RT-CNV-001 — as credenciais do APP da Meta, não do salão: um app serve todos os
+  # números, e a assinatura é a mesma para todos. Por isso vivem aqui e não no banco.
+  #
+  # Padrão VAZIO, ao contrário do segredo do JWT — e a diferença é deliberada. Sem JWT a
+  # aplicação não serve para nada e não deve subir; sem WhatsApp ela serve para tudo menos
+  # para o agente (ADR-0006: nenhum provedor contratado ainda).
+  #
+  # Vazio significa DESLIGADO, nunca ABERTO: o webhook recusa toda requisição com 503 e a
+  # subida registra um aviso. Aceitar por não ter como validar transformaria uma variável
+  # esquecida em permissão para gravar mensagem em nome de qualquer salão.
+  app-secret: ${WHATSAPP_APP_SECRET:}
+  # O token que a Meta devolve no handshake de cadastro da URL. Comparado em tempo
+  # constante: a rota é pública, e um equals entrega o token pelo tempo de resposta.
+  token-de-verificacao: ${WHATSAPP_TOKEN_VERIFICACAO:}
+
 app.cripto:
   # AES-256 em Base64 (32 bytes). Sem padrão: a aplicação não sobe sem chave, porque
   # um padrão em código vira a chave de produção de alguém. Gere com

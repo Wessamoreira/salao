@@ -205,12 +205,62 @@ class ArquiteturaTest {
         "br.com.salao.notificacao.internal.application.EnfileirarMensagemUseCase",
     };
 
+    /**
+     * Casos de uso autenticados pelo <strong>provedor</strong>, e não por um principal.
+     *
+     * <p>Categoria descoberta em RT-CNV-001, e ela é genuinamente diferente das duas de cima. O
+     * webhook do WhatsApp é chamado pela Meta: não há usuário, não há token nosso, não há tenant —
+     * o tenant é justamente o que aquele caso de uso descobre. Qualquer {@code @PreAuthorize} ali
+     * recusaria 100% das chamadas, porque não existe {@code Authentication} nenhum no contexto.
+     *
+     * <p>Não cabe em {@code TRANCADOS_PELA_IDENTIDADE}: lá a tranca é verificada
+     * <em>dentro</em> do caso de uso (o autor é o dono da conta). Aqui a tranca é o HMAC
+     * {@code X-Hub-Signature-256}, verificado na <strong>borda</strong> — e o projeto desconfia de
+     * tranca na borda exatamente porque outro chamador pode aparecer e contorná-la.
+     *
+     * <p>Nem em {@code NAO_SAO_PORTA}: a condição de lá é que nenhum controller alcance a classe,
+     * e um controller alcança esta.
+     *
+     * <p><strong>A condição desta lista, então, é outra e é estreita:</strong> só o controller do
+     * webhook pode alcançá-las — o que {@link #o_que_o_provedor_autentica_so_e_alcancado_pelo_webhook}
+     * verifica. Sem isso, um caso de uso que aceita {@code estabelecimentoId} como parâmetro e não
+     * checa permissão ficaria a uma tela de distância de injetar mensagem falsa na caixa de
+     * entrada de qualquer salão.
+     */
+    private static final String[] AUTENTICADOS_PELO_PROVEDOR = {
+        "br.com.salao.conversacional.internal.application.ReceberLoteDoWhatsAppUseCase",
+        "br.com.salao.conversacional.internal.application.GravarMensagemRecebidaUseCase",
+    };
+
+    private static final String WEBHOOK_DO_WHATSAPP =
+            "br.com.salao.conversacional.internal.web.WebhookDoWhatsAppController";
+
     private static DescribedPredicate<JavaClass> foraDaListaDeTrancadosPelaIdentidade() {
         var permitidas = new java.util.HashSet<String>();
         permitidas.addAll(Set.of(TRANCADOS_PELA_IDENTIDADE));
         permitidas.addAll(Set.of(NAO_SAO_PORTA));
+        permitidas.addAll(Set.of(AUTENTICADOS_PELO_PROVEDOR));
         return DescribedPredicate.describe("fora das listas de exceção",
                 classe -> !permitidas.contains(classe.getFullName()));
+    }
+
+    /**
+     * O que sustenta {@code AUTENTICADOS_PELO_PROVEDOR}: só o webhook chega lá.
+     *
+     * <p>No dia em que "reprocessar mensagem" ou "simular recebimento" virar tela, o build reprova
+     * e obriga a decidir a permissão — que é o momento em que a decisão precisa ser tomada.
+     */
+    @Test
+    void o_que_o_provedor_autentica_so_e_alcancado_pelo_webhook() {
+        for (String classe : AUTENTICADOS_PELO_PROVEDOR) {
+            noClasses().that().resideInAPackage("..web..")
+                    .and().doNotHaveFullyQualifiedName(WEBHOOK_DO_WHATSAPP)
+                    .should().dependOnClassesThat().haveFullyQualifiedName(classe)
+                    .because(classe + " dispensa @PreAuthorize porque quem a autentica é o HMAC "
+                            + "do provedor, verificado no webhook; outro controller chamando-a "
+                            + "quebra essa premissa")
+                    .check(CLASSES);
+        }
     }
 
     /**

@@ -250,6 +250,21 @@ public class SegurancaConfig {
                         .requestMatchers("/api/v1/auth/mfa/**", "/api/v1/me/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout-all")
                         .authenticated()
+                        /*
+                         * RT-CNV-001 — o webhook do WhatsApp.
+                         *
+                         * Pública porque a Meta não tem como autenticar: ela não carrega token
+                         * nosso e não sabe de tenant. Quem autentica é o HMAC do cabeçalho
+                         * `X-Hub-Signature-256`, validado no próprio controller sobre os BYTES do
+                         * corpo (RN-CNV-001) — e ele recusa tudo quando o segredo não está
+                         * configurado, em vez de aceitar por não ter como verificar.
+                         *
+                         * Aberta AQUI, na lista central, e não numa cadeia própria dentro do
+                         * módulo: rota pública é decisão de segurança, e ela tem de ser legível
+                         * num só lugar por quem audita. O caminho fica fora de `/api` de
+                         * propósito — ver o javadoc do controller.
+                         */
+                        .requestMatchers("/webhooks/whatsapp").permitAll()
                         // Tudo o mais fechado por padrão: endpoint novo nasce protegido, e é
                         // preciso um ato deliberado para abri-lo. O contrário — abrir por padrão
                         // e lembrar de fechar — falha na primeira distração.

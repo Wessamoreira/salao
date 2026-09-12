@@ -41,8 +41,35 @@ Abertos de propósito, cada um com motivo escrito no código: `login`, `refresh`
 access token já expirou), `logout` (sair não pode depender de token expirado) e `mfa/verificar`
 (quem chega tem só o desafio, que sozinho não abre nada).
 
-**Onde verificar:** `AutorizacaoWebIT.sem_token_nada_passa` e
-`AutenticacaoWebIT.rota_desconhecida_exige_autenticacao`.
+### A exceção que escreve, e o que a segura — RT-CNV-001
+
+`POST /webhooks/whatsapp` é a **única rota pública que grava** no sistema. Ela é diferente das
+quatro acima em algo que importa: aquelas são degraus para *obter* credencial e não escrevem nada
+de negócio; esta insere linha em tabela de negócio, sem usuário e sem tenant.
+
+O que a segura, em ordem de execução:
+
+1. **segredo ausente ⇒ 503.** Falha fechada: um deploy com a variável esquecida recusa tudo, em
+   vez de aceitar por não ter como validar (RN-CNV-001);
+2. **teto de 512 KB no corpo, antes do HMAC.** A rota é pública e o HMAC percorre o corpo inteiro:
+   sem teto, um POST de 2 GB é CPU de graça para quem nem tem o segredo;
+3. **HMAC-SHA256 sobre os BYTES**, comparado com `MessageDigest.isEqual` — tempo constante, porque
+   comparação que sai no primeiro byte diferente entrega a assinatura byte a byte;
+4. **o JSON só é interpretado depois disso.** O parser é a maior superfície de ataque da rota;
+5. **o tenant vem do `phone_number_id` cadastrado**, não do payload livre — e número desconhecido
+   é descartado, contado em métrica (RN-CNV-004);
+6. **`grant update (processada_em)` e mais nada.** O texto que a cliente mandou não é editável nem
+   apagável pela aplicação, e o consumidor dessa tabela vai ser um LLM (RN-CNV-005).
+
+Fora de `/api` de propósito: o limitador de taxa por IP (item 4) conta por origem, e a Meta é
+*uma* origem para todos os salões — aplicá-lo ali descartaria mensagem de cliente em hora de pico.
+**Isso deixa a rota sem limite de taxa próprio, e é pendência conhecida:** o controle certo é por
+`phone_number_id`, depois da assinatura conferir.
+
+**Onde verificar:** `AutorizacaoWebIT.sem_token_nada_passa`,
+`AutenticacaoWebIT.rota_desconhecida_exige_autenticacao`,
+`WebhookDoWhatsAppWebIT` (a rota passa assinada e é recusada sem assinatura, e o cadastro do canal
+continua exigindo 401), `WebhookDoWhatsAppControllerTest` (503, 403, 413 e a ordem entre eles).
 
 ## 3. Senha protegida no banco ✅
 

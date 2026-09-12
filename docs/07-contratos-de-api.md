@@ -6,6 +6,13 @@ Regras válidas para **todo** endpoint. Não repita em cada rotina — referenci
 
 `/api/v1`. Versão só muda em quebra de contrato. Data em ISO-8601 com offset. `application/json`.
 
+**A exceção é `/webhooks/*`**, e ela é deliberada (RT-CNV-001). Webhook não é API do produto: não
+tem versão negociada com front nenhum, nenhum navegador o chama — então não recebe CORS — e o
+contrato dele é do provedor, não nosso. Pôr o webhook do WhatsApp em `/api/v1` o colocaria sob o
+limite de taxa por IP, que conta por origem: a Meta é *uma* origem para todos os salões, e o limite
+pensado para conter ataque passaria a descartar mensagem de cliente. Nada mais neste arquivo vale
+para `/webhooks/*`: quem manda ali é quem chama.
+
 ## Erro — RFC 9457 Problem Details, com código estável
 
 ```json
