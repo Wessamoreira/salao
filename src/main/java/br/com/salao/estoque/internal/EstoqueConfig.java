@@ -5,6 +5,10 @@ import br.com.salao.estoque.internal.application.CadastrarProdutoUseCase;
 import br.com.salao.estoque.internal.application.DefinirAtivacaoDoProdutoUseCase;
 import br.com.salao.estoque.internal.application.DefinirPrecoDeVendaUseCase;
 import br.com.salao.estoque.internal.application.BaixaFefo;
+import br.com.salao.estoque.internal.application.DevolverAoFornecedorUseCase;
+import br.com.salao.estoque.internal.application.MovimentoComMotivo;
+import br.com.salao.estoque.internal.application.RegistrarAjusteUseCase;
+import br.com.salao.estoque.internal.application.RegistrarPerdaUseCase;
 import br.com.salao.estoque.internal.application.ConsultarSaldoUseCase;
 import br.com.salao.estoque.internal.application.ListarLotesUseCase;
 import br.com.salao.estoque.internal.application.ListarProdutosUseCase;
@@ -74,6 +78,30 @@ public class EstoqueConfig {
     @Bean
     public BaixaFefo baixaFefo(LotesJdbc lotes, Relogio relogio) {
         return new BaixaFefo(lotes, relogio);
+    }
+
+    @Bean
+    public MovimentoComMotivo movimentoComMotivo(LotesJdbc lotes, Relogio relogio) {
+        return new MovimentoComMotivo(lotes, relogio);
+    }
+
+    @Bean
+    public RegistrarPerdaUseCase registrarPerdaUseCase(BaixaFefo baixa,
+                                                       MovimentoComMotivo movimentos,
+                                                       AuditoriaApi auditoria) {
+        return new RegistrarPerdaUseCase(baixa, movimentos, auditoria);
+    }
+
+    @Bean
+    public RegistrarAjusteUseCase registrarAjusteUseCase(MovimentoComMotivo movimentos,
+                                                         AuditoriaApi auditoria) {
+        return new RegistrarAjusteUseCase(movimentos, auditoria);
+    }
+
+    @Bean
+    public DevolverAoFornecedorUseCase devolverAoFornecedorUseCase(
+            MovimentoComMotivo movimentos, AuditoriaApi auditoria) {
+        return new DevolverAoFornecedorUseCase(movimentos, auditoria);
     }
 
     @Bean

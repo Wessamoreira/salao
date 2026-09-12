@@ -33,7 +33,7 @@ dono do salão. Em português, sem misturês (`AgendamentoRepository`, não `Boo
 | **Conciliação** | Casamento entre pagamento e transação de adquirente | `Conciliacao` |
 | **Produto** | Item físico vendável ou consumível | `Produto` |
 | **Lote** | Entrada de produto com custo e validade próprios | `Lote` |
-| **Movimento de estoque** | Evento imutável que altera saldo: `ENTRADA`, `VENDA`, `CONSUMO_INTERNO`, `PERDA`, `AJUSTE` | `MovimentoEstoque` |
+| **Movimento de estoque** | Evento imutável que altera saldo: `ENTRADA`, `VENDA`, `CONSUMO_INTERNO`, `PERDA`, `AJUSTE`, `DEVOLUCAO`, `DEVOLUCAO_AO_FORNECEDOR`. Imutável **por permissão** desde V45 — antes a frase era só promessa | `MovimentoEstoque` |
 | **FEFO** | *First Expired, First Out*. Sai primeiro o lote que vence primeiro | — |
 | **Conversa** | Sessão de diálogo com um contato em um canal (WhatsApp/Telegram) | `Conversa` |
 | **Intenção pendente** | Ação proposta pela IA aguardando confirmação humana, com TTL e máquina de estados | `IntencaoPendente` |

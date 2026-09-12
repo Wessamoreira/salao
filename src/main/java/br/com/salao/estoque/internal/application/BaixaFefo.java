@@ -68,6 +68,20 @@ public class BaixaFefo implements EstoqueApi {
     @Transactional
     public BaixaDeEstoque baixar(UUID produtoId, BigDecimal quantidade, TipoDeMovimento tipo,
                                  String origemTipo, UUID origemId) {
+        return baixar(produtoId, quantidade, tipo, origemTipo, origemId, null);
+    }
+
+    /**
+     * A mesma baixa, carregando um motivo para a coluna {@code observacao}.
+     *
+     * <p>Fora de {@link EstoqueApi} de propósito: venda e consumo interno têm ORIGEM — item de
+     * comanda, serviço — e a origem já explica a saída. Só perda, ajuste e devolução ao
+     * fornecedor exigem que alguém digite o porquê (RT-EST-005), e isso é assunto interno do
+     * módulo. Acrescentar o parâmetro ao contrato público obrigaria `atendimento` a passar
+     * {@code null} em toda venda.
+     */
+    public BaixaDeEstoque baixar(UUID produtoId, BigDecimal quantidade, TipoDeMovimento tipo,
+                                 String origemTipo, UUID origemId, String observacao) {
         if (quantidade == null || quantidade.signum() <= 0) {
             throw new ErroDeDominio(ErrosDoEstoque.QUANTIDADE_INVALIDA,
                     "quantidade a baixar: " + quantidade);
@@ -113,7 +127,7 @@ public class BaixaFefo implements EstoqueApi {
             }
             BigDecimal daqui = lote.quantidade().min(restante);
             lotes.inserirMovimento(tenant, produtoId, lote.id(), tipo, daqui.negate(),
-                    lote.custoUnitario(), origemTipo, origemId, null, relogio.agora(),
+                    lote.custoUnitario(), origemTipo, origemId, observacao, relogio.agora(),
                     UsuarioAtual.idOuNulo());
 
             parcelas.add(new BaixaDeEstoque.ParcelaDaBaixa(lote.id(), daqui,

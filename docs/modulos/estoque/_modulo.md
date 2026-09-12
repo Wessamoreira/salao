@@ -60,4 +60,4 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-EST-001 a RN-EST-013.
+Ver [regras.md](regras.md) — RN-EST-001 a RN-EST-017.

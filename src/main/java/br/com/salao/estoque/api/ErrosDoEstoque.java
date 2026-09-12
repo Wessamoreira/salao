@@ -44,6 +44,18 @@ public enum ErrosDoEstoque implements CodigoDeErro {
      * o que resta ou se troca o produto, e "saldo insuficiente" sozinho não responde nenhuma das
      * duas.
      */
+    LOTE_NAO_ENCONTRADO("ER-EST-LOTE_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
+            "Lote não encontrado"),
+
+    /**
+     * Perda, ajuste ou devolução sem explicação (RT-EST-005).
+     *
+     * <p>Código próprio porque a recusa não é sobre número: é sobre a falta da única informação
+     * que faz o movimento ter valor depois. "Faltam 3 unidades" sem motivo não se investiga.
+     */
+    MOTIVO_OBRIGATORIO("ER-EST-MOTIVO_OBRIGATORIO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Perda, ajuste e devolução exigem motivo"),
+
     SALDO_INSUFICIENTE("ER-EST-SALDO_INSUFICIENTE", HttpStatus.UNPROCESSABLE_ENTITY,
             "Não há saldo suficiente em estoque"),
 

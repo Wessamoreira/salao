@@ -24,6 +24,24 @@ public enum TipoDeMovimento {
     /** Correção de contagem, com motivo (RT-EST-005 e RT-EST-006). */
     AJUSTE,
 
-    /** Voltou para o fornecedor, ou a cliente devolveu (RT-EST-005). */
-    DEVOLUCAO
+    /**
+     * A cliente devolveu: as unidades voltam aos lotes de onde saíram (RT-ATD-007).
+     *
+     * <p>Quantidade <strong>positiva</strong>. Escrita pelo estorno e pela reabertura de comanda,
+     * nunca à mão.
+     */
+    DEVOLUCAO,
+
+    /**
+     * Mandamos de volta ao fornecedor (RT-EST-005). Quantidade negativa.
+     *
+     * <p>Separado de {@link #DEVOLUCAO} porque é outro fato: o estoque sai em vez de entrar, a
+     * contraparte é o fornecedor e não a cliente, e "quanto devolvemos ao fornecedor este mês?" é
+     * pergunta de compras. Com um tipo só, ela dependeria de filtrar por sinal — e de ninguém
+     * nunca ter misturado os dois.
+     *
+     * <p>É a mesma razão pela qual o razão separa {@code RECEITA_SERVICO} de
+     * {@code RECEITA_PRODUTO}: mesmo sinal, significados diferentes. Aqui os sinais são opostos.
+     */
+    DEVOLUCAO_AO_FORNECEDOR
 }

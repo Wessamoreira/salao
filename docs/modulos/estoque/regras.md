@@ -275,3 +275,99 @@ a transação da baixa.
 **Rotinas.** RT-EST-004 · **Teste.** `BaixaFefoIT.concorrencia_na_ultima_unidade`,
 `BaixaFefoIT.saldo_insuficiente`, `BaixaFefoIT.recusa_nao_deixa_rastro`
 **Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-EST-014 — Perda, ajuste e devolução ao fornecedor exigem motivo, e quem garante é o banco
+
+**Enunciado.** Movimento de tipo `PERDA`, `AJUSTE` ou `DEVOLUCAO_AO_FORNECEDOR` só é gravado com
+`observacao` de pelo menos 3 caracteres. Os demais tipos não exigem: eles têm **origem** — item de
+comanda, serviço, nota de entrada — e a origem explica a saída.
+
+**Motivo.** "Faltaram três shampoos" sem motivo não se investiga. E o motivo está na constraint, e
+não só no caso de uso, porque os próximos caminhos de escrita — o inventário (RT-EST-006) e a ficha
+técnica (RT-EST-007) — vão gravar ajuste por baixo; sem a constraint, o primeiro que esquecesse
+gravaria perda sem explicação sem nada reclamar.
+
+Três caracteres, e não "não vazio": um campo obrigatório que aceita `"x"` é um campo que a recepção
+preenche com `"x"`. Três não resolve o problema — resolve o contorno mais barato dele.
+
+**Onde é garantida.** V45: constraint `movimento_com_motivo` ·
+`MovimentoComMotivo.exigirMotivo` para a recusa ter frase.
+**Rotinas.** RT-EST-005 · **Teste.** `PerdaAjusteDevolucaoIT.perda_exige_motivo`,
+`PerdaAjusteDevolucaoIT.motivo_de_uma_letra`, `PerdaAjusteDevolucaoIT.banco_exige_motivo`
+**Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-EST-015 — Movimento de estoque é imutável por permissão
+
+**Enunciado.** `movimento_estoque` recebe apenas `INSERT` e `SELECT` da role da aplicação. Corrigir
+um movimento é lançar o movimento contrário.
+
+**Motivo.** O glossário já chamava o movimento de *"evento imutável que altera saldo"* — e a role
+tinha `UPDATE` e `DELETE`. O razão (V40), o vale (V41) e o fechamento (V42) todos impõem a
+imutabilidade pelo banco, com a mesma justificativa escrita três vezes; o movimento de estoque, que
+é **onde a ideia começou**, era o único que dependia de disciplina de quem escreve o código.
+
+Importa mais justamente aqui. Perda e ajuste são exatamente os movimentos que alguém vai querer
+"consertar" com um `update`: registrou 5 de perda e eram 3. O movimento contrário deixa rastro dos
+dois fatos; o `update` apaga o erro e, com ele, a explicação.
+
+Nada no código fazia `update` nem `delete` nesta tabela — conferido antes de revogar. A devolução
+de estoque (RN-ATD-022) já funcionava por `insert` de movimento contrário, que é o padrão que o
+revoke transformou em regra.
+
+**Onde é garantida.** V45: `revoke update, delete on movimento_estoque from salao_app`.
+**Rotinas.** RT-EST-005 · **Teste.** `PerdaAjusteDevolucaoIT.movimento_e_imutavel`
+**Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-EST-016 — Devolução ao fornecedor é outro tipo que devolução da cliente
+
+**Enunciado.** `DEVOLUCAO` é a volta das unidades quando uma comanda é reaberta ou estornada —
+quantidade **positiva**, nos lotes de onde saíram. `DEVOLUCAO_AO_FORNECEDOR` é mercadoria indo
+embora — quantidade **negativa**, sempre num lote informado.
+
+**Motivo.** Com um tipo só, *"quanto devolvemos ao fornecedor este mês?"* dependeria de filtrar por
+sinal e de ninguém nunca ter misturado os dois. São fatos diferentes: contrapartes diferentes,
+sinais opostos, e um é pergunta de compras enquanto o outro é de atendimento.
+
+É a mesma razão pela qual o razão separa `RECEITA_SERVICO` de `RECEITA_PRODUTO` — mesmo sinal,
+mesma direção, significados diferentes. Aqui os sinais são **opostos**, então o argumento é mais
+forte.
+
+E o tipo antigo **não** foi renomeado para `DEVOLUCAO_DA_CLIENTE`: a tabela acabou de ficar
+append-only (RN-EST-015) e as linhas existentes são todas devolução de cliente. Reescrever
+histórico para deixar um nome simétrico é pior do que conviver com a assimetria.
+
+**Onde é garantida.** V45 estende o `check` de tipo · `DevolverAoFornecedorUseCase` nega o sinal ·
+`BaixaFefo.devolver` continua escrevendo `DEVOLUCAO`.
+**Rotinas.** RT-EST-005 · **Teste.** `PerdaAjusteDevolucaoIT.devolucao_ao_fornecedor`,
+`PerdaAjusteDevolucaoIT.devolucao_negativa_recusada`
+**Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-EST-017 — Perda é por FEFO; ajuste e devolução são por lote
+
+**Enunciado.** `PERDA` recebe produto e quantidade, e sai do lote que vence primeiro. `AJUSTE` e
+`DEVOLUCAO_AO_FORNECEDOR` exigem o **lote**. Ajuste aceita os dois sinais; unidades que aparecem
+entram no custo do lote em que apareceram.
+
+**Motivo.** A diferença não é burocrática: é **quem sabe o quê**. "Sumiram três shampoos" não diz de
+qual lote, e FEFO é a resposta certa quando ninguém sabe. Já quem conta tem a etiqueta na mão, e
+quem devolve ao fornecedor está devolvendo uma caixa de uma nota específica.
+
+E o lote obrigatório no ajuste positivo protege o custo médio: atribuir unidades achadas a um lote
+escolhido por FEFO **inventaria um custo**, e o custo médio ponderado (RT-EST-003) passaria a
+mentir a partir dali. É a mesma razão pela qual a devolução de comanda devolve aos lotes de onde
+saiu (RN-ATD-022).
+
+**Onde é garantida.** `RegistrarPerdaUseCase` usa `BaixaFefo` · `MovimentoComMotivo.noLote` lê o
+custo do próprio lote · o lock e a releitura em comando separado repetem o cuidado de RT-EST-004.
+**Rotinas.** RT-EST-005 · **Teste.** `PerdaAjusteDevolucaoIT.perda_sai_por_fefo`,
+`PerdaAjusteDevolucaoIT.ajuste_positivo_usa_o_custo_do_lote`,
+`PerdaAjusteDevolucaoIT.ajuste_nao_fica_negativo`
+**Configurável?** Não · **Origem.** 2026-09-12
