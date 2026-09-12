@@ -17,6 +17,8 @@ public record ProdutoResumo(
         FinalidadeDoProduto finalidade,
         UnidadeDeMedida unidade,
         Money precoVenda,
+        /** RT-EST-009 — exatamente o que o leitor emite, ou nulo. */
+        String codigoBarras,
         boolean ativo,
         int versao) {
 

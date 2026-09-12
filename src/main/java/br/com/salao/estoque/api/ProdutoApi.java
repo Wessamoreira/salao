@@ -18,4 +18,17 @@ import java.util.UUID;
 public interface ProdutoApi {
 
     Optional<ProdutoResumo> porId(UUID produtoId);
+
+    /**
+     * RT-EST-009 — o produto que o leitor bipou.
+     *
+     * <p>Existe no contrato público porque quem mais vai usá-la é o {@code atendimento}: bipar na
+     * comanda é o caminho mais rápido de lançar um produto, e o `atendimento` não pode consultar a
+     * tabela do estoque direto.
+     *
+     * <p>Devolve vazio para código desconhecido. Quem decide o que dizer é a tela — "não
+     * cadastrado, quer cadastrar?" na tela de estoque, e "produto não encontrado" na comanda são
+     * respostas diferentes para o mesmo vazio.
+     */
+    Optional<ProdutoResumo> porCodigoDeBarras(String codigoDeBarras);
 }

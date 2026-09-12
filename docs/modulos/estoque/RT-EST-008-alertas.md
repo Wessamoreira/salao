@@ -81,7 +81,9 @@ compra, não um cálculo que a pessoa tem de fazer de cabeça.
 
 - [ ] **O alerta não é empurrado** — ver seção 2. É a pendência da rotina, e ela é de arquitetura,
       não de esforço.
-- [ ] **Não há rota nem tela.**
+- [x] ~~Não há rota~~ — `GET /api/v1/produtos/alertas` e
+      `PUT /api/v1/produtos/{id}/estoque-minimo` foram expostas na RT-EST-009, junto com as rotas
+      do leitor. **Tela continua não havendo.**
 - [ ] **A janela de validade não é configurável por salão.** É parâmetro da consulta com padrão de
       30 dias; um salão com produto de giro lento vai querer outro número.
 - [ ] **O mínimo não considera o giro.** Mínimo fixo é pior que ponto de pedido calculado sobre o

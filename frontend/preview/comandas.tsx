@@ -87,7 +87,8 @@ const RESPOSTAS: Record<string, unknown> = {
     { id: 'pr2', nome: 'Berenice do Carmo', apelido: 'Nice' },
   ],
   '/api/v1/produtos?somenteVendaveis=true': [
-    { id: 'p1', nome: 'Shampoo pós-coloração', precoVenda: 45, vendavel: true },
+    { id: 'p1', nome: 'Shampoo pós-coloração', precoVenda: 45,
+      codigoBarras: '7891234567895', vendavel: true },
   ],
 };
 

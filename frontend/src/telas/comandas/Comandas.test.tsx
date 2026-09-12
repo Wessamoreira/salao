@@ -51,7 +51,11 @@ function servidor(sobrescritas: Record<string, unknown> = {}) {
     if (caminho === '/v1/servicos') return [{ id: 's1', nome: 'Escova', ativo: true }];
     if (caminho === '/v1/profissionais') return [{ id: 'pr1', nome: 'Ana', apelido: 'Ana' }];
     if (caminho.startsWith('/v1/produtos')) {
-      return [{ id: 'p1', nome: 'Shampoo', precoVenda: 45, vendavel: true }];
+      return [
+        { id: 'p1', nome: 'Shampoo', precoVenda: 45,
+          codigoBarras: '7891234567895', vendavel: true },
+        { id: 'p2', nome: 'Máscara', precoVenda: 60, codigoBarras: null, vendavel: true },
+      ];
     }
     throw new Error(`sem resposta para ${caminho}`);
   });
@@ -91,6 +95,41 @@ describe('tela de fechamento', () => {
 
     expect(await screen.findByText('Falta receber')).toBeInTheDocument();
     expect(screen.getAllByText('R$ 90,00').length).toBeGreaterThan(0);
+  });
+
+  it('bipar o código escolhe o produto, e lançar continua sendo do humano', async () => {
+    // RT-EST-009. O bipe seleciona; o botão lança. Lançar no bipe seria mais rápido e
+    // erraria mais: o lançamento dá baixa FEFO no estoque, e desfazer custa um estorno.
+    servidor();
+    montar();
+
+    const leitor = await screen.findByLabelText('Bipar produto');
+    await userEvent.type(leitor, '7891234567895{Enter}');
+
+    expect(screen.getByLabelText('Produto')).toHaveValue('p1');
+    expect(leitor).toHaveValue('');
+    expect(chamar).not.toHaveBeenCalledWith(
+      expect.stringContaining('/itens/produto'), expect.anything(),
+    );
+  });
+
+  it('código que não é de nenhum produto do balcão não seleciona nada e diz qual foi', async () => {
+    // Sem o código no aviso, quem bipou não sabe se leu errado ou se o produto não tem
+    // código cadastrado — e a saída de cada caso é diferente.
+    servidor();
+    montar();
+
+    const leitor = await screen.findByLabelText('Bipar produto');
+    // Com um produto JÁ escolhido por um bipe anterior: o segundo bipe, que falhou, tem de
+    // desarmar o botão. Sem isso, "Lançar produto" lançaria o item do bipe de antes.
+    await userEvent.type(leitor, '7891234567895{Enter}');
+    expect(screen.getByLabelText('Produto')).toHaveValue('p1');
+
+    await userEvent.type(leitor, '0000000000000{Enter}');
+
+    expect(screen.getByRole('alert')).toHaveTextContent('0000000000000');
+    expect(screen.getByLabelText('Produto')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Lançar produto' })).toBeDisabled();
   });
 
   it('não deixa fechar enquanto falta receber', async () => {

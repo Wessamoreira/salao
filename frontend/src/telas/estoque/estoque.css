@@ -1,0 +1,115 @@
+/*
+ * RT-EST-009 — o leitor de código de barras.
+ *
+ * Duas aparências, porque são dois papéis:
+ *
+ * - numa tela compartilhada (lançar produto na comanda) ele é UM CAMPO a mais, e tem de
+ *   parecer com os vizinhos. Cartão, borda de destaque e indicador de estado ali seriam
+ *   três enfeites dizendo o que o campo já diz;
+ * - numa tela dedicada a bipar (`segurarFoco`) ele toma o foco de todo mundo, e aí precisa
+ *   dizer em que estado está — daí o cartão, a borda que acende e o alvo de 44px.
+ *
+ * Rótulo em caixa normal, escuro, junto do controle: é a convenção do produto, e está
+ * explicada em `comandas.css`. Versalete de 10px em --tinta-fraca é o desenho do SELO e do
+ * cabeçalho de tabela; reusá-lo para rótulo é o que faz o sistema parecer não ter sido
+ * desenhado.
+ */
+.est-rotulo {
+  display: block;
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+  letter-spacing: var(--tr-corpo);
+  color: var(--tinta);
+}
+
+.est-leitor-linha {
+  display: flex;
+  gap: var(--e-2);
+  margin-top: var(--e-2);
+}
+
+/*
+ * Monoespaçado e com numerais tabulares: o código é conferido de relance contra a etiqueta
+ * da embalagem, e em fonte proporcional o 1 e o 7 de um EAN encostam.
+ */
+.est-leitor-campo {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-family: var(--fonte-mono);
+  font-size: var(--t-14);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  background: var(--papel);
+  color: var(--tinta);
+}
+.est-leitor-campo::placeholder {
+  font-family: var(--fonte);
+  letter-spacing: 0;
+  color: var(--tinta-tenue);
+}
+.est-leitor-campo:focus-visible {
+  outline: 2px solid var(--tinta);
+  outline-offset: 1px;
+}
+.est-leitor-campo:disabled {
+  background: var(--papel-afundado);
+  color: var(--tinta-fraca);
+}
+
+.est-leitor-estado {
+  margin: var(--e-2) 0 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-11);
+  line-height: 1.45;
+}
+
+/* ------------------------------------------------------------------ modo dedicado */
+
+.est-leitor-dedicado {
+  padding: var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--regua);
+  border-left: 3px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+/* A borda acende quando está escutando — e o texto embaixo diz a mesma coisa em palavra. */
+.est-leitor-armado {
+  border-left-color: var(--foco);
+}
+.est-leitor-dedicado .est-leitor-campo {
+  min-height: 44px;
+  font-size: var(--t-16);
+}
+
+.est-leitor-pausa {
+  flex-shrink: 0;
+  min-height: 44px;
+  padding: 0 var(--e-4);
+  font: inherit;
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  background: var(--papel);
+  color: var(--tinta);
+  cursor: pointer;
+  transition: background var(--mov-imediato) var(--mov-curva);
+}
+.est-leitor-pausa:hover { background: var(--papel-fundo); }
+
+/* ------------------------------------------------------------------ o que o bipe achou */
+
+.est-achado {
+  margin: var(--e-2) 0 0;
+  font-size: var(--t-12);
+  line-height: 1.45;
+  color: var(--tinta);
+}
+.est-achado-codigo {
+  font-family: var(--fonte-mono);
+  font-variant-numeric: tabular-nums;
+}

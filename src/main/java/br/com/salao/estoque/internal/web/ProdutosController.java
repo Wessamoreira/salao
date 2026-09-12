@@ -1,5 +1,14 @@
 package br.com.salao.estoque.internal.web;
 
+import br.com.salao.estoque.internal.application.ConsultarAlertasUseCase;
+import br.com.salao.estoque.internal.application.DefinirCodigoDeBarrasUseCase;
+import br.com.salao.estoque.internal.application.DefinirEstoqueMinimoUseCase;
+import br.com.salao.shared.erro.ErroDeDominio;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import br.com.salao.estoque.api.ProdutoApi;
+import br.com.salao.estoque.api.ErrosDoEstoque;
+import br.com.salao.estoque.api.AlertasDeEstoque;
 import br.com.salao.estoque.api.FinalidadeDoProduto;
 import br.com.salao.estoque.api.LoteResumo;
 import br.com.salao.estoque.api.ProdutoResumo;
@@ -55,6 +64,10 @@ public class ProdutosController {
     private final RegistrarEntradaDeLoteUseCase registrarEntrada;
     private final ListarLotesUseCase listarLotes;
     private final ConsultarSaldoUseCase consultarSaldo;
+    private final DefinirCodigoDeBarrasUseCase definirCodigoDeBarras;
+    private final DefinirEstoqueMinimoUseCase definirEstoqueMinimo;
+    private final ConsultarAlertasUseCase alertas;
+    private final ProdutoApi produtos;
 
     public ProdutosController(CadastrarProdutoUseCase cadastrar, AtualizarProdutoUseCase atualizar,
                               DefinirPrecoDeVendaUseCase definirPreco,
@@ -62,7 +75,14 @@ public class ProdutosController {
                               ListarProdutosUseCase listar,
                               RegistrarEntradaDeLoteUseCase registrarEntrada,
                               ListarLotesUseCase listarLotes,
-                              ConsultarSaldoUseCase consultarSaldo) {
+                              ConsultarSaldoUseCase consultarSaldo,
+                              DefinirCodigoDeBarrasUseCase definirCodigoDeBarras,
+                              DefinirEstoqueMinimoUseCase definirEstoqueMinimo,
+                              ConsultarAlertasUseCase alertas, ProdutoApi produtos) {
+        this.definirCodigoDeBarras = definirCodigoDeBarras;
+        this.definirEstoqueMinimo = definirEstoqueMinimo;
+        this.alertas = alertas;
+        this.produtos = produtos;
         this.cadastrar = cadastrar;
         this.atualizar = atualizar;
         this.definirPreco = definirPreco;
@@ -89,6 +109,7 @@ public class ProdutosController {
             FinalidadeDoProduto finalidade,
             UnidadeDeMedida unidade,
             BigDecimal precoVenda,
+            String codigoBarras,
             boolean ativo,
             boolean vendavel,
             int versao) {
@@ -96,7 +117,7 @@ public class ProdutosController {
         static ProdutoResponse de(ProdutoResumo p) {
             return new ProdutoResponse(p.id(), p.nome(), p.descricao(), p.finalidade(),
                     p.unidade(), p.precoVenda() == null ? null : p.precoVenda().valor(),
-                    p.ativo(), p.vendavel(), p.versao());
+                    p.codigoBarras(), p.ativo(), p.vendavel(), p.versao());
         }
     }
 
@@ -141,6 +162,56 @@ public class ProdutosController {
     }
 
     public record AtivacaoRequest(@NotNull Boolean ativo) {
+    }
+
+    /**
+     * RT-EST-009 — o produto que o leitor bipou.
+     *
+     * <p>Caminho literal antes do {@code /{id}}: o Spring prefere o mapeamento mais específico, e
+     * "por-codigo-barras" nunca é convertido para UUID.
+     *
+     * <p>404 quando não existe, e não uma lista vazia: quem bipou precisa saber que aquele código
+     * não está cadastrado, e uma lista de zero itens obriga o front a interpretar.
+     *
+     * <p>Devolve o mesmo {@code ProdutoResponse} das outras rotas. Devolver o {@code ProdutoResumo}
+     * cru daria à tela DUAS formas do mesmo produto — o {@code Money} do domínio serializa como
+     * {@code {"valor": …}}, e o resto da API manda número.
+     */
+    @GetMapping("/por-codigo-barras")
+    public ProdutoResponse porCodigoDeBarras(@RequestParam String codigo) {
+        return ProdutoResponse.de(produtos.porCodigoDeBarras(codigo)
+                .orElseThrow(() -> new ErroDeDominio(
+                        ErrosDoEstoque.CODIGO_DE_BARRAS_DESCONHECIDO,
+                        "nenhum produto com o código " + codigo)));
+    }
+
+    /** O código de barras do produto. Corpo vazio ou nulo remove. */
+    @PutMapping("/{id}/codigo-barras")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void definirCodigoDeBarras(@PathVariable UUID id,
+                                      @RequestBody CodigoRequest req) {
+        definirCodigoDeBarras.executar(id, req == null ? null : req.codigo());
+    }
+
+    /** Sem {@code @NotBlank}: vazio é o pedido de REMOVER o código. */
+    public record CodigoRequest(@jakarta.validation.constraints.Size(max = 64) String codigo) {
+    }
+
+    /** O estoque mínimo do produto. Corpo com {@code null} remove — nulo não é zero. */
+    @PutMapping("/{id}/estoque-minimo")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void definirEstoqueMinimo(@PathVariable UUID id,
+                                     @RequestBody MinimoRequest req) {
+        definirEstoqueMinimo.executar(id, req == null ? null : req.minimo());
+    }
+
+    public record MinimoRequest(java.math.BigDecimal minimo) {
+    }
+
+    /** RT-EST-008 — o que está acabando e o que vai vencer. */
+    @GetMapping("/alertas")
+    public AlertasDeEstoque alertas(@RequestParam(required = false) Integer dias) {
+        return alertas.executar(dias);
     }
 
     @PatchMapping("/{id}/ativacao")

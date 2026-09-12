@@ -258,7 +258,27 @@ export function useAbrirComanda() {
 export interface ServicoResumo { id: string; nome: string; ativo: boolean }
 export interface ProfissionalResumo { id: string; nome: string; apelido: string | null }
 export interface ProdutoVendavel {
-  id: string; nome: string; precoVenda: number | null; vendavel: boolean;
+  id: string; nome: string; precoVenda: number | null;
+  /** RT-EST-009. Nulo na maioria: quem etiqueta o próprio produto não tem código impresso. */
+  codigoBarras: string | null;
+  vendavel: boolean;
+}
+
+/**
+ * Acha o produto do código bipado na lista JÁ carregada.
+ *
+ * Sem ir ao servidor de propósito, embora a rota exista (`GET /v1/produtos/por-codigo-barras`).
+ * A lista do balcão já veio inteira para desenhar o select, o bipe tem de responder no ritmo do
+ * gatilho, e no salão a internet cai. A rota serve às telas onde o produto pode estar FORA da
+ * lista — inventário, entrada de nota —, não a esta.
+ *
+ * A comparação é literal: RN-EST-026 guarda o código exatamente como o leitor o emite, e
+ * "normalizar" aqui (tirar zero à esquerda, calcular dígito) desencontraria o que o banco casou.
+ */
+export function produtoDoCodigo(
+  produtos: ProdutoVendavel[], codigo: string,
+): ProdutoVendavel | undefined {
+  return produtos.find((p) => p.codigoBarras === codigo);
 }
 
 export function useServicos() {

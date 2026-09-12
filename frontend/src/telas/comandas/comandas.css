@@ -214,6 +214,15 @@
 .cmd-lancar-bloco .cmd-rotulo { grid-column: 1 / -1; }
 .cmd-lancar-bloco .cmd-campo { grid-column: 1; }
 .cmd-lancar-bloco .cmd-botao { grid-column: 1 / -1; justify-self: start; }
+/*
+ * O leitor (RT-EST-009) e o aviso do código sem dono ocupam a linha inteira.
+ *
+ * Quem posiciona é o HOST, não o componente: o leitor não sabe que caiu num grid de duas
+ * colunas. Sem estas duas linhas o aviso era colocado automaticamente na coluna 2 e
+ * esmagava o formulário — e só apareceu ao abrir o navegador.
+ */
+.cmd-lancar-bloco .est-leitor,
+.cmd-lancar-bloco .est-achado { grid-column: 1 / -1; }
 
 .cmd-rotulo {
   font-size: var(--t-10);

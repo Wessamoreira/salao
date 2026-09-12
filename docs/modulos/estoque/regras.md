@@ -581,3 +581,92 @@ tarde para devolver; noventa encheria a lista com o que ainda não é problema.
 `AlertasDeEstoqueIT.lote_vencido`, `AlertasDeEstoqueIT.fora_da_janela`,
 `AlertasDeEstoqueIT.sem_validade`, `AlertasDeEstoqueIT.lote_esgotado_nao_alerta`
 **Configurável?** A janela é parâmetro; o padrão, não · **Origem.** 2026-09-12
+
+---
+
+### RN-EST-026 — O código guardado é o que o leitor emite; não há validação de dígito verificador
+
+**Enunciado.** `produto.codigo_barras` é texto livre, opcional, guardado **exatamente** como
+chegou. A única restrição de forma é não ser vazio nem conter espaço em branco. O sistema **não**
+valida dígito verificador de EAN-13/UPC-A, não normaliza zero à esquerda e não converte entre
+padrões.
+
+**Motivo.** O que o sistema precisa é reencontrar o produto quando o mesmo leitor ler a mesma
+etiqueta. Isso é comparação literal, e qualquer normalização afasta os dois lados: o código
+gravado deixa de ser o código lido.
+
+Validar o dígito recusaria código legítimo no dia seguinte ao da implantação:
+
+- produto importado com etiqueta fora do padrão brasileiro;
+- produto **reetiquetado** pelo distribuidor, com código interno de 5 ou 6 dígitos;
+- etiqueta **impressa pelo próprio salão** para o que chegou sem código — o caso mais comum em
+  produto de revenda fracionado;
+- Code 128 e QR, que não têm dígito verificador no mesmo sentido.
+
+Recusar o cadastro nesses casos não protege ninguém: empurra a pessoa a inventar um código falso
+que passe na validação, e aí o campo mente.
+
+O espaço em branco é proibido porque é sempre erro: nenhum padrão de código de barras o contém, e
+o que aparece é sujeira de recorte e cola. Proibi-lo evita o cadastro que nunca vai casar com bipe
+nenhum — e que é indistinguível a olho do certo.
+
+**Onde é garantida.** `V49__codigo_de_barras.sql`, `check codigo_barras_sem_espaco` ·
+`DefinirCodigoDeBarrasUseCase` (apara as pontas, recusa espaço no meio) ·
+`ProdutosJdbc.porCodigoDeBarras` compara com `=`.
+**Rotinas.** RT-EST-009 · **Teste.** `CodigoDeBarrasIT.espaco_no_meio`,
+`CodigoDeBarrasIT.digito_invalido_e_aceito`, `CodigoDeBarrasIT.codigo_interno_aceito`,
+`CodigoDeBarrasIT.codigo_aparado`, `CodigoDeBarrasIT.bipar_acha`
+**Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-EST-027 — Um código por produto, único no salão; sem código é o normal
+
+**Enunciado.** No mesmo estabelecimento, um código de barras pertence a **no máximo um** produto.
+O campo é nulo por padrão e continua nulo para a maioria dos produtos: insumo de bancada não tem
+etiqueta. Gravar código vazio **remove** o código. O mesmo código pode existir em salões
+diferentes sem conflito.
+
+**Motivo.** Se dois produtos dividissem o código, o bipe teria de perguntar qual dos dois — e a
+pessoa que bipou está com a mão ocupada. A ambiguidade tem de ser impossível no cadastro, não
+resolvida no balcão.
+
+O índice é **parcial** (`where codigo_barras is not null`) porque em índice único do PostgreSQL
+nulos não colidem entre si, mas explicitar a condição deixa o índice pequeno: ele indexa as poucas
+dezenas de produtos etiquetados, não as centenas sem código.
+
+Nulo é o estado normal, e não um cadastro incompleto: nada no sistema exige o código, e a tela não
+deve cobrá-lo.
+
+**Onde é garantida.** `V49__codigo_de_barras.sql`, índice `um_codigo_de_barras_por_salao` ·
+`DefinirCodigoDeBarrasUseCase` consulta o dono antes para dar a mensagem com o **nome** de quem já
+tem o código, e o `DuplicateKeyException` cobre a corrida.
+**Rotinas.** RT-EST-009 · **Teste.** `CodigoDeBarrasIT.codigo_duplicado`,
+`CodigoDeBarrasIT.mesmo_ean_em_saloes_diferentes`, `CodigoDeBarrasIT.remover_libera`,
+`CodigoDeBarrasIT.vazio_remove`
+**Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-EST-028 — O bipe escolhe; lançar é do humano. Código desconhecido desarma o botão
+
+**Enunciado.** Na tela de comanda, ler um código **seleciona** o produto — não lança o item. Um
+código que não pertence a nenhum produto vendável **limpa a seleção** e mostra o código lido.
+
+**Motivo.** O lançamento dá baixa FEFO no estoque (RT-EST-004) e entra na conta da cliente;
+desfazer um bipe torto custa um estorno. E a quantidade quase nunca é 1 em venda de balcão, então
+lançar no gatilho obrigaria a corrigir logo depois.
+
+Limpar a seleção é o ponto que importa: sem isso, bipar o produto A, depois bipar o B que não tem
+código cadastrado, deixava o aviso na tela **e o A ainda armado no botão** — e o próximo clique
+lançava o item errado, exatamente no fluxo em que ninguém está olhando a tela.
+
+O código lido aparece no aviso porque "não achei" tem duas saídas diferentes: leitura errada
+(bipar de novo) ou produto sem código cadastrado (escolher na lista e cadastrar depois). Sem o
+número, quem bipou não sabe em qual dos dois está.
+
+**Onde é garantida.** `Lancar.tsx`, `aoLer` · `produtoDoCodigo` em `api/comandas.ts`.
+**Rotinas.** RT-EST-009 · **Teste.**
+`Comandas.test.tsx` — *bipar o código escolhe o produto, e lançar continua sendo do humano*,
+*código que não é de nenhum produto do balcão não seleciona nada e diz qual foi*
+**Configurável?** Não · **Origem.** 2026-09-12

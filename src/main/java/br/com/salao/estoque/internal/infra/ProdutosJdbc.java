@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProdutosJdbc implements ProdutoApi {
 
     private static final String CAMPOS = """
-            id, nome, descricao, finalidade, unidade, preco_venda, ativo, versao
+            id, nome, descricao, finalidade, unidade, preco_venda, codigo_barras, ativo, versao
             """;
 
     private final JdbcClient jdbc;
@@ -138,6 +138,38 @@ public class ProdutosJdbc implements ProdutoApi {
                 .list();
     }
 
+    /**
+     * RT-EST-009 — o produto que o leitor bipou.
+     *
+     * <p>O código entra na consulta como texto exato, sem `trim` nem `lower`: o que foi guardado é
+     * o que o leitor emitiu, e normalizar na leitura e não na escrita criaria pares que casam num
+     * lado e não no outro. Quem normaliza é o cadastro, uma vez.
+     */
+    @Transactional(readOnly = true)
+    public Optional<ProdutoResumo> porCodigoDeBarras(String codigo) {
+        return jdbc.sql("select " + CAMPOS + " from produto where codigo_barras = :codigo")
+                .param("codigo", codigo)
+                .query(ProdutosJdbc::mapear)
+                .optional();
+    }
+
+    /**
+     * Define ou remove o código. {@code null} remove.
+     *
+     * <p>A unicidade por salão é do índice parcial da V49 — conferir antes e gravar depois
+     * deixaria a janela entre a leitura e a escrita, e duas pessoas cadastrando o mesmo produto
+     * bipado ao mesmo tempo é justamente o caso comum no recebimento de uma carga.
+     */
+    @Transactional
+    public int definirCodigoDeBarras(UUID id, String codigo) {
+        return jdbc.sql("""
+                update produto set codigo_barras = :codigo, versao = versao + 1 where id = :id
+                """)
+                .param("id", id)
+                .param("codigo", codigo)
+                .update();
+    }
+
     private static ProdutoResumo mapear(ResultSet rs, int linha) throws SQLException {
         BigDecimal preco = rs.getBigDecimal("preco_venda");
         return new ProdutoResumo(
@@ -147,6 +179,7 @@ public class ProdutosJdbc implements ProdutoApi {
                 FinalidadeDoProduto.valueOf(rs.getString("finalidade")),
                 UnidadeDeMedida.valueOf(rs.getString("unidade")),
                 preco == null ? null : new Money(preco),
+                rs.getString("codigo_barras"),
                 rs.getBoolean("ativo"),
                 rs.getInt("versao"));
     }

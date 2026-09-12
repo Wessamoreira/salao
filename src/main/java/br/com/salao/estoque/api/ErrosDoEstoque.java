@@ -44,6 +44,20 @@ public enum ErrosDoEstoque implements CodigoDeErro {
      * o que resta ou se troca o produto, e "saldo insuficiente" sozinho não responde nenhuma das
      * duas.
      */
+    /**
+     * Código de barras já usado por outro produto do salão (RT-EST-009).
+     *
+     * <p>{@code 409} e não {@code 422}: o código está certo, o conflito é com o cadastro. A
+     * mensagem nomeia o produto que já o tem, porque a ação de quem bipou é ir ver aquele
+     * produto — quase sempre é o mesmo item cadastrado duas vezes.
+     */
+    CODIGO_DE_BARRAS_EM_USO("ER-EST-CODIGO_DE_BARRAS_EM_USO", HttpStatus.CONFLICT,
+            "Este código de barras já é de outro produto"),
+
+    /** O leitor bipou algo que não está cadastrado. */
+    CODIGO_DE_BARRAS_DESCONHECIDO("ER-EST-CODIGO_DE_BARRAS_DESCONHECIDO", HttpStatus.NOT_FOUND,
+            "Nenhum produto com este código de barras"),
+
     SERVICO_NAO_ENCONTRADO("ER-EST-SERVICO_NAO_ENCONTRADO", HttpStatus.NOT_FOUND,
             "Serviço não encontrado"),
 

@@ -49,6 +49,7 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 | [RT-EST-006](RT-EST-006-inventario.md) — inventário: contagem, divergência, ajuste | implementada |
 | [RT-EST-007](RT-EST-007-ficha-tecnica.md) — ficha técnica e consumo interno | implementada |
 | [RT-EST-008](RT-EST-008-alertas.md) — alertas de mínimo e de validade | implementada |
+| [RT-EST-009](RT-EST-009-codigo-de-barras.md) — leitor de código de barras (HID) | implementada |
 
 ## Rotas
 
@@ -59,6 +60,10 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 | `PUT /api/v1/produtos/{id}/preco` | define ou remove o preço | `produto:price:write` |
 | `PATCH /api/v1/produtos/{id}/ativacao` | tira de circulação sem apagar | `estoque:write` |
 | `GET /api/v1/produtos` | lista; `somenteVendaveis` é a do balcão | `estoque:read` |
+| `GET /api/v1/produtos/por-codigo-barras?codigo=` | o produto que o leitor bipou; **404** se não há | `estoque:read` |
+| `PUT /api/v1/produtos/{id}/codigo-barras` | define o código; corpo vazio remove | `estoque:write` |
+| `PUT /api/v1/produtos/{id}/estoque-minimo` | define o mínimo; nulo desliga o alerta | `estoque:write` |
+| `GET /api/v1/produtos/alertas` | o que está acabando e o que vai vencer | `estoque:read` |
 | `POST /api/v1/produtos/{id}/lotes` | a caixa chegou: lote + movimento de entrada | `estoque:write` |
 | `GET /api/v1/produtos/{id}/lotes` | os lotes, **na ordem do FEFO** | `estoque:read` |
 | `GET /api/v1/produtos/saldos` | o inventário; padrão traz também o que zerou | `estoque:read` |
@@ -66,4 +71,4 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-EST-001 a RN-EST-025.
+Ver [regras.md](regras.md) — RN-EST-001 a RN-EST-028.
