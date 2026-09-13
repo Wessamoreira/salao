@@ -23,7 +23,7 @@
   border-bottom: 1px solid var(--regua-forte);
 }
 
-/* Instrument Serif aparece em dois lugares no produto; identidade é um deles. */
+/* A fonte serifada de identidade aparece em dois lugares no produto; este é um deles. */
 .painel-identidade {
   font-family: var(--fonte-identidade);
   font-size: 34px;
@@ -122,4 +122,40 @@
   flex-grow: 1;
   font-size: 27px;
   color: var(--tinta-fraca);
+}
+
+.painel-offline {
+  margin: var(--e-3) 0 0;
+  padding: var(--e-2) var(--e-3);
+  color: var(--tinta);
+  background: var(--status-solicitado-fundo);
+  border-left: 4px solid var(--status-solicitado);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 900px) {
+  .painel { padding: var(--e-5); }
+  .painel-identidade { font-size: 28px; }
+  .painel-relogio { font-size: 34px; }
+  .painel-cabecalho,
+  .painel-linha { grid-template-columns: 100px 1fr 180px 160px; gap: 0 var(--e-4); }
+  .painel-hora { font-size: 24px; }
+  .painel-cliente { font-size: 22px; }
+  .painel-profissional { font-size: 20px; }
+  .painel-situacao { font-size: 17px; }
+}
+
+@media (max-width: 620px) {
+  .painel { height: auto; min-height: 100dvh; padding: var(--e-4); }
+  .painel-cabecalho { display: none; }
+  .painel-linha {
+    grid-template-columns: 74px 1fr;
+    gap: var(--e-2) var(--e-4);
+    padding: var(--e-4) 0;
+  }
+  .painel-profissional,
+  .painel-situacao { grid-column: 2; font-size: 16px; }
+  .painel-situacao::before { height: 18px; }
+  .painel-rodape { flex-direction: column; gap: var(--e-2); margin-top: var(--e-8); }
 }

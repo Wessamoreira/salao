@@ -11,19 +11,29 @@
 
 :root {
   /* ---------------------------------------------------------------------
-   * Papel e tinta — quente, nunca cinza de SaaS.
-   * Salão é ambiente quente; um neutro frio brigaria com o lugar.
+   * Back-office de recepção — neutros frios, sem bege editorial nem dourado.
    * ------------------------------------------------------------------- */
-  --papel:            oklch(0.981 0.008 85);   /* superfície principal */
-  --papel-fundo:      oklch(0.955 0.010 85);   /* fundo atrás das superfícies */
-  --papel-afundado:   oklch(0.945 0.008 85);   /* campo, bloqueio, estado inerte */
+  --papel:            #ffffff;   /* superfície principal */
+  --papel-fundo:      #f4f6f7;   /* fundo atrás das superfícies */
+  --papel-afundado:   #e9edef;   /* campo, bloqueio, estado inerte */
 
-  --tinta:            oklch(0.235 0.012 60);   /* texto principal e ações */
-  --tinta-fraca:      oklch(0.545 0.012 60);   /* texto secundário */
-  --tinta-tenue:      oklch(0.700 0.010 60);   /* rótulo, metadado — ver nota de contraste */
+  --tinta:            #172126;   /* texto principal e ações */
+  --tinta-fraca:      #536168;   /* texto secundário */
+  --tinta-tenue:      #8a969c;   /* traço e metadado não essencial */
 
-  --regua:            oklch(0.905 0.008 85);   /* divisória interna, linha de meia hora */
-  --regua-forte:      oklch(0.855 0.010 85);   /* borda de container, linha de hora cheia */
+  --regua:            #dce2e5;   /* divisória interna, linha de meia hora */
+  --regua-forte:      #c5ced2;   /* borda de container, linha de hora cheia */
+
+  --espelho:              #20282d; /* menu lateral */
+  --espelho-hover:        #29343a;
+  --espelho-ativo:        #344148;
+  --espelho-regua:        #3d4b52;
+  --espelho-texto:        #fcfdfd;
+  --espelho-texto-fraco:  #c4ccd0;
+  --vinho:                #6f3651; /* única cor de marca */
+  --vinho-fundo:          #f7f1f4;
+  --metal:                #9da8ad; /* aço escovado, não dourado */
+  --metal-claro:          #cbd2d5;
 
   /* ---------------------------------------------------------------------
    * Status — mesma chroma (0.115) e luminosidade (0.62), só a matiz muda.
@@ -58,13 +68,25 @@
   /* ---------------------------------------------------------------------
    * Tipografia
    * ------------------------------------------------------------------- */
-  --fonte-identidade: "Instrument Serif", "Iowan Old Style", Georgia, serif;
-  --fonte:            "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+  /* Auto-hospedadas (frontend/src/estilo/fontes.css): mesma origem, sem CDN, sem
+     dependência de internet depois da primeira visita — e, ao contrário da pilha de
+     sistema que estava aqui antes, o MESMO desenho em toda máquina. A pilha antiga
+     entregava Avenir Next só no macOS e Bodoni só no macOS: fora dele o produto não
+     tinha fonte, tinha empréstimo. */
+  --fonte-identidade: "Bodoni Moda Variable", Didot, "Iowan Old Style", Georgia, serif;
+  --fonte:            "Archivo Variable", "Segoe UI", system-ui, sans-serif;
   --fonte-mono:       ui-monospace, "SF Mono", Menlo, monospace;
 
-  --t-10: 10px;    /* rótulo em caixa alta, metadado */
-  --t-11: 11px;
-  --t-12: 12.5px;  /* apoio */
+  /* Pesos nomeados. Com eixo contínuo eles são DESENHOS, não negrito sintetizado —
+     que era o traço sujo de antes, sentido sem conseguir ser nomeado. */
+  --p-normal:  400;
+  --p-medio:   500;
+  --p-forte:   600;
+  --p-pesado:  700;
+
+  --t-10: 11px;    /* rótulo em caixa alta, metadado */
+  --t-11: 12px;
+  --t-12: 13px;    /* apoio */
   --t-14: 14px;    /* corpo */
   --t-16: 16px;    /* corpo destacado */
   --t-20: 20px;
@@ -75,17 +97,43 @@
   --numerais: "tnum" 1;
 
   /* ---------------------------------------------------------------------
+   * Entreletra por tamanho — a escala óptica que faltava.
+   *
+   * Um mesmo tracking do rótulo de 11px ao total de 30px é o erro que faz
+   * tipografia parecer não desenhada: texto pequeno precisa de ar para não
+   * empastar, e texto grande precisa fechar para não se desmanchar em letras
+   * soltas. São quatro valores, não um gradiente.
+   * ------------------------------------------------------------------- */
+  --tr-micro:   0.09em;   /* rótulo em caixa alta, 10–12px */
+  --tr-corpo:   0;        /* 13–16px */
+  --tr-titulo:  -0.012em; /* 20px */
+  --tr-display: -0.022em; /* 25–30px e identidade */
+
+  /* ---------------------------------------------------------------------
+   * Foco
+   *
+   * TINTA, e não cor de status. O anel global era `--status-atendendo`, o mesmo azul de
+   * "em atendimento" — e na grade da agenda um elemento focado passava a ter a cor de um
+   * atendimento em curso. Cor de status codifica estado do negócio (regra nº 1 deste
+   * sistema); foco é orientação do teclado, e orientação usa tinta e aço.
+   *
+   * Sobre o menu escuro a tinta desaparece, então lá o anel é claro. Duas variantes, uma
+   * regra: o anel é o oposto do fundo em que está.
+   * ------------------------------------------------------------------- */
+  --foco:        var(--tinta);
+  --foco-claro:  var(--espelho-texto);
+
+  /* ---------------------------------------------------------------------
    * Borda e elevação
    * ------------------------------------------------------------------- */
-  --raio-1: 2px;   /* bloco de agenda, chip, selo */
-  --raio-2: 3px;   /* container, botão, campo */
-  /* Não existe --raio-3. Canto muito arredondado lê como app de consumo,
-     não como ferramenta de trabalho. */
+  --raio-1: 4px;   /* bloco de agenda, chip, selo */
+  --raio-2: 8px;   /* botão e campo */
+  --raio-3: 12px;  /* painel principal e folha móvel */
 
   /* Sombra existe só para o que FLUTUA — menu, diálogo. Card não tem sombra:
      é o traço mais reconhecível de tela gerada sem critério. */
-  --sombra-flutuante: 0 4px 16px oklch(0.235 0.012 60 / 0.10),
-                      0 1px 3px  oklch(0.235 0.012 60 / 0.08);
+  --sombra-flutuante: 0 10px 30px rgb(23 33 38 / 12%),
+                      0 2px 8px rgb(23 33 38 / 8%);
 
   /* ---------------------------------------------------------------------
    * Movimento — curto o bastante para não ser notado.

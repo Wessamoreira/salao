@@ -41,7 +41,7 @@ describe('configuração do salão', () => {
     montar();
 
     await userEvent.type(await screen.findByLabelText(/DDD da região/), '11');
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await userEvent.click(screen.getByRole('button', { name: /Salvar/ }));
 
     expect(chamar).toHaveBeenCalledWith('/v1/configuracao', expect.objectContaining({
       method: 'PUT',
@@ -68,19 +68,19 @@ describe('configuração do salão', () => {
   it('confirma que salvou — num formulário sem mudança visível, o silêncio vira dúvida', async () => {
     montar();
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Salvar' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Salvar/ }));
 
-    expect(await screen.findByText('Configurações salvas.')).toBeInTheDocument();
+    expect(await screen.findByText('Salvo')).toBeInTheDocument();
   });
 
   it('a confirmação some ao mexer de novo', async () => {
     montar();
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Salvar' }));
-    await screen.findByText('Configurações salvas.');
+    await userEvent.click(await screen.findByRole('button', { name: /Salvar/ }));
+    await screen.findByText('Salvo');
     await userEvent.type(screen.getByLabelText(/DDD da região/), '2');
 
-    expect(screen.queryByText('Configurações salvas.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Salvo')).not.toBeInTheDocument();
   });
 
   it('parte dos valores que o servidor mandou, não de padrões inventados', async () => {

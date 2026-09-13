@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Cliente } from '../../api/clientes';
 import { useBusca } from '../../api/clientes';
+import { Pagina } from '../../layout/Pagina';
 import { CadastroRapido } from './CadastroRapido';
 import { Ficha } from './Ficha';
 import { Isolado } from './Isolado';
@@ -24,7 +25,8 @@ export function Clientes() {
   const [selecionado, setSelecionado] = useState<Cliente | null>(null);
   const campo = useRef<HTMLInputElement>(null);
 
-  const { data: resultado } = useBusca(useTermoComPausa(termo));
+  const termoBuscado = useTermoComPausa(termo);
+  const { data: resultado, isFetching } = useBusca(termoBuscado);
 
   // O foco começa no campo: quem abre esta tela vai digitar, sempre.
   useEffect(() => { campo.current?.focus(); }, []);
@@ -33,7 +35,8 @@ export function Clientes() {
   const esperando = termo.trim().length === 0;
 
   return (
-    <div className={esperando ? 'cli-tela esperando' : 'cli-tela'}>
+    <Pagina>
+    <div className={`pagina-cheia cli-tela${esperando ? ' esperando' : ''}`}>
       <header className="cli-cabecalho">
         <input
           ref={campo}
@@ -56,6 +59,7 @@ export function Clientes() {
         <Resultados
           resultado={resultado}
           termo={termo}
+          carregando={isFetching}
           selecionadoId={selecionado?.id ?? null}
           aoSelecionar={setSelecionado}
         />
@@ -77,6 +81,7 @@ export function Clientes() {
         ) : null}
       </div>
     </div>
+    </Pagina>
   );
 }
 

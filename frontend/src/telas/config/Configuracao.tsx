@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { Acao, Esqueleto, Pagina } from '../../layout/Pagina';
 import type { BaseDeComissao, Periodicidade } from '../../api/configuracao';
 import { FUSOS, useConfiguracao, useSalvarConfiguracao } from '../../api/configuracao';
 import { ErroDaApi } from '../../api/http';
@@ -22,22 +23,45 @@ import './config.css';
 export function Configuracao() {
   const { data: atual, isPending } = useConfiguracao();
   const salvar = useSalvarConfiguracao();
-  const [form, setForm] = useState<Formulario | null>(null);
+  const [alteracoes, setForm] = useState<Formulario | null>(null);
   const [salvo, setSalvo] = useState(false);
 
-  useEffect(() => {
-    if (atual) setForm(deConfiguracao(atual));
-  }, [atual]);
+  // Antes da primeira edição, a configuração é derivada da consulta. Copiá-la por
+  // efeito causava uma renderização vazia e ainda podia sobrescrever o que a pessoa
+  // estava digitando durante uma revalidação em segundo plano.
+  const form = alteracoes ?? (atual ? deConfiguracao(atual) : null);
 
-  if (isPending || !form) return <p className="cfg-carregando">Carregando…</p>;
+  // Esqueleto com a forma do formulário, não a palavra "Carregando": o texto de uma
+  // linha sendo trocado por um formulário de três seções é o pulo que se sente como
+  // travada.
+  if (isPending || !form) {
+    return (
+      <Pagina>
+        <div className="cfg-tela"><Esqueleto linhas={7} altura={52} /></div>
+      </Pagina>
+    );
+  }
 
   const alterar = <C extends keyof Formulario>(campo: C, valor: Formulario[C]) => {
     setForm({ ...form, [campo]: valor });
     setSalvo(false);
   };
 
+  const podeSalvar = !salvar.isPending && Boolean(form.nome.trim());
+
   return (
+    <Pagina
+      acoes={
+        <>
+          {salvo && <span className="cfg-salvo" role="status">Salvo</span>}
+          <Acao type="submit" form="cfg-formulario" disabled={!podeSalvar}>
+            {salvar.isPending ? 'Salvando…' : 'Salvar alterações'}
+          </Acao>
+        </>
+      }
+    >
     <form
+      id="cfg-formulario"
       className="cfg-tela"
       onSubmit={(e) => {
         e.preventDefault();
@@ -56,7 +80,9 @@ export function Configuracao() {
         );
       }}
     >
-      <h1 className="cfg-titulo">Configurações do salão</h1>
+      {salvar.isError && (
+        <p className="erro" role="alert">{mensagem(salvar.error)}</p>
+      )}
 
       <section>
         <h2 className="secao-titulo">Identidade</h2>
@@ -151,16 +177,8 @@ export function Configuracao() {
         </label>
       </section>
 
-      <div className="secao">
-        <button type="submit" className="acao" disabled={salvar.isPending || !form.nome.trim()}>
-          {salvar.isPending ? 'Salvando…' : 'Salvar'}
-        </button>
-        {/* Confirmação explícita: num formulário sem mudança visível na tela, salvar sem
-            resposta deixa a dúvida de se salvou — e a pessoa clica de novo. */}
-        {salvo && <p className="aviso-salvo">Configurações salvas.</p>}
-        {salvar.isError && <p className="erro">{mensagem(salvar.error)}</p>}
-      </div>
     </form>
+    </Pagina>
   );
 }
 

@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ErroDaApi, api } from '../api/http';
 import { chaveDasCapacidades, useCapacidades } from '../api/capacidades';
 import { definirTokenAtual } from '../sessao/sessao';
+import { Autenticacao } from './Autenticacao';
 
 interface Inscricao { segredo: string; uriOtpauth: string }
 interface Confirmacao { codigos: string[]; aviso: string; sessao: { tokenDeAcesso: string } }
@@ -83,12 +84,9 @@ function Inscrever() {
     return (
       <Moldura titulo="Guarde estes códigos"
         descricao="Cada um funciona uma única vez, e eles não serão exibidos de novo. Se você perder o celular, é por aqui que entra.">
-        <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 var(--e-6)',
-          display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--e-2)' }}>
+        <ul className="auth-recuperacao">
           {codigos.map((c) => (
-            <li key={c} style={{ fontFamily: 'var(--fonte-mono)', fontSize: 'var(--t-14)',
-              padding: 'var(--e-2)', background: 'var(--papel-afundado)',
-              borderRadius: 'var(--raio-1)', textAlign: 'center' }}>{c}</li>
+            <li key={c}>{c}</li>
           ))}
         </ul>
         <Botao onClick={() => navegar('/')}>Guardei — continuar</Botao>
@@ -108,10 +106,7 @@ function Inscrever() {
   return (
     <Moldura titulo="Ative o segundo fator"
       descricao="No aplicativo autenticador, use este código de configuração. Depois informe os seis dígitos que ele mostrar.">
-      <div style={{ fontFamily: 'var(--fonte-mono)', fontSize: 'var(--t-14)',
-        letterSpacing: '0.08em', padding: 'var(--e-3)', background: 'var(--papel-afundado)',
-        borderRadius: 'var(--raio-1)', wordBreak: 'break-all',
-        marginBottom: 'var(--e-5)' }}>{inscricao.segredo}</div>
+      <div className="auth-segredo">{inscricao.segredo}</div>
       <CampoDeCodigo valor={codigo} aoMudar={definirCodigo} aoConfirmar={confirmar} />
       {erro && <Alerta>{erro}</Alerta>}
       <Botao onClick={confirmar}>Confirmar</Botao>
@@ -122,18 +117,9 @@ function Inscrever() {
 function Moldura({ titulo, descricao, children }:
   { titulo: string; descricao: string; children: React.ReactNode }) {
   return (
-    <main style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center',
-      background: 'var(--papel-fundo)', padding: 'var(--e-6)' }}>
-      <section style={{ width: 400, background: 'var(--papel)',
-        border: '1px solid var(--regua-forte)', borderRadius: 'var(--raio-2)',
-        padding: 'var(--e-8)' }}>
-        <h1 style={{ fontFamily: 'var(--fonte-identidade)', fontSize: 'var(--t-25)',
-          margin: 0, fontWeight: 400 }}>{titulo}</h1>
-        <p style={{ fontSize: 'var(--t-12)', color: 'var(--tinta-fraca)',
-          margin: 'var(--e-2) 0 var(--e-6)', lineHeight: 1.5 }}>{descricao}</p>
-        {children}
-      </section>
-    </main>
+    <Autenticacao titulo={titulo} apoio={descricao}>
+      <div className="auth-formulario">{children}</div>
+    </Autenticacao>
   );
 }
 
@@ -141,26 +127,18 @@ function CampoDeCodigo({ valor, aoMudar, aoConfirmar }:
   { valor: string; aoMudar: (v: string) => void; aoConfirmar: () => void }) {
   return (
     <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={valor}
-      aria-label="Código de verificação" autoFocus
+      className="auth-codigo" aria-label="Código de verificação" autoFocus
       onChange={(e) => aoMudar(e.target.value.replace(/\D/g, ''))}
-      onKeyDown={(e) => { if (e.key === 'Enter') aoConfirmar(); }}
-      style={{ width: '100%', boxSizing: 'border-box', padding: 'var(--e-3)',
-        border: '1px solid var(--regua-forte)', borderRadius: 'var(--raio-2)',
-        background: 'var(--papel)', fontFamily: 'var(--fonte-mono)', fontSize: 'var(--t-20)',
-        letterSpacing: '0.28em', textAlign: 'center', marginBottom: 'var(--e-4)' }} />
+      onKeyDown={(e) => { if (e.key === 'Enter') aoConfirmar(); }} />
   );
 }
 
 function Alerta({ children }: { children: React.ReactNode }) {
-  return <p role="alert" style={{ fontSize: 'var(--t-12)', color: 'var(--status-falta)',
-    margin: '0 0 var(--e-4)' }}>{children}</p>;
+  return <p className="auth-erro" role="alert">{children}</p>;
 }
 
 function Botao({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (
-    <button onClick={onClick} style={{ width: '100%', border: 0,
-      borderRadius: 'var(--raio-2)', padding: 'var(--e-3)', background: 'var(--tinta)',
-      color: 'var(--papel)', fontFamily: 'inherit', fontSize: 'var(--t-14)',
-      fontWeight: 600, cursor: 'pointer' }}>{children}</button>
+    <button className="auth-acao" type="button" onClick={onClick}>{children}</button>
   );
 }

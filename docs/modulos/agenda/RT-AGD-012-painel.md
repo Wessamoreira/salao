@@ -9,7 +9,7 @@ depende_de: [RT-AGD-011]
 permissoes: [agenda:read:all, agenda:read:own]
 eventos: []
 regras: [RN-AGD-024]
-atualizado_em: 2026-09-05
+atualizado_em: 2026-09-11
 ---
 
 # RT-AGD-012 — Painel do balcão
@@ -102,6 +102,11 @@ itálico. Em preto e branco, o painel continua legível.
 
 Contraste medido no navegador: cabeçalho 4.67, cliente 15.77, profissional 4.67, situação 15.77,
 rodapé 4.67 — todos acima do mínimo, com o limiar de texto grande aplicado onde vale.
+
+Quando a conexão cai depois que o retrato foi carregado, as linhas não somem: o cache em memória
+continua na parede e uma faixa informa `Sem conexão — dados de HH:MM`. Se nenhum retrato chegou, a
+mensagem de indisponibilidade ocupa o painel em vez de uma tela branca. O app shell é servido pelo
+service worker da casca, mas uma abertura a frio ainda exige a sessão do modo quiosque pendente.
 
 ## 9. Pendências
 

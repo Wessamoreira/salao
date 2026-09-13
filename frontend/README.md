@@ -1,32 +1,35 @@
-# React + TypeScript + Vite
+# Frontend do Salão
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React, TypeScript e Vite. A navegação e as permissões vêm de `/me/capabilities`; o frontend não
+decide acesso por perfil.
 
-Currently, two official plugins are available:
+## Desenvolvimento
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+O Vite encaminha `/api` para `http://localhost:8080`. O service worker é registrado apenas no
+build de produção para não criar cache durante o desenvolvimento.
+
+## PWA e offline
+
+O build gera `sw.js` com os arquivos versionados do próprio bundle. O manifesto torna o sistema
+instalável e o app shell abre sem rede depois do primeiro acesso em produção. Instalação fora de
+`localhost` exige HTTPS, como todo service worker.
+
+Dados autenticados não são gravados no Cache Storage. Se a internet cair com a sessão aberta, as
+consultas já carregadas continuam na tela com aviso de horário; escritas falham imediatamente e
+nunca são enfileiradas. Uma abertura offline a frio depende do futuro modo quiosque com credencial
+isolada por dispositivo.
+
+## Verificação
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+As prévias das telas centrais ficam nos scripts `previa:*` do `package.json`.

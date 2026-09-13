@@ -1,3 +1,4 @@
+import { Esqueleto, Falha, Vazio } from '../../layout/Pagina';
 import { useMemo, useState } from 'react';
 import {
   useAgendaDoDia, type Agendamento, type AgendaDoDia, type BlocoDoAgendamento,
@@ -6,6 +7,7 @@ import {
   cargaEmMinutos, faixaDoDia, posicao, posicaoDoAgora, rotuloDeCarga, rotuloDeHora,
   PIXELS_POR_MINUTO, type FaixaDoDia,
 } from './grade';
+import { useConectado } from '../../pwa/conectado';
 import './agenda.css';
 
 /** A jornada mais cheia do salão é a régua da barra de carga — não um número inventado. */
@@ -65,7 +67,9 @@ function porExtenso(data: string): { dia: string; semana: string } {
 export function Agenda() {
   const [data, definirData] = useState(hoje());
   const [escolhido, definirEscolhido] = useState<string | null>(null);
-  const { data: agenda, isPending, error } = useAgendaDoDia(data);
+  const { data: agenda, dataUpdatedAt, isPending, isPlaceholderData, error, refetch } =
+    useAgendaDoDia(data);
+  const conectado = useConectado();
 
   // Reavaliado a cada render; a linha do agora só precisa da precisão do minuto, e um
   // timer que redesenha a grade inteira a cada segundo é gasto sem ganho.
@@ -90,7 +94,14 @@ export function Agenda() {
           <div className="agenda-data">{extenso.dia}</div>
           <div className="agenda-dia-da-semana">{extenso.semana}</div>
         </div>
-        <div style={{ flexGrow: 1 }} />
+        <div className="agenda-topo-espaco" />
+        {!conectado && agenda && (
+          <span className="agenda-dados-offline">
+            Dados de {new Intl.DateTimeFormat('pt-BR', {
+              hour: '2-digit', minute: '2-digit',
+            }).format(new Date(dataUpdatedAt))}
+          </span>
+        )}
         <nav className="agenda-navegacao" aria-label="Navegar entre os dias">
           <button type="button" onClick={() => definirData(somarDias(data, -1))}
             aria-label="Dia anterior">←</button>
@@ -100,17 +111,24 @@ export function Agenda() {
         </nav>
       </header>
 
-      {error && <p className="agenda-vazia">Não foi possível carregar a agenda deste dia.</p>}
-      {isPending && !error && <p className="agenda-vazia">Carregando a agenda…</p>}
+      {error && !agenda && (
+        <Falha aoTentar={() => refetch()}>
+          A agenda deste dia não chegou. Os dias já abertos continuam na tela.
+        </Falha>
+      )}
+      {/* Esqueleto com a forma da grade — só na PRIMEIRA carga, porque a partir dela o
+          dia anterior fica na tela (ver `useAgendaDoDia`). */}
+      {isPending && !error && <Esqueleto linhas={7} altura={64} />}
 
       {agenda && agenda.profissionais.length === 0 && (
-        <p className="agenda-vazia">
-          Nenhum profissional cadastrado. A agenda aparece quando houver quem atenda.
-        </p>
+        <Vazio icone="pessoas" titulo="Ninguém para atender ainda">
+          A agenda aparece quando houver profissional cadastrado com jornada.
+        </Vazio>
       )}
 
       {agenda && agenda.profissionais.length > 0 && (
-        <div className="agenda-corpo">
+        <div className={`agenda-corpo${isPlaceholderData ? ' trocando' : ''}`}
+          aria-busy={isPlaceholderData || undefined}>
           <Horas faixa={faixa} altura={alturaDaPista}
             agora={posicaoDoAgora(agora, agenda.data, faixa, agenda.fuso)}
             rotuloDoAgora={rotuloDeHora(agora.toISOString(), agenda.fuso)} />

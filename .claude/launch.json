@@ -2,15 +2,58 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "previa-sistema",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "previa:sistema"
+      ],
+      "port": 5174
+    },
+    {
       "name": "previa-agenda",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "frontend", "run", "previa:agenda"],
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "previa:agenda"
+      ],
       "port": 5174
     },
     {
       "name": "previa-comandas",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "frontend", "run", "previa:comandas"],
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "previa:comandas"
+      ],
+      "port": 5174
+    },
+    {
+      "name": "previa-casca",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "previa:casca"
+      ],
+      "port": 5174
+    },
+    {
+      "name": "previa-login",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "previa:login"
+      ],
       "port": 5174
     }
   ]

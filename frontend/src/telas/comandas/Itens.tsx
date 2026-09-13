@@ -24,30 +24,33 @@ export function Itens({ itens, aoRemover, aoDescontar, bloqueado }: {
   }
 
   return (
-    <table className="cmd-itens">
-      <caption className="cmd-oculto">Itens da comanda</caption>
-      <thead>
-        <tr>
-          <th scope="col">Item</th>
-          <th scope="col" className="cmd-num">Qtd</th>
-          <th scope="col" className="cmd-num">Unitário</th>
-          <th scope="col" className="cmd-num">Desconto</th>
-          <th scope="col" className="cmd-num">Total</th>
-          <th scope="col"><span className="cmd-oculto">Ações</span></th>
-        </tr>
-      </thead>
-      <tbody>
-        {itens.map((item) => (
-          <Linha
-            key={item.id}
-            item={item}
-            bloqueado={bloqueado}
-            aoRemover={aoRemover}
-            aoDescontar={aoDescontar}
-          />
-        ))}
-      </tbody>
-    </table>
+    <div className="cmd-itens-rolagem" role="region" aria-label="Itens da comanda"
+      tabIndex={0}>
+      <table className="cmd-itens">
+        <caption className="cmd-oculto">Itens da comanda</caption>
+        <thead>
+          <tr>
+            <th scope="col">Item</th>
+            <th scope="col" className="cmd-num">Qtd</th>
+            <th scope="col" className="cmd-num">Unitário</th>
+            <th scope="col" className="cmd-num">Desconto</th>
+            <th scope="col" className="cmd-num">Total</th>
+            <th scope="col"><span className="cmd-oculto">Ações</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          {itens.map((item) => (
+            <Linha
+              key={item.id}
+              item={item}
+              bloqueado={bloqueado}
+              aoRemover={aoRemover}
+              aoDescontar={aoDescontar}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

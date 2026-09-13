@@ -1,0 +1,37 @@
+.conectividade {
+  position: fixed;
+  z-index: 90;
+  right: var(--e-4);
+  bottom: var(--e-4);
+  max-width: min(380px, calc(100vw - var(--e-6)));
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: var(--e-2);
+  padding: var(--e-3) var(--e-4);
+  color: var(--espelho-texto);
+  background: var(--espelho);
+  border: 1px solid var(--espelho-regua);
+  border-radius: var(--raio-2);
+  box-shadow: var(--sombra-flutuante);
+  font-size: var(--t-12);
+}
+
+.conectividade strong { font-weight: var(--p-pesado); }
+.conectividade > span:last-child { color: var(--espelho-texto-fraco); }
+.conectividade-ponto {
+  width: 8px;
+  height: 8px;
+  background: var(--status-solicitado);
+  border-radius: 50%;
+}
+
+@media (max-width: 560px) {
+  .conectividade {
+    right: var(--e-3);
+    bottom: var(--e-3);
+    left: var(--e-3);
+    grid-template-columns: auto 1fr;
+  }
+  .conectividade > span:last-child { grid-column: 2; }
+}

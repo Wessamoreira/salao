@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./fontes.css";
 @import "./tokens.css";
 @import "./componentes.css";
 
@@ -16,6 +17,11 @@
   --color-tinta-tenue: var(--tinta-tenue);
   --color-regua: var(--regua);
   --color-regua-forte: var(--regua-forte);
+  --color-espelho: var(--espelho);
+  --color-espelho-texto: var(--espelho-texto);
+  --color-vinho: var(--vinho);
+  --color-vinho-fundo: var(--vinho-fundo);
+  --color-metal: var(--metal);
 
   --color-confirmado: var(--status-confirmado);
   --color-solicitado: var(--status-solicitado);
@@ -28,9 +34,11 @@
 
   --radius-1: var(--raio-1);
   --radius-2: var(--raio-2);
+  --radius-3: var(--raio-3);
 }
 
 @layer base {
+  *, *::before, *::after { box-sizing: border-box; }
   html { background: var(--papel-fundo); }
   body {
     margin: 0;
@@ -39,14 +47,90 @@
     /* Numeral tabular: numa grade de horários, número que não alinha em coluna
        força o olho a reprocessar cada linha. */
     font-feature-settings: var(--numerais);
-    -webkit-font-smoothing: antialiased;
+    /* Sem `-webkit-font-smoothing: antialiased`: ele afina o texto no macOS e não faz
+       nada no resto, então acrescentava divergência entre máquinas em vez de
+       acabamento. Com fonte própria, o desenho já é o mesmo em todo lugar. */
+    text-rendering: optimizeLegibility;
   }
   /* Foco sempre visível. Removê-lo é o atalho mais comum para quebrar navegação
      por teclado — e a recepção trabalha com as mãos no teclado (R-UX-02). */
   :focus-visible {
-    outline: 2px solid var(--status-atendendo);
+    outline: 2px solid var(--foco);
     outline-offset: 2px;
+  }
+  /* Sobre o menu escuro, tinta sobre tinta não existe: lá o anel é claro. */
+  .casca-lateral :focus-visible,
+  .auth-placa:focus-visible {
+    outline-color: var(--foco-claro);
   }
   a { color: oklch(0.55 0.10 252); }
   a:hover { color: oklch(0.45 0.10 252); }
+}
+
+/* O boot nunca deixa uma tela branca enquanto o cookie seguro restaura a sessão. */
+.inicio-carga {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--e-4);
+  background: var(--espelho);
+}
+.inicio-carga-marca {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  color: var(--espelho);
+  background: var(--metal);
+  border-radius: var(--raio-2);
+  font-family: var(--fonte-identidade);
+  font-size: var(--t-30);
+}
+.inicio-carga-linha {
+  width: 52px;
+  height: 2px;
+  overflow: hidden;
+  background: var(--espelho-regua);
+}
+.inicio-carga-linha::after {
+  content: '';
+  display: block;
+  width: 45%;
+  height: 100%;
+  background: var(--metal-claro);
+  animation: inicio-carga 900ms var(--mov-curva) infinite alternate;
+}
+@keyframes inicio-carga { to { transform: translateX(122%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .inicio-carga-linha::after { width: 100%; animation: none; }
+}
+
+.em-breve {
+  max-width: 620px;
+  margin: var(--e-6);
+  padding: var(--e-8);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-top: 3px solid var(--metal);
+}
+.em-breve-rotulo {
+  color: var(--tinta-fraca);
+  font-size: var(--t-10);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.em-breve h1 { margin: var(--e-2) 0 0; font-size: var(--t-25); }
+.em-breve p { margin: var(--e-3) 0 0; color: var(--tinta-fraca); line-height: 1.5; }
+.em-breve code {
+  padding: 1px var(--e-1);
+  color: var(--tinta);
+  background: var(--papel-afundado);
+  font-family: var(--fonte-mono);
+  font-size: var(--t-12);
+}
+@media (max-width: 600px) {
+  .em-breve { margin: var(--e-3); padding: var(--e-5); }
 }

@@ -1,0 +1,69 @@
+/*
+ * A tela de falha. Papel, tinta e nada mais: ela aparece quando o sistema já falhou, e
+ * não é hora de ornamento nem de cor de alerta gritando — a pessoa precisa ler e agir.
+ */
+.barreira {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--e-6);
+  background: var(--papel-fundo);
+}
+/* Dentro da casca: ocupa a área de trabalho, e a lateral continua ali. */
+.barreira.na-pagina { min-height: auto; place-items: start center; padding: var(--e-8) var(--e-5); }
+
+.barreira-caixa {
+  width: min(100%, 420px);
+  padding: var(--e-8);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-3);
+}
+
+.barreira-caixa h2 {
+  margin: 0;
+  font-size: var(--t-20);
+  font-weight: var(--p-forte);
+  letter-spacing: var(--tr-titulo);
+}
+.barreira-caixa p {
+  margin: var(--e-3) 0 var(--e-6);
+  color: var(--tinta-fraca);
+  font-size: var(--t-14);
+  line-height: 1.5;
+}
+.barreira-caixa button {
+  min-height: 42px;
+  padding: 0 var(--e-5);
+  color: var(--papel);
+  background: var(--tinta);
+  border: 1px solid var(--tinta);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-14);
+  font-weight: var(--p-forte);
+  cursor: pointer;
+}
+.barreira-caixa button:hover {
+  background: color-mix(in srgb, var(--tinta) 88%, white);
+}
+
+.barreira-caixa details { margin-top: var(--e-6); }
+.barreira-caixa summary {
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  cursor: pointer;
+}
+.barreira-caixa code {
+  display: block;
+  margin-top: var(--e-3);
+  padding: var(--e-3);
+  overflow-wrap: anywhere;
+  color: var(--tinta);
+  background: var(--papel-fundo);
+  border: 1px solid var(--regua);
+  border-radius: var(--raio-1);
+  font-family: var(--fonte-mono);
+  font-size: var(--t-11);
+  line-height: 1.5;
+}

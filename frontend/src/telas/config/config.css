@@ -1,14 +1,17 @@
 /* RT-CFG-001 — só o que é desta tela; o resto vem de estilo/componentes.css. */
 
 .cfg-tela {
+  /* A moldura da página já dá o respiro externo (ver pagina.css). */
+  margin: 0 auto;
   /* Formulário é leitura em coluna: linha longa obriga o olho a voltar ao começo, e
      aqui cada campo tem uma explicação embaixo que precisa ser lida. */
   max-width: 560px;
   /*
    * Superfície, não trecho do fundo.
    *
-   * Medido: --tinta-fraca sobre --papel-fundo dá 4.34 e reprova AA; sobre --papel dá
-   * 4.67 e passa. Vale para os rótulos, os títulos de seção e o texto de ajuda — que é
+   * Medido novamente após a direção de back-office: --tinta-fraca passa tanto sobre
+   * --papel-fundo (5.57) quanto sobre --papel (6.08). Vale para os rótulos, os títulos
+   * de seção e o texto de ajuda — que é
    * onde estão as consequências que a pessoa precisa ler antes de mexer.
    *
    * É a mesma correção da lista de clientes, pela mesma causa. Está virando padrão do
@@ -20,14 +23,27 @@
   border-radius: var(--raio-2);
 }
 
-.cfg-titulo {
-  margin: 0 0 var(--e-6);
-  font-size: var(--t-20);
-  font-weight: 600;
-  letter-spacing: -0.005em;
+/*
+ * Sem título próprio: quem nomeia a página é a trilha da barra de topo, e a ação de
+ * salvar mora lá também — sempre visível, sem precisar rolar três seções para achá-la.
+ *
+ * "Salvo" é um aviso de estado ao lado da ação, e não um parágrafo no pé: num formulário
+ * longo, a confirmação no pé fica abaixo da dobra e a pessoa clica de novo achando que
+ * não salvou.
+ */
+.cfg-salvo {
+  color: var(--tinta-fraca);
+  font-size: var(--t-11);
+  font-weight: var(--p-forte);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
 }
 
-.cfg-carregando { font-size: var(--t-14); color: var(--tinta-fraca); }
+@media (max-width: 700px) {
+  .cfg-tela {
+  /* A moldura da página já dá o respiro externo (ver pagina.css). */
+  margin: 0 auto; max-width: none; margin: var(--e-3); padding: var(--e-4); }
+}
 
 /* A primeira seção não leva a linha de separação: ela vem logo abaixo do título. */
 .cfg-tela > section:first-of-type { margin-top: 0; }

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { _limparRenovacaoEmCurso, api, ErroDaApi } from './http';
+import { _limparRenovacaoEmCurso, api, ErroDaApi, ouvirEventos } from './http';
+import { registrarEstadoDaApi } from '../pwa/conectado';
 import { definirTokenAtual, tokenAtual } from '../sessao/sessao';
 
 function resposta(status: number, corpo: unknown = {}) {
@@ -15,6 +16,7 @@ describe('cliente HTTP', () => {
     _limparRenovacaoEmCurso();
     definirTokenAtual('token-velho');
     vi.restoreAllMocks();
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
   });
 
   it('renova UMA vez quando várias chamadas recebem 401 juntas', async () => {
@@ -87,6 +89,85 @@ describe('cliente HTTP', () => {
       expect(e.codigo).toBe('ER-IAM-DADOS_INVALIDOS');
       expect(e.status).toBe(422);
     });
+  });
+
+  it('queda de rede chega como ErroDaApi em português, e não como o erro cru do navegador', async () => {
+    // "Failed to fetch" na tela da recepção é o que acontece quando o erro sobe cru.
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+
+    await expect(api('/v1/agendamentos')).rejects.toMatchObject({
+      codigo: 'ER-INF-SEM_CONEXAO', status: 0,
+    });
+  });
+
+  it('prazo de 12s estourado vira ER-INF-TEMPO_ESGOTADO', async () => {
+    // Sem a tradução, a mensagem era "signal is aborted without reason", em inglês.
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal('fetch', vi.fn((_url: string, init: RequestInit) =>
+        new Promise((_resolver, rejeitar) => {
+          init.signal?.addEventListener('abort',
+            () => rejeitar(new DOMException('aborted', 'AbortError')));
+        })));
+
+      const chamada = expect(api('/v1/agendamentos')).rejects.toMatchObject({
+        codigo: 'ER-INF-TEMPO_ESGOTADO', status: 0,
+      });
+      await vi.advanceTimersByTimeAsync(12_000);
+      await chamada;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('cancelar o SSE não acende "Sem conexão"', async () => {
+    /*
+     * O SSE aborta ao desmontar, e o StrictMode desmonta todo efeito uma vez em dev. Antes, o
+     * catch marcava a API como fora do ar em QUALQUER falha — inclusive nesse cancelamento
+     * pedido por quem chamou —, e a faixa aparecia com a rede funcionando.
+     */
+    registrarEstadoDaApi(true);
+    const avisos = vi.fn();
+    window.addEventListener('salao:conectividade', avisos);
+    vi.stubGlobal('fetch', vi.fn((_url: string, init: RequestInit) =>
+      new Promise((_resolver, rejeitar) => {
+        init.signal?.addEventListener('abort',
+          () => rejeitar(new DOMException('aborted', 'AbortError')));
+      })));
+
+    const encerrar = ouvirEventos('/v1/agenda/eventos', () => {});
+    encerrar();
+    await new Promise((pronto) => setTimeout(pronto, 0));
+
+    expect(avisos).not.toHaveBeenCalled();
+    window.removeEventListener('salao:conectividade', avisos);
+  });
+
+  it('502 do proxy conta como servidor fora do ar, mesmo com o fetch tendo "funcionado"', async () => {
+    // Backend caído atrás do Caddy não faz o fetch falhar: devolve 502. É o caso "Wi-Fi ok,
+    // servidor fora" que `registrarEstadoDaApi` existe para perceber.
+    registrarEstadoDaApi(true);
+    const avisos = vi.fn();
+    window.addEventListener('salao:conectividade', avisos);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response('Bad Gateway', { status: 502 })));
+
+    await expect(api('/v1/agendamentos')).rejects.toMatchObject({ status: 502 });
+
+    expect(avisos).toHaveBeenCalledOnce();
+    window.removeEventListener('salao:conectividade', avisos);
+    registrarEstadoDaApi(true);
+  });
+
+  it('recusa uma escrita offline na hora, sem enfileirar nem chamar a rede', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+    const buscar = vi.fn();
+    vi.stubGlobal('fetch', buscar);
+
+    await expect(api('/v1/agendamentos', {
+      method: 'POST', body: JSON.stringify({}),
+    })).rejects.toMatchObject({ codigo: 'ER-INF-SEM_CONEXAO', status: 0 });
+    expect(buscar).not.toHaveBeenCalled();
   });
 });
 

@@ -89,6 +89,18 @@ export function useAgendaDoDia(data: string) {
   return useQuery({
     queryKey: ['agenda', data],
     queryFn: () => api<AgendaDoDia>(`/v1/agendamentos/dia?data=${data}`),
+    /*
+     * Mantém a grade do dia anterior enquanto o novo chega.
+     *
+     * Sem isto, cada clique na flecha derrubava a grade inteira — doze colunas, a régua
+     * de horas, todos os blocos — e a trocava por um parágrafo "Carregando a agenda…",
+     * para remontar tudo meio segundo depois. Não é a demora que se sente como travada:
+     * é o desmonte. A recepção navega entre dias o tempo todo.
+     *
+     * Quem avisa que o dado ainda não é do dia pedido é `isPlaceholderData`, que a tela
+     * usa para esmaecer a grade. Mostrar sem avisar seria pior que a tela branca.
+     */
+    placeholderData: (anterior) => anterior,
   });
 }
 

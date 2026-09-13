@@ -165,7 +165,7 @@ describe('grade da agenda', () => {
   it('salão sem profissional explica em vez de mostrar grade vazia', async () => {
     montar(agendaDoDia({ profissionais: [], jornadas: {} }));
 
-    expect(await screen.findByText(/Nenhum profissional cadastrado/)).toBeInTheDocument();
+    expect(await screen.findByText(/Ninguém para atender ainda/)).toBeInTheDocument();
   });
 
   it('clicar na tarja mostra o que não cabe nela', async () => {

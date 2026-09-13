@@ -1,3 +1,4 @@
+import { Pagina, Vazio } from '../../layout/Pagina';
 import { useState } from 'react';
 import { ErroDaApi } from '../../api/http';
 import {
@@ -66,7 +67,8 @@ export function Comandas() {
   const bloqueado = comanda !== undefined && comanda.status !== 'ABERTA';
 
   return (
-    <div className="cmd-tela">
+    <Pagina>
+    <div className="pagina-cheia cmd-tela">
       <BarraDeAbertas
         comandas={abertas ?? []}
         selecionadaId={selecionadaId}
@@ -74,18 +76,18 @@ export function Comandas() {
       />
 
       {detalhada === undefined || conta === undefined ? (
-        <section className="cmd-vazio">
-          <h1 className="cmd-vazio-titulo">Nenhuma comanda selecionada</h1>
-          <p className="cmd-vazio-texto">
-            Escolha uma comanda aberta ao lado para lançar itens e receber.
-          </p>
-        </section>
+        <Vazio icone="tesoura" titulo="Nenhuma comanda selecionada">
+          Escolha uma comanda aberta na barra acima para lançar itens e receber.
+        </Vazio>
       ) : (
         <section className="cmd-conta" aria-label={`Comanda ${detalhada.comanda.numero}`}>
           <header className="cmd-conta-topo">
-            <h1 className="cmd-conta-titulo">
+            {/* `h2`: o `h1` desta página é "Atendimento", na barra de topo. A comanda é
+                uma seção dentro dela — dois `h1` numa página é hierarquia quebrada para
+                quem navega por leitor de tela. */}
+            <h2 className="cmd-conta-titulo">
               Comanda <span className="cmd-conta-numero">#{detalhada.comanda.numero}</span>
-            </h1>
+            </h2>
             <span className={`cmd-selo cmd-selo-${detalhada.comanda.status.toLowerCase()}`}>
               {detalhada.comanda.status.toLowerCase()}
             </span>
@@ -149,6 +151,7 @@ export function Comandas() {
         </section>
       )}
     </div>
+    </Pagina>
   );
 }
 

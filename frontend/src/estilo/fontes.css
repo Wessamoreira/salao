@@ -1,0 +1,66 @@
+/*
+ * RT-INF-010 — as duas fontes do produto, auto-hospedadas.
+ *
+ * POR QUE ISTO EXISTE
+ *
+ * Até aqui o sistema declarava `"Avenir Next", Avenir, "Segoe UI", system-ui` e
+ * `"Bodoni 72", Didot, Georgia`. As duas primeiras de cada pilha são macOS. O efeito
+ * é que o produto NÃO TINHA FONTE: tinha a que cada sistema operacional emprestou —
+ * Segoe UI no Windows, Roboto no Android — e o gesto editorial que justifica o negócio
+ * ser beleza virava Georgia em silêncio para a maioria das telas.
+ *
+ * Pior: `font-weight: 600` e `650` sobre pilha estática fazem o navegador SINTETIZAR o
+ * negrito, esticando o desenho em vez de trocá-lo. É o traço sujo que se sente sem
+ * conseguir nomear.
+ *
+ * AS DUAS ESCOLHAS
+ *
+ * Archivo (Omnibus-Type, SIL OFL) — grotesca desenhada para alta legibilidade em corpo
+ * pequeno e dado denso, que é exatamente a grade de horários e a lista de comandas. Tem
+ * eixo de peso contínuo, então 600 é um desenho e não uma deformação. Não é Inter nem
+ * Roboto pela razão que a doc já dava: são o padrão de toda tela gerada sem escolha.
+ *
+ * Bodoni Moda (SIL OFL) — mantém a decisão original, que estava certa: uma didone é o
+ * registro visual do setor de beleza, e um único gesto editorial se justifica. A
+ * diferença é que agora ela aparece em toda máquina. O eixo óptico (`opsz`) é o que
+ * impede o fio fino da didone de sumir em corpo pequeno.
+ *
+ * POR QUE O @font-face É ESCRITO À MÃO, E NÃO IMPORTADO DO PACOTE
+ *
+ * O `standard.css` do Fontsource declara TODOS os subsets — vietnamita, latin-ext,
+ * math, symbols. Em runtime o `unicode-range` impede o download do que não se usa, mas
+ * o `sw.js` (vite.config) pré-carrega tudo que o build gerou: seriam 217 KB de fonte no
+ * Cache Storage em vez de 81 KB, e o custo da primeira visita de um PWA é justamente o
+ * que se está tentando proteger.
+ *
+ * Português inteiro cabe em U+0000–00FF: ã, õ, ç e todos os acentuados são Latin-1.
+ * Declarar só o arquivo latino não perde um caractere sequer.
+ *
+ * A promessa de `16-design-system.md` continua valendo: `swap` não bloqueia a primeira
+ * tela, os arquivos vêm da mesma origem (nenhuma CDN, nada a vazar para o Google Fonts)
+ * e o service worker os guarda na primeira visita.
+ */
+
+@font-face {
+  font-family: 'Archivo Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('../../node_modules/@fontsource-variable/archivo/files/archivo-latin-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Bodoni Moda Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400 900;
+  src: url('../../node_modules/@fontsource-variable/bodoni-moda/files/bodoni-moda-latin-standard-normal.woff2')
+    format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}

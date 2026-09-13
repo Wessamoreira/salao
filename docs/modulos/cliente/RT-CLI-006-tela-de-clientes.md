@@ -95,10 +95,10 @@ telefone já está com: Ju" — sem botão e sem destaque de alerta (RN-CLI-027)
 
 Três defeitos passaram por 25 testes de comportamento e por uma revisão de código.
 
-**O nome da ficha estava em Instrument Serif.** O sistema diz que a serifada aparece em exatamente
+**O nome da ficha estava na fonte serifada de identidade.** O sistema diz que ela aparece em exatamente
 dois lugares — nome do estabelecimento e totais — e "em texto operacional, nunca". Ficou bonito;
 era violação do mesmo jeito. Alargar a regra na primeira vez em que ela incomoda é como ela deixa
-de restringir. Virou Instrument Sans, com presença vinda de corpo e peso.
+de restringir. Virou a fonte operacional do sistema, com presença vinda de corpo e peso.
 
 **O telefone da lista estava em `--tinta-tenue`.** A regra do sistema é explícita: o tênue nunca em
 "informação que o usuário precise ler para decidir algo" — e aquele número é literalmente o que a

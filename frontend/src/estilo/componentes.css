@@ -17,19 +17,31 @@
  * em corpo de rótulo — um parágrafo inteiro gritando. Passou nos testes de
  * comportamento e apareceu na primeira olhada no navegador.
  */
+/*
+ * Rótulo em CAIXA NORMAL, escuro e junto do campo.
+ *
+ * Ele era versalete de 10px em --tinta-fraca — exatamente o mesmo desenho de
+ * `.secao-titulo`. Dois níveis de hierarquia renderizados iguais: o agrupamento do
+ * formulário simplesmente não se lia, e a etiqueta gritava mais que o dado que ela
+ * nomeia. É o formulário de dez anos atrás, e era o mesmo defeito da tela de entrada.
+ *
+ * Agora o rótulo é o mais forte dos três (rótulo, seção, ajuda), e está certo: ele é
+ * conteúdo. A seção é divisória, e divisória se resolve com traço e espaço — não
+ * competindo em peso.
+ */
 .campo > span:first-child {
   display: block;
-  margin-bottom: var(--e-1);
-  font-size: var(--t-10);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--tinta-fraca);
+  margin-bottom: var(--e-2);
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+  letter-spacing: var(--tr-corpo);
+  color: var(--tinta);
 }
 .campo input,
 .campo select {
   display: block;
   width: 100%;
+  min-height: 42px;
   padding: var(--e-2) var(--e-3);
   font: inherit;
   font-size: var(--t-14);
@@ -54,6 +66,7 @@
 }
 
 .acao {
+  min-height: 42px;
   padding: var(--e-2) var(--e-4);
   font: inherit;
   font-size: var(--t-14);
@@ -65,6 +78,7 @@
   cursor: pointer;
 }
 .acao:disabled { opacity: 0.45; cursor: default; }
+.acao:hover:not(:disabled) { background: var(--espelho-hover); border-color: var(--espelho-hover); }
 
 .acao-discreta {
   padding: var(--e-1) 0;
@@ -83,13 +97,26 @@
   padding-top: var(--e-5);
   border-top: 1px solid var(--regua);
 }
+/*
+ * A seção é DIVISÓRIA: traço acima e ar, não peso de tipo. Quem carrega a hierarquia
+ * aqui é o espaço em branco — que é o que separa um formulário desenhado de uma pilha
+ * de campos.
+ */
 .secao-titulo {
+  margin: 0 0 var(--e-4);
   font-size: var(--t-10);
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
   text-transform: uppercase;
   color: var(--tinta-fraca);
-  margin-bottom: var(--e-4);
+}
+/* O traço vem do container da seção, não do título: assim a primeira seção não ganha
+   uma linha órfã no alto do cartão. */
+.cfg-tela > section + section,
+.secao + .secao {
+  margin-top: var(--e-8);
+  padding-top: var(--e-6);
+  border-top: 1px solid var(--regua);
 }
 
 .erro {

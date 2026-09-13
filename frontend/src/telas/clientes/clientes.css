@@ -14,6 +14,7 @@
   grid-template-rows: auto 1fr;
   gap: 0 var(--e-8);
   height: 100%;
+  padding: var(--e-6);
   align-content: start;
 }
 
@@ -25,8 +26,27 @@
  * toda vez que abre a tela. Ele tem um trabalho só: fazer ela digitar.
  */
 .cli-tela.esperando { grid-template-columns: 1fr; }
-.cli-tela.esperando .cli-vazio { max-width: 460px; padding-top: var(--e-6); }
-.cli-tela.esperando .cli-vazio-titulo { font-size: var(--t-16); }
+
+/*
+ * A dica fica ALINHADA COM O CAMPO, na largura dele. Ela explica o campo; centralizada
+ * na área de trabalho, soltava-se dele e passava a parecer resultado de uma busca que
+ * ninguém fez. O estado vazio de verdade — "ninguém com esse nome" — usa a moldura
+ * compartilhada e fica centralizado, porque aí o assunto é a área toda.
+ */
+.cli-dica {
+  max-width: 520px;
+  margin-top: var(--e-2);
+  font-size: var(--t-14);
+  line-height: 1.55;
+  color: var(--tinta-fraca);
+}
+.cli-dica p { margin: 0 0 var(--e-2); }
+.cli-dica p:last-child { margin-bottom: 0; }
+.cli-dica-titulo {
+  color: var(--tinta);
+  font-size: var(--t-16);
+  font-weight: var(--p-forte);
+}
 
 .cli-cabecalho {
   grid-column: 1 / -1;
@@ -55,7 +75,7 @@
 /* Medido: --tinta-tenue dá 2.36 e é ilegível de fato. O texto do placeholder aqui
    é orientação, não enfeite — ele diz o que se pode digitar. */
 .cli-busca::placeholder { color: var(--tinta-fraca); }
-.cli-busca:focus-visible { border-color: var(--status-atendendo); }
+.cli-busca:focus-visible { border-color: var(--foco); }
 
 /* O que o servidor entendeu do termo. Vem da resposta, nunca de um palpite do
    front — ver ResultadoDaBusca. */
@@ -66,9 +86,9 @@
   min-height: var(--e-5);
   margin-top: var(--e-3);
   font-size: var(--t-12);
-  /* Medido: --tinta-fraca sobre --papel-fundo dá 4.34 e reprova AA em corpo de
-     texto. Esta linha é o que explica a busca à recepção — não é decoração, e a
-     subordinação dela vem do corpo pequeno, não de cor apagada. */
+  /* Medido: --tinta-fraca passa em AA sobre os dois fundos. Esta linha é o que explica
+     a busca à recepção — não é decoração, e a subordinação dela vem do corpo pequeno,
+     não de cor apagada. */
   color: var(--tinta);
 }
 .cli-leitura-chave {
@@ -86,9 +106,8 @@
 /*
  * A lista é uma superfície, não um trecho do fundo.
  *
- * Medido: --tinta-fraca sobre --papel-fundo dá 4.34 e reprova AA para corpo de
- * texto; sobre --papel dá 4.67 e passa. O telefone da lista é a informação mais
- * essencial da tela, e não pode ficar no par que reprova.
+ * A superfície preserva hierarquia e estabilidade de contraste. Na paleta atual,
+ * --tinta-fraca mede 6.08 sobre --papel e 5.57 sobre --papel-fundo.
  */
 .cli-lista {
   list-style: none;
@@ -185,7 +204,7 @@ kbd {
 .cli-ficha > * { max-width: 620px; }
 
 /*
- * Instrument Sans, e não a serifada de identidade.
+ * A fonte operacional, e não a serifada de identidade.
  *
  * O sistema declara que a serifada aparece em exatamente dois lugares — nome do
  * estabelecimento e totais — e nunca em texto operacional. A primeira versão desta
@@ -322,5 +341,22 @@ kbd {
 
 
 @media (max-width: 900px) {
-  .cli-tela { grid-template-columns: 1fr; gap: var(--e-6) 0; }
+  .cli-tela {
+    grid-template-columns: 1fr;
+    gap: var(--e-6) 0;
+    height: auto;
+    min-height: 100%;
+    padding: var(--e-4);
+  }
+  .cli-cabecalho { padding-bottom: var(--e-4); }
+  .cli-busca { max-width: none; min-height: 46px; font-size: var(--t-16); }
+  .cli-ficha { padding: var(--e-4); }
+}
+
+@media (max-width: 480px) {
+  .cli-tela { padding: var(--e-3); }
+  .cli-dados { grid-template-columns: 1fr; gap: var(--e-1); }
+  .cli-dados dd + dt { margin-top: var(--e-3); }
+  .cli-consentimento-cabeca { align-items: flex-start; flex-direction: column; gap: var(--e-1); }
+  .cli-escolha { flex-wrap: wrap; }
 }

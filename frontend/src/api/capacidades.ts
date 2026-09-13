@@ -6,6 +6,20 @@ export interface Menu {
   rotulo: string;
   rota: string;
   icone: string;
+  /** Id de um `GrupoDeMenu`. Define em que seção da lateral o item aparece. */
+  grupo: string;
+}
+
+/**
+ * Uma seção da navegação lateral.
+ *
+ * Vem do servidor pela mesma razão que os menus vêm: agrupar aqui seria recriar no
+ * JavaScript a regra que `/me/capabilities` existe para eliminar. A ordem da lista é a
+ * ordem da tela e o rótulo é o que aparece — o front não traduz nem reordena.
+ */
+export interface GrupoDeMenu {
+  id: string;
+  rotulo: string;
 }
 
 /**
@@ -23,6 +37,7 @@ export interface Capacidades {
   perfil: string;
   estabelecimento: { id: string; nome: string; timezone: string; moeda: string };
   permissoes: string[];
+  grupos: GrupoDeMenu[];
   menus: Menu[];
   flags: Record<string, boolean>;
   limites: Record<string, number>;

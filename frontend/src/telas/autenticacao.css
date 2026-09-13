@@ -1,0 +1,293 @@
+/*
+ * RT-INF-010 — a porta do sistema.
+ *
+ * Uma coluna centrada, e o fundo com as linhas do livro de agendamento: traço fino na
+ * meia hora, mais forte na hora cheia, na mesma cadência da grade da agenda. É o único
+ * ornamento da tela e ele é material do ofício — não gradiente, não forma abstrata, não
+ * o painel escuro com slogan que toda tela de entrada tem.
+ */
+
+.auth-tela {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(20px, 5vw, 56px) var(--e-4);
+  background-color: var(--papel-fundo);
+}
+
+/*
+ * As linhas do livro de horários, num pseudo-elemento para poderem ser MASCARADAS: elas
+ * desaparecem no centro, onde o formulário mora, e só existem nas bordas da tela. Sem a
+ * máscara, o fundo compete com o campo de senha — que é o único lugar para onde alguém
+ * está olhando aqui.
+ *
+ * A cadência é a da grade: traço fraco na meia hora, traço visível na hora cheia. Se
+ * todos fossem iguais seria papel milimetrado, que é textura genérica; é a hierarquia
+ * que faz isto ser o livro de agendamento e não uma trama qualquer.
+ */
+.auth-tela::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      var(--regua-forte) 0 1px,
+      transparent 1px 128px),
+    repeating-linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--regua) 60%, transparent) 0 1px,
+      transparent 1px 32px);
+  background-position: 0 -1px;
+  mask-image: radial-gradient(100% 85% at 50% 48%,
+    transparent 0%, transparent 20%, black 62%);
+}
+
+.auth-coluna {
+  position: relative;
+  width: min(100%, 400px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-5);
+}
+
+/* ------------------------------------------------------------------ marca */
+
+.auth-marca {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  padding-left: var(--e-1);
+}
+
+/* A mesma placa da casca, um pouco maior. Entrar e estar dentro são o mesmo produto. */
+.auth-placa {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: grid;
+  place-items: center;
+  padding-bottom: 1px;
+  color: var(--papel);
+  background: linear-gradient(160deg, var(--tinta-fraca), var(--tinta));
+  font-family: var(--fonte-identidade);
+  font-size: 17px;
+  font-weight: var(--p-medio);
+  line-height: 1;
+  border-radius: var(--raio-2);
+}
+
+.auth-marca-texto { display: flex; flex-direction: column; min-width: 0; }
+.auth-marca-texto strong {
+  overflow: hidden;
+  font-family: var(--fonte-identidade);
+  font-size: var(--t-20);
+  font-weight: var(--p-medio);
+  line-height: 1.1;
+  letter-spacing: var(--tr-titulo);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.auth-marca-texto small {
+  margin-top: 2px;
+  color: var(--tinta-fraca);
+  font-size: 10px;
+  font-weight: var(--p-forte);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------ cartão */
+
+.auth-cartao {
+  padding: var(--e-8);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-3);
+}
+
+.auth-titulo {
+  margin: 0;
+  font-size: var(--t-20);
+  font-weight: var(--p-forte);
+  letter-spacing: var(--tr-titulo);
+}
+.auth-apoio {
+  margin: var(--e-2) 0 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-14);
+  line-height: 1.5;
+}
+
+.auth-formulario {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-5);
+  margin-top: var(--e-6);
+}
+
+/* ------------------------------------------------------------------ campos */
+
+.auth-campo { display: flex; flex-direction: column; gap: var(--e-2); }
+.auth-campo > label {
+  color: var(--tinta);
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+}
+
+.auth-campo-caixa {
+  display: flex;
+  align-items: center;
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  transition: border-color var(--mov-imediato) var(--mov-curva),
+    box-shadow var(--mov-imediato) var(--mov-curva);
+}
+/*
+ * O foco desenha a CAIXA inteira, não só a borda do input: o botão "Mostrar" mora
+ * dentro dela, e um anel que cortasse o botão ao meio seria pior do que nenhum.
+ */
+.auth-campo-caixa:focus-within {
+  border-color: var(--foco);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--foco) 14%, transparent);
+}
+.auth-campo-caixa input {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  padding: 0 var(--e-3);
+  color: var(--tinta);
+  background: transparent;
+  border: 0;
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: 15px;
+}
+.auth-campo-caixa input:focus-visible { outline: none; }
+.auth-campo-caixa input::placeholder { color: var(--tinta-fraca); }
+
+.auth-revelar {
+  flex-shrink: 0;
+  height: 30px;
+  margin-right: var(--e-1);
+  padding: 0 var(--e-2);
+  color: var(--tinta-fraca);
+  background: transparent;
+  border: 0;
+  border-radius: var(--raio-1);
+  font: inherit;
+  font-size: var(--t-11);
+  font-weight: var(--p-forte);
+  cursor: pointer;
+}
+.auth-revelar:hover { color: var(--tinta); background: var(--papel-fundo); }
+
+.auth-caps,
+.auth-dica {
+  margin: 0;
+  font-size: var(--t-11);
+  line-height: 1.4;
+}
+.auth-caps { color: var(--tinta); font-weight: var(--p-medio); }
+.auth-caps::before { content: '↑ '; color: var(--tinta-fraca); }
+.auth-dica { color: var(--tinta-fraca); }
+
+/* ------------------------------------------------------------------ erro e ação */
+
+/*
+ * O erro entra no fluxo do formulário, acima dos campos, e não como faixa colada no
+ * topo do cartão: quem lê precisa ir dali direto para o campo que vai corrigir.
+ */
+.auth-erro {
+  margin: 0;
+  padding: var(--e-3);
+  color: var(--tinta);
+  background: var(--status-falta-fundo);
+  border-left: 3px solid var(--status-falta);
+  border-radius: 0 var(--raio-1) var(--raio-1) 0;
+  font-size: var(--t-12);
+  line-height: 1.45;
+}
+
+.auth-acao {
+  width: 100%;
+  min-height: 44px;
+  margin-top: var(--e-1);
+  padding: var(--e-3) var(--e-4);
+  color: var(--papel);
+  background: var(--vinho);
+  border: 1px solid var(--vinho);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-14);
+  font-weight: var(--p-forte);
+  cursor: pointer;
+  transition: background var(--mov-imediato) var(--mov-curva);
+}
+.auth-acao:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--vinho) 88%, black);
+}
+.auth-acao:active:not(:disabled) {
+  background: color-mix(in srgb, var(--vinho) 78%, black);
+}
+.auth-acao:disabled { opacity: 0.6; cursor: wait; }
+
+/* ------------------------------------------------------------------ segundo fator */
+
+.auth-codigo {
+  width: 100%;
+  height: 52px;
+  padding: 0 var(--e-3);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font-family: var(--fonte-mono);
+  font-size: var(--t-25);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3em;
+  text-align: center;
+  text-indent: 0.3em;
+}
+.auth-segredo {
+  padding: var(--e-3);
+  overflow-wrap: anywhere;
+  color: var(--tinta);
+  background: var(--papel-fundo);
+  border: 1px solid var(--regua);
+  border-radius: var(--raio-2);
+  font-family: var(--fonte-mono);
+  font-size: var(--t-12);
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+.auth-recuperacao {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--e-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.auth-recuperacao li {
+  padding: var(--e-2);
+  overflow-wrap: anywhere;
+  background: var(--papel-fundo);
+  border: 1px solid var(--regua);
+  border-radius: var(--raio-1);
+  font-family: var(--fonte-mono);
+  font-size: var(--t-12);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+@media (max-width: 460px) {
+  .auth-cartao { padding: var(--e-6) var(--e-5); }
+  .auth-recuperacao { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-acao, .auth-campo-caixa { transition: none; }
+}

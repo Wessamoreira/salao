@@ -15,7 +15,7 @@ justificar por escrito aqui, não uma exceção silenciosa no CSS.
 | Desenho das três telas centrais | skill `design` | Canvas com agenda, comanda, painel e vocabulário |
 | Crítica estruturada | skill `design:design-critique` | 7 achados aplicados — ver "O que a crítica corrigiu" |
 | Formalização em sistema | skill `design:design-system` | Este documento e `design/tokens.css` |
-| Acabamento na implementação | skill `frontend-design` | Pendente do `RT-INF-010` |
+| Acabamento na implementação | skill `frontend-design` | Casca responsiva e identidade material em `RT-INF-010` |
 | Auditoria de acessibilidade | skill `design:accessibility-review` | Pendente do `RT-INF-010` |
 
 Os arquivos-fonte do canvas vivem em `design/*.dc.html` e são re-semeados a cada alteração — o
@@ -23,23 +23,26 @@ canvas publicado nunca é editado direto.
 
 ## A direção, em uma frase
 
-**Papel e tinta, densidade alta, referência de calendário nativo.** Não é minimalismo por moda: a
-recepção usa isto com o telefone no ombro e a cliente em pé na frente, e cada pixel que decora é um
-pixel que não informa.
+**Back-office de recepção com régua de horários.** Branco e cinza frio organizam o trabalho, a
+lateral escura ancora a navegação e uma única cor de marca identifica o salão. A personalidade vem
+do ritmo da agenda e dos detalhes próprios da operação — não de uma estética genérica de luxo.
 
 ## As quatro decisões que sustentam tudo
 
-### 1. Cor só onde carrega informação
+### 1. Cor operacional só onde carrega informação
 
-Status de agendamento, alerta de validade, divergência financeira. **O resto do produto é neutro.**
+Status de agendamento, alerta de validade, divergência financeira. **A área de trabalho é neutra.**
+A cor de marca e o aço neutro aparecem na identidade e na orientação da casca, em áreas pequenas
+e previsíveis; eles não codificam estado nem competem com o conteúdo operacional.
 
 E cor **nunca em texto**: a medição de contraste mostrou que nenhum dos status passa em AA sobre
 papel. Eles são borda, barra e fundo claro — o que já era a regra, agora com o motivo medido.
 
 Os quatro status compartilham chroma (0.115) e luminosidade (0.62) em oklch, variando só a matiz —
 é isso que faz os quatro pesarem igual na tela, em vez de um gritar mais alto por acidente de
-saturação. Um accent nunca aparece em bloco cheio: entra como borda, barra lateral de 3px, ou fundo
-de luminosidade alta na mesma matiz.
+saturação. Uma **cor de status** nunca aparece em bloco cheio: entra como borda, barra lateral de
+3px, ou fundo de luminosidade alta na mesma matiz. O vinho sólido é reservado a pequenos elementos
+de identidade, como o avatar, sempre com contraste medido.
 
 ### 2. Forma, além de cor
 
@@ -57,15 +60,60 @@ Em preto e branco, a tela continua legível. É o teste.
 
 ### 3. Tipografia com um único gesto
 
-**Instrument Serif** aparece em exatamente dois lugares: identidade do estabelecimento e totais. O
-negócio é beleza — um gesto editorial se justifica. Em texto operacional, nunca.
+**Bodoni Moda** aparece somente na identidade do estabelecimento e nos totais. O negócio é
+beleza — um gesto editorial se justifica. Em texto operacional, nunca. Na casca ela aparece **uma
+vez**: na placa do salão.
 
-**Instrument Sans** em todo o resto, com `font-feature-settings: "tnum"` ligado. Numeral tabular
-não é preciosismo: numa grade de horários, número que não alinha em coluna força o olho a
-reprocessar cada linha.
+**Archivo** em todo o resto, com `font-feature-settings: "tnum"` ligado. Numeral tabular não é
+preciosismo: numa grade de horários, número que não alinha em coluna força o olho a reprocessar
+cada linha.
 
 Nem Inter nem Roboto. Não por esnobismo — são as fontes-padrão de toda tela gerada sem escolha, e
 o produto perde identidade por omissão.
+
+> **Correção de 11/09/2026 — o produto não tinha fonte.** Este documento dizia
+> *"Bodoni 72/Didot"* e *"Avenir Next/Segoe UI"*, e justificava a escolha com *"são pilhas locais
+> de sistema: não há download de fonte bloqueando a primeira tela"*. As duas primeiras de cada
+> pilha **só existem no macOS**. Fora dele, o texto caía em Segoe UI ou Roboto e a identidade caía
+> em Georgia — em silêncio. A economia era real e o custo era o produto inteiro: três aparências,
+> nenhuma escolhida, e o único gesto editorial do sistema invisível para a maioria das telas.
+>
+> Pior, e menos óbvio: `font-weight: 600` e `650` sobre pilha estática fazem o navegador
+> **sintetizar** o negrito, esticando o desenho em vez de trocá-lo. É o traço sujo que se sente
+> sem conseguir nomear — e foi exatamente a reclamação que abriu esta revisão.
+>
+> Agora as duas famílias são **auto-hospedadas e variáveis** (`frontend/src/estilo/fontes.css`),
+> servidas da mesma origem, sem CDN e sem nada a vazar para terceiros. **81 KB pelas duas
+> famílias inteiras**, só o subset latino — que cobre o português completo, porque `ã`, `õ` e `ç`
+> são Latin-1. A promessa original continua valendo: `font-display: swap` não bloqueia a primeira
+> tela, e o service worker guarda os arquivos na primeira visita.
+>
+> E os pesos passam a ser tokens (`--p-normal` a `--p-pesado`), com uma escala de entreletra por
+> tamanho (`--tr-micro` a `--tr-display`) que antes não existia — o mesmo tracking ia do rótulo de
+> 10px ao total de 30px.
+
+### 3b. Três convenções de texto, e cada coisa usa a sua
+
+Descoberta ao revisar o conteúdo das telas: **rótulo de campo, título de seção, etiqueta de
+status e cabeçalho de tabela estavam todos com o mesmo desenho** — versalete de 10px, peso 600,
+`--tinta-fraca`. Quatro coisas de hierarquias diferentes renderizadas iguais. O agrupamento do
+formulário não se lia, e a etiqueta gritava mais que o dado que ela nomeia.
+
+| Papel | Desenho | Onde |
+|---|---|---|
+| **Rótulo** — nomeia um controle | caixa normal, 13px, `--p-forte`, `--tinta` | `.campo > span`, `.cmd-rotulo`, campos da entrada |
+| **Seção** — divide um formulário | versalete 10px, `--p-pesado`, `--tinta-fraca`, **traço acima** | `.secao-titulo` |
+| **Etiqueta** — classifica um registro | versalete 10px, `--tinta-fraca` | selo de status, tipo do item, cabeçalho de tabela |
+
+O rótulo é o mais forte dos três, e está certo: ele é conteúdo. Seção é divisória, e divisória se
+resolve com **traço e espaço** — não competindo em peso.
+
+### 3c. Foco é tinta, nunca cor de status
+
+O anel global era `--status-atendendo` — o mesmo azul de "em atendimento". Na grade da agenda, um
+elemento focado passava a ter a cor de um atendimento em curso, violando a regra nº 1 deste
+sistema. Agora há `--foco` (tinta) e `--foco-claro` (para o menu escuro): **o anel é o oposto do
+fundo em que está**.
 
 ### 4. Escala de espaçamento fixa
 
@@ -76,40 +124,56 @@ rodapé. Ninguém consegue nomear o problema, mas todo mundo sente.
 
 ## Contraste — medido, não estimado
 
-Medido no navegador em 30/08/2026 (`RT-CLI-006`), convertendo os oklch para sRGB e aplicando a
-fórmula da WCAG. **Substitui a tabela estimada anterior**, que errava por um motivo específico:
-só considerava `--papel` como fundo.
+Recalculado em 11/09/2026 sobre os valores hexadecimais da direção “back-office de recepção”, aplicando a
+fórmula de luminância relativa da WCAG. A tabela anterior considerava apenas `--papel` como fundo.
 
 | Par | Razão | AA (corpo) | Uso permitido |
 |---|---|---:|---|
-| `--tinta` sobre `--papel` | **15.77** | ✅ | qualquer |
-| `--tinta` sobre `--papel-fundo` | **14.68** | ✅ | qualquer |
-| `--papel` sobre `--tinta` | **15.77** | ✅ | botão escolhido |
-| `--tinta` sobre `--status-*-fundo` | **15.5** | ✅ | texto dentro de aviso |
-| `--tinta-fraca` sobre `--papel` | **4.67** | ✅ | texto secundário |
-| `--tinta-fraca` sobre `--papel-fundo` | **4.34** | ❌ | só título grande |
-| `--tinta-fraca` sobre `--papel-afundado` | **4.20** | ❌ | só título grande |
-| `--status-falta` sobre `--papel` | **3.62** | ❌ | borda e ícone, nunca texto |
-| `--status-confirmado` sobre `--papel` | **3.25** | ❌ | borda e ícone, nunca texto |
-| `--tinta-tenue` sobre `--papel` | **2.53** | ❌ | nada, na prática |
+| `--tinta` sobre `--papel` | **16.38** | ✅ | qualquer |
+| `--tinta` sobre `--papel-fundo` | **15.11** | ✅ | qualquer |
+| `--tinta-fraca` sobre `--papel` | **6.41** | ✅ | texto secundário |
+| `--tinta-fraca` sobre `--papel-fundo` | **5.91** | ✅ | texto secundário |
+| `--tinta-tenue` sobre `--papel` | **3.03** | ❌ | traço e metadado não essencial |
+| `--espelho-texto` sobre `--espelho` | **14.69** | ✅ | navegação principal |
+| `--espelho-texto-fraco` sobre `--espelho` | **9.19** | ✅ | navegação secundária |
+| `--papel` sobre `--vinho` | **9.04** | ✅ | avatar e ação marcada |
+| `--tinta` sobre `--vinho-fundo` | **14.70** | ✅ | aviso e seleção clara |
+| `--espelho` sobre `--metal` | **6.16** | ✅ | monograma |
+
+### O que a casca de 11/09/2026 acrescentou
+
+| Par | Razão | AA (corpo) | Uso |
+|---|---:|:---:|---|
+| `--tinta` sobre `--papel-afundado` | **13.90** | ✅ | linha marcada da busca |
+| `--tinta-fraca` sobre `--papel-afundado` | **5.44** | ✅ | rota na linha marcada |
+| `--espelho` sobre `--metal-claro` | **9.78** | ✅ | placa, extremo claro do aço |
+| `--papel` sobre `--tinta-fraca` | **6.41** | ✅ | placa do login, extremo claro |
+| `--espelho-texto-fraco` sobre `--espelho-ativo` | **6.46** | ✅ | ícone do item ativo |
+| `--metal` sobre `--espelho-ativo` | **4.33** | ⚠️ | marcador do item ativo — **não é texto**, é traço de 2px, e o item já se distingue pelo fundo e pela cor do rótulo |
+
+**E uma violação encontrada e corrigida na medição.** A rota exibida na busca (`/financeiro`)
+nasceu em `--tinta-tenue`, que mede 3.03 sobre papel — exatamente o que a seção acima reserva a
+"traço e separador". Rota é texto: alguém lê para saber para onde vai. Passou para
+`--tinta-fraca`.
+
+É a terceira vez que este token escapa para uso de texto. Ele continua no sistema porque traço
+precisa dele — mas a regra não se sustenta sozinha, e vale medir toda tela nova.
 
 ### O que a medição mudou
 
-**`--tinta-fraca` depende do fundo.** Sobre `--papel` passa; sobre `--papel-fundo` e
-`--papel-afundado`, não. Foi por isso que a lista de resultados de `RT-CLI-006` virou uma
-superfície com fundo `--papel` em vez de ficar solta sobre o fundo da página — o telefone da
-cliente é a informação mais essencial daquela tela e estava no par que reprova.
+**`--tinta-fraca` sobrevive aos dois fundos de trabalho.** Sobre `--papel` mede 6.41 e
+sobre `--papel-fundo`, 5.91. A lista de resultados continua numa superfície própria por hierarquia,
+mas contraste não depende mais disso.
 
-Aconteceu de novo em `RT-CFG-001`, com o formulário de configuração, e virou **regra do produto**:
-*texto secundário mora sobre papel*. Bloco que contenha rótulo, legenda ou explicação recebe
-superfície própria; sobre o fundo da página só vai texto em `--tinta`.
+Em `RT-CFG-001`, o formulário ainda usa superfície própria para separar grupos — agora por
+hierarquia e não como remendo necessário para o contraste.
 
 **Os status não servem para texto.** Nenhum passa em corpo de texto sobre papel, e é consequência
 direta de eles compartilharem luminosidade 0.62 para pesarem igual. Continuam certos como borda,
 barra e fundo claro; texto colorido em cima de papel, não. A ação de apagar dados perdeu o
 vermelho por isso — e por já contradizer o próprio argumento de ser discreta.
 
-**`--tinta-tenue` não sobrevive a nenhum uso de texto**, nem como placeholder: 2.53 é ilegível de
+**`--tinta-tenue` não sobrevive a nenhum uso de texto**, nem como placeholder: 3.03 é ilegível de
 fato, não no papel. Ele fica reservado a traço e separador.
 
 ### O que RT-AGD-011 acrescentou
@@ -135,8 +199,8 @@ segundos. Estimar a partir da luminosidade foi o que produziu a tabela errada da
 **Sombra existe só para o que flutua** — menu suspenso, diálogo. Card não tem sombra. É o traço
 mais reconhecível de tela gerada sem critério, e o mais fácil de evitar.
 
-Raios de 2px e 3px, e não existe um terceiro. Canto muito arredondado lê como app de consumo, não
-como ferramenta de trabalho.
+Raios de 4px, 8px e 12px cobrem bloco, controle e painel. O terceiro raio não é decoração: impede
+que uma folha móvel tenha o mesmo desenho de um chip, sem transformar tudo em cápsula.
 
 ## Movimento
 
@@ -148,6 +212,20 @@ recepção clica com pressa, e animação é atraso disfarçado de sofisticaçã
 **A exceção que importa:** o rollback de uma ação otimista (R-UX-18) **precisa** ser visível. Se o
 servidor recusar o agendamento que já apareceu na grade, ele tem que sumir de um jeito que a pessoa
 perceba — desfazer silencioso é pior que erro visível.
+
+## Fluidez e conexão
+
+Fluidez aqui significa **preservar contexto**, não espalhar transições. Consultas recentes ficam
+em memória por 30 minutos e são consideradas atuais por 30 segundos; voltar para uma tela não a
+apaga para desenhar um spinner. A restauração de sessão mostra imediatamente a marca e uma única
+linha de progresso, em vez de uma página branca.
+
+Requisição operacional comum tem prazo máximo de 12 segundos. O app shell instalado usa cache
+primeiro para seus arquivos e, numa navegação sem resposta, troca para a cópia local em 3 segundos.
+Movimento continua restrito a 120/180 ms e respeita `prefers-reduced-motion`.
+
+Offline é explícito. O sistema conserva dados já abertos, informa o horário do retrato e recusa
+escritas na hora; nunca guarda uma mutação para executá-la depois contra uma agenda diferente.
 
 ## O que a crítica corrigiu
 
@@ -167,8 +245,8 @@ nomear.
 ## O que este projeto não faz
 
 Gradiente roxo · sombra grande em card · ícone genérico em toda linha · emoji em título ·
-espaçamento uniforme de 24px · Inter e Roboto · cor decorativa · canto muito arredondado ·
-animação que se nota.
+espaçamento uniforme de 24px · Inter e Roboto · cor decorativa fora da identidade · canto muito
+arredondado · animação que se nota.
 
 ## Para o `RT-INF-010`
 

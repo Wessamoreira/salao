@@ -1,4 +1,5 @@
 import { definirTokenAtual, tokenAtual } from '../sessao/sessao';
+import { registrarEstadoDaApi } from '../pwa/conectado';
 
 export class ErroDaApi extends Error {
   readonly status: number;
@@ -34,10 +35,7 @@ async function renovarSessao(): Promise<string | null> {
   if (!renovacaoEmCurso) {
     renovacaoEmCurso = (async () => {
       try {
-        const resposta = await fetch('/api/v1/auth/refresh', {
-          method: 'POST',
-          credentials: 'include', // o cookie HttpOnly é a credencial aqui
-        });
+        const resposta = await enviar('/v1/auth/refresh', { method: 'POST' }, null);
         if (!resposta.ok) return null;
         const corpo = (await resposta.json()) as RespostaDeSessao;
         definirTokenAtual(corpo.tokenDeAcesso);
@@ -52,16 +50,55 @@ async function renovarSessao(): Promise<string | null> {
   return renovacaoEmCurso;
 }
 
+/**
+ * Respostas que são o PROXY dizendo que o backend não respondeu.
+ *
+ * Em produção o Caddy fica na frente, e em dev o Vite: com o backend fora do ar, o `fetch` não
+ * falha — ele recebe um 502 do proxy. Sem esta lista, "Wi-Fi conectado com o servidor fora do ar",
+ * que é exatamente o caso que `registrarEstadoDaApi` existe para perceber, passaria despercebido.
+ */
+const SERVIDOR_FORA = new Set([502, 503, 504]);
+
 async function enviar(caminho: string, init: RequestInit, token: string | null) {
-  return fetch(`/api${caminho}`, {
-    ...init,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers,
-    },
-  });
+  // Um request comum não pode deixar a interface esperando para sempre. O SSE fornece
+  // seu próprio AbortSignal e, por ser conexão longa, fica deliberadamente sem prazo.
+  const controlador = init.signal ? null : new AbortController();
+  const prazo = controlador
+    ? window.setTimeout(() => controlador.abort(), 12_000)
+    : null;
+  try {
+    const resposta = await fetch(`/api${caminho}`, {
+      ...init,
+      signal: init.signal ?? controlador?.signal,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init.headers,
+      },
+    });
+    registrarEstadoDaApi(!SERVIDOR_FORA.has(resposta.status));
+    return resposta;
+  } catch (erro) {
+    // Cancelamento pedido por quem chamou não é queda de rede. O SSE aborta ao desmontar — e o
+    // StrictMode monta e desmonta todo efeito uma vez em dev —, e marcar a API como fora do ar
+    // ali acendia "Sem conexão" com a rede funcionando. O erro original sobe intacto: quem
+    // cancelou espera exatamente um AbortError.
+    if (init.signal?.aborted) throw erro;
+
+    registrarEstadoDaApi(false);
+    // O resto vira ErroDaApi com texto em português. Sem isso a tela recebia o erro cru do
+    // navegador — "Failed to fetch", ou "signal is aborted without reason" quando o prazo de
+    // 12s estourava —, e quem mostra `erro.message` mostraria isso para a recepção.
+    if (controlador?.signal.aborted) {
+      throw new ErroDaApi(0, 'ER-INF-TEMPO_ESGOTADO',
+        'O servidor demorou demais para responder. Verifique a conexão e tente de novo.');
+    }
+    throw new ErroDaApi(0, 'ER-INF-SEM_CONEXAO',
+      'Sem conexão com o servidor. Verifique a internet e tente de novo.');
+  } finally {
+    if (prazo !== null) window.clearTimeout(prazo);
+  }
 }
 
 /**
@@ -72,6 +109,15 @@ async function enviar(caminho: string, init: RequestInit, token: string | null) 
  * uma sessão expirada numa rajada de requisições.
  */
 export async function api<T>(caminho: string, init: RequestInit = {}): Promise<T> {
+  const metodo = (init.method ?? 'GET').toUpperCase();
+  if (metodo !== 'GET' && typeof navigator !== 'undefined' && !navigator.onLine) {
+    throw new ErroDaApi(
+      0,
+      'ER-INF-SEM_CONEXAO',
+      'Sem conexão. A alteração não foi enviada; tente novamente quando a internet voltar.',
+    );
+  }
+
   let resposta = await enviar(caminho, init, tokenAtual());
 
   if (resposta.status === 401 && !caminho.startsWith('/v1/auth/')) {

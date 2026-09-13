@@ -1,3 +1,5 @@
+import { Pagina, Vazio } from '../layout/Pagina';
+
 /**
  * Marcador honesto de tela que ainda não existe.
  *
@@ -6,15 +8,11 @@
  */
 export function EmBreve({ titulo, rotina }: { titulo: string; rotina: string }) {
   return (
-    <div style={{ padding: 'var(--e-10)' }}>
-      <h1 style={{ fontFamily: 'var(--fonte-identidade)', fontSize: 'var(--t-30)',
-        margin: 0, fontWeight: 400, letterSpacing: '-0.01em' }}>{titulo}</h1>
-      <p style={{ fontSize: 'var(--t-14)', color: 'var(--tinta-fraca)',
-        margin: 'var(--e-2) 0 0' }}>
-        Entra em <code style={{ fontFamily: 'var(--fonte-mono)', fontSize: 'var(--t-12)',
-          background: 'var(--papel-afundado)', padding: '1px 5px',
-          borderRadius: 'var(--raio-1)' }}>{rotina}</code>.
-      </p>
-    </div>
+    <Pagina>
+      <Vazio icone="caixa" titulo={`${titulo} ainda não está pronto`}>
+        Esta área chega com a rotina <code>{rotina}</code>. Até lá, nada aqui é dado real —
+        e é de propósito: tela com número inventado parece pronta e engana quem revisa.
+      </Vazio>
+    </Pagina>
   );
 }

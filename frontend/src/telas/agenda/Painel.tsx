@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { usePainel, type LinhaDoPainel } from '../../api/agenda';
 import { rotuloDeHora } from './grade';
+import { useConectado } from '../../pwa/conectado';
 import './painel.css';
 
 /**
@@ -17,6 +18,7 @@ const SITUACAO: Record<string, { texto: string; classe: string }> = {
 
 export function Painel() {
   const { data: painel, error } = usePainel();
+  const conectado = useConectado();
 
   // O relógio grande anda sozinho; o resto da tela só muda quando o servidor avisa.
   const [agora, definirAgora] = useState(() => new Date());
@@ -35,7 +37,13 @@ export function Painel() {
         <span className="painel-relogio">{hora}</span>
       </header>
 
-      {error && <p className="painel-vazio">Sem conexão com o sistema.</p>}
+      {painel && (!conectado || error) && (
+        <p className="painel-offline" role="status">
+          Sem conexão — dados de {rotuloDeHora(painel.atualizadoEm, painel.fuso)}
+        </p>
+      )}
+
+      {error && !painel && <p className="painel-vazio">Sem conexão com o sistema.</p>}
 
       {painel && painel.linhas.length === 0 && !error && (
         <p className="painel-vazio">Nenhum atendimento restante hoje.</p>

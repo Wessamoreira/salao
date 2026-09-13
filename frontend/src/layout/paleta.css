@@ -1,0 +1,123 @@
+/*
+ * RT-INF-010 — a busca da casca.
+ *
+ * Ela flutua sobre a tela inteira, então tem sombra; e fica no terço superior, e não no
+ * centro vertical, porque a lista cresce para baixo e uma caixa centrada salta de lugar
+ * a cada letra digitada.
+ */
+.paleta-encosto {
+  position: fixed;
+  z-index: 90;
+  inset: 0;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  padding: clamp(48px, 12vh, 140px) var(--e-4) var(--e-4);
+  background: rgb(20 24 27 / 40%);
+  animation: paleta-fundo var(--mov-imediato) var(--mov-curva);
+}
+
+.paleta {
+  width: min(100%, 520px);
+  overflow: hidden;
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-3);
+  box-shadow: var(--sombra-flutuante);
+  animation: paleta-entra var(--mov-curto) var(--mov-curva);
+}
+
+.paleta-campo {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  padding: 0 var(--e-3);
+  border-bottom: 1px solid var(--regua);
+}
+.paleta-campo > svg { flex: 0 0 16px; color: var(--tinta-fraca); }
+.paleta-campo input {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  padding: 0;
+  color: var(--tinta);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: var(--t-16);
+}
+.paleta-campo input:focus { outline: none; }
+.paleta-campo input::placeholder { color: var(--tinta-fraca); }
+.paleta-campo kbd {
+  padding: 2px 6px;
+  color: var(--tinta-fraca);
+  background: var(--papel-fundo);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-1);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: var(--p-forte);
+  text-transform: uppercase;
+}
+
+.paleta-lista {
+  max-height: min(420px, 50vh);
+  overflow-y: auto;
+  margin: 0;
+  padding: var(--e-2);
+  list-style: none;
+}
+
+.paleta-item {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  padding: 0 var(--e-3);
+  color: var(--tinta);
+  background: transparent;
+  border: 0;
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-14);
+  text-align: left;
+  cursor: pointer;
+}
+/*
+ * Uma marcação só, do teclado e do mouse ao mesmo tempo: `:hover` move o índice, então
+ * não existe o estado confuso de duas linhas parecendo escolhidas.
+ */
+.paleta-item.marcado {
+  background: var(--papel-afundado);
+  /* Barra de tinta, não de cor: Enter age sobre esta linha, então a marcação precisa ser
+     inconfundível — e um fundo de papel-fundo sobre papel quase não existe. */
+  box-shadow: inset 2px 0 0 var(--tinta);
+}
+.paleta-item-icone { flex: 0 0 18px; color: var(--tinta-fraca); display: grid; }
+.paleta-item-rotulo { flex: 1; font-weight: var(--p-medio); }
+/*
+ * `--tinta-fraca`, e não `--tinta-tenue`: o sistema de design mediu 3.03 para tinta-tenue
+ * sobre papel e a reservou a traço e separador. Rota é texto — alguém lê para saber para
+ * onde vai.
+ */
+.paleta-item-rota {
+  color: var(--tinta-fraca);
+  font-family: var(--fonte-mono);
+  font-size: var(--t-11);
+}
+
+.paleta-vazio {
+  margin: 0;
+  padding: var(--e-5) var(--e-4);
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  line-height: 1.5;
+}
+
+@keyframes paleta-fundo { from { opacity: 0; } }
+@keyframes paleta-entra { from { opacity: 0; transform: translateY(-6px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .paleta-encosto, .paleta { animation: none; }
+}
