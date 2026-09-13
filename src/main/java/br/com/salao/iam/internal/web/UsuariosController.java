@@ -1,5 +1,7 @@
 package br.com.salao.iam.internal.web;
 
+import org.springframework.web.bind.annotation.PutMapping;
+import br.com.salao.iam.internal.application.DefinirTelefoneDoUsuarioUseCase;
 import br.com.salao.iam.api.Perfil;
 import br.com.salao.iam.api.UsuarioResumo;
 import br.com.salao.iam.internal.application.AlterarPerfilDoUsuarioUseCase;
@@ -41,16 +43,23 @@ public class UsuariosController {
     private final AlterarPerfilDoUsuarioUseCase alterarPerfil;
     private final DefinirAtivacaoDoUsuarioUseCase definirAtivacao;
     private final ResetarSegundoFatorUseCase resetarMfa;
+    private final DefinirTelefoneDoUsuarioUseCase definirTelefone;
 
     public UsuariosController(CriarUsuarioUseCase criar, ListarUsuariosUseCase listar,
                               AlterarPerfilDoUsuarioUseCase alterarPerfil,
                               DefinirAtivacaoDoUsuarioUseCase definirAtivacao,
-                              ResetarSegundoFatorUseCase resetarMfa) {
+                              ResetarSegundoFatorUseCase resetarMfa,
+                              DefinirTelefoneDoUsuarioUseCase definirTelefone) {
         this.criar = criar;
         this.listar = listar;
         this.alterarPerfil = alterarPerfil;
         this.definirAtivacao = definirAtivacao;
         this.resetarMfa = resetarMfa;
+        this.definirTelefone = definirTelefone;
+    }
+
+    /** RT-CNV-002 — sem {@code @NotBlank}: vazio é o pedido de TIRAR o telefone da conta. */
+    public record TelefoneRequest(@Size(max = 40) String telefone) {
     }
 
     public record CriarUsuarioRequest(
@@ -98,6 +107,14 @@ public class UsuariosController {
     public ResponseEntity<Void> resetarMfa(@PathVariable UUID id,
                                            @AuthenticationPrincipal Jwt jwt) {
         resetarMfa.executar(id, UUID.fromString(jwt.getSubject()));
+        return ResponseEntity.noContent().build();
+    }
+
+    /** RT-CNV-002 — o telefone pelo qual o agente reconhece esta pessoa. */
+    @PutMapping("/{id}/telefone")
+    public ResponseEntity<Void> definirTelefone(@PathVariable UUID id,
+                                                @Valid @RequestBody TelefoneRequest requisicao) {
+        definirTelefone.executar(id, requisicao.telefone());
         return ResponseEntity.noContent().build();
     }
 }

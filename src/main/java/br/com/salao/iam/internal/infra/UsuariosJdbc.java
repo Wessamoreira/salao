@@ -3,6 +3,8 @@ package br.com.salao.iam.internal.infra;
 import br.com.salao.iam.api.Perfil;
 import br.com.salao.iam.api.UsuarioResumo;
 import java.util.List;
+import java.util.Optional;
+import java.time.Instant;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,10 +19,21 @@ import org.springframework.transaction.annotation.Transactional;
  */
 public class UsuariosJdbc {
 
-    private static final String LISTAR = """
-            select id, nome, email, perfil, ativo, mfa_ativo, ultimo_acesso_em
-              from usuario order by ativo desc, nome
+    private static final String CAMPOS_DO_RESUMO =
+            "id, nome, email, telefone, perfil, ativo, mfa_ativo, ultimo_acesso_em";
+
+    private static final String LISTAR =
+            "select " + CAMPOS_DO_RESUMO + " from usuario order by ativo desc, nome";
+
+    private static final String POR_ID =
+            "select " + CAMPOS_DO_RESUMO + " from usuario where id = :id";
+
+    private static final String POR_TELEFONE = """
+            select id, nome, perfil, ativo, bloqueado_ate from usuario where telefone = :telefone
             """;
+
+    private static final String DEFINIR_TELEFONE =
+            "update usuario set telefone = :telefone, versao = versao + 1 where id = :id";
 
     private static final String CRIAR = """
             insert into usuario
@@ -53,15 +66,58 @@ public class UsuariosJdbc {
 
     @Transactional(readOnly = true)
     public List<UsuarioResumo> listar() {
-        return jdbc.sql(LISTAR).query((rs, linha) -> new UsuarioResumo(
+        return jdbc.sql(LISTAR).query(this::resumo).list();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<UsuarioResumo> porId(UUID usuarioId) {
+        return jdbc.sql(POR_ID).param("id", usuarioId).query(this::resumo).optional();
+    }
+
+    private UsuarioResumo resumo(java.sql.ResultSet rs, int linha) throws java.sql.SQLException {
+        return new UsuarioResumo(
                 rs.getObject("id", UUID.class),
                 rs.getString("nome"),
                 rs.getString("email"),
+                rs.getString("telefone"),
                 Perfil.valueOf(rs.getString("perfil")),
                 rs.getBoolean("ativo"),
                 rs.getBoolean("mfa_ativo"),
                 rs.getTimestamp("ultimo_acesso_em") == null
-                        ? null : rs.getTimestamp("ultimo_acesso_em").toInstant())).list();
+                        ? null : rs.getTimestamp("ultimo_acesso_em").toInstant());
+    }
+
+    /**
+     * RT-CNV-002 — quem deste salão tem este telefone.
+     *
+     * <p>Sob RLS, pela conexão da aplicação: o webhook já descobriu o salão (RN-CNV-003), e esta
+     * pergunta é feita DENTRO dele. Um telefone de outro salão simplesmente não é visto.
+     *
+     * <p>Devolve o necessário para a política decidir — ativo, bloqueio, perfil — e nada de
+     * autenticação: hash de senha e contador de falhas não têm o que fazer aqui.
+     */
+    @Transactional(readOnly = true)
+    public Optional<PorTelefone> porTelefone(String telefone) {
+        return jdbc.sql(POR_TELEFONE).param("telefone", telefone)
+                .query((rs, linha) -> new PorTelefone(
+                        rs.getObject("id", UUID.class),
+                        rs.getString("nome"),
+                        Perfil.valueOf(rs.getString("perfil")),
+                        rs.getBoolean("ativo"),
+                        rs.getTimestamp("bloqueado_ate") == null
+                                ? null : rs.getTimestamp("bloqueado_ate").toInstant()))
+                .optional();
+    }
+
+    @Transactional
+    public int definirTelefone(UUID usuarioId, String telefone) {
+        return jdbc.sql(DEFINIR_TELEFONE)
+                .param("id", usuarioId).param("telefone", telefone).update();
+    }
+
+    /** O que a política do usuário efetivo precisa saber de uma conta. */
+    public record PorTelefone(UUID id, String nome, Perfil perfil, boolean ativo,
+                              Instant bloqueadoAte) {
     }
 
     @Transactional

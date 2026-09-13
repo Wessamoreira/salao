@@ -115,6 +115,25 @@ mandar mensagem para o bot e conseguir o que o seu login não permite.
 
 Telefone não cadastrado → o bot responde como desconhecido e não executa nada que escreva.
 
+**"Exatamente as permissões dele" tem três exceções, e o próprio código as exige** (RT-CNV-002):
+
+- **Perfil que exige segundo fator não age pelo canal.** Na web, ADMIN e GERENTE sem MFA na sessão
+  não acessam *nada* (RN-IAM-014). O WhatsApp não tem como apresentar segundo fator, e herdar as
+  permissões deles pelo celular seria contornar o MFA pela porta lateral. Recusado, e não "com
+  teto": um teto ainda seria mais do que a web concede. MFA *inscrito* não é MFA *apresentado*.
+- **Permissão de escopo próprio (`:own`) não vai pelo canal.** Nenhum caso de uso confere o dono —
+  não existe vínculo entre `usuario` e `profissional`. Na web é pendência conhecida; pelo agente,
+  "mostre a agenda de todo mundo" seria atendido. O canal nunca carrega permissão cujo escopo o
+  sistema não consegue impor.
+- **Identidade por telefone é comparação exata.** O WhatsApp às vezes manda número brasileiro antigo
+  sem o nono dígito, e casar "com ou sem o 9" parece gentileza. É personificação esperando para
+  acontecer: o número parecido é, por definição, outro número.
+
+As permissões são resolvidas **na hora da ação**, nunca guardadas com a mensagem — quem é
+desativado entre escrever e o agente agir não age com as permissões de antes. E a auditoria
+registra `ator = BOT` com o usuário efetivo em `usuario_id`: "o agente cancelou, a pedido da
+recepção".
+
 ## Segurança do agente conversacional
 
 O furo mais grave e o mais esquecido. Mensagem de cliente é **entrada não confiável**.

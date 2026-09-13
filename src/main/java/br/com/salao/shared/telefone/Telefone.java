@@ -1,9 +1,16 @@
-package br.com.salao.cliente.internal.domain;
+package br.com.salao.shared.telefone;
 
 import java.util.Objects;
 
 /**
  * RT-CLI-001 / R-UX-15 — telefone normalizado.
+ *
+ * <p><strong>Em {@code shared} desde RT-CNV-002</strong>, quando o segundo lugar precisou da mesma
+ * resposta: o telefone do usuário, que é o que o agente usa para saber em nome de quem age. Duas
+ * normalizações divergiriam na primeira mudança — e aqui a divergência não seria um cadastro feio:
+ * seria o telefone da recepcionista gravado de um jeito e a mensagem dela chegando de outro, e o
+ * agente respondendo a ela como desconhecida. É regra de FORMATO, como {@code Money}, e não de
+ * negócio de um módulo — por isso cabe aqui.
  *
  * <h2>Por que isto merece um tipo próprio</h2>
  *

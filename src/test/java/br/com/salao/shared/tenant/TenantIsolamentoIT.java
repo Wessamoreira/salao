@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -101,6 +102,39 @@ class TenantIsolamentoIT extends AbstractPostgresIT {
         assertThat(vistoPorA).isEqualTo(3);
         assertThat(vistoPorB).isEqualTo(5);
         assertThat(vistoPorAdeNovo).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("transação recusada por falta de tenant não deixa nada preso na thread")
+    void recusa_sem_tenant_nao_prende_a_thread() throws SQLException {
+        /*
+         * Achado em RT-CNV-002. O `doBegin` conferia o tenant DEPOIS do `super.doBegin`, que já
+         * tinha pegado a conexão, marcado read-only e amarrado o EntityManager à thread. A exceção
+         * saía e nada era desfeito: a próxima @Transactional na mesma thread se juntava à transação
+         * morta. O teste ao lado (`transacao_sem_escopo_falha`) provava a recusa e nunca olhou o
+         * que sobrava depois dela.
+         *
+         * Dois detectores, porque cada um pega o bug por um lado: o mapa de recursos da thread
+         * (o que ficou amarrado) e uma escrita logo depois — com pool de UMA conexão, a conexão
+         * presa faria a gravação cair em "read-only transaction".
+         */
+        var somenteLeitura = new TransactionTemplate(gerenciadorDeTransacao);
+        somenteLeitura.setReadOnly(true);
+
+        assertThatThrownBy(() -> somenteLeitura.execute(s -> contarAuditoria()))
+                .isInstanceOf(TenantNaoDefinidoException.class);
+
+        assertThat(TransactionSynchronizationManager.getResourceMap())
+                .as("nada pode ficar amarrado à thread depois da recusa")
+                .isEmpty();
+
+        UUID a = criarEstabelecimento("Salão A");
+        TenantContext.executar(a, () -> tx.executeWithoutResult(s -> em.createNativeQuery("""
+                insert into auditoria (estabelecimento_id, ator, acao, entidade)
+                values (:tenant, 'SISTEMA', 'TESTE', 'teste')
+                """).setParameter("tenant", a).executeUpdate()));
+        long gravadas = TenantContext.obter(a, () -> tx.execute(s -> contarAuditoria()));
+        assertThat(gravadas).as("a transação seguinte, com tenant, grava normalmente").isEqualTo(1);
     }
 
     @Test

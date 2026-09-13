@@ -295,6 +295,23 @@ de **188 s para 0,7 s**.
 
 O sintoma parecia bug de isolamento e não era — vale a nota para quando algo parecido reaparecer.
 
+### A recusa sem tenant prendia a transação na thread — achado em RT-CNV-002
+
+Uma quarta armadilha, e esta estava no código de produção. `doBegin` chamava `super.doBegin`
+**antes** de conferir o tenant. O `super` já tinha pegado a conexão, marcado read-only e amarrado o
+`EntityManager` e o `ConnectionHolder` à thread. A `TenantNaoDefinidoException` saía e nada era
+desfeito: a transação ficava ativa e presa, e a **próxima** `@Transactional` na mesma thread se
+juntava a ela.
+
+Apareceu como `cannot execute UPDATE in a read-only transaction` num login, em testes que não tinham
+nada a ver com tenant — o que manda quem investiga para o lado errado. Em produção o alvo seriam os
+jobs: `scheduling-N` é reaproveitada, e uma chamada sem tenant quebraria aquela thread para sempre.
+
+Corrigido conferindo antes de adquirir, e desfazendo o que o `super` montou se o `set_config` falhar
+depois. `transacao_sem_escopo_falha` provava a recusa e nunca olhou o que sobrava;
+`recusa_sem_tenant_nao_prende_a_thread` olha — com o pool de uma conexão desta classe, a conexão
+presa é inevitável — e a mutação o deixa vermelho.
+
 ## 18. Pendências
 
 - [ ] **Login é cross-tenant e ainda não tem solução.** Autenticar exige achar o usuário pelo

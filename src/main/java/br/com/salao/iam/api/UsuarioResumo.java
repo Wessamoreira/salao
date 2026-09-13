@@ -14,6 +14,8 @@ public record UsuarioResumo(
         UUID id,
         String nome,
         String email,
+        /** RT-CNV-002 — E.164, só dígitos. Nulo para quem não usa o agente, que é quase todo mundo. */
+        String telefone,
         Perfil perfil,
         boolean ativo,
         boolean mfaAtivo,

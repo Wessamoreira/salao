@@ -23,6 +23,11 @@ public final class UsuarioAtual {
 
     public static UUID idOuNulo() {
         var autenticacao = SecurityContextHolder.getContext().getAuthentication();
+        // RT-CNV-002: o agente agindo em nome de alguém é atribuído a essa pessoa. Sem este ramo,
+        // toda ação do agente sairia com `criado_por` nulo — como se ninguém tivesse pedido.
+        if (autenticacao != null && autenticacao.getPrincipal() instanceof EmNomeDe agente) {
+            return agente.usuarioId();
+        }
         if (autenticacao != null && autenticacao.getPrincipal() instanceof Jwt jwt) {
             try {
                 return UUID.fromString(jwt.getSubject());
@@ -33,5 +38,16 @@ public final class UsuarioAtual {
             }
         }
         return null;
+    }
+
+    /**
+     * Verdadeiro quando quem age é o agente conversacional, em nome de alguém.
+     *
+     * <p>Separado de {@link #idOuNulo()} de propósito: o id responde "a pedido de quem", e isto
+     * responde "quem apertou o botão". A trilha precisa dos dois.
+     */
+    public static boolean ehAgente() {
+        var autenticacao = SecurityContextHolder.getContext().getAuthentication();
+        return autenticacao != null && autenticacao.getPrincipal() instanceof EmNomeDe;
     }
 }

@@ -60,6 +60,9 @@ teste:
 O `BOT` vazio é o que impede o *confused deputy*: mandar mensagem ao bot e conseguir o que o
 próprio login não permite.
 
+Herdar tem três exceções, e o código as exige: perfil que exige MFA não age pelo canal, permissão
+`:own` não vai pelo canal, e o telefone é comparado exatamente — ver RT-CNV-002.
+
 **Em código, e não em banco, por enquanto.** Enquanto todos os salões usam o mesmo mapa, uma
 tabela seria configuração que ninguém configura — e precisaria de tela, migração e teste. O
 gatilho para mover está escrito: o primeiro salão que pedir um perfil diferente. O que já está

@@ -368,3 +368,119 @@ valor antigo e ele ficaria até o TTL — o oposto do pretendido.
 `ConfiguracaoIT.define_o_ddd_e_destrava_o_cadastro` (só passa com a limpeza síncrona no commit)
 **Configurável?** Não
 **Origem.** 2026-08-30
+
+---
+
+### RN-IAM-019 — O agente age em nome de uma pessoa da equipe, resolvida pelo telefone na hora da
+ação
+
+**Enunciado.** O agente conversacional não tem permissão própria (`BOT` é vazio). Ele age **em
+nome de** um usuário do salão cujo telefone é o do remetente, com as permissões desse usuário
+(com o teto do canal, RN-IAM-020 e RN-IAM-021). A resolução acontece **no instante de executar**,
+nunca guardada com a mensagem. Durante a ação, o contexto de segurança carrega as autoridades do
+usuário efetivo, e a auditoria registra `ator = BOT` com `usuario_id` da pessoa.
+
+**Motivo.** É a frase de docs/05 — *o bot não é usuário privilegiado* — em código, e é o que
+elimina o *confused deputy*: mandar mensagem ao agente e conseguir o que o próprio login não
+permite. A permissão é imposta pelo **mesmo** `@PreAuthorize` de cada caso de uso, e não por uma
+checagem paralela no agente: a segunda cópia da autorização é a que alguém esquece de atualizar.
+
+Resolver na hora da ação é a razão de o JWT carregar o perfil e não as permissões (RT-IAM-006):
+quem é desativado entre escrever e o agente agir não age com as permissões de antes.
+
+`emNomeDe` recebe o **telefone**, e não um `usuarioId`: com um id, quem chama escolheria em nome de
+quem agir. O telefone vem de uma mensagem assinada pela Meta, que atesta o remetente.
+
+E recusa rodar com alguém já autenticado no contexto — agir em nome de uma pessoa dentro da sessão
+de outra é o confused deputy exato que a regra existe para impedir.
+
+**Onde é garantida.** `ResolvedorDeUsuarioEfetivo` (`UsuarioEfetivoApi`) · `EmNomeDe` +
+`UsuarioAtual.ehAgente` · `AuditoriaJdbc.ator`.
+**Rotinas.** RT-CNV-002 · **Teste.** `UsuarioEfetivoIT.identifica_recepcao`,
+`.pode_o_que_a_pessoa_pode`, `.nao_pode_o_que_a_pessoa_nao_pode`, `.resolve_na_hora_da_acao`,
+`.auditoria_diz_bot`, `.contexto_restaurado`, `.recusa_com_pessoa_autenticada`
+**Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-IAM-020 — Perfil que exige segundo fator não age pelo canal; conta que não é pessoa também
+não
+
+**Enunciado.** Não vira usuário efetivo: perfil para o qual `MapaDePermissoes.exigeMfa` é
+verdadeiro (hoje ADMIN e GERENTE), mesmo com MFA inscrito; `PAINEL` e `BOT`; conta inativa; conta
+com bloqueio por tentativas em curso. Todos recebem a mesma recusa,
+`ER-IAM-CONTATO_NAO_IDENTIFICADO`.
+
+**Motivo.** Na web, perfil que exige MFA **sem MFA na sessão não acessa nada** (RN-IAM-014). O
+WhatsApp não tem como apresentar segundo fator. Herdar as permissões do dono pelo celular seria
+contornar o MFA pela porta lateral — e um "teto" de permissões ainda seria mais do que a própria
+web concede sem o código. MFA *inscrito* não é MFA *apresentado*: ter o autenticador configurado
+não diz nada sobre quem está com o celular agora.
+
+A regra é sobre `exigeMfa`, e não sobre uma lista de perfis escrita aqui: se o mapa der
+`financeiro:read:all` à recepção, ela passa a exigir MFA na web e a ser recusada no canal no mesmo
+dia, sem ninguém lembrar.
+
+Bloqueio em curso é sinal de ataque à conta; o canal não pode ser a porta lateral dele.
+
+Uma recusa só, para todos os motivos, pela razão de `CREDENCIAIS_INVALIDAS`: distinguir diria a
+quem sonda que o número é da equipe, e com qual perfil. O motivo existe (`MotivoDaRecusa`) para o
+diagnóstico, nunca para a resposta ao remetente.
+
+**Onde é garantida.** `PoliticaDoUsuarioEfetivo.avaliar`.
+**Rotinas.** RT-CNV-002 · **Teste.** `PoliticaDoUsuarioEfetivoTest.segundo_fator_para_todo_perfil`,
+`.contas_que_nao_sao_pessoas`, `.inativo`, `.bloqueio`,
+`UsuarioEfetivoIT.admin_recusado_mesmo_com_mfa`, `.inativo`, `.bloqueado`
+**Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-IAM-021 — O canal não carrega permissão cujo escopo o sistema não consegue impor
+
+**Enunciado.** As permissões do usuário efetivo são as do perfil **menos** as de escopo próprio
+(sufixo `:own`). Nunca mais do que o perfil tem.
+
+**Motivo.** `agenda:read:own` promete "só a própria agenda", mas nenhum caso de uso confere o
+dono: não existe vínculo entre `usuario` e `profissional` para saber qual é a própria. Na web isso
+é pendência conhecida; pelo agente, é um prompt injection pedindo "mostre a agenda de todo mundo" e
+recebendo (R-10). Devolver o `:own` ao canal só faz sentido no dia em que o vínculo existir e os
+casos de uso conferirem o dono — antes disso seria trocar o nome do buraco.
+
+O teto só tira. Uma política que acrescentasse permissão seria o confused deputy por outra porta.
+
+**Onde é garantida.** `PoliticaDoUsuarioEfetivo.permissoesPeloCanal`.
+**Rotinas.** RT-CNV-002 · **Teste.** `PoliticaDoUsuarioEfetivoTest.sem_escopo_proprio`,
+`.profissional`, `.nunca_mais_que_o_perfil`, `UsuarioEfetivoIT.profissional_sem_escopo_proprio`
+**Configurável?** Não · **Origem.** 2026-09-12
+
+---
+
+### RN-IAM-022 — Telefone do usuário: só dígitos, único por salão, comparação exata
+
+**Enunciado.** `usuario.telefone` é opcional, em E.164 só dígitos, normalizado a partir do que se
+digita com as regras de `Telefone`. É único por estabelecimento, **inclusive entre contas
+inativas**. A identificação compara o número exato do remetente — sem aproximação, nem "com ou sem
+o nono dígito". Ligar ou tirar o telefone de uma conta exige `usuario:manage`, e a auditoria guarda
+o número anterior e o novo, inteiros.
+
+**Motivo.** Dois usuários com o mesmo telefone tornariam impossível saber com as permissões de
+quem o agente age: a ambiguidade é recusada no cadastro, não resolvida na conversa. Por salão, e não
+global, porque quem trabalha em dois salões tem duas contas e um WhatsApp só — e o webhook já sabe
+o salão antes de perguntar o remetente (RN-CNV-003). Incluindo inativos, porque um índice
+`where ativo` faria reativar uma conta falhar por unicidade, num caso de uso que não tem nada a ver
+com telefone.
+
+Comparação exata porque aproximação em identidade que concede permissão é como nasce a
+personificação: o número parecido é, por definição, outro número.
+
+Ligar telefone parece cadastro e é gesto de permissão: dá a quem escreve daquele número as
+permissões daquela conta. Daí `usuario:manage`, e daí a trilha com o número inteiro — ela existe
+para responder "quem apontou este telefone para esta conta", e mascarada não responde.
+
+**Onde é garantida.** `V51__telefone_do_usuario.sql` (check e índice
+`um_telefone_por_usuario_no_salao`) · `DefinirTelefoneDoUsuarioUseCase` ·
+`ResolvedorDeUsuarioEfetivo.identificarPorTelefone`.
+**Rotinas.** RT-CNV-002 · **Teste.** `UsuarioEfetivoIT.telefone_em_uso`,
+`.mesmo_telefone_em_dois_saloes`, `.remover_telefone`, `.telefone_invalido`, `.sem_permissao`,
+`.auditoria_do_telefone`, `.sem_nono_digito`, `.isolamento`
+**Configurável?** Não · **Origem.** 2026-09-12

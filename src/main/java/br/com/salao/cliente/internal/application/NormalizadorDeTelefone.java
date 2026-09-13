@@ -1,8 +1,8 @@
 package br.com.salao.cliente.internal.application;
 
 import br.com.salao.cliente.api.ErrosDoCliente;
-import br.com.salao.cliente.internal.domain.Telefone;
-import br.com.salao.cliente.internal.domain.TelefoneInvalidoException;
+import br.com.salao.shared.telefone.Telefone;
+import br.com.salao.shared.telefone.TelefoneInvalidoException;
 import br.com.salao.iam.api.ConfiguracaoDoEstabelecimento;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.shared.erro.CampoInvalido;

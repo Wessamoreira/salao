@@ -103,9 +103,8 @@ no código para quem vier depois não precisar redescobrir.
 
 - [ ] Auditar agenda e financeiro: as entidades críticas já estão na regra de retenção, mas os
       módulos não existem. Entram junto com `RT-AGD-002` e `RT-ATD-006`
-- [ ] Ator `BOT`: hoje só `USUARIO` e `SISTEMA`. Entra na Fase 4, quando o bot passar a agir em
-      nome de alguém — ali o usuário efetivo estará no contexto e o ator precisará dizer que a
-      ação veio da IA
+- [x] ~~Ator `BOT`~~ — entrou em RT-CNV-002. Com o agente agindo em nome de alguém, `ator = BOT` e
+      `usuario_id` é a pessoa (`UsuarioAtual.ehAgente`). Teste: `UsuarioEfetivoIT.auditoria_diz_bot`
 - [ ] Consulta da trilha por tela: hoje só existe por SQL. Precisa de decisão de UI e de permissão
       própria — nem todo perfil deve ver quem alterou o quê
 - [ ] Auditar login e logout. Hoje ficam em log; como são eventos de segurança e não alterações

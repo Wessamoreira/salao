@@ -1,5 +1,8 @@
 package br.com.salao.iam.internal;
 
+import br.com.salao.iam.internal.application.ResolvedorDeUsuarioEfetivo;
+import br.com.salao.iam.internal.application.DefinirTelefoneDoUsuarioUseCase;
+import br.com.salao.iam.api.UsuarioEfetivoApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.internal.application.AtualizarConfiguracaoUseCase;
 import br.com.salao.iam.internal.application.AutenticarUseCase;
@@ -222,5 +225,17 @@ public class IamConfig {
             MeterRegistry registro) {
         return new RenovarAcessoUseCase(tokens, credenciais, emissor, relogio, validade,
                 tolerancia, registro);
+    }
+
+    /** RT-CNV-002 — em nome de quem o agente age. */
+    @Bean
+    public UsuarioEfetivoApi usuarioEfetivoApi(UsuariosJdbc usuarios, Relogio relogio) {
+        return new ResolvedorDeUsuarioEfetivo(usuarios, relogio);
+    }
+
+    @Bean
+    public DefinirTelefoneDoUsuarioUseCase definirTelefoneDoUsuarioUseCase(
+            UsuariosJdbc usuarios, EstabelecimentoApi estabelecimentos, AuditoriaApi auditoria) {
+        return new DefinirTelefoneDoUsuarioUseCase(usuarios, estabelecimentos, auditoria);
     }
 }

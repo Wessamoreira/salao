@@ -1,4 +1,4 @@
-package br.com.salao.cliente.internal.domain;
+package br.com.salao.shared.telefone;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

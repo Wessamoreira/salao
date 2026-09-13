@@ -62,11 +62,16 @@ pelo telefone.
 Não depende de `cliente`, `agenda` nem `notificacao`. Vai depender, e a ordem importa: a
 dependência entra quando a rotina que precisa dela chegar, não antes.
 
+RT-CNV-002 entregou, **no `iam`**, `UsuarioEfetivoApi` — é por ela que a orquestração (RT-CNV-004)
+vai agir em nome de quem escreveu. O módulo ainda não a usa: quem a usa é o primeiro caso de uso
+que age.
+
 ## Rotinas
 
 | Rotina | Situação |
 |---|---|
 | [RT-CNV-001](RT-CNV-001-webhook-whatsapp.md) — webhook: assinatura + idempotência | implementada |
+| [RT-CNV-002](../iam/RT-CNV-002-usuario-efetivo.md) — usuário efetivo pelo telefone (mora no `iam`) | implementada |
 
 ## Rotas
 

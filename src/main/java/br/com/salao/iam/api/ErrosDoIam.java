@@ -49,7 +49,31 @@ public enum ErrosDoIam implements CodigoDeErro {
             "O salão ficaria sem administrador"),
 
     SENHA_ATUAL_INCORRETA("ER-IAM-SENHA_ATUAL_INCORRETA", HttpStatus.UNPROCESSABLE_ENTITY,
-            "Senha atual incorreta");
+            "Senha atual incorreta"),
+
+    /** RT-CNV-002 — o telefone do usuário não é um número. */
+    TELEFONE_INVALIDO("ER-IAM-TELEFONE_INVALIDO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Telefone inválido"),
+
+    /**
+     * RT-CNV-002 — o telefone já é de outro usuário deste salão.
+     *
+     * <p>Código próprio porque dois usuários com o mesmo telefone tornariam impossível saber em nome
+     * de quem o agente age. A ambiguidade tem de ser recusada no cadastro, não resolvida na conversa.
+     */
+    TELEFONE_EM_USO("ER-IAM-TELEFONE_EM_USO", HttpStatus.CONFLICT,
+            "Telefone já ligado a outro usuário"),
+
+    /**
+     * RT-CNV-002 — um código só para telefone desconhecido, usuário inativo, bloqueado e perfil que
+     * o canal não atende.
+     *
+     * <p>Mesma razão de {@link #CREDENCIAIS_INVALIDAS}: distinguir diria a quem está sondando que o
+     * número pertence à equipe, e com qual perfil. O motivo existe, em {@link MotivoDaRecusa}, para o
+     * diagnóstico — não para a resposta.
+     */
+    CONTATO_NAO_IDENTIFICADO("ER-IAM-CONTATO_NAO_IDENTIFICADO", HttpStatus.FORBIDDEN,
+            "Contato sem permissão para agir por este canal");
 
     private final String codigo;
     private final HttpStatus status;

@@ -44,10 +44,24 @@ public class TenantAwareTransactionManager extends JpaTransactionManager {
                 .register(registro);
     }
 
+    /**
+     * <h2>A ordem é o conserto, e não estética</h2>
+     *
+     * <p>A versão anterior chamava {@code super.doBegin} PRIMEIRO e conferia o tenant depois. Só que
+     * {@code super.doBegin} já pegou a conexão, marcou read-only quando é o caso, abriu a transação e
+     * AMARROU o {@code EntityManager} à thread. A exceção saía daqui e ninguém desfazia nada: a
+     * transação ficava ativa e presa à thread, e a próxima {@code @Transactional} nela SE JUNTAVA à
+     * transação morta — "cannot execute UPDATE in a read-only transaction", depois 25P02 para tudo.
+     *
+     * <p>Achado em RT-CNV-002: um teste de "sem tenant" em leitura derrubou os logins de todos os
+     * testes seguintes. Em produção o estrago seria nos jobs — as threads {@code scheduling-N} são
+     * reaproveitadas, e uma única chamada sem tenant deixaria aquela thread quebrada para sempre,
+     * com a conexão fora do pool.
+     *
+     * <p>Agora: conferir antes de adquirir. O que não foi pego não precisa ser devolvido.
+     */
     @Override
     protected void doBegin(Object transaction, TransactionDefinition definition) {
-        super.doBegin(transaction, definition);
-
         UUID tenant = TenantContext.atual();
         if (tenant == null && !TenantContext.semTenantPermitido()) {
             if (transacoesSemTenant != null) {
@@ -56,11 +70,32 @@ public class TenantAwareTransactionManager extends JpaTransactionManager {
             throw new TenantNaoDefinidoException();   // RN-INF-003
         }
 
-        // Sem tenant: define string vazia. A política usa nullif(...,'')::uuid, que vira NULL,
-        // e a comparação resulta em NULL — nenhuma linha passa. Falha fechada.
-        entityManager().createNativeQuery(SQL)
-                .setParameter("tenant", tenant == null ? "" : tenant.toString())
-                .getSingleResult();
+        super.doBegin(transaction, definition);
+
+        try {
+            // Sem tenant: define string vazia. A política usa nullif(...,'')::uuid, que vira NULL,
+            // e a comparação resulta em NULL — nenhuma linha passa. Falha fechada.
+            entityManager().createNativeQuery(SQL)
+                    .setParameter("tenant", tenant == null ? "" : tenant.toString())
+                    .getSingleResult();
+        } catch (RuntimeException falha) {
+            // Mesmo problema pelo outro lado: se aplicar o tenant falhar DEPOIS do begin, o que o
+            // `super` montou fica preso à thread. Desfaz a transação e solta os recursos antes de
+            // propagar. Este caminho não tem teste — provocar falha no `set_config` exigiria
+            // derrubar a conexão no meio do begin —, e por isso está escrito com o mínimo de passos.
+            try {
+                var holder = (EntityManagerHolder) TransactionSynchronizationManager
+                        .getResource(obterEntityManagerFactory());
+                if (holder != null && holder.getEntityManager().getTransaction().isActive()) {
+                    holder.getEntityManager().getTransaction().rollback();
+                }
+            } catch (RuntimeException aoDesfazer) {
+                falha.addSuppressed(aoDesfazer);
+            } finally {
+                doCleanupAfterCompletion(transaction);
+            }
+            throw falha;
+        }
     }
 
     private EntityManager entityManager() {

@@ -232,10 +232,11 @@ dia em que alguém precisar casar este número com o de um cliente.
 ## 13. Pendências
 
 - [ ] **O evento não está no outbox ainda.** O Spring Modulith grava uma publicação **por
-      listener**, e `MensagemDeClienteRecebida` não tem nenhum — `event_publication` fica vazia. A
-      garantia de entrega passa a valer em RT-CNV-002, quando o consumidor existir. Hoje o evento
-      é publicação em processo, e uma queda entre o commit e o consumo não perde nada porque não há
-      consumo. **É a primeira coisa a verificar na próxima rotina.**
+      listener**, e `MensagemDeClienteRecebida` não tem nenhum — `event_publication` fica vazia. Hoje
+      o evento é publicação em processo, e uma queda entre o commit e o consumo não perde nada
+      porque não há consumo. **RT-CNV-002 não criou consumidor, de propósito:** a identidade é
+      resolvida na hora da ação, não na chegada (RN-IAM-019). A verificação passa a ser a primeira
+      coisa a fazer no primeiro consumidor — RT-CNV-003 (áudio) ou RT-CNV-004.
 - [ ] **Recibo de entrega é ignorado.** `value.statuses` traz `sent`/`delivered`/`read` das
       mensagens que o salão mandou, e ligá-los a `mensagem.status` (RT-NOT-001) fecharia o ciclo
       "a cliente recebeu o lembrete?". Não é desta rotina, mas o dado está chegando e sendo

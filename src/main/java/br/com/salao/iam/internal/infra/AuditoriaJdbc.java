@@ -92,11 +92,19 @@ public class AuditoriaJdbc implements AuditoriaApi {
     }
 
     /**
-     * Sem usuário no contexto, o ator é {@code SISTEMA} — job agendado, migração, consumidor de
-     * evento. O {@code BOT} entra na Fase 4, quando ele passar a agir em nome de alguém: ali o
-     * usuário efetivo estará no contexto e o ator precisará dizer que a ação veio da IA.
+     * Quem apertou o botão.
+     *
+     * <ul>
+     *   <li>{@code BOT} — o agente, em nome de alguém (RT-CNV-002). {@code usuario_id} continua
+     *       sendo a pessoa: a trilha responde "o agente cancelou, a pedido da recepção";
+     *   <li>{@code USUARIO} — uma pessoa, pelo próprio login;
+     *   <li>{@code SISTEMA} — ninguém: job agendado, migração, consumidor de evento.
+     * </ul>
      */
     private String ator() {
+        if (UsuarioAtual.ehAgente()) {
+            return "BOT";
+        }
         return usuarioAtual() == null ? "SISTEMA" : "USUARIO";
     }
 
