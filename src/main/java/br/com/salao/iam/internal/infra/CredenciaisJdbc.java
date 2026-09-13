@@ -93,6 +93,15 @@ public class CredenciaisJdbc {
         return aplicacao.sql(POR_ID).param("id", usuarioId).query(this::mapear).optional();
     }
 
+    /** Nome de exibição lido sob o tenant, para a identidade da sessão no frontend. */
+    @Transactional(readOnly = true)
+    public Optional<String> nomePorId(UUID usuarioId) {
+        return aplicacao.sql("select nome from usuario where id = :id")
+                .param("id", usuarioId)
+                .query(String.class)
+                .optional();
+    }
+
     /** Chamado dentro do escopo do tenant: a RLS confere que o usuário é mesmo dele. */
     @Transactional
     public void registrarFalha(UUID usuarioId, Instant bloqueadoAte) {

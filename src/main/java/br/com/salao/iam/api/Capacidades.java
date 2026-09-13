@@ -26,6 +26,7 @@ public record Capacidades(
         Perfil perfil,
         EstabelecimentoResumo estabelecimento,
         Set<String> permissoes,
+        List<GrupoDeMenu> grupos,
         List<Menu> menus,
         Map<String, Object> flags,
         Map<String, Object> limites,
@@ -35,6 +36,21 @@ public record Capacidades(
     public record EstabelecimentoResumo(UUID id, String nome, String timezone, String moeda) {
     }
 
-    public record Menu(String id, String rotulo, String rota, String icone) {
+    /**
+     * RT-INF-010 — uma seção da navegação lateral.
+     *
+     * <p>Os grupos vêm do servidor pela mesma razão que os menus vêm: agrupar no front seria
+     * recriar no JavaScript a regra que este endpoint existe para eliminar. A ordem da lista é a
+     * ordem da tela, e o rótulo é o que aparece — o front não traduz nem reordena nada.
+     *
+     * <p>Um grupo sem nenhum menu visível simplesmente não é desenhado. É por isso que a lista
+     * chega completa, em vez de filtrada: filtrar é aritmética sobre o que já foi enviado, e
+     * mandar grupo vazio deixaria a recepção vendo um título sozinho.
+     */
+    public record GrupoDeMenu(String id, String rotulo) {
+    }
+
+    /** @param grupo o id de um {@link GrupoDeMenu}; define onde o item aparece na lateral */
+    public record Menu(String id, String rotulo, String rota, String icone, String grupo) {
     }
 }

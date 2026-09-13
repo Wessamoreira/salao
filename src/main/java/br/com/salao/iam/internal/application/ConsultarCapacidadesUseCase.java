@@ -38,18 +38,21 @@ public class ConsultarCapacidadesUseCase {
                 new ErroDeDominio(ErrosDaInfra.NAO_ENCONTRADO, "Usuário não encontrado."));
         var salao = estabelecimentos.configuracao(estabelecimentoId).orElseThrow(() ->
                 new ErroDeDominio(ErrosDaInfra.NAO_ENCONTRADO, "Estabelecimento não encontrado."));
+        String nomeDoUsuario = credenciais.nomePorId(usuarioId).orElseThrow(() ->
+                new ErroDeDominio(ErrosDaInfra.NAO_ENCONTRADO, "Usuário não encontrado."));
 
         Perfil perfil = usuario.perfil();
         Set<String> permissoes = MapaDePermissoes.de(perfil);
 
         return new Capacidades(
                 usuarioId,
-                salao.nome(),
+                nomeDoUsuario,
                 usuario.email(),
                 perfil,
                 new Capacidades.EstabelecimentoResumo(salao.id(), salao.nome(),
                         salao.fuso().getId(), salao.moeda()),
                 permissoes,
+                GRUPOS,
                 menusDe(permissoes),
                 Map.of(
                         // Nome que descreve o EFEITO, não o perfil: o front pergunta "posso ver
@@ -63,27 +66,39 @@ public class ConsultarCapacidadesUseCase {
                 MapaDePermissoes.exigeMfa(perfil));
     }
 
+    /**
+     * As seções da lateral, na ordem da tela.
+     *
+     * <p>A divisão não é decorativa: ela separa o que a recepção usa o dia inteiro do que o dono
+     * abre uma vez por semana, e é o que impede a lista de crescer até virar um paredão em que
+     * ninguém acha nada. Grupo sem menu visível não é desenhado pelo front.
+     */
+    private static final List<Capacidades.GrupoDeMenu> GRUPOS = List.of(
+            new Capacidades.GrupoDeMenu("operacao", "Operação"),
+            new Capacidades.GrupoDeMenu("gestao", "Gestão"),
+            new Capacidades.GrupoDeMenu("sistema", "Sistema"));
+
     private List<Capacidades.Menu> menusDe(Set<String> permissoes) {
         var menus = new ArrayList<Capacidades.Menu>();
         if (permissoes.contains(Permissao.AGENDA_LER_PROPRIA)
                 || permissoes.contains(Permissao.AGENDA_LER_TODAS)) {
-            menus.add(new Capacidades.Menu("agenda", "Agenda", "/agenda", "calendario"));
+            menus.add(new Capacidades.Menu("agenda", "Agenda", "/agenda", "calendario", "operacao"));
         }
         if (permissoes.contains(Permissao.COMANDA_ABRIR)) {
-            menus.add(new Capacidades.Menu("atendimento", "Atendimento", "/comandas", "tesoura"));
+            menus.add(new Capacidades.Menu("atendimento", "Atendimento", "/comandas", "tesoura", "operacao"));
         }
         if (permissoes.contains(Permissao.CLIENTE_LER)) {
-            menus.add(new Capacidades.Menu("clientes", "Clientes", "/clientes", "pessoas"));
+            menus.add(new Capacidades.Menu("clientes", "Clientes", "/clientes", "pessoas", "operacao"));
         }
         if (permissoes.contains(Permissao.ESTOQUE_LER)) {
-            menus.add(new Capacidades.Menu("estoque", "Estoque", "/estoque", "caixa"));
+            menus.add(new Capacidades.Menu("estoque", "Estoque", "/estoque", "caixa", "gestao"));
         }
         if (permissoes.contains(Permissao.FINANCEIRO_LER_PROPRIO)
                 || permissoes.contains(Permissao.FINANCEIRO_LER_TODOS)) {
-            menus.add(new Capacidades.Menu("financeiro", "Financeiro", "/financeiro", "cifrao"));
+            menus.add(new Capacidades.Menu("financeiro", "Financeiro", "/financeiro", "cifrao", "gestao"));
         }
         if (permissoes.contains(Permissao.CONFIG_GERENCIAR)) {
-            menus.add(new Capacidades.Menu("configuracao", "Configurações", "/config", "engrenagem"));
+            menus.add(new Capacidades.Menu("configuracao", "Configurações", "/config", "engrenagem", "sistema"));
         }
         return List.copyOf(menus);
     }

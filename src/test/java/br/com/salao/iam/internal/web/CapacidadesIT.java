@@ -56,6 +56,7 @@ class CapacidadesIT extends AbstractPostgresIT {
                 () -> capacidades.executar(conta.usuarioId(), conta.tenant()));
 
         assertThat(c.perfil()).isEqualTo(Perfil.ADMIN);
+        assertThat(c.nome()).isEqualTo("Ana");
         assertThat(c.permissoes()).contains(Permissao.CONFIG_GERENCIAR,
                 Permissao.FINANCEIRO_LER_TODOS, Permissao.CLIENTE_FICHA_LER);
         assertThat(c.estabelecimento().timezone()).isEqualTo("America/Sao_Paulo");
@@ -118,5 +119,22 @@ class CapacidadesIT extends AbstractPostgresIT {
             ps.setObject(2, usuarioId);
             ps.executeUpdate();
         }
+    }
+
+    @Test
+    @DisplayName("todo menu aponta para um grupo que existe")
+    void menu_aponta_para_grupo_existente() throws SQLException {
+        // Um menu com grupo inexistente SOME da lateral sem erro nenhum: o front desenha
+        // grupo a grupo, e o que não casa não é desenhado. Seria uma seção inteira do
+        // sistema desaparecendo em silêncio, descoberta por alguém reclamando.
+        Conta conta = contaCom(Perfil.ADMIN);
+
+        var c = TenantContext.obter(conta.tenant(),
+                () -> capacidades.executar(conta.usuarioId(), conta.tenant()));
+
+        assertThat(c.grupos()).isNotEmpty();
+        assertThat(c.menus()).isNotEmpty();
+        assertThat(c.menus()).allSatisfy(menu ->
+                assertThat(c.grupos()).extracting(g -> g.id()).contains(menu.grupo()));
     }
 }
