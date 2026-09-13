@@ -80,6 +80,8 @@ reconectar · métrica `cache.listener.up` com alerta.
 perfil do usuário efetivo; escrita só via `simular` → confirmação humana → `confirmar`; teto de
 custo; log completo em `acao_ia`.
 **Teste obrigatório:** suíte de mensagens adversariais que devem falhar por autorização.
+**Estado:** coberto em RT-CNV-004 — `OrquestradorTest.modelo_comprometido` e
+`AgenteIT.modelo_comprometido`, com o modelo roteirizado para obedecer ao ataque.
 
 ### R-11 · Ampere ARM indisponível na Oracle
 **Dano:** o plano de infra gratuito não se materializa.
@@ -113,6 +115,8 @@ Tablet em espaço público com token de longa duração. Escopo somente leitura 
 PIN para sair do quiosque, revogação individual do dispositivo.
 
 ### R-17 · Custo de LLM e STT sem teto
+**Estado:** teto de LLM por salão por dia implementado em RT-CNV-004 (RN-CNV-011). STT ainda sem
+teto — não há provedor, e sem provedor não há tabela de preço.
 Áudio é caro e a Fase 4 pode consumir orçamento sem ninguém ver. Teto por estabelecimento por dia,
 corte automático, custo registrado por ação em `acao_ia`, alerta em 80% do teto.
 

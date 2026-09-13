@@ -36,7 +36,8 @@ Três consequências que atravessam o módulo inteiro:
 - **Não sabe quem é a pessoa.** O telefone entra como texto; ligá-lo a um `cliente` é RT-CNV-002.
 - **Não baixa mídia no webhook.** Áudio entra como *id*; o download e a transcrição são
   RT-CNV-003, numa fila fora de transação. Imagem e documento continuam só como *id*.
-- **Não chama LLM nenhum.** Orquestração, allowlist de tools e teto de custo são RT-CNV-004.
+- **Não entrega a resposta.** RT-CNV-004 conversa e registra a resposta; enviá-la pelo WhatsApp
+  ainda não existe.
 
 ## O que ele **não** guarda
 
@@ -58,6 +59,8 @@ pelo telefone.
 
 - `iam` — `AuditoriaApi` (cadastro do canal) e `Permissao.CONFIG_GERENCIAR`
 - `arquivos` — `IngestaoDeArquivoApi` (o áudio guardado e relido, RT-CNV-003)
+- `iam` — `UsuarioEfetivoApi` e `EstabelecimentoApi` (em nome de quem, e o fuso do teto, RT-CNV-004)
+- `shared.agente` — `Ferramenta`, que os outros módulos implementam (RN-CNV-013)
 - `shared` — `ConexaoDeManutencao` (o roteamento roda sem tenant), `Relogio`, `ErroDeDominio`
 
 Não depende de `cliente`, `agenda` nem `notificacao`. Vai depender, e a ordem importa: a
@@ -74,6 +77,7 @@ que age.
 | [RT-CNV-001](RT-CNV-001-webhook-whatsapp.md) — webhook: assinatura + idempotência | implementada |
 | [RT-CNV-002](../iam/RT-CNV-002-usuario-efetivo.md) — usuário efetivo pelo telefone (mora no `iam`) | implementada |
 | [RT-CNV-003](RT-CNV-003-audio-transcricao.md) — áudio: download, guarda e transcrição | implementada, sem provedor de STT |
+| [RT-CNV-004](RT-CNV-004-orquestracao.md) — orquestração: ferramentas por permissão, teto, limite | implementada, sem provedor de LLM |
 
 ## Rotas
 
@@ -86,4 +90,4 @@ que age.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-CNV-001 a RN-CNV-009.
+Ver [regras.md](regras.md) — RN-CNV-001 a RN-CNV-013.

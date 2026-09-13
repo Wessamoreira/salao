@@ -1,5 +1,21 @@
 package br.com.salao.conversacional.internal;
 
+import org.springframework.beans.factory.ObjectProvider;
+import java.math.BigDecimal;
+import br.com.salao.shared.agente.Ferramenta;
+import br.com.salao.iam.api.UsuarioEfetivoApi;
+import br.com.salao.iam.api.EstabelecimentoApi;
+import br.com.salao.conversacional.internal.infra.ProcessadorDeInteracoes;
+import br.com.salao.conversacional.internal.infra.LimitePorTelefone;
+import br.com.salao.conversacional.internal.infra.ExecucoesJdbc;
+import br.com.salao.conversacional.internal.infra.ConsumoDeIaJdbc;
+import br.com.salao.conversacional.internal.infra.ClaudeMessagesApi;
+import br.com.salao.conversacional.internal.application.PrecoDoModelo;
+import br.com.salao.conversacional.internal.application.Orquestrador;
+import br.com.salao.conversacional.internal.application.ModeloDeLinguagem;
+import br.com.salao.conversacional.internal.application.EnfileiradorDeInteracoes;
+import br.com.salao.conversacional.internal.application.ConcluirTranscricao;
+import br.com.salao.conversacional.internal.application.CatalogoDeFerramentas;
 import tools.jackson.databind.ObjectMapper;
 import br.com.salao.conversacional.internal.infra.TranscritorNaoConfigurado;
 import br.com.salao.conversacional.internal.infra.TranscricoesJdbc;
@@ -137,9 +153,89 @@ public class ConversacionalConfig {
     public ProcessadorDeAudios processadorDeAudios(
             ConexaoDeManutencao manutencao, TranscricoesJdbc transcricoes,
             MensagensRecebidasJdbc mensagens, MidiaDoWhatsApp midia, GuardarAudioBaixado guardar,
-            IngestaoDeArquivoApi ingestao, Transcritor transcritor, Relogio relogio,
-            MeterRegistry metricas) {
+            IngestaoDeArquivoApi ingestao, Transcritor transcritor, ConcluirTranscricao concluir,
+            Relogio relogio, MeterRegistry metricas) {
         return new ProcessadorDeAudios(manutencao, transcricoes, mensagens, midia, guardar,
-                ingestao, transcritor, relogio, metricas);
+                ingestao, transcritor, concluir, relogio, metricas);
+    }
+
+    // ------------------------------------------------------------------ RT-CNV-004
+
+    /** O endpoint é fixo no adaptador: a chave de API não vai para uma URL de configuração. */
+    @Bean
+    public ModeloDeLinguagem modeloDeLinguagem(
+            @Value("${app.agente.chave-api:}") String chave,
+            @Value("${app.agente.modelo:claude-opus-5}") String modelo,
+            ObjectMapper json) {
+        if (chave == null || chave.isBlank()) {
+            log.warn("app.agente.chave-api não configurada: as conversas vão esperar na fila");
+        }
+        return new ClaudeMessagesApi(chave, modelo, json);
+    }
+
+    @Bean
+    public PrecoDoModelo precoDoModelo(
+            @Value("${app.agente.preco.entrada-por-milhao-usd:}") String entrada,
+            @Value("${app.agente.preco.saida-por-milhao-usd:}") String saida) {
+        PrecoDoModelo preco = PrecoDoModelo.de(entrada, saida);
+        if (!preco.configurado()) {
+            log.warn("Preço do modelo não configurado: sem preço não há teto de custo, "
+                    + "e o agente não roda (R-17)");
+        }
+        return preco;
+    }
+
+    /** Recolhe as ferramentas que os módulos contribuem. Nenhuma é declarada aqui. */
+    @Bean
+    public CatalogoDeFerramentas catalogoDeFerramentas(ObjectProvider<Ferramenta> ferramentas) {
+        return new CatalogoDeFerramentas(ferramentas.orderedStream().toList());
+    }
+
+    @Bean
+    public Orquestrador orquestrador(ModeloDeLinguagem modelo, CatalogoDeFerramentas catalogo,
+                                     PrecoDoModelo preco, ObjectMapper json) {
+        return new Orquestrador(modelo, catalogo, preco, json);
+    }
+
+    @Bean
+    public ExecucoesJdbc execucoesJdbc(DataSource dataSource, ObjectMapper json) {
+        return new ExecucoesJdbc(JdbcClient.create(dataSource), json);
+    }
+
+    @Bean
+    public ConsumoDeIaJdbc consumoDeIaJdbc(DataSource dataSource) {
+        return new ConsumoDeIaJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public LimitePorTelefone limitePorTelefone(
+            @Value("${app.agente.limite-por-telefone-por-hora:30}") int porHora) {
+        return new LimitePorTelefone(porHora);
+    }
+
+    @Bean
+    public EnfileiradorDeInteracoes enfileiradorDeInteracoes(MensagensRecebidasJdbc mensagens,
+                                                             ExecucoesJdbc execucoes,
+                                                             Relogio relogio) {
+        return new EnfileiradorDeInteracoes(mensagens, execucoes, relogio);
+    }
+
+    @Bean
+    public ConcluirTranscricao concluirTranscricao(TranscricoesJdbc transcricoes,
+                                                   MensagensRecebidasJdbc mensagens,
+                                                   ExecucoesJdbc execucoes) {
+        return new ConcluirTranscricao(transcricoes, mensagens, execucoes);
+    }
+
+    @Bean
+    public ProcessadorDeInteracoes processadorDeInteracoes(
+            ConexaoDeManutencao manutencao, ExecucoesJdbc execucoes, UsuarioEfetivoApi usuarios,
+            EstabelecimentoApi estabelecimentos, Orquestrador orquestrador,
+            ModeloDeLinguagem modelo, PrecoDoModelo preco, ConsumoDeIaJdbc consumo,
+            LimitePorTelefone limite,
+            @Value("${app.agente.teto-diario-usd:2.00}") BigDecimal tetoDiario,
+            Relogio relogio, MeterRegistry metricas) {
+        return new ProcessadorDeInteracoes(manutencao, execucoes, usuarios, estabelecimentos,
+                orquestrador, modelo, preco, consumo, limite, tetoDiario, relogio, metricas);
     }
 }

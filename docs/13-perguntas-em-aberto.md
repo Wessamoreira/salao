@@ -53,7 +53,7 @@ resposta muda com o tempo de qualquer forma.
 |---|---|---|
 | 11 | Quantos salões na v1 — só o seu ou já vender? | Não muda o schema (multi-tenant é dia 0), mas muda onboarding, cobrança e suporte |
 | 13 | Volume: agendamentos/dia e profissionais simultâneos? | Dimensiona pool, VM e densidade da grade |
-| 14 | Orçamento mensal: infra + WhatsApp por conversa + LLM + **STT** | STT de áudio ficou fora da conta original e não é barato. **Desde RT-CNV-003 bloqueia de verdade:** os áudios são guardados e esperam um provedor |
+| 14 | Orçamento mensal: infra + WhatsApp por conversa + LLM + **STT** | STT de áudio ficou fora da conta original e não é barato. **Desde RT-CNV-003 bloqueia de verdade:** os áudios são guardados e esperam um provedor. **E desde RT-CNV-004, o LLM:** sem chave e preço, as conversas esperam |
 
 ---
 

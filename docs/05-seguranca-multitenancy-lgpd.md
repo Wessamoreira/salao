@@ -148,6 +148,12 @@ O furo mais grave e o mais esquecido. Mensagem de cliente é **entrada não conf
 - Log completo em `acao_ia`: mensagem original, transcrição, tools, argumentos, resultado, custo.
 - Conteúdo de mensagem **nunca** entra em log de aplicação (PII).
 
+**Implementado em RT-CNV-004** (RN-CNV-010 a 013): a lista permitida sai das permissões do usuário
+efetivo; pedido fora dela é recusado e registrado; o que passa roda em nome do usuário, com o
+`@PreAuthorize` do caso de uso conferindo de novo; escrita nunca é executada pelo orquestrador. O
+teto é reservado antes de cada chamada, e há limite por telefone. A suíte R-10 usa um modelo
+roteirizado para obedecer ao ataque — e prova que nada passa.
+
 ## Aplicação
 
 - Bean Validation em todo DTO de entrada + limite de tamanho de payload.

@@ -70,4 +70,16 @@ public class MensagensRecebidasJdbc {
 
     public record MidiaDaMensagem(String midiaId, String mimeDeclarado) {
     }
+
+    /** RT-CNV-004 — quem mandou, e o texto quando for texto. */
+    @Transactional(readOnly = true)
+    public Optional<Remetente> remetente(UUID mensagemId) {
+        return jdbc.sql("select de_telefone, texto from mensagem_recebida where id = :id")
+                .param("id", mensagemId)
+                .query((rs, n) -> new Remetente(rs.getString("de_telefone"), rs.getString("texto")))
+                .optional();
+    }
+
+    public record Remetente(String telefone, String texto) {
+    }
 }

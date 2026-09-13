@@ -185,3 +185,55 @@ update transcricao_de_audio
 ```
 
 **`FALHOU` com "áudio recusado"** — os bytes não eram áudio. O arquivo `RECUSADO` fica registrado.
+
+## Agente (RT-CNV-004)
+
+### Credencial e preço
+
+```
+AGENTE_CHAVE_API=<chave do provedor de LLM>
+AGENTE_MODELO=claude-opus-5
+AGENTE_PRECO_ENTRADA=<dólares por milhão de tokens de entrada, da tabela do provedor>
+AGENTE_PRECO_SAIDA=<dólares por milhão de tokens de saída>
+AGENTE_TETO_DIARIO_USD=2.00
+AGENTE_LIMITE_TELEFONE_HORA=30
+```
+
+**Sem chave OU sem preço, o agente não roda** — as conversas esperam na fila. O preço não tem valor
+padrão de propósito: sem preço não há custo, e sem custo não há teto (R-17). Confira a tabela do
+provedor ao trocar de modelo.
+
+Antes de ligar em produção: mensagem, nome de quem escreve e resultado de ferramenta vão para o
+provedor — é tratamento por terceiro, e pede contrato de processamento de dados (LGPD).
+
+### Olhar
+
+```sql
+select status, motivo_recusa, count(*) from execucao_do_agente group by 1, 2;
+
+select dia, chamadas, custo_confirmado_usd, custo_reservado_usd
+  from consumo_de_ia where estabelecimento_id = '<salão>' order by dia desc limit 7;
+```
+
+Métrica: `conversacional_agente_total{desfecho}` — `concluida`, `recusada_identidade`,
+`recusada_limite`, `recusada_teto`, `adiada`, `falhou`.
+
+### Modos de falha
+
+**`RECUSADA` com `TELEFONE_DESCONHECIDO` de alguém da equipe** — o telefone não está ligado à conta
+(`PUT /api/v1/usuarios/{id}/telefone`), ou chegou sem o nono dígito (RT-CNV-002).
+
+**`RECUSADA` com `PERFIL_EXIGE_SEGUNDO_FATOR`** — dono e gerente não conversam pelo canal. É regra
+(RN-IAM-020), não defeito.
+
+**`recusada_teto` subindo** — o salão atingiu o teto do dia. Volta sozinho à meia-noite do fuso do
+salão. Subir o teto é decisão de custo, não correção.
+
+**`custo_reservado_usd` alto e parado** — um processo morreu entre reservar e liquidar. A reserva só
+é liberada no dia seguinte; é o lado seguro de errar.
+
+**`adiada` com "modelo respondeu 401"** — chave vencida ou trocada.
+
+**Ferramenta com desfecho `SEM_PERMISSAO` em conversa legítima** — a ferramenta declara uma
+permissão e o caso de uso exige outra. Corrigir a DECLARAÇÃO da ferramenta; nunca afrouxar o caso de
+uso.

@@ -25,7 +25,7 @@ conteúdo de mensagem de cliente.
 | `cache.listener.up` | `LISTEN/NOTIFY` caído = preço velho silencioso (R-09) |
 | Tamanho e idade da fila do outbox | Notificação que não sai (R-12) |
 | Falha de webhook por origem | WhatsApp perdendo mensagem |
-| Custo de LLM por estabelecimento por dia | Teto da Fase 4 (R-17) |
+| Custo de LLM por estabelecimento por dia | Teto da Fase 4 (R-17). Tabela `consumo_de_ia`; métrica `conversacional_agente_total{desfecho}` (`recusada_teto` é o corte) |
 | Taxa de 5xx e de 409 | 409 subindo = corrida real na agenda |
 
 ## Alertas mínimos

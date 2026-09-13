@@ -51,3 +51,9 @@ banco protege "no máximo um", não "no máximo três" — ver a primeira pendê
 ## Regras
 
 Ver [regras.md](regras.md) — RN-CAT-001 a RN-CAT-014.
+
+## Ferramentas do agente
+
+`listar_servicos` (RT-CNV-004) — o cardápio para o agente conversacional, chamando
+`ListarServicosUseCase` com o `@PreAuthorize` dele. É a ferramenta de referência de RN-CNV-013: o
+módulo dono contribui a ferramenta, e o agente esbarra na mesma tranca que a tela.

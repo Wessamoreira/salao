@@ -1,6 +1,7 @@
 package br.com.salao.conversacional.internal.infra;
 
 import br.com.salao.arquivos.api.IngestaoDeArquivoApi;
+import br.com.salao.conversacional.internal.application.ConcluirTranscricao;
 import br.com.salao.conversacional.internal.application.FalhaPermanente;
 import br.com.salao.conversacional.internal.application.GuardarAudioBaixado;
 import br.com.salao.conversacional.internal.application.MidiaDoWhatsApp;
@@ -78,13 +79,15 @@ public class ProcessadorDeAudios {
     private final GuardarAudioBaixado guardar;
     private final IngestaoDeArquivoApi ingestao;
     private final Transcritor transcritor;
+    private final ConcluirTranscricao concluir;
     private final Relogio relogio;
     private final MeterRegistry metricas;
 
     public ProcessadorDeAudios(ConexaoDeManutencao manutencao, TranscricoesJdbc transcricoes,
                                MensagensRecebidasJdbc mensagens, MidiaDoWhatsApp midia,
                                GuardarAudioBaixado guardar, IngestaoDeArquivoApi ingestao,
-                               Transcritor transcritor, Relogio relogio, MeterRegistry metricas) {
+                               Transcritor transcritor, ConcluirTranscricao concluir,
+                               Relogio relogio, MeterRegistry metricas) {
         this.manutencao = manutencao;
         this.transcricoes = transcricoes;
         this.mensagens = mensagens;
@@ -92,6 +95,7 @@ public class ProcessadorDeAudios {
         this.guardar = guardar;
         this.ingestao = ingestao;
         this.transcritor = transcritor;
+        this.concluir = concluir;
         this.relogio = relogio;
         this.metricas = metricas;
     }
@@ -184,7 +188,8 @@ public class ProcessadorDeAudios {
         var audio = ingestao.conteudo(r.arquivoId())
                 .orElseThrow(() -> new FalhaPermanente("o áudio guardado não foi encontrado"));
         var resultado = transcritor.transcrever(audio.bytes(), audio.tipo());
-        transcricoes.concluir(r.id(), resultado, relogio.agora());
+        // RT-CNV-004: concluir e virar conversa no mesmo commit.
+        concluir.executar(r.id(), r.mensagemId(), r.estabelecimentoId(), resultado, relogio.agora());
     }
 
     /** A gravação da falha também pode falhar (banco fora). Aí a reserva vence e a linha volta. */

@@ -137,6 +137,24 @@ app.whatsapp:
   audio:
     intervalo: ${WHATSAPP_AUDIO_INTERVALO:PT30S}
 
+app.agente:
+  # RT-CNV-004 — o modelo de linguagem. Sem chave, o agente não roda: as mensagens ficam na fila.
+  chave-api: ${AGENTE_CHAVE_API:}
+  modelo: ${AGENTE_MODELO:claude-opus-5}
+  # Sem valor padrão, de propósito. Sem preço não há como calcular custo, e sem custo não há teto
+  # (R-17): o agente não roda enquanto os dois não forem informados. Um padrão aqui seria uma tabela
+  # de preço inventada, desatualizada no dia em que o provedor mudasse.
+  preco:
+    entrada-por-milhao-usd: ${AGENTE_PRECO_ENTRADA:}
+    saida-por-milhao-usd: ${AGENTE_PRECO_SAIDA:}
+  # Por salão, por dia civil no fuso do salão. Atingido, o agente para de chamar o modelo até virar
+  # o dia.
+  teto-diario-usd: ${AGENTE_TETO_DIARIO_USD:2.00}
+  # Conversas por telefone por hora. Protege o teto de um único número em laço — e de quem descobriu
+  # o número da recepção.
+  limite-por-telefone-por-hora: ${AGENTE_LIMITE_TELEFONE_HORA:30}
+  intervalo: ${AGENTE_INTERVALO:PT15S}
+
 app.cripto:
   # AES-256 em Base64 (32 bytes). Sem padrão: a aplicação não sobe sem chave, porque
   # um padrão em código vira a chave de produção de alguém. Gere com

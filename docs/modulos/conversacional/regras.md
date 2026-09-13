@@ -252,3 +252,103 @@ própria recusa.
 **Rotinas.** RT-CNV-003 · **Teste.** `TranscricaoDeAudioIT.retentativa_usa_a_copia`,
 `.concluida_nao_e_reescrita`, `.bytes_que_nao_sao_audio`, `.nao_apaga`, `.isolamento`
 **Configurável?** Não · **Origem.** 2026-09-13
+
+---
+
+### RN-CNV-010 — O modelo é tratado como comprometido: três trancas, nenhuma no prompt
+
+**Enunciado.** O modelo só vê as ferramentas permitidas ao usuário efetivo — de leitura, e com TODAS
+as permissões declaradas presentes. Qualquer pedido fora delas é recusado pelo orquestrador, com o
+motivo registrado: `INEXISTENTE`, `ESCRITA_EXIGE_CONFIRMACAO` ou `FORA_DA_LISTA`. O que passa é
+executado **em nome do** usuário efetivo, e o `@PreAuthorize` do caso de uso confere de novo
+(`SEM_PERMISSAO`). Escrita nunca é executada pelo orquestrador, nem com permissão.
+
+**Motivo.** docs/05: prompt injection "tem que esbarrar em permissão, não em prompt". A pergunta de
+projeto não é como impedir o modelo de ser enganado — é o que acontece quando ele for. Resposta:
+nada além do que a pessoa já pode pela tela.
+
+Três trancas porque cada uma pode falhar sozinha. A lista é calculada da declaração da ferramenta, e
+a declaração pode estar errada; o `@PreAuthorize` não depende dela. A recusa volta ao modelo como
+erro e fica no rastro: o ataque aparece como RECUSADO, e não como silêncio.
+
+Nenhuma frase de segurança no prompt, de propósito: "não faça X" é uma instrução que a mensagem
+seguinte revoga.
+
+**Onde é garantida.** `CatalogoDeFerramentas.permitidasPara` · `Orquestrador.avaliar` ·
+`ProcessadorDeInteracoes` (executor por `UsuarioEfetivoApi.emNomeDe`).
+**Rotinas.** RT-CNV-004 · **Teste.** `OrquestradorTest.modelo_comprometido`, `.so_ve_a_lista`,
+`.escrita_com_permissao`, `AgenteIT.modelo_comprometido`, `CatalogoDeFerramentasTest.escrita_nunca`,
+`.sem_declaracao`
+**Configurável?** Não · **Origem.** 2026-09-13
+
+---
+
+### RN-CNV-011 — O teto de custo é reservado antes de cada chamada, e sem preço o agente não roda
+
+**Enunciado.** Antes de cada chamada ao modelo, o pior caso — tokens estimados de entrada e o máximo
+de saída — é reservado no teto do salão para o dia civil no fuso do salão. Não coube: a conversa
+para ali, sem chamar. Depois da chamada, a reserva é trocada pelo custo real; se o modelo falhar, a
+reserva é solta com custo zero. Sem preço configurado, o agente não roda.
+
+**Motivo.** R-17: custo de LLM sem teto consome o orçamento sem ninguém ver. O custo só é conhecido
+quando a chamada volta, e "conferir antes, gravar depois" deixaria chamadas concorrentes passarem
+juntas pelo mesmo saldo. A reserva é um comando só (`insert ... on conflict do update ... where
+cabe`), e a linha do dia travada pelo conflito é o que serializa as reservas.
+
+Reserva presa por queda de processo fica até o fim do dia: erra para o lado de gastar menos.
+
+Sem preço, não há custo; sem custo, não há teto. Um preço padrão no código seria uma tabela
+inventada, desatualizada no dia em que o provedor mudasse — e o teto viraria ficção.
+
+**Onde é garantida.** `ConsumoDeIaJdbc.reservar` · `Orquestrador.conduzir` (reserva por iteração,
+liquida inclusive na falha) · `PrecoDoModelo.configurado` · `V53`.
+**Rotinas.** RT-CNV-004 · **Teste.** `AgenteIT.teto_de_custo`, `.falha_transitoria`,
+`OrquestradorTest.teto_antes`, `.teto_no_meio`, `.falha_solta_reserva`
+**Configurável?** O valor do teto (`app.agente.teto-diario-usd`) · **Origem.** 2026-09-13
+
+---
+
+### RN-CNV-012 — Encerrar sem gastar: identidade, limite, teto — nessa ordem
+
+**Enunciado.** Antes de chamar o modelo, a conversa é recusada sem custo quando o remetente não é
+usuário efetivo (motivo da identidade), quando o telefone passou do limite por hora
+(`LIMITE_POR_TELEFONE`), ou quando o teto do dia não comporta a chamada (`TETO_DE_CUSTO`). A
+recusa é registrada e nada é respondido. Há também um teto de quatro iterações por conversa.
+
+**Motivo.** docs/05: "telefone não cadastrado → o bot responde como desconhecido e não executa
+nada". Chamar o modelo para decidir que não vai atender quem não é da equipe gastaria dinheiro com
+texto de estranho — inclusive com texto de ataque.
+
+O limite por telefone protege o teto de um número em laço. É por instância, como o limite por IP; o
+teto, que protege o dinheiro, é global, no banco. O limite de iterações existe porque um modelo que
+pede ferramenta sem fim consumiria o dia do salão numa conversa só.
+
+**Onde é garantida.** `ProcessadorDeInteracoes.conduzir` · `LimitePorTelefone` ·
+`Orquestrador.MAXIMO_DE_ITERACOES`.
+**Rotinas.** RT-CNV-004 · **Teste.** `AgenteIT.desconhecido`, `.dono_nao_conversa`,
+`.limite_por_telefone`, `.sem_modelo`, `OrquestradorTest.laco_infinito`
+**Configurável?** O limite (`app.agente.limite-por-telefone-por-hora`) · **Origem.** 2026-09-13
+
+---
+
+### RN-CNV-013 — Ferramenta é contribuída pelo módulo dono, e declara o que exige
+
+**Enunciado.** O contrato `Ferramenta` mora em `shared.agente`. Cada módulo publica as suas como
+beans, chamando os PRÓPRIOS casos de uso. Toda ferramenta declara nome
+(`[a-zA-Z0-9_-]{1,64}`), natureza e permissões exigidas; sem permissão declarada, nunca é oferecida.
+Nome repetido ou fora do formato derruba a aplicação na subida.
+
+**Motivo.** A segunda tranca de RN-CNV-010 só existe se a ferramenta chamar o caso de uso com o
+`@PreAuthorize`. A fronteira proíbe `conversacional` de chamar caso de uso interno de outro módulo —
+chamando só a API pública, a tranca some. E pôr o contrato em `conversacional` faria os módulos de
+negócio dependerem dele. Em `shared`, que é aberto e não depende de ninguém, os dois problemas
+somem.
+
+Ferramenta que não diz o que exige é tratada como perigosa. E dois beans com o mesmo nome fariam o
+modelo pedir um e o sistema executar o outro, sem erro nenhum — por isso a falha é na subida.
+
+**Onde é garantida.** `shared.agente.Ferramenta` · `CatalogoDeFerramentas` (construtor) ·
+`FerramentaListarServicos` (a primeira, do `catalogo`).
+**Rotinas.** RT-CNV-004 · **Teste.** `CatalogoDeFerramentasTest.nome_repetido`, `.nome_invalido`,
+`.todas_as_permissoes`, `AgenteIT.recepcao_conversa`
+**Configurável?** Não · **Origem.** 2026-09-13

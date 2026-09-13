@@ -177,12 +177,41 @@ public abstract class AbstractPostgresIT {
         }
     }
 
+    /**
+     * Apaga o que o teste anterior deixou — com retentativa em deadlock.
+     *
+     * <p>O motivo é algo que a suíte faz de propósito: os listeners assíncronos do outbox
+     * (RT-CNV-003/004) podem ainda estar gravando o que o teste anterior disparou — a fila de áudio,
+     * a conversa do agente — quando este {@code TRUNCATE ... CASCADE} pede lock exclusivo em todas as
+     * tabelas da cascata. O Postgres detecta o ciclo e aborta um dos dois. Abortou o TRUNCATE: tentar
+     * de novo resolve. Abortou o listener: a linha que ele gravaria era de um salão que está sendo
+     * apagado.
+     *
+     * <p>Apareceu quando o enfileirador de conversas passou a reagir a TODA mensagem de texto: o
+     * {@code WebhookDoWhatsAppIT}, que entrega texto em quase todo teste, virou uma sequência de
+     * disparos assíncronos seguidos de TRUNCATE — e o verify completo falhou em dois deles.
+     *
+     * <p>Só {@code 40P01}. Qualquer outro erro aqui é defeito de verdade, e sobe.
+     */
     @BeforeEach
     void limparDados() throws SQLException {
-        try (var st = comoOwner().createStatement()) {
-            st.execute("truncate auditoria, refresh_token, mfa_credencial, "
-                    + "mfa_codigo_recuperacao, usuario, estabelecimento "
-                    + "restart identity cascade");
+        for (int tentativa = 1; ; tentativa++) {
+            try (var st = comoOwner().createStatement()) {
+                st.execute("truncate auditoria, refresh_token, mfa_credencial, "
+                        + "mfa_codigo_recuperacao, usuario, estabelecimento "
+                        + "restart identity cascade");
+                return;
+            } catch (SQLException e) {
+                if (!"40P01".equals(e.getSQLState()) || tentativa >= 5) {
+                    throw e;
+                }
+                try {
+                    Thread.sleep(200L * tentativa);
+                } catch (InterruptedException interrompido) {
+                    Thread.currentThread().interrupt();
+                    throw e;
+                }
+            }
         }
     }
 

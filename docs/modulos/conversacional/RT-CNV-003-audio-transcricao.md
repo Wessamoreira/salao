@@ -182,4 +182,5 @@ a fila, pareceria certo.
       runbook.
 - [ ] **Codificação do sha256.** A documentação não diz; aceitam-se hexadecimal e Base64.
 - [ ] **`FALHOU` não se reprocessa por tela.** O runbook tem o SQL.
-- [ ] **O texto ainda não chega ao agente.** Quem o lê é RT-CNV-004.
+- [x] ~~O texto ainda não chega ao agente.~~ Fechada em RT-CNV-004: `ConcluirTranscricao` conclui e
+      enfileira a conversa no mesmo commit.

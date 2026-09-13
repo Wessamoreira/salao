@@ -1,5 +1,8 @@
 package br.com.salao.catalogo.internal;
 
+import tools.jackson.databind.ObjectMapper;
+import br.com.salao.shared.agente.Ferramenta;
+import br.com.salao.catalogo.internal.application.FerramentaListarServicos;
 import br.com.salao.catalogo.api.RecursoApi;
 import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.catalogo.internal.application.AtualizarRecursoUseCase;
@@ -104,5 +107,11 @@ public class CatalogoConfig {
     @Bean
     public ListarRecursosUseCase listarRecursosUseCase(RecursosJdbc recursos) {
         return new ListarRecursosUseCase(recursos);
+    }
+
+    /** RT-CNV-004 — o cardápio, como ferramenta do agente. */
+    @Bean
+    public Ferramenta ferramentaListarServicos(ListarServicosUseCase listar, ObjectMapper json) {
+        return new FerramentaListarServicos(listar, json);
     }
 }
