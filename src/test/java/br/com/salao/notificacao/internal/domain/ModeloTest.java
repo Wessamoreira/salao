@@ -1,5 +1,6 @@
 package br.com.salao.notificacao.internal.domain;
 
+import br.com.salao.shared.tempo.EsperaEntreTentativas;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 

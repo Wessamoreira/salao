@@ -19,7 +19,26 @@ public enum TipoDeArquivo {
     /** iPhone tira foto assim por padrão, e metade das fotos de salão vem de iPhone. */
     HEIC("image/heic", ".heic"),
     WEBP("image/webp", ".webp"),
-    PDF("application/pdf", ".pdf");
+    PDF("application/pdf", ".pdf"),
+
+    /**
+     * RT-CNV-003 — a nota de voz do WhatsApp: Opus num contêiner Ogg. É a imensa maioria dos
+     * áudios que chegam, porque é o que o botão de microfone grava.
+     *
+     * <p>Áudio só pertence a {@code MENSAGEM} (ver {@code TiposPorDono}). Anexar áudio à ficha de uma
+     * cliente não é caso de uso de ninguém, e aceitar abriria o upload de foto para um formato que a
+     * tela não sabe mostrar.
+     */
+    OGG("audio/ogg", ".ogg"),
+
+    /** Áudio encaminhado de outro aplicativo. */
+    MP3("audio/mpeg", ".mp3"),
+
+    /** Áudio de gravador de iPhone encaminhado. Só a marca {@code M4A }, não o MP4 genérico. */
+    M4A("audio/mp4", ".m4a"),
+
+    /** Gravador de celular antigo e alguns Android. */
+    AMR("audio/amr", ".amr");
 
     private final String contentType;
     private final String extensao;

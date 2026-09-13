@@ -163,7 +163,8 @@ RN-INF-014, com teste de arquitetura que proíbe `ResultSet.wasNull` fora de `Co
       implementar o port — e é onde a assinatura passa a valer de fato
 - [ ] **Ninguém expurga o que ficou `AGUARDANDO`.** O índice parcial existe para isso e o job não.
       Hoje, todo link pedido e não usado vira linha permanente
-- [ ] **O download não existe.** `urlDeLeitura` está no port e não tem chamador — e é ele que
+- [ ] **O download não existe** — do lado do servidor já existe `Armazenamento.ler` (RT-CNV-003), para
+      reler áudio; o download para o navegador continua faltando. `urlDeLeitura` está no port e não tem chamador — e é ele que
       precisa servir com o `Content-Type` detectado e `attachment` (seção 4). **Enquanto o download
       não for escrito, a defesa contra poliglota está pela metade**
 - [ ] **A anonimização não alcança os arquivos.** RN-CLI-007 apaga o dado da cliente; a foto dela

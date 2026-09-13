@@ -32,6 +32,18 @@ public interface Armazenamento {
     /** Quantos bytes há na chave, ou vazio se não há nada. */
     Optional<Long> tamanho(String chave);
 
+    /**
+     * RT-CNV-003 — o conteúdo inteiro, ou vazio se não há nada na chave.
+     *
+     * <p>Existe para o servidor reler o que guardou — a transcrição que falhou tenta de novo a partir
+     * da nossa cópia, e não da Meta, cuja mídia expira. Não é o download para o navegador: esse
+     * continua sendo {@link #urlDeLeitura}.
+     *
+     * @param maximo teto em bytes. Acima dele lança {@link IllegalStateException}: arquivo validado
+     *               nunca passa do teto, e se passar é defeito — carregar em memória seria pior
+     */
+    Optional<byte[]> ler(String chave, long maximo);
+
     /** Apaga. Chamado quando a validação recusa — o arquivo não pode ficar no bucket. */
     void apagar(String chave);
 }

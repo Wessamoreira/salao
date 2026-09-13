@@ -1,5 +1,15 @@
 package br.com.salao.conversacional.internal;
 
+import tools.jackson.databind.ObjectMapper;
+import br.com.salao.conversacional.internal.infra.TranscritorNaoConfigurado;
+import br.com.salao.conversacional.internal.infra.TranscricoesJdbc;
+import br.com.salao.conversacional.internal.infra.ProcessadorDeAudios;
+import br.com.salao.conversacional.internal.infra.MidiaDoWhatsAppGraph;
+import br.com.salao.conversacional.internal.application.Transcritor;
+import br.com.salao.conversacional.internal.application.MidiaDoWhatsApp;
+import br.com.salao.conversacional.internal.application.GuardarAudioBaixado;
+import br.com.salao.conversacional.internal.application.EnfileiradorDeAudios;
+import br.com.salao.arquivos.api.IngestaoDeArquivoApi;
 import br.com.salao.conversacional.internal.application.ConsultarCanalUseCase;
 import br.com.salao.conversacional.internal.application.GravarMensagemRecebidaUseCase;
 import br.com.salao.conversacional.internal.application.ReceberLoteDoWhatsAppUseCase;
@@ -79,5 +89,57 @@ public class ConversacionalConfig {
     @Bean
     public ConsultarCanalUseCase consultarCanalUseCase(CanaisJdbc canais) {
         return new ConsultarCanalUseCase(canais);
+    }
+
+    // ------------------------------------------------------------------ RT-CNV-003
+
+    /**
+     * A política de hosts é a da Meta, fixa, e não uma propriedade: uma chave "hosts extras" seria a
+     * chave que alguém vira em produção para destravar um teste — e o token do app iria junto.
+     */
+    @Bean
+    public MidiaDoWhatsApp midiaDoWhatsApp(
+            @Value("${app.whatsapp.graph-url:https://graph.facebook.com/v23.0}") String graphUrl,
+            @Value("${app.whatsapp.token-de-acesso:}") String token,
+            ObjectMapper json) {
+        if (token == null || token.isBlank()) {
+            log.warn("app.whatsapp.token-de-acesso não configurado: "
+                    + "áudios recebidos vão esperar na fila sem ser baixados");
+        }
+        return new MidiaDoWhatsAppGraph(graphUrl, token,
+                MidiaDoWhatsAppGraph.PoliticaDeUrl.daMeta(), json);
+    }
+
+    /** Sem provedor escolhido (pergunta 14). Um provedor real entra como bean {@code @Primary}. */
+    @Bean
+    public Transcritor transcritor() {
+        return new TranscritorNaoConfigurado();
+    }
+
+    @Bean
+    public TranscricoesJdbc transcricoesJdbc(DataSource dataSource) {
+        return new TranscricoesJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public EnfileiradorDeAudios enfileiradorDeAudios(TranscricoesJdbc transcricoes,
+                                                     Relogio relogio) {
+        return new EnfileiradorDeAudios(transcricoes, relogio);
+    }
+
+    @Bean
+    public GuardarAudioBaixado guardarAudioBaixado(TranscricoesJdbc transcricoes,
+                                                   IngestaoDeArquivoApi ingestao) {
+        return new GuardarAudioBaixado(transcricoes, ingestao);
+    }
+
+    @Bean
+    public ProcessadorDeAudios processadorDeAudios(
+            ConexaoDeManutencao manutencao, TranscricoesJdbc transcricoes,
+            MensagensRecebidasJdbc mensagens, MidiaDoWhatsApp midia, GuardarAudioBaixado guardar,
+            IngestaoDeArquivoApi ingestao, Transcritor transcritor, Relogio relogio,
+            MeterRegistry metricas) {
+        return new ProcessadorDeAudios(manutencao, transcricoes, mensagens, midia, guardar,
+                ingestao, transcritor, relogio, metricas);
     }
 }

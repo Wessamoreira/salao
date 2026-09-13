@@ -128,6 +128,14 @@ app.whatsapp:
   # O token que a Meta devolve no handshake de cadastro da URL. Comparado em tempo
   # constante: a rota é pública, e um equals entrega o token pelo tempo de resposta.
   token-de-verificacao: ${WHATSAPP_TOKEN_VERIFICACAO:}
+  # RT-CNV-003 — token do usuário de sistema do app, para BAIXAR mídia. É outra credencial: o
+  # app-secret AUTENTICA o webhook; este token AUTORIZA ler da Graph API. Vazio significa que o áudio
+  # espera na fila sem gastar tentativa — e não que o download é tentado sem credencial.
+  token-de-acesso: ${WHATSAPP_TOKEN_ACESSO:}
+  # A versão da Graph API muda; a Meta desliga as antigas em cerca de dois anos. Conferir no runbook.
+  graph-url: ${WHATSAPP_GRAPH_URL:https://graph.facebook.com/v23.0}
+  audio:
+    intervalo: ${WHATSAPP_AUDIO_INTERVALO:PT30S}
 
 app.cripto:
   # AES-256 em Base64 (32 bytes). Sem padrão: a aplicação não sobe sem chave, porque

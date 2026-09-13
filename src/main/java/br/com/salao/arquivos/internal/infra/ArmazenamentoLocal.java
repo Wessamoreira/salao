@@ -88,6 +88,26 @@ public class ArmazenamentoLocal implements Armazenamento, EscritaDeConteudo {
         }
     }
 
+    @Override
+    public Optional<byte[]> ler(String chave, long maximo) {
+        Path arquivo = caminhoDe(chave);
+        if (!Files.isRegularFile(arquivo)) {
+            return Optional.empty();
+        }
+        try {
+            long tamanho = Files.size(arquivo);
+            if (tamanho > maximo) {
+                throw new IllegalStateException(
+                        "arquivo " + chave + " com " + tamanho + " bytes, acima do teto de leitura");
+            }
+            return Optional.of(Files.readAllBytes(arquivo));
+        } catch (IOException e) {
+            // Arquivo que existe e não pôde ser lido é falha de infraestrutura, não "não há nada":
+            // devolver vazio faria quem chamou concluir que o áudio sumiu.
+            throw new java.io.UncheckedIOException("não foi possível ler " + chave, e);
+        }
+    }
+
     /** Escreve os bytes. Só existe nesta implementação; num bucket, quem escreve é o navegador. */
     @Override
     public void guardar(String chave, byte[] conteudo) throws IOException {

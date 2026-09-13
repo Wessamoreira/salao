@@ -1,9 +1,14 @@
-package br.com.salao.notificacao.internal.domain;
+package br.com.salao.shared.tempo;
 
 import java.time.Duration;
 
 /**
  * RT-NOT-001 — quanto esperar antes de tentar de novo.
+ *
+ * <p><strong>Em {@code shared} desde RT-CNV-003</strong>, quando o segundo lugar precisou da mesma
+ * resposta: o processador de áudios fala com a Meta e com o provedor de transcrição, e os dois falham
+ * do mesmo jeito que o provedor de mensagens. Duas políticas de espera divergiriam, e a divergência
+ * apareceria como um integrador bloqueando a conta do salão por rajada.
  *
  * <p>Dobrando: 1, 2, 4, 8, 16 minutos, e para na quinta falha. Sem a espera crescente, um provedor
  * fora do ar vira uma rajada de chamadas que o mantém fora do ar — e o salão descobre pelo bloqueio

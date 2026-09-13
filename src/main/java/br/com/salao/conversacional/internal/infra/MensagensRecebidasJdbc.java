@@ -54,4 +54,20 @@ public class MensagensRecebidasJdbc {
                 .query(UUID.class)
                 .optional();
     }
+
+    /** RT-CNV-003 — o bilhete da mídia de uma mensagem, se ela tiver um. */
+    @Transactional(readOnly = true)
+    public Optional<MidiaDaMensagem> midiaDe(UUID mensagemId) {
+        return jdbc.sql("""
+                select midia_id, midia_mime from mensagem_recebida
+                 where id = :id and midia_id is not null
+                """)
+                .param("id", mensagemId)
+                .query((rs, n) -> new MidiaDaMensagem(rs.getString("midia_id"),
+                        rs.getString("midia_mime")))
+                .optional();
+    }
+
+    public record MidiaDaMensagem(String midiaId, String mimeDeclarado) {
+    }
 }

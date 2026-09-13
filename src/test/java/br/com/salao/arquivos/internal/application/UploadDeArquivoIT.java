@@ -183,4 +183,23 @@ class UploadDeArquivoIT extends AbstractPostgresIT {
         assertThat(TenantContext.obter(salaoB, () -> arquivos.porId(doB.arquivoId()))
                 .orElseThrow().chave()).startsWith(salaoB.toString());
     }
+
+    @Test
+    @DisplayName("áudio enviado como foto de cliente é recusado: o tipo tem de caber no dono")
+    void audio_nao_e_anexo_de_cliente() throws IOException {
+        // RT-CNV-003 trouxe áudio para a lista de formatos reconhecidos. Sem a regra por dono, um
+        // OGG legítimo subiria como "foto" da ficha — reconhecido pelos bytes, e errado pelo lugar.
+        UUID tenant = salao();
+        var autorizacao = TenantContext.obter(tenant,
+                () -> upload.autorizar("CLIENTE", UUID.randomUUID(), "foto.jpg"));
+        byte[] ogg = new byte[64];
+        System.arraycopy("OggS".getBytes(StandardCharsets.US_ASCII), 0, ogg, 0, 4);
+        enviar(autorizacao, ogg, tenant);
+
+        var confirmado = TenantContext.obter(tenant,
+                () -> upload.confirmar(autorizacao.arquivoId()));
+
+        assertThat(confirmado.status()).isEqualTo(StatusDoArquivo.RECUSADO);
+        assertThat(confirmado.motivoRecusa()).contains("OGG");
+    }
 }

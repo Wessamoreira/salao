@@ -99,4 +99,35 @@ class MagicBytesTest {
         assertThat(TipoDeArquivo.JPEG.contentType()).isEqualTo("image/jpeg");
         assertThat(TipoDeArquivo.HEIC.contentType()).isEqualTo("image/heic");
     }
+
+    private byte[] ascii(String texto, int posicao) {
+        byte[] saida = new byte[MagicBytes.BYTES_NECESSARIOS];
+        byte[] valor = texto.getBytes(StandardCharsets.US_ASCII);
+        System.arraycopy(valor, 0, saida, posicao, valor.length);
+        return saida;
+    }
+
+    @Test
+    @DisplayName("reconhece o áudio que chega pelo WhatsApp")
+    void audios() {
+        assertThat(MagicBytes.detectar(ascii("OggS", 0))).contains(TipoDeArquivo.OGG);
+        assertThat(MagicBytes.detectar(ascii("#!AMR", 0))).contains(TipoDeArquivo.AMR);
+        assertThat(MagicBytes.detectar(ascii("ID3", 0))).contains(TipoDeArquivo.MP3);
+        // Quadro MPEG-1 camada III sem ID3: FF FB.
+        assertThat(MagicBytes.detectar(bytes(0xFF, 0xFB, 0x90, 0x44))).contains(TipoDeArquivo.MP3);
+
+        byte[] m4a = ascii("....ftypM4A ", 0);
+        assertThat(MagicBytes.detectar(m4a)).contains(TipoDeArquivo.M4A);
+    }
+
+    @Test
+    @DisplayName("AAC cru não passa por MP3, e MP4 genérico não passa por M4A")
+    void nao_confunde_audio() {
+        // ADTS começa com os mesmos 11 bits de sincronia do MPEG, mas com camada 00.
+        assertThat(MagicBytes.detectar(bytes(0xFF, 0xF1, 0x50, 0x80))).isEmpty();
+        // "isom" é o contêiner MP4 que também é vídeo.
+        assertThat(MagicBytes.detectar(ascii("....ftypisom", 0))).isEmpty();
+        // E a foto do iPhone continua sendo foto.
+        assertThat(MagicBytes.detectar(ascii("....ftypheic", 0))).contains(TipoDeArquivo.HEIC);
+    }
 }

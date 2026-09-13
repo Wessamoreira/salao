@@ -44,6 +44,34 @@ public class ArquivosJdbc {
                 .single();
     }
 
+    /**
+     * RT-CNV-003 — registra já validado, para a ingestão pelo servidor.
+     *
+     * <p>Sem passar por {@code AGUARDANDO}: esse estado existe porque no upload direto a linha nasce
+     * antes dos bytes. Aqui os bytes já foram conferidos em memória antes de a linha existir.
+     */
+    @Transactional
+    public UUID registrarValidado(UUID estabelecimentoId, String donoTipo, UUID donoId,
+                                  String chave, String nomeOriginal, TipoDeArquivo tipo,
+                                  long tamanho) {
+        return jdbc.sql("""
+                insert into arquivo (estabelecimento_id, dono_tipo, dono_id, chave, nome_original,
+                                     tipo, tamanho_bytes, status, confirmado_em)
+                values (:estabelecimento, :donoTipo, :dono, :chave, :nome,
+                        :tipo, :tamanho, 'VALIDADO', now())
+                returning id
+                """)
+                .param("estabelecimento", estabelecimentoId)
+                .param("donoTipo", donoTipo)
+                .param("dono", donoId)
+                .param("chave", chave)
+                .param("nome", nomeOriginal)
+                .param("tipo", tipo.name())
+                .param("tamanho", tamanho)
+                .query(UUID.class)
+                .single();
+    }
+
     @Transactional
     public void validar(UUID id, TipoDeArquivo tipo, long tamanho) {
         jdbc.sql("""

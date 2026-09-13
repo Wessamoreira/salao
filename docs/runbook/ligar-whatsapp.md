@@ -129,3 +129,59 @@ Se o tipo for novo — a Meta acrescenta tipos sem aviso —, ele deveria estar 
   RT-CNV-002 em diante.
 - **Áudio.** Entra como id de mídia; baixar e transcrever é RT-CNV-003.
 - **Recibo de entrega.** `statuses` chega e é ignorado — ligá-lo a `mensagem.status` é pendência.
+
+## Áudio (RT-CNV-003)
+
+### Credencial
+
+```
+WHATSAPP_TOKEN_ACESSO=<token do usuário de sistema do app, com whatsapp_business_messaging>
+WHATSAPP_GRAPH_URL=https://graph.facebook.com/v23.0
+```
+
+É **outra** credencial: o app secret autentica o webhook; este token autoriza ler da Graph API. Sem
+ele, os áudios chegam, entram na fila e **esperam** — sem gastar tentativa. A subida avisa.
+
+A Meta desliga versões da Graph API em cerca de dois anos. Quando a versão configurada estiver perto
+do fim, troque `WHATSAPP_GRAPH_URL`; nada mais muda.
+
+### Transcrição
+
+**Não há provedor de STT configurado** (pergunta 14). Os áudios são baixados, guardados e param em
+`BAIXADA`. Quando um provedor entrar, eles seguem sozinhos.
+
+### Olhar a fila
+
+```sql
+select status, count(*), max(ultimo_erro)
+  from transcricao_de_audio
+ group by status;
+```
+
+Métrica: `conversacional_audio_total{etapa, desfecho}` — `desfecho` é `ok`, `adiada` ou `falhou`.
+
+### Modos de falha
+
+**`PENDENTE` crescendo com `tentativas = 0`** — o token de acesso não está configurado. Não é falha:
+é espera.
+
+**`FALHOU` com "URL de conteúdo fora dos hosts da Meta"** — a Meta passou a servir mídia de um CDN
+que não está em `MidiaDoWhatsAppGraph.PoliticaDeUrl.daMeta()`. **Não afrouxe a lista sem olhar o
+host**: é a defesa que impede o token de ir para quem não é a Meta. Confirme que o domínio é da Meta
+e acrescente-o no código.
+
+**`FALHOU` com "respondeu 404"** — a mídia expirou na Meta antes de ser baixada. Não há o que
+recuperar.
+
+**`adiada` em série com "respondeu 401"** — o token venceu ou foi trocado. Depois de consertar, as
+linhas voltam sozinhas; as que já chegaram a `FALHOU` precisam ser reenfileiradas:
+
+```sql
+-- Só depois de consertar a causa. Volta para a etapa em que parou.
+update transcricao_de_audio
+   set status = case when arquivo_id is null then 'PENDENTE' else 'BAIXADA' end,
+       tentativas = 0, proxima_tentativa_em = now(), reservada_ate = null
+ where status = 'FALHOU' and ultimo_erro like '%401%';
+```
+
+**`FALHOU` com "áudio recusado"** — os bytes não eram áudio. O arquivo `RECUSADO` fica registrado.

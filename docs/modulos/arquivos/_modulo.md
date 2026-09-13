@@ -13,6 +13,10 @@ ler o começo, medir, apagar — e `EscritaDeConteudo`, que é a parte destinada
 escrever os bytes pela aplicação só faz sentido enquanto não há provedor de objeto. Separados
 porque juntos obrigariam a implementação de bucket a ter um `guardar` que existe só para recusar.
 
+Desde RT-CNV-003 expõe também `IngestaoDeArquivoApi` — guardar bytes que o **servidor** obteve, num
+passo só, com as mesmas garantias e sem porta HTTP (RN-ARQ-006) — e `ConteudoDeArquivo`. E o tipo
+passou a precisar caber no dono (RN-ARQ-005): áudio só pertence a `MENSAGEM`.
+
 O módulo é o **único lugar** onde se decide o que um arquivo é. Qualquer outro módulo que aceitasse
 um `Content-Type` como verdade estaria refazendo essa decisão pior.
 
@@ -47,4 +51,4 @@ ele pertence.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-ARQ-001 a RN-ARQ-004.
+Ver [regras.md](regras.md) — RN-ARQ-001 a RN-ARQ-006.

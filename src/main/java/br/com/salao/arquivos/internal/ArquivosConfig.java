@@ -1,5 +1,8 @@
 package br.com.salao.arquivos.internal;
 
+import br.com.salao.arquivos.internal.application.IngestaoDeArquivo;
+import br.com.salao.arquivos.api.IngestaoDeArquivoApi;
+import br.com.salao.arquivos.api.EscritaDeConteudo;
 import br.com.salao.arquivos.api.Armazenamento;
 import br.com.salao.arquivos.internal.application.UploadDeArquivoUseCase;
 import br.com.salao.arquivos.internal.infra.ArmazenamentoLocal;
@@ -44,5 +47,16 @@ public class ArquivosConfig {
     public UploadDeArquivoUseCase uploadDeArquivoUseCase(ArquivosJdbc arquivos,
                                                          Armazenamento armazenamento) {
         return new UploadDeArquivoUseCase(arquivos, armazenamento);
+    }
+
+    /**
+     * RT-CNV-003 — ingestão pelo servidor. Injetada pelos dois contratos, e não pela implementação
+     * local: um provedor de objeto que entrar como {@code @Primary} precisa receber também esta
+     * escrita, e não ser contornado por uma referência ao disco.
+     */
+    @Bean
+    public IngestaoDeArquivoApi ingestaoDeArquivo(ArquivosJdbc arquivos, Armazenamento armazenamento,
+                                                  EscritaDeConteudo escrita) {
+        return new IngestaoDeArquivo(arquivos, armazenamento, escrita);
     }
 }

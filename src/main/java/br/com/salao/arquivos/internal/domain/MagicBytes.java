@@ -57,7 +57,42 @@ public final class MagicBytes {
         if (em(inicio, 4, 0x66, 0x74, 0x79, 0x70) && ehHeic(inicio)) {
             return Optional.of(TipoDeArquivo.HEIC);
         }
+
+        // ---- RT-CNV-003: áudio. Detectar não é aceitar: quem decide se o tipo cabe no dono é
+        // TiposPorDono.
+        if (comeca(inicio, 0x4F, 0x67, 0x67, 0x53)) {                 // "OggS"
+            return Optional.of(TipoDeArquivo.OGG);
+        }
+        if (comeca(inicio, 0x23, 0x21, 0x41, 0x4D, 0x52)) {           // "#!AMR"
+            return Optional.of(TipoDeArquivo.AMR);
+        }
+        if (comeca(inicio, 0x49, 0x44, 0x33) || ehQuadroMp3(inicio)) { // "ID3", ou quadro MPEG
+            return Optional.of(TipoDeArquivo.MP3);
+        }
+        // Só a marca "M4A ". "isom" e "mp42" são o contêiner MP4 genérico, que também é vídeo —
+        // aceitá-los como áudio seria deixar entrar um vídeo pela porta das notas de voz.
+        if (em(inicio, 4, 0x66, 0x74, 0x79, 0x70) && em(inicio, 8, 'M', '4', 'A', ' ')) {
+            return Optional.of(TipoDeArquivo.M4A);
+        }
         return Optional.empty();
+    }
+
+    /**
+     * Um quadro MPEG de áudio sem cabeçalho ID3.
+     *
+     * <p>Os 11 bits de sincronia não bastam: o AAC cru (ADTS) começa igual. A diferença está na
+     * camada — {@code 00} é reservada no MPEG e é justamente o que o ADTS usa. Sem esta conferência,
+     * um AAC passaria como MP3 e seria servido com o {@code Content-Type} errado.
+     */
+    private static boolean ehQuadroMp3(byte[] inicio) {
+        int primeiro = inicio[0] & 0xFF;
+        int segundo = inicio[1] & 0xFF;
+        if (primeiro != 0xFF || (segundo & 0xE0) != 0xE0) {
+            return false;
+        }
+        int versao = (segundo >> 3) & 0x03;   // 01 é reservado
+        int camada = (segundo >> 1) & 0x03;   // 00 é reservado — e é o que o ADTS usa
+        return versao != 0x01 && camada != 0x00;
     }
 
     /**

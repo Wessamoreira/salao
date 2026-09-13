@@ -294,6 +294,24 @@ class ArquiteturaTest {
                 .check(CLASSES);
     }
 
+    /**
+     * RT-CNV-003 — a ingestão pelo servidor não tem porta HTTP.
+     *
+     * <p>Ela grava arquivo sem {@code @PreAuthorize}, porque quem chama é um job sem usuário. Um
+     * controller que a usasse abriria um upload sem permissão e sem os dois passos de RT-ARQ-001.
+     */
+    @Test
+    void ingestao_de_arquivo_nao_tem_porta_http() {
+        noClasses().that().resideInAPackage("..web..")
+                .should().dependOnClassesThat()
+                .haveFullyQualifiedName("br.com.salao.arquivos.api.IngestaoDeArquivoApi")
+                .orShould().dependOnClassesThat()
+                .haveFullyQualifiedName("br.com.salao.arquivos.internal.application.IngestaoDeArquivo")
+                .because("a ingestão pelo servidor dispensa permissão porque nenhuma requisição a "
+                        + "alcança; um controller usando-a seria upload sem tranca")
+                .check(CLASSES);
+    }
+
     @Test
     void instante_nunca_vem_de_now() {
         noClasses().that().resideOutsideOfPackage("..shared.tempo..")

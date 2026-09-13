@@ -13,6 +13,10 @@ import java.io.IOException;
  * <p>Ter dois contratos evita a alternativa ruim: um {@code guardar} no port principal que a
  * implementação de bucket teria de existir só para recusar.
  */
+// RT-CNV-003 acrescentou um segundo uso, e ele NÃO desaparece: a ingestão pelo servidor
+// (IngestaoDeArquivoApi) grava bytes que a própria aplicação baixou — o áudio do WhatsApp. Num
+// bucket, isso é um PutObject feito pelo servidor. O provedor de objeto que entrar precisa cumprir
+// este contrato também; o que sai com `app.arquivos.modo=objeto` é só a PORTA HTTP local de escrita.
 public interface EscritaDeConteudo {
 
     /** Escreve os bytes na chave. Quem chama já conferiu que a chave é do salão atual. */

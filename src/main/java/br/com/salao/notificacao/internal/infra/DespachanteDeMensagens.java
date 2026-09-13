@@ -3,7 +3,7 @@ package br.com.salao.notificacao.internal.infra;
 import br.com.salao.notificacao.api.CanalDeEnvio;
 import br.com.salao.notificacao.api.Mensageiro;
 import br.com.salao.notificacao.internal.application.CatalogoDeModelos;
-import br.com.salao.notificacao.internal.domain.EsperaEntreTentativas;
+import br.com.salao.shared.tempo.EsperaEntreTentativas;
 import br.com.salao.shared.manutencao.ConexaoDeManutencao;
 import br.com.salao.shared.tempo.Relogio;
 import java.time.Instant;

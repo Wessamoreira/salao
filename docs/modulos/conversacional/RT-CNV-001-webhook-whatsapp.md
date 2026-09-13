@@ -231,7 +231,8 @@ dia em que alguém precisar casar este número com o de um cliente.
 
 ## 13. Pendências
 
-- [ ] **O evento não está no outbox ainda.** O Spring Modulith grava uma publicação **por
+- [x] ~~O evento não está no outbox ainda.~~ **Fechada em RT-CNV-003**: o `EnfileiradorDeAudios` é o
+      primeiro consumidor, e `TranscricaoDeAudioIT.audio_entra_pelo_outbox` prova a publicação. Histórico: O Spring Modulith grava uma publicação **por
       listener**, e `MensagemDeClienteRecebida` não tem nenhum — `event_publication` fica vazia. Hoje
       o evento é publicação em processo, e uma queda entre o commit e o consumo não perde nada
       porque não há consumo. **RT-CNV-002 não criou consumidor, de propósito:** a identidade é

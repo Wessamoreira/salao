@@ -5,6 +5,7 @@ import br.com.salao.arquivos.api.ArquivoResumo;
 import br.com.salao.arquivos.api.StatusDoArquivo;
 import br.com.salao.arquivos.api.TipoDeArquivo;
 import br.com.salao.arquivos.internal.domain.MagicBytes;
+import br.com.salao.arquivos.internal.domain.TiposPorDono;
 import br.com.salao.arquivos.internal.infra.ArquivosJdbc;
 import br.com.salao.iam.api.Permissao;
 import br.com.salao.shared.erro.CodigoDeErro;
@@ -150,6 +151,12 @@ public class UploadDeArquivoUseCase {
             // O nome dizia .jpg e os bytes dizem outra coisa. É o ataque que a validação existe
             // para impedir, e também o engano honesto de quem renomeou um arquivo.
             return recusar(arquivo, "o conteúdo não é uma imagem nem um PDF");
+        }
+        // RT-CNV-003: reconhecer o formato não basta — ele tem de caber no dono. Sem isto, um áudio
+        // legítimo subiria como "foto" da ficha da cliente.
+        if (!TiposPorDono.aceita(arquivo.donoTipo(), tipo.get())) {
+            return recusar(arquivo, "um arquivo " + tipo.get() + " não pode ser anexado a "
+                    + arquivo.donoTipo().toLowerCase());
         }
 
         arquivos.validar(arquivoId, tipo.get(), tamanho);
