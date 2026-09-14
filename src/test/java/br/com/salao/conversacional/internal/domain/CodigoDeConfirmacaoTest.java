@@ -63,4 +63,15 @@ class CodigoDeConfirmacaoTest {
         assertThat(CodigoDeConfirmacao.codigoEm(pedido))
                 .as("o próprio pedido não é uma confirmação").isEmpty();
     }
+
+    @Test
+    @DisplayName("RT-CNV-006: com aceite a pedir, o pedido diz que o SIM ainda não marca")
+    void pedido_com_aceite() {
+        String pedido = CodigoDeConfirmacao.pedido("Corte para Marilda com Ana, sábado, 20/09, "
+                + "das 19:00 às 19:30", "4821", LocalTime.of(10, 42), "Ana", "fora da jornada");
+
+        assertThat(pedido).contains("responda SIM 4821")
+                .endsWith("Depois do seu SIM, Ana ainda precisa aceitar (fora da jornada).");
+        assertThat(CodigoDeConfirmacao.codigoEm(pedido)).isEmpty();
+    }
 }

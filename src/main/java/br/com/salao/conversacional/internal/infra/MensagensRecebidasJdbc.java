@@ -27,18 +27,20 @@ public class MensagensRecebidasJdbc {
      * cabe o reenvio, e duas requisições concorrentes com o mesmo {@code wamid} passariam as duas.
      * Quem arbitra é o índice único — a aplicação valida por educação, o banco garante.
      *
+     * @param botaoId RT-CNV-006 — o id do botão tocado, só em {@code BOTAO}
      * @return o id da mensagem gravada, ou vazio quando ela já existia
      */
     @Transactional
     public Optional<UUID> inserir(UUID estabelecimentoId, String provedorId, String deTelefone,
                                   TipoDeMensagem tipo, String texto, String midiaId,
-                                  String midiaMime, Instant enviadaEm, Instant recebidaEm) {
+                                  String midiaMime, String botaoId, Instant enviadaEm,
+                                  Instant recebidaEm) {
         return jdbc.sql("""
                 insert into mensagem_recebida
                     (estabelecimento_id, canal, provedor_id, de_telefone, tipo, texto,
-                     midia_id, midia_mime, enviada_em, recebida_em)
+                     midia_id, midia_mime, botao_id, enviada_em, recebida_em)
                 values (:estabelecimento, 'WHATSAPP', :provedor, :de, :tipo, :texto,
-                        :midiaId, :midiaMime, :enviada, :recebida)
+                        :midiaId, :midiaMime, :botaoId, :enviada, :recebida)
                 on conflict (estabelecimento_id, provedor_id) do nothing
                 returning id
                 """)
@@ -49,6 +51,7 @@ public class MensagensRecebidasJdbc {
                 .param("texto", texto)
                 .param("midiaId", midiaId)
                 .param("midiaMime", midiaMime)
+                .param("botaoId", botaoId)
                 .param("enviada", java.sql.Timestamp.from(enviadaEm))
                 .param("recebida", java.sql.Timestamp.from(recebidaEm))
                 .query(UUID.class)
@@ -71,15 +74,16 @@ public class MensagensRecebidasJdbc {
     public record MidiaDaMensagem(String midiaId, String mimeDeclarado) {
     }
 
-    /** RT-CNV-004 — quem mandou, e o texto quando for texto. */
+    /** RT-CNV-004 — quem mandou, e o texto ou o botão, conforme o tipo. */
     @Transactional(readOnly = true)
     public Optional<Remetente> remetente(UUID mensagemId) {
-        return jdbc.sql("select de_telefone, texto from mensagem_recebida where id = :id")
+        return jdbc.sql("select de_telefone, texto, botao_id from mensagem_recebida where id = :id")
                 .param("id", mensagemId)
-                .query((rs, n) -> new Remetente(rs.getString("de_telefone"), rs.getString("texto")))
+                .query((rs, n) -> new Remetente(rs.getString("de_telefone"), rs.getString("texto"),
+                        rs.getString("botao_id")))
                 .optional();
     }
 
-    public record Remetente(String telefone, String texto) {
+    public record Remetente(String telefone, String texto, String botaoId) {
     }
 }

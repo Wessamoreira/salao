@@ -175,6 +175,11 @@ mensagem "SIM" + código da própria pessoa, reconhecida fora dele. Por isso a `
 (validade, estados, uma por telefone) nasceu em RT-CNV-005, e RT-CNV-006 fica com a negociação com o
 profissional e os botões.
 
+**RT-CNV-006, depois de três perguntas ao dono (14/09/2026):** "negociar com o profissional" é pedir o
+aceite dela para o que foge da regra — horário fora da jornada —, pelo telefone do cadastro, com
+botões; e a mesma rotina criou a saída para a equipe, por onde passam a resposta do agente e o pedido de
+confirmação.
+
 ---
 
 ## Fase 5 — Conciliação

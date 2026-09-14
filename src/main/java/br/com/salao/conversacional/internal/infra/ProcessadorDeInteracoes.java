@@ -1,6 +1,8 @@
 package br.com.salao.conversacional.internal.infra;
 
+import br.com.salao.conversacional.internal.application.ConcluirExecucao;
 import br.com.salao.conversacional.internal.application.ConfirmarPeloCodigo;
+import br.com.salao.conversacional.internal.application.DecidirAceite;
 import br.com.salao.conversacional.internal.application.ExecutorDeFerramenta;
 import br.com.salao.conversacional.internal.application.FalhaPermanente;
 import br.com.salao.conversacional.internal.application.ModeloDeLinguagem;
@@ -38,7 +40,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import tools.jackson.databind.JsonNode;
 
 /**
- * RT-CNV-004 / RT-CNV-005 — quem tira a conversa da fila e a conduz.
+ * RT-CNV-004 / RT-CNV-005 / RT-CNV-006 — quem tira a conversa da fila e a conduz.
  *
  * <p>Na ordem, e cada passo pode encerrar sem gastar nada:
  *
@@ -53,11 +55,13 @@ import tools.jackson.databind.JsonNode;
  *       dentro de uma transação somente leitura.
  * </ol>
  *
+ * <p>O toque num botão de aceite (RT-CNV-006) não é conversa: tem caminho próprio, sem identidade de
+ * usuário — quem aceita é quem vai atender, e ela pode nem ter conta —, sem modelo e sem custo.
+ *
  * <p>A reserva da linha é a mesma do processador de áudio (RN-CNV-008): um comando atômico, que vence.
  *
- * <p><strong>Nada é enviado a ninguém daqui.</strong> A resposta fica registrada, e o pedido de
- * confirmação fica na intenção; entregá-los pelo WhatsApp é uma pendência explícita — não existe hoje
- * um mensageiro real, e o sistema não sabe falar com a própria equipe pela fila de notificação.
+ * <p><strong>Nada é enviado daqui.</strong> Encerrar a conversa enfileira a resposta na saída para a
+ * equipe, no mesmo commit ({@link ConcluirExecucao}); quem manda é o {@code DespachanteParaEquipe}.
  */
 public class ProcessadorDeInteracoes {
 
@@ -81,7 +85,7 @@ public class ProcessadorDeInteracoes {
                     order by proxima_tentativa_em
                     limit :lote
                       for update skip locked)
-            returning e.id, e.estabelecimento_id, e.de_telefone, e.entrada, e.tentativas
+            returning e.id, e.estabelecimento_id, e.de_telefone, e.entrada, e.tipo, e.tentativas
             """;
 
     private final ConexaoDeManutencao manutencao;
@@ -96,6 +100,8 @@ public class ProcessadorDeInteracoes {
     private final BigDecimal tetoDiario;
     private final ProporIntencao propor;
     private final ConfirmarPeloCodigo confirmar;
+    private final DecidirAceite decidirAceite;
+    private final ConcluirExecucao concluir;
     private final TransacaoSomenteLeitura somenteLeitura;
     private final Relogio relogio;
     private final MeterRegistry metricas;
@@ -106,6 +112,7 @@ public class ProcessadorDeInteracoes {
                                    PrecoDoModelo preco, ConsumoDeIaJdbc consumo,
                                    LimitePorTelefone limite, BigDecimal tetoDiario,
                                    ProporIntencao propor, ConfirmarPeloCodigo confirmar,
+                                   DecidirAceite decidirAceite, ConcluirExecucao concluir,
                                    TransacaoSomenteLeitura somenteLeitura, Relogio relogio,
                                    MeterRegistry metricas) {
         this.manutencao = manutencao;
@@ -120,13 +127,15 @@ public class ProcessadorDeInteracoes {
         this.tetoDiario = tetoDiario;
         this.propor = propor;
         this.confirmar = confirmar;
+        this.decidirAceite = decidirAceite;
+        this.concluir = concluir;
         this.somenteLeitura = somenteLeitura;
         this.relogio = relogio;
         this.metricas = metricas;
     }
 
     private record Reservada(UUID id, UUID estabelecimentoId, String telefone, String entrada,
-                             int tentativas) {
+                             ExecucoesJdbc.Tipo tipo, int tentativas) {
     }
 
     private record Simulada(UUID usuarioId, FerramentaDeEscrita.Simulacao simulacao) {
@@ -166,6 +175,7 @@ public class ProcessadorDeInteracoes {
                         rs.getObject("estabelecimento_id", UUID.class),
                         rs.getString("de_telefone"),
                         rs.getString("entrada"),
+                        ExecucoesJdbc.Tipo.valueOf(rs.getString("tipo")),
                         rs.getInt("tentativas")))
                 .list();
     }
@@ -197,6 +207,10 @@ public class ProcessadorDeInteracoes {
     }
 
     private void conduzir(Reservada r) {
+        if (r.tipo() == ExecucoesJdbc.Tipo.BOTAO) {
+            conduzirBotao(r);
+            return;
+        }
         UUID salao = r.estabelecimentoId();
         Instant agora = relogio.agora();
 
@@ -222,7 +236,7 @@ public class ProcessadorDeInteracoes {
         if (codigo.isPresent()) {
             var decisao = confirmar.executar(r.telefone(), usuario.usuarioId(), r.id(),
                     codigo.get());
-            execucoes.concluirSemModelo(r.id(), usuario.usuarioId(), decisao.resposta(),
+            concluir.semModelo(r.id(), r.telefone(), usuario.usuarioId(), decisao.resposta(),
                     relogio.agora());
             contar(desfechoDaConfirmacao(decisao.desfecho()));
             return;
@@ -264,7 +278,11 @@ public class ProcessadorDeInteracoes {
                 propor.executar(new ProporIntencao.Proposta(r.id(), r.telefone(),
                         simulada.usuarioId(), ferramenta.nome(), argumentos,
                         simulada.simulacao()));
-                return simulada.simulacao().resumo();
+                var aceite = simulada.simulacao().aceite();
+                // O modelo precisa saber que o SIM não basta, ou diria "marcado" a quem ainda espera.
+                return aceite == null ? simulada.simulacao().resumo()
+                        : simulada.simulacao().resumo() + " — " + aceite.motivo()
+                                + ": depois da confirmação, " + aceite.nome() + " precisa aceitar";
             }
         };
 
@@ -277,13 +295,33 @@ public class ProcessadorDeInteracoes {
             log.warn("Salão {} atingiu o teto diário de custo do agente", salao);
             return;
         }
-        execucoes.concluir(r.id(), usuario.usuarioId(), resultado, relogio.agora());
+        concluir.conduzida(r.id(), r.telefone(), usuario.usuarioId(), resultado, relogio.agora());
         contar("concluida");
+    }
+
+    /**
+     * RT-CNV-006 — o toque num botão de aceite.
+     *
+     * <p>Sem identidade de usuário: o que vale é o botão, com o token, vindo do número para onde o
+     * pedido foi mandado (RN-CNV-019). O limite por telefone continua valendo — é ele que torna tocar
+     * em sequência inútil.
+     */
+    private void conduzirBotao(Reservada r) {
+        if (!limite.consumir(r.estabelecimentoId(), r.telefone())) {
+            execucoes.recusar(r.id(), "LIMITE_POR_TELEFONE", null, null, relogio.agora());
+            contar("recusada_limite");
+            return;
+        }
+        var decisao = decidirAceite.executar(r.telefone(), r.id(), r.entrada());
+        concluir.semModelo(r.id(), r.telefone(), decisao.usuarioEfetivoId(), decisao.resposta(),
+                relogio.agora());
+        contar("aceite_" + decisao.desfecho().name().toLowerCase(Locale.ROOT));
     }
 
     private static String desfechoDaConfirmacao(ConfirmarPeloCodigo.Desfecho desfecho) {
         return switch (desfecho) {
             case CONFIRMADA -> "confirmada";
+            case AGUARDANDO_ACEITE -> "confirmacao_aguardando_aceite";
             case RECUSADA -> "confirmacao_recusada";
             case VENCIDA -> "confirmacao_vencida";
             case JA_DECIDIDA -> "confirmacao_ja_decidida";

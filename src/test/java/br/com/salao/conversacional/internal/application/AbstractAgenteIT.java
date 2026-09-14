@@ -70,6 +70,10 @@ abstract class AbstractAgenteIT extends AbstractPostgresIT {
         registro.add("app.agente.atraso-inicial", () -> "PT10H");
         registro.add("app.whatsapp.audio.intervalo", () -> "PT10H");
         registro.add("app.whatsapp.audio.atraso-inicial", () -> "PT10H");
+        registro.add("app.whatsapp.saida.intervalo", () -> "PT10H");
+        registro.add("app.whatsapp.saida.atraso-inicial", () -> "PT10H");
+        registro.add("app.agente.aceite.intervalo", () -> "PT10H");
+        registro.add("app.agente.aceite.atraso-inicial", () -> "PT10H");
     }
 
     static class ModeloFalso implements ModeloDeLinguagem {
@@ -92,8 +96,41 @@ abstract class AbstractAgenteIT extends AbstractPostgresIT {
         }
     }
 
+    /** RT-CNV-006 — o provedor de envio, que registra o que mandaria e falha quando roteirizado. */
+    static class EnviadorFalso implements EnviadorDoWhatsApp {
+        volatile boolean configurado = true;
+        volatile long esperaMillis;
+        final List<Envio> envios = new CopyOnWriteArrayList<>();
+        final ConcurrentLinkedDeque<RuntimeException> falhas = new ConcurrentLinkedDeque<>();
+
+        @Override public boolean configurado() { return configurado; }
+
+        @Override
+        public String enviar(Envio envio) {
+            RuntimeException falha = falhas.poll();
+            if (falha != null) {
+                throw falha;
+            }
+            if (esperaMillis > 0) {
+                try {
+                    Thread.sleep(esperaMillis);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            envios.add(envio);
+            return "wamid.saida." + envios.size();
+        }
+    }
+
     @TestConfiguration(proxyBeanMethods = false)
     static class Falsos {
+        @Bean
+        @Primary
+        EnviadorFalso enviadorFalso() {
+            return new EnviadorFalso();
+        }
+
         @Bean
         @Primary
         ModeloFalso modeloFalso() {
@@ -139,6 +176,7 @@ abstract class AbstractAgenteIT extends AbstractPostgresIT {
     @Autowired protected ReceberLoteDoWhatsAppUseCase receber;
     @Autowired protected ProcessadorDeInteracoes processador;
     @Autowired protected ModeloFalso modelo;
+    @Autowired protected EnviadorFalso enviador;
 
     protected final JsonMapper json = JsonMapper.builder().build();
 
@@ -150,6 +188,10 @@ abstract class AbstractAgenteIT extends AbstractPostgresIT {
         modelo.configurado = true;
         modelo.roteiro.clear();
         modelo.pedidos.clear();
+        enviador.configurado = true;
+        enviador.esperaMillis = 0;
+        enviador.envios.clear();
+        enviador.falhas.clear();
     }
 
     @AfterEach
@@ -218,6 +260,12 @@ abstract class AbstractAgenteIT extends AbstractPostgresIT {
                 ? """
                   {"from":"%s","id":"%s","timestamp":"1757000000","type":"audio",
                    "audio":{"id":"MIDIA1","mime_type":"audio/ogg"}}""".formatted(telefone, wamid)
+                : "botao".equals(tipo)
+                ? """
+                  {"from":"%s","id":"%s","timestamp":"1757000000","type":"interactive",
+                   "interactive":{"type":"button_reply",
+                     "button_reply":{"id":"%s","title":"Aceitar"}}}"""
+                        .formatted(telefone, wamid, texto)
                 : """
                   {"from":"%s","id":"%s","timestamp":"1757000000","type":"text",
                    "text":{"body":"%s"}}""".formatted(telefone, wamid, texto);
@@ -287,6 +335,45 @@ abstract class AbstractAgenteIT extends AbstractPostgresIT {
                 throw new IllegalStateException(e);
             }
         }, "a conversa não entrou na fila", 15);
+    }
+
+    /** RT-CNV-006 — o toque num botão, até entrar na fila. */
+    protected void naFilaBotao(Salao salao, String telefone, String wamid, String idDoBotao) {
+        entregar(salao.numero(), telefone, wamid, "botao", idDoBotao);
+        aguardar(() -> {
+            try {
+                return !execucao(salao.tenant(), wamid).isEmpty();
+            } catch (SQLException e) {
+                throw new IllegalStateException(e);
+            }
+        }, "o toque não entrou na fila", 15);
+    }
+
+    /** RT-CNV-006 — a saída para a equipe do salão, na ordem. */
+    protected List<Map<String, Object>> saida(UUID tenant) throws SQLException {
+        var linhas = new ArrayList<Map<String, Object>>();
+        try (var ps = comoOwner().prepareStatement("""
+                select destino, motivo, origem_id, texto, botoes::text as botoes, status, tentativas,
+                       provedor_id, ultimo_erro, proxima_tentativa_em > now() as adiada
+                  from mensagem_para_equipe
+                 where estabelecimento_id = ?
+                 order by sequencia""")) {
+            ps.setObject(1, tenant);
+            try (var rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    var linha = new HashMap<String, Object>();
+                    for (String coluna : List.of("destino", "motivo", "texto", "botoes", "status",
+                            "provedor_id", "ultimo_erro")) {
+                        linha.put(coluna, rs.getString(coluna));
+                    }
+                    linha.put("origem_id", rs.getObject("origem_id", UUID.class));
+                    linha.put("tentativas", rs.getInt("tentativas"));
+                    linha.put("adiada", rs.getBoolean("adiada"));
+                    linhas.add(linha);
+                }
+            }
+        }
+        return linhas;
     }
 
     protected Map<String, Object> consumoDeHoje(UUID tenant) throws SQLException {

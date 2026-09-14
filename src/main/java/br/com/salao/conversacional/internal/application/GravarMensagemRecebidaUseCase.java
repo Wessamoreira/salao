@@ -58,6 +58,7 @@ public class GravarMensagemRecebidaUseCase {
                 entrante.texto(),
                 entrante.midiaId(),
                 entrante.midiaMime(),
+                entrante.botaoId(),
                 entrante.enviadaEm(),
                 relogio.agora());
 

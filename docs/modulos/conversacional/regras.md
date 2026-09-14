@@ -467,3 +467,109 @@ com `usuario_efetivo_id`) · `ConfirmarPeloCodigo` (filtra pelo usuário) · RLS
 `.telefone_trocou_de_dono` (a comparação com o dono — a busca por telefone não a cobre),
 `.outra_pessoa_nao_confirma`, `.outro_salao`, `FerramentasDaAgendaIT.confirmar_confere_de_novo`
 **Configurável?** Não · **Origem.** 2026-09-13
+
+---
+
+### RN-CNV-018 — Fora da jornada, quem vai atender aceita; o SIM de quem pediu não grava
+
+**Enunciado.** Quando a única recusa da simulação é a jornada, a intenção nasce pedindo o aceite de
+quem vai atender, pelo telefone do cadastro. O SIM de quem pediu passa a intenção a
+`AGUARDANDO_ACEITE` e envia o pedido com botões — sem gravar. O toque "Aceitar" grava, em nome de
+quem PEDIU, resolvido de novo, e a ferramenta só força a jornada com a prova do aceite. Intenção que
+exigia aceite só pode ser `CONFIRMADA` com o aceite registrado.
+
+**Motivo.** A tela deixa forçar a jornada com uma justificativa; pelo agente, a justificativa honesta é
+a própria profissional dizendo sim. Recusar de cara faria a recepção largar o agente e ligar para ela.
+
+Em nome de quem pediu porque aceitar o horário não é permissão de marcar: a profissional nem tem conta,
+e se tivesse, o aceite dela não pode ampliar o que a recepção pode. As trancas de RN-CNV-017 valem de
+novo no toque.
+
+A constraint existe para que nenhum caminho da aplicação — nem um erro futuro — grave "confirmada"
+pulando quem precisava aceitar.
+
+**Onde é garantida.** `FerramentaAgendar` (lê `foraDaJornada` da simulação; `confirmar` exige a prova) ·
+`EfetivarIntencao.executar` (SIM → `AGUARDANDO_ACEITE`) e `.decidirAceite` · `V55`,
+`intencao_com_aceite_so_confirma_aceita`.
+**Rotinas.** RT-CNV-006 · **Teste.** `AceiteDaProfissionalIT.caminho_completo`, `.recusa`,
+`.confirmada_sem_aceite_e_recusada_pelo_banco`, `.permissao_retirada_de_quem_pediu`, `.horario_tomado_antes_do_aceite`, `.sem_telefone`,
+`FerramentasDaAgendaIT.simular_fora_da_jornada_pede_aceite`, `.simular_fora_da_jornada_confere_o_resto`,
+`.confirmar_fora_da_jornada_sem_aceite`, `.confirmar_com_aceite`
+**Configurável?** Não · **Origem.** 2026-09-14, decisão do dono: "só o que foge da regra"
+
+---
+
+### RN-CNV-019 — O aceite vale pelo botão e pelo número, e não passa pelo modelo
+
+**Enunciado.** O toque num botão de aceite vale quando o id tem o formato do botão, o token confere em
+tempo constante, o toque veio do número para onde o pedido foi mandado, e a intenção ainda espera
+aceite no prazo. Não exige conta de usuário. Qualquer falha responde "Não encontrei esse pedido". O
+toque não chega ao modelo, não conta custo e não entra no histórico da conversa.
+
+**Motivo.** Quem aceita é a profissional, que normalmente não tem conta — então a identidade de
+RT-CNV-002 não serve. O que a Meta atesta é o NÚMERO de onde veio o toque (RN-CNV-001), e é ele que
+autentica. O token não autentica: impede que um id de botão copiado de um print sirva sozinho, e que
+a intenção seja adivinhável.
+
+"Não encontrei" para toda falha, porque dizer "esse pedido é de outro número" confirmaria a quem não é
+dono que o pedido existe.
+
+Fora do histórico porque o id carrega o token — no histórico, iria para o provedor de LLM.
+
+**Onde é garantida.** `BotaoDeAceite` · `EfetivarIntencao.valeParaEsteBotao` ·
+`ProcessadorDeInteracoes.conduzirBotao` · `ExecucoesJdbc.historico` (`tipo = 'CONVERSA'`).
+**Rotinas.** RT-CNV-006 · **Teste.** `BotaoDeAceiteTest`, `AceiteDaProfissionalIT.outro_numero`,
+`.quem_pediu_nao_aceita_por_ela`, `.token_forjado`, `.profissional_mandando_o_codigo`,
+`SaidaParaEquipeIT.botao_fora_do_historico`, `CargaDoWhatsAppTest.botao_interativo`, `.botao_de_modelo`
+**Configurável?** Não · **Origem.** 2026-09-14, decisão do dono: "telefone do cadastro"
+
+---
+
+### RN-CNV-020 — O que o agente diz à equipe sai por uma fila, enfileirado junto com o fato
+
+**Enunciado.** Resposta, pedido de confirmação, pedido de aceite e desfecho do aceite são enfileirados
+em `mensagem_para_equipe` na MESMA transação que os produziu. O pedido de confirmação só sai ao
+encerrar a conversa, depois da resposta. Conversa recusada não enfileira nada. O despachante reserva
+de forma atômica, manda na ordem por destino e, sem provedor configurado, não reserva nada. A aplicação
+só insere na fila.
+
+**Motivo.** Separar o fato do aviso deixaria, numa queda, a conversa encerrada e ninguém avisado — e
+nenhuma rodada seguinte a encontraria, porque já não está pendente. O índice único
+(`motivo`, `origem_id`, `destino`) torna a volta à fila inofensiva.
+
+A resposta antes do pedido porque o contrário é o "SIM + código" chegando antes do "preparei, confirme
+pelo código". E só ao encerrar porque conversa que parou no teto não deve entregar pedido a quem não
+recebeu resposta.
+
+Reserva atômica porque o `SELECT ... FOR UPDATE SKIP LOCKED` em autocommit solta o lock no fim do
+próprio SELECT — o defeito do despachante da notificação. Sem provedor, esperar é o honesto: marcar
+enviada uma mensagem que não saiu é a pior mentira desta fila.
+
+**Onde é garantida.** `ConcluirExecucao` · `EfetivarIntencao` · `MensagensParaEquipeJdbc` ·
+`DespachanteParaEquipe` · `EnviadorNaoConfigurado` · `V55` (`revoke update, delete`).
+**Rotinas.** RT-CNV-006 · **Teste.** `SaidaParaEquipeIT` — resposta na saída, pedido depois da
+resposta, recusada não responde, teto não entrega pedido, em ordem por destino, sem provedor espera,
+falhas, canal desligado, reserva atômica, enfileirado imutável
+**Configurável?** O intervalo (`app.whatsapp.saida.intervalo`) · **Origem.** 2026-09-14, decisão do
+dono: "sim, no mesmo canal"
+
+---
+
+### RN-CNV-021 — O aceite vence por um varredor, que avisa quem pediu no mesmo comando
+
+**Enunciado.** O aceite vale duas horas a partir do SIM de quem pediu. Um varredor passa a cada minuto
+e, num único comando, vence as intenções no prazo e enfileira o aviso a quem pediu. O toque depois do
+prazo, antes do varredor, vence e avisa — uma vez só.
+
+**Motivo.** A validade do código de confirmação se confere na hora do SIM. A do aceite não pode ser só
+na hora do toque: se a profissional nunca tocar, a recepção nunca saberia.
+
+Num comando só — `UPDATE` num `WITH` que alimenta o `INSERT` — porque em dois, uma queda entre eles
+deixaria a intenção vencida e ninguém avisado, sem rodada que a reencontrasse. Duas horas porque fora
+da jornada ela, por definição, não está trabalhando.
+
+**Onde é garantida.** `ExpiradorDeAceites` · `EfetivarIntencao.decidirAceite` (toque vencido) · índice
+`uma_mensagem_por_origem`.
+**Rotinas.** RT-CNV-006 · **Teste.** `AceiteDaProfissionalIT.vencido_pelo_expirador`,
+`.toque_depois_do_prazo`
+**Configurável?** A validade (`app.agente.aceite.validade`) e o intervalo · **Origem.** 2026-09-14

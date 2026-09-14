@@ -114,11 +114,17 @@ public class CriarAgendamentoUseCase {
      * gravação quem decide é a exclusion constraint (RN-AGD-004); sem o insert ela não fala, e um
      * resumo que oferecesse um horário tomado seria confirmado só para falhar. A resposta continua
      * não sendo garantia — entre simular e confirmar cabe outra marcação, e ali o banco decide.
+     *
+     * <p><strong>A jornada é informada, e não recusada</strong> (RT-CNV-006). Fora da jornada, quem
+     * simula pelo agente pede o aceite de quem vai atender. A primeira versão lançava a recusa e a
+     * ferramenta simulava de novo — e isso envenenava a transação somente leitura em que a simulação
+     * roda: a exceção atravessando este método a marca para rollback, e o commit do fim estoura. Uma
+     * recusa que quem chama precisa tratar volta como dado, não como exceção.
      */
     @PreAuthorize("hasAuthority('" + Permissao.AGENDA_ESCREVER_TODAS + "')")
     @Transactional(readOnly = true)
     public AgendamentoSimulado simular(NovoAgendamento pedido) {
-        Preparado preparado = preparar(pedido);
+        Preparado preparado = preparar(informandoAJornada(pedido));
         Janela periodo = preparado.reserva().periodo();
         List<Janela> tomadas = agenda.ocupacoesEm(periodo).doProfissional(pedido.profissionalId());
         for (BlocoDoAgendamento bloco : preparado.reserva().blocos()) {
@@ -131,7 +137,21 @@ public class CriarAgendamentoUseCase {
         }
         return new AgendamentoSimulado(pedido.clienteId(), pedido.profissionalId(),
                 pedido.servicoId(), preparado.servico().nome(), preparado.status(), periodo,
-                preparado.reserva().blocos());
+                preparado.reserva().blocos(), !preparado.reserva().dentroDaJornada());
+    }
+
+    /** O pedido com a jornada forçada, só para ela ser informada em vez de recusar. */
+    private static NovoAgendamento informandoAJornada(NovoAgendamento pedido) {
+        if (pedido.forcarForaJornada()) {
+            return pedido;
+        }
+        String justificativa = pedido.justificativa() == null || pedido.justificativa().isBlank()
+                ? "simulação: a jornada é informada, não recusada"
+                : pedido.justificativa();
+        return new NovoAgendamento(pedido.clienteId(), pedido.profissionalId(),
+                pedido.servicoId(), pedido.inicio(), pedido.origem(), pedido.observacao(),
+                pedido.duracaoMinutos(), true, pedido.forcarPassado(), justificativa,
+                pedido.chaveIdempotencia());
     }
 
     /** Tudo o que a gravação confere antes do insert — e nada que grave. */

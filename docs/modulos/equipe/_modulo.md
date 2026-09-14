@@ -27,7 +27,8 @@ consulta a tabela.
 
 ## Depende de
 
-- `iam` — `AuditoriaApi` e a permissão `usuario:manage`
+- `iam` — `AuditoriaApi`, a permissão `usuario:manage` e, desde RT-CNV-006, `EstabelecimentoApi` (DDD e
+  país padrão para normalizar o telefone, RN-EQP-016)
 - `catalogo` — `ServicoApi`, para conferir que um serviço declarado como habilidade existe neste
   salão. É a única barreira que existe: não há FK, e por RN-CAT-011 uma FK também não separaria os
   salões

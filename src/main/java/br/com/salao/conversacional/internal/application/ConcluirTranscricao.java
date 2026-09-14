@@ -40,6 +40,7 @@ public class ConcluirTranscricao {
             return;
         }
         mensagens.remetente(mensagemId).ifPresent(r ->
-                execucoes.enfileirar(estabelecimentoId, mensagemId, r.telefone(), texto, agora));
+                execucoes.enfileirar(estabelecimentoId, mensagemId, r.telefone(), texto,
+                        ExecucoesJdbc.Tipo.CONVERSA, agora));
     }
 }

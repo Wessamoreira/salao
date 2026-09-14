@@ -31,6 +31,9 @@ import tools.jackson.databind.JsonNode;
  */
 public final class CargaDoWhatsApp {
 
+    /** O limite da Cloud API para o id de um botão de resposta. */
+    static final int MAXIMO_DO_ID_DO_BOTAO = 256;
+
     private CargaDoWhatsApp() {
     }
 
@@ -40,6 +43,7 @@ public final class CargaDoWhatsApp {
      * @param tipoOriginal o {@code type} literal da Meta. Serve para o log dizer <em>qual</em>
      *                     tipo novo apareceu; não é persistido, porque a coluna guarda o tipo
      *                     traduzido e um texto livre de terceiro na tabela seria dado sem contrato
+     * @param botaoId      RT-CNV-006 — o id do botão tocado; só em {@code BOTAO}
      */
     public record Entrante(
             String phoneNumberId,
@@ -50,6 +54,7 @@ public final class CargaDoWhatsApp {
             String texto,
             String midiaId,
             String midiaMime,
+            String botaoId,
             Instant enviadaEm) {
     }
 
@@ -108,6 +113,15 @@ public final class CargaDoWhatsApp {
                     enviadaEm, mensagem.path("image"));
             case "document" -> comMidia(phoneNumberId, id, de, TipoDeMensagem.DOCUMENTO,
                     tipoOriginal, enviadaEm, mensagem.path("document"));
+            // RT-CNV-006. Dois formatos para a mesma coisa: o botão de mensagem interativa (dentro da
+            // janela de 24h) e o botão de resposta rápida de modelo aprovado (fora dela). Lista não é
+            // botão: o sistema não manda lista, e uma resposta de lista seria de outra conversa.
+            case "interactive" -> comBotao(phoneNumberId, id, de, tipoOriginal, enviadaEm,
+                    "button_reply".equals(texto(mensagem.path("interactive").path("type")))
+                            ? texto(mensagem.path("interactive").path("button_reply").path("id"))
+                            : null);
+            case "button" -> comBotao(phoneNumberId, id, de, tipoOriginal, enviadaEm,
+                    texto(mensagem.path("button").path("payload")));
             default -> naoSuportada(phoneNumberId, id, de, tipoOriginal, enviadaEm);
         };
     }
@@ -120,7 +134,7 @@ public final class CargaDoWhatsApp {
             return naoSuportada(numero, id, de, tipoOriginal, enviadaEm);
         }
         return new Entrante(numero, id, de, TipoDeMensagem.TEXTO, tipoOriginal,
-                corpo, null, null, enviadaEm);
+                corpo, null, null, null, enviadaEm);
     }
 
     private static Entrante comMidia(String numero, String id, String de, TipoDeMensagem tipo,
@@ -130,13 +144,26 @@ public final class CargaDoWhatsApp {
             return naoSuportada(numero, id, de, tipoOriginal, enviadaEm);
         }
         return new Entrante(numero, id, de, tipo, tipoOriginal,
-                null, midiaId, texto(midia.path("mime_type")), enviadaEm);
+                null, midiaId, texto(midia.path("mime_type")), null, enviadaEm);
+    }
+
+    /**
+     * O id do botão, com teto: é nosso ao sair, mas volta num payload que não controlamos, e um id
+     * enorme não é botão que mandamos.
+     */
+    private static Entrante comBotao(String numero, String id, String de, String tipoOriginal,
+                                     Instant enviadaEm, String botaoId) {
+        if (botaoId == null || botaoId.length() > MAXIMO_DO_ID_DO_BOTAO) {
+            return naoSuportada(numero, id, de, tipoOriginal, enviadaEm);
+        }
+        return new Entrante(numero, id, de, TipoDeMensagem.BOTAO, tipoOriginal,
+                null, null, null, botaoId, enviadaEm);
     }
 
     private static Entrante naoSuportada(String numero, String id, String de, String tipoOriginal,
                                          Instant enviadaEm) {
         return new Entrante(numero, id, de, TipoDeMensagem.NAO_SUPORTADO, tipoOriginal,
-                null, null, null, enviadaEm);
+                null, null, null, null, enviadaEm);
     }
 
     /** Texto de um nó, ou {@code null} — que é diferente de string vazia e de nó ausente. */

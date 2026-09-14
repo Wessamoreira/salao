@@ -217,4 +217,71 @@ class CargaDoWhatsAppTest {
         JsonNode raiz = json.readTree(payload);
         return CargaDoWhatsApp.mensagens(raiz);
     }
+
+    // ------------------------------------------------------------------ RT-CNV-006: botões
+
+    private static String comMensagem(String mensagem) {
+        return """
+                {"object":"whatsapp_business_account","entry":[{"id":"WABA1","changes":[{
+                  "field":"messages","value":{"messaging_product":"whatsapp",
+                    "metadata":{"display_phone_number":"5511999990000",
+                                "phone_number_id":"1234567890"},
+                    "messages":[%s]}}]}]}
+                """.formatted(mensagem);
+    }
+
+    @Test
+    @DisplayName("toque em botão de mensagem interativa vira BOTAO, com o id do botão e sem texto")
+    void botao_interativo() {
+        var carga = ler(comMensagem("""
+                {"from":"5511988887777","id":"wamid.BTN","timestamp":"1757000000",
+                 "type":"interactive","context":{"from":"5511999990000","id":"wamid.PEDIDO"},
+                 "interactive":{"type":"button_reply",
+                   "button_reply":{"id":"aceite:x:y:sim","title":"Aceitar"}}}"""));
+
+        assertThat(carga).singleElement().satisfies(m -> {
+            assertThat(m.tipo()).isEqualTo(TipoDeMensagem.BOTAO);
+            assertThat(m.botaoId()).isEqualTo("aceite:x:y:sim");
+            assertThat(m.texto()).as("o título do botão é nosso, não texto da pessoa").isNull();
+        });
+    }
+
+    @Test
+    @DisplayName("toque em resposta rápida de modelo aprovado também vira BOTAO, pelo payload")
+    void botao_de_modelo() {
+        var carga = ler(comMensagem("""
+                {"from":"5511988887777","id":"wamid.BTN2","timestamp":"1757000000",
+                 "type":"button","button":{"payload":"aceite:x:y:nao","text":"Recusar"}}"""));
+
+        assertThat(carga).singleElement().satisfies(m -> {
+            assertThat(m.tipo()).isEqualTo(TipoDeMensagem.BOTAO);
+            assertThat(m.botaoId()).isEqualTo("aceite:x:y:nao");
+        });
+    }
+
+    @Test
+    @DisplayName("resposta de lista não é botão: o sistema não manda lista")
+    void lista_nao_e_botao() {
+        var carga = ler(comMensagem("""
+                {"from":"5511988887777","id":"wamid.LST","timestamp":"1757000000",
+                 "type":"interactive",
+                 "interactive":{"type":"list_reply","list_reply":{"id":"x","title":"Corte"}}}"""));
+
+        assertThat(carga).singleElement().satisfies(m -> {
+            assertThat(m.tipo()).isEqualTo(TipoDeMensagem.NAO_SUPORTADO);
+            assertThat(m.botaoId()).isNull();
+        });
+    }
+
+    @Test
+    @DisplayName("id de botão maior que o limite da Cloud API não é botão que mandamos")
+    void botao_grande_demais() {
+        var carga = ler(comMensagem("""
+                {"from":"5511988887777","id":"wamid.BIG","timestamp":"1757000000",
+                 "type":"button","button":{"payload":"%s","text":"Aceitar"}}"""
+                .formatted("a".repeat(CargaDoWhatsApp.MAXIMO_DO_ID_DO_BOTAO + 1))));
+
+        assertThat(carga).singleElement()
+                .satisfies(m -> assertThat(m.tipo()).isEqualTo(TipoDeMensagem.NAO_SUPORTADO));
+    }
 }

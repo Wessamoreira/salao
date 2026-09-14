@@ -18,6 +18,8 @@ import br.com.salao.equipe.internal.application.PeriodoBruto;
 import br.com.salao.iam.api.Permissao;
 import br.com.salao.iam.internal.application.ProvisionarEstabelecimentoCommand;
 import br.com.salao.iam.internal.application.ProvisionarEstabelecimentoUseCase;
+import br.com.salao.shared.agente.FerramentaDeEscrita.Aceite;
+import br.com.salao.shared.agente.FerramentaDeEscrita.AceiteRegistrado;
 import br.com.salao.shared.agente.FerramentaDeEscrita.Efetivacao;
 import br.com.salao.shared.agente.FerramentaDeEscrita.Simulacao;
 import br.com.salao.shared.erro.ErroDeDominio;
@@ -33,6 +35,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,6 +45,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
@@ -64,6 +69,7 @@ class FerramentasDaAgendaIT extends AbstractPostgresIT {
     @Autowired private CriarAgendamentoUseCase criar;
     @Autowired private FerramentaConsultarDisponibilidade disponibilidade;
     @Autowired private FerramentaAgendar agendar;
+    @Autowired private PlatformTransactionManager transacoes;
 
     private final JsonMapper json = JsonMapper.builder().build();
 
@@ -74,9 +80,13 @@ class FerramentasDaAgendaIT extends AbstractPostgresIT {
     }
 
     private UUID profissional(UUID tenant, String nome, int cpf) {
+        return profissional(tenant, nome, cpf, null);
+    }
+
+    private UUID profissional(UUID tenant, String nome, int cpf, String telefone) {
         UUID id = TenantContext.obter(tenant, () -> cadastrarProfissional.executar(
                 new DadosDoProfissional(nome, null, CPFS[cpf], TipoDeVinculo.EMPREGADO,
-                        null, null, null, null, null, null))).id();
+                        telefone, null, null, null, null, null))).id();
         TenantContext.executar(tenant, () -> definirJornada.executar(id,
                 Map.of(DIA.getDayOfWeek(),
                         List.of(new PeriodoBruto(LocalTime.of(9, 0), LocalTime.of(18, 0))))));
@@ -122,6 +132,24 @@ class FerramentasDaAgendaIT extends AbstractPostgresIT {
         TenantContext.executar(tenant, () -> criar.executar(new NovoAgendamento(cliente,
                 profissional, servico, inicio, OrigemDoAgendamento.PAINEL, null, null, false,
                 false, null, null)));
+    }
+
+    private void marcarNoBalcaoForcando(UUID tenant, UUID cliente, UUID profissional,
+                                        UUID servico, Instant inicio) {
+        TenantContext.executar(tenant, () -> criar.executar(new NovoAgendamento(cliente,
+                profissional, servico, inicio, OrigemDoAgendamento.PAINEL, null, null, true,
+                false, "encaixe combinado no balcão", null)));
+    }
+
+    private String trilhaDe(UUID agendamentoId) throws SQLException {
+        try (var ps = comoOwner().prepareStatement(
+                "select depois::text from auditoria where entidade = 'agendamento' "
+                        + "and entidade_id = ?")) {
+            ps.setObject(1, agendamentoId);
+            try (var rs = ps.executeQuery()) {
+                return rs.next() ? rs.getString(1) : null;
+            }
+        }
     }
 
     private int agendamentosDo(UUID tenant) throws SQLException {
@@ -315,7 +343,7 @@ class FerramentasDaAgendaIT extends AbstractPostgresIT {
                 marcacao(marilda, corte, ana, DIA + "T13:00")));
 
         Efetivacao efetivacao = TenantContext.obter(tenant,
-                () -> agendar.confirmar(UUID.randomUUID(), simulacao.comando()));
+                () -> agendar.confirmar(UUID.randomUUID(), simulacao.comando(), Optional.empty()));
 
         assertThat(efetivacao.mensagem())
                 .isEqualTo("Marcado: Corte para Marilda com Ana, " + quando("13:00", "13:30") + ".");
@@ -343,11 +371,134 @@ class FerramentasDaAgendaIT extends AbstractPostgresIT {
         marcarNoBalcao(tenant, marilda, ana, corte, as(13, 0));
 
         var erro = recusa(() -> TenantContext.executar(tenant,
-                () -> agendar.confirmar(UUID.randomUUID(), simulacao.comando())));
+                () -> agendar.confirmar(UUID.randomUUID(), simulacao.comando(), Optional.empty())));
 
         assertThat(erro.codigo()).isEqualTo(ErrosDaAgenda.CONFLITO_HORARIO);
         assertThat(erro.getMessage())
                 .isEqualTo("quem vai atender já tem atendimento nesse horário.");
         assertThat(agendamentosDo(tenant)).isEqualTo(1);
+    }
+
+    // ------------------------------------------------------------------ RT-CNV-006: fora da jornada
+
+    @Test
+    @DisplayName("fora da jornada, a simulação pede o aceite de quem vai atender, com o telefone normalizado")
+    void simular_fora_da_jornada_pede_aceite() throws SQLException {
+        UUID tenant = salao();
+        UUID ana = profissional(tenant, "Ana", 0, "(11) 98765-4321");
+        UUID marilda = marilda(tenant);
+        UUID corte = corte(tenant);
+
+        Simulacao simulacao = TenantContext.obter(tenant, () -> agendar.simular(
+                marcacao(marilda, corte, ana, DIA + "T19:00")));
+
+        assertThat(simulacao.aceite())
+                .isEqualTo(new Aceite("Ana", "5511987654321", "fora da jornada"));
+        assertThat(simulacao.comando().path("fora_da_jornada").asBoolean()).isTrue();
+        assertThat(simulacao.resumo())
+                .isEqualTo("Corte para Marilda com Ana, " + quando("19:00", "19:30"));
+        assertThat(agendamentosDo(tenant)).isZero();
+    }
+
+    @Test
+    @DisplayName("fora da jornada dentro de uma transação somente leitura: a simulação não a envenena")
+    void simular_fora_da_jornada_dentro_de_transacao() {
+        // É como o agente simula (TransacaoSomenteLeitura). A primeira versão lançava a recusa da
+        // jornada e simulava de novo: a exceção marcava a transação para rollback, e o commit do fim
+        // estourava com UnexpectedRollbackException. Sem a transação por fora, o teste acima passava.
+        UUID tenant = salao();
+        UUID ana = profissional(tenant, "Ana", 0, "(11) 98765-4321");
+        UUID marilda = marilda(tenant);
+        UUID corte = corte(tenant);
+        var somenteLeitura = new TransactionTemplate(transacoes);
+        somenteLeitura.setReadOnly(true);
+
+        Simulacao simulacao = TenantContext.obter(tenant, () -> somenteLeitura.execute(
+                transacao -> agendar.simular(marcacao(marilda, corte, ana, DIA + "T19:00"))));
+
+        assertThat(simulacao.aceite()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("dentro da jornada ninguém precisa aceitar")
+    void simular_dentro_da_jornada_sem_aceite() {
+        UUID tenant = salao();
+        UUID ana = profissional(tenant, "Ana", 0, "(11) 98765-4321");
+        UUID marilda = marilda(tenant);
+        UUID corte = corte(tenant);
+
+        Simulacao simulacao = TenantContext.obter(tenant, () -> agendar.simular(
+                marcacao(marilda, corte, ana, DIA + "T13:00")));
+
+        assertThat(simulacao.aceite()).isNull();
+        assertThat(simulacao.comando().path("fora_da_jornada").asBoolean(true)).isFalse();
+    }
+
+    @Test
+    @DisplayName("fora da jornada sem telefone no cadastro: recusa dizendo por quê")
+    void simular_fora_da_jornada_sem_telefone() {
+        UUID tenant = salao();
+        UUID ana = profissional(tenant, "Ana", 0);
+        UUID marilda = marilda(tenant);
+        UUID corte = corte(tenant);
+
+        var erro = recusa(() -> TenantContext.executar(tenant, () -> agendar.simular(
+                marcacao(marilda, corte, ana, DIA + "T19:00"))));
+
+        assertThat(erro.codigo()).isEqualTo(ErrosDaAgenda.FORA_DA_JORNADA);
+        assertThat(erro.getMessage()).contains("não há telefone válido");
+    }
+
+    @Test
+    @DisplayName("fora da jornada não perdoa o resto: horário tomado continua recusado")
+    void simular_fora_da_jornada_confere_o_resto() {
+        UUID tenant = salao();
+        UUID ana = profissional(tenant, "Ana", 0, "(11) 98765-4321");
+        UUID marilda = marilda(tenant);
+        UUID corte = corte(tenant);
+        marcarNoBalcaoForcando(tenant, marilda, ana, corte, as(19, 0));
+
+        var erro = recusa(() -> TenantContext.executar(tenant, () -> agendar.simular(
+                marcacao(marilda, corte, ana, DIA + "T19:15"))));
+
+        assertThat(erro.codigo()).isEqualTo(ErrosDaAgenda.CONFLITO_HORARIO);
+    }
+
+    @Test
+    @DisplayName("confirmar fora da jornada sem a prova do aceite é recusado")
+    void confirmar_fora_da_jornada_sem_aceite() throws SQLException {
+        UUID tenant = salao();
+        UUID ana = profissional(tenant, "Ana", 0, "(11) 98765-4321");
+        UUID marilda = marilda(tenant);
+        UUID corte = corte(tenant);
+        Simulacao simulacao = TenantContext.obter(tenant, () -> agendar.simular(
+                marcacao(marilda, corte, ana, DIA + "T19:00")));
+
+        var erro = recusa(() -> TenantContext.executar(tenant,
+                () -> agendar.confirmar(UUID.randomUUID(), simulacao.comando(), Optional.empty())));
+
+        assertThat(erro.codigo()).isEqualTo(ErrosDaAgenda.FORA_DA_JORNADA);
+        assertThat(erro.getMessage()).contains("o aceite de quem vai atender não chegou");
+        assertThat(agendamentosDo(tenant)).isZero();
+    }
+
+    @Test
+    @DisplayName("confirmar com o aceite força a jornada e deixa o aceite na trilha")
+    void confirmar_com_aceite() throws SQLException {
+        UUID tenant = salao();
+        UUID ana = profissional(tenant, "Ana", 0, "(11) 98765-4321");
+        UUID marilda = marilda(tenant);
+        UUID corte = corte(tenant);
+        Simulacao simulacao = TenantContext.obter(tenant, () -> agendar.simular(
+                marcacao(marilda, corte, ana, DIA + "T19:00")));
+
+        Efetivacao efetivacao = TenantContext.obter(tenant, () -> agendar.confirmar(
+                UUID.randomUUID(), simulacao.comando(), Optional.of(new AceiteRegistrado("Ana",
+                        "5511987654321", Instant.now()))));
+
+        UUID agendamento = UUID.fromString(
+                efetivacao.registro().path("agendamento_id").asString());
+        assertThat(trilhaDe(agendamento)).contains("forcouForaJornada")
+                .contains("aceito por Ana pelo WhatsApp (final 4321)");
     }
 }

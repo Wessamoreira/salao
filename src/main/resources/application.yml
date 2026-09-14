@@ -136,6 +136,10 @@ app.whatsapp:
   graph-url: ${WHATSAPP_GRAPH_URL:https://graph.facebook.com/v23.0}
   audio:
     intervalo: ${WHATSAPP_AUDIO_INTERVALO:PT30S}
+  # RT-CNV-006 — a saída para a equipe (resposta do agente, pedido de confirmação, pedido de aceite).
+  # Sem provedor de envio as mensagens esperam na fila; nada é marcado como enviado sem ter saído.
+  saida:
+    intervalo: ${WHATSAPP_SAIDA_INTERVALO:PT5S}
 
 app.agente:
   # RT-CNV-004 — o modelo de linguagem. Sem chave, o agente não roda: as mensagens ficam na fila.
@@ -158,6 +162,12 @@ app.agente:
   # nada: a pessoa pede de novo, e o horário é conferido de novo. ISO-8601 (PT10M).
   intencao:
     validade: ${AGENTE_INTENCAO_VALIDADE:PT10M}
+  # RT-CNV-006 — por quanto tempo quem vai atender pode aceitar um horário fora da jornada, contado do
+  # SIM de quem pediu. Fora da jornada ela, por definição, não está trabalhando: não responde em
+  # minutos. Vencido, quem pediu é avisado e nada é gravado.
+  aceite:
+    validade: ${AGENTE_ACEITE_VALIDADE:PT2H}
+    intervalo: ${AGENTE_ACEITE_INTERVALO:PT1M}
 
 app.cripto:
   # AES-256 em Base64 (32 bytes). Sem padrão: a aplicação não sobe sem chave, porque

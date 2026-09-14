@@ -14,6 +14,8 @@ import br.com.salao.shared.agente.ArgumentosDaFerramenta;
 import br.com.salao.shared.agente.FerramentaDeEscrita;
 import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.shared.erro.ErrosDaInfra;
+import br.com.salao.shared.telefone.Telefone;
+import br.com.salao.shared.telefone.TelefoneInvalidoException;
 import br.com.salao.shared.tenant.TenantContext;
 import java.time.DateTimeException;
 import java.time.Instant;
@@ -22,6 +24,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import tools.jackson.databind.JsonNode;
@@ -50,6 +53,14 @@ import tools.jackson.databind.node.ObjectNode;
  * (RN-AGD-013). O agente não força jornada, passado nem duração: forçar exige justificativa de quem
  * sabe por quê, e isso é da tela.
  *
+ * <h2>Fora da jornada não é "não": é "pergunte a quem vai atender" — RT-CNV-006</h2>
+ *
+ * <p>A simulação informa a jornada em vez de recusá-la, e fora dela sai com um
+ * {@linkplain Aceite aceite} pedido à profissional, pelo telefone do cadastro. O resto continua valendo
+ * — conflito, recurso, passado. E {@link #confirmar} só força a jornada com a prova do aceite: a
+ * justificativa que a tela exige vira "aceito por Ana pelo WhatsApp em 14/09 às 14:32", e vai para a
+ * trilha.
+ *
  * <h2>Sem chave de idempotência</h2>
  *
  * <p>"No máximo uma vez" é garantido por quem chama {@link #confirmar}: a intenção vira CONFIRMADA no
@@ -62,6 +73,8 @@ public class FerramentaAgendar implements FerramentaDeEscrita {
     private static final DateTimeFormatter DIA = DateTimeFormatter.ofPattern("EEEE, dd/MM", PT_BR);
     private static final DateTimeFormatter DIA_CURTO = DateTimeFormatter.ofPattern("dd/MM", PT_BR);
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm", PT_BR);
+    private static final DateTimeFormatter DATA_HORA =
+            DateTimeFormatter.ofPattern("dd/MM 'às' HH:mm", PT_BR);
 
     private final CriarAgendamentoUseCase criar;
     private final ServicoApi servicos;
@@ -123,30 +136,50 @@ public class FerramentaAgendar implements FerramentaDeEscrita {
 
         AgendamentoSimulado simulado;
         try {
-            simulado = criar.simular(pedido(cliente, profissional, servico, inicio));
+            simulado = criar.simular(pedido(cliente, profissional, servico, inicio, null));
         } catch (ErroDeDominio erro) {
             throw legivel(erro);
+        }
+        // RT-CNV-006. Uma chamada só, e a jornada lida como dado: pegar a recusa e simular de novo
+        // envenenava a transação somente leitura em que a simulação roda. Sem telefone válido não há a
+        // quem perguntar, e a recusa continua sendo a da jornada — dita com o motivo.
+        Aceite aceite = null;
+        if (simulado.foraDaJornada()) {
+            aceite = aceiteDe(profissional).orElseThrow(() -> new ErroDeDominio(
+                    ErrosDaAgenda.FORA_DA_JORNADA, "o horário está fora da jornada de quem vai "
+                            + "atender, e não há telefone válido no cadastro para pedir o aceite."));
         }
 
         ObjectNode comando = json.createObjectNode()
                 .put("cliente_id", cliente.toString())
                 .put("profissional_id", profissional.toString())
                 .put("servico_id", servico.toString())
-                .put("inicio", simulado.periodo().inicio().toString());
+                .put("inicio", simulado.periodo().inicio().toString())
+                .put("fora_da_jornada", aceite != null);
         return new Simulacao(resumo(simulado.servico(), cliente, profissional,
-                simulado.periodo().inicio(), simulado.periodo().fim(), fuso), comando);
+                simulado.periodo().inicio(), simulado.periodo().fim(), fuso), comando, aceite);
     }
 
     @Override
-    public Efetivacao confirmar(UUID intencaoId, JsonNode comando) {
+    public Efetivacao confirmar(UUID intencaoId, JsonNode comando,
+                                Optional<AceiteRegistrado> aceite) {
         UUID cliente = ArgumentosDaFerramenta.uuid(comando, "cliente_id");
         UUID servico = ArgumentosDaFerramenta.uuid(comando, "servico_id");
         UUID profissional = ArgumentosDaFerramenta.uuid(comando, "profissional_id");
         Instant inicio = instante(comando, "inicio");
 
+        boolean foraDaJornada = comando.path("fora_da_jornada").asBoolean(false);
+        if (foraDaJornada && aceite.isEmpty()) {
+            // Forçar a jornada só com a prova de que quem vai atender aceitou. Sem ela, seria a regra
+            // contornada por quem não tinha como justificar.
+            throw new ErroDeDominio(ErrosDaAgenda.FORA_DA_JORNADA,
+                    "o horário está fora da jornada, e o aceite de quem vai atender não chegou.");
+        }
+        String justificativa = foraDaJornada ? justificativa(aceite.get()) : null;
+
         AgendamentoResumo criado;
         try {
-            criado = criar.executar(pedido(cliente, profissional, servico, inicio));
+            criado = criar.executar(pedido(cliente, profissional, servico, inicio, justificativa));
         } catch (ErroDeDominio erro) {
             throw legivel(erro);
         }
@@ -161,10 +194,42 @@ public class FerramentaAgendar implements FerramentaDeEscrita {
         return new Efetivacao(mensagem, registro);
     }
 
+    /** Força a jornada se, e somente se, vier justificativa. Passado e duração, nunca. */
     private static NovoAgendamento pedido(UUID cliente, UUID profissional, UUID servico,
-                                          Instant inicio) {
+                                          Instant inicio, String justificativaForaDaJornada) {
         return new NovoAgendamento(cliente, profissional, servico, inicio,
-                OrigemDoAgendamento.AGENTE, null, null, false, false, null, null);
+                OrigemDoAgendamento.AGENTE, null, null, justificativaForaDaJornada != null, false,
+                justificativaForaDaJornada, null);
+    }
+
+    /**
+     * Quem vai atender, com o telefone normalizado — ou vazio, se não há a quem perguntar.
+     *
+     * <p>Normalizado aqui também, e não só no cadastro (RN-EQP-016): o que foi cadastrado antes da
+     * normalização ficou como foi digitado.
+     */
+    private Optional<Aceite> aceiteDe(UUID profissionalId) {
+        var profissional = equipe.porId(profissionalId).filter(ProfissionalResumo::ativo);
+        if (profissional.isEmpty() || profissional.get().telefone() == null) {
+            return Optional.empty();
+        }
+        var configuracao = estabelecimentos.configuracao(TenantContext.obrigatorio()).orElseThrow();
+        try {
+            String telefone = Telefone.de(profissional.get().telefone(), configuracao.paisPadrao(),
+                    configuracao.dddPadrao()).e164();
+            return Optional.of(new Aceite(profissional.get().comoChamar(), telefone,
+                    "fora da jornada"));
+        } catch (TelefoneInvalidoException e) {
+            return Optional.empty();
+        }
+    }
+
+    /** "Fora da jornada, aceito por Ana pelo WhatsApp (final 4321) em 14/09 às 14:32". */
+    private String justificativa(AceiteRegistrado aceite) {
+        String telefone = aceite.telefone();
+        return "Fora da jornada, aceito por %s pelo WhatsApp (final %s) em %s".formatted(
+                aceite.nome(), telefone.substring(Math.max(0, telefone.length() - 4)),
+                DATA_HORA.format(aceite.em().atZone(fuso())));
     }
 
     private ZoneId fuso() {

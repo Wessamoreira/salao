@@ -316,16 +316,15 @@ qualquer pode trazer dado pessoal.
 
 ## 16. Pendências
 
-- [ ] **Nada é entregue.** Nem a resposta do modelo nem o pedido de confirmação chegam ao WhatsApp: não
-      há mensageiro real, e a fila de notificação só fala com clientes. **Sem isso o agente não marca
-      nada em produção.** Quando existir, o pedido de confirmação vai como mensagem SEPARADA da resposta
-      do modelo, nunca concatenado (§10) — e os botões de RT-CNV-006 carregam o mesmo código.
+- [x] ~~**Nada é entregue.**~~ RT-CNV-006 criou a saída para a equipe: a resposta e o pedido de
+      confirmação são enfileirados ao encerrar a conversa, nessa ordem e como mensagens separadas.
+      **Falta o provedor de envio** — até lá, a fila espera.
 - [ ] **Remarcar e cancelar** não têm ferramenta. O contrato comporta: cada uma é uma
       `FerramentaDeEscrita` no módulo `agenda`.
 - [ ] **Sem modelo configurado, as confirmações também esperam.** O processador não reserva nada sem
       chave e preço. Como sem modelo não nasce intenção, a que ficou vence sozinha.
-- [ ] **Intenção de conversa que não terminou** — teto atingido depois da proposta, falha do modelo —
-      fica pendente sem ter sido entregue, e vence.
+- [x] ~~**Intenção de conversa que não terminou**~~ continua pendente e vence — mas desde RT-CNV-006
+      o pedido só é entregue quando a conversa termina, e nunca chega a quem não recebeu resposta.
 - [ ] **Transcrição por extenso não confirma.** "sim quatro oito dois um" vai ao modelo, que não grava:
       falha fechada. Converter número por extenso seria interpretar; medir antes.
 - [ ] **O resumo pode divergir do gravado num caso:** a duração da profissional mudar entre a simulação

@@ -7,11 +7,14 @@ import br.com.salao.equipe.internal.domain.Documento;
 import br.com.salao.equipe.internal.domain.DocumentoInvalidoException;
 import br.com.salao.equipe.internal.infra.ProfissionaisJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
+import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.api.Permissao;
 import br.com.salao.iam.api.RegistroDeAuditoria;
 import br.com.salao.shared.erro.CampoInvalido;
 import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.shared.seguranca.UsuarioAtual;
+import br.com.salao.shared.telefone.Telefone;
+import br.com.salao.shared.telefone.TelefoneInvalidoException;
 import br.com.salao.shared.tenant.TenantContext;
 import java.math.BigDecimal;
 import java.util.List;
@@ -48,10 +51,13 @@ public class CadastrarProfissionalUseCase {
 
     private final ProfissionaisJdbc profissionais;
     private final AuditoriaApi auditoria;
+    private final EstabelecimentoApi estabelecimentos;
 
-    public CadastrarProfissionalUseCase(ProfissionaisJdbc profissionais, AuditoriaApi auditoria) {
+    public CadastrarProfissionalUseCase(ProfissionaisJdbc profissionais, AuditoriaApi auditoria,
+                                        EstabelecimentoApi estabelecimentos) {
         this.profissionais = profissionais;
         this.auditoria = auditoria;
+        this.estabelecimentos = estabelecimentos;
     }
 
     @PreAuthorize("hasAuthority('" + Permissao.USUARIO_GERENCIAR + "')")
@@ -72,7 +78,7 @@ public class CadastrarProfissionalUseCase {
 
         try {
             UUID id = profissionais.inserir(TenantContext.obrigatorio(), nome,
-                    texto(dados.apelido()), documento, dados.vinculo(), texto(dados.telefone()),
+                    texto(dados.apelido()), documento, dados.vinculo(), telefoneDe(dados.telefone()),
                     texto(dados.email()), comissao, dados.contratoInicio(), dados.contratoFim(),
                     dados.contratoAssinadoEm(), UsuarioAtual.idOuNulo());
 
@@ -92,6 +98,27 @@ public class CadastrarProfissionalUseCase {
             // com o mesmo CNPJ dividiriam a comissão de um só em dois extratos.
             throw new ErroDeDominio(ErrosDaEquipe.DOCUMENTO_JA_CADASTRADO,
                     "já existe um profissional com este documento neste salão");
+        }
+    }
+
+    /**
+     * RN-EQP-016 — o telefone em E.164, só dígitos, como a V17 sempre disse e o cadastro não fazia.
+     *
+     * <p>Até RT-CNV-006 ele era guardado como digitado, e nada o lia. Agora é o destino do pedido de
+     * aceite da profissional pelo WhatsApp: um "(11) 98765-4321" ali é mensagem que não sai, ou que sai
+     * para o número errado. Mesma normalização do cliente e do usuário ({@code shared.telefone}).
+     */
+    private String telefoneDe(String informado) {
+        String telefone = texto(informado);
+        if (telefone == null) {
+            return null;
+        }
+        var configuracao = estabelecimentos.configuracao(TenantContext.obrigatorio()).orElseThrow();
+        try {
+            return Telefone.de(telefone, configuracao.paisPadrao(), configuracao.dddPadrao()).e164();
+        } catch (TelefoneInvalidoException e) {
+            throw new ErroDeDominio(ErrosDaEquipe.DADOS_INVALIDOS, "telefone inválido", Map.of(),
+                    List.of(new CampoInvalido("telefone", "INVALIDO", "Telefone inválido")));
         }
     }
 

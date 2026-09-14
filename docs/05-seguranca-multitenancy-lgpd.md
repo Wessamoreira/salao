@@ -161,6 +161,13 @@ própria pessoa — "SIM" e o código —, reconhecida antes e fora do modelo, c
 resolvidas de novo e a intenção decidida no mesmo commit da gravação. Nem uma ferramenta que se declara
 leitura consegue gravar: o banco recusa.
 
+**E quem não é da equipe no sistema, em RT-CNV-006** (RN-CNV-018 a 021): a profissional aceita um
+horário fora da jornada tocando num botão, sem conta de usuário. O toque vale pelo número para onde o
+pedido foi — atestado pela Meta — e por um token no id do botão, comparado em tempo constante; não
+passa pelo modelo e não entra no histórico. Aceitar não dá permissão a ninguém: a gravação é feita em
+nome de quem pediu, resolvido de novo, e a intenção que exigia aceite só é confirmada com ele
+registrado — por constraint no banco.
+
 ## Aplicação
 
 - Bean Validation em todo DTO de entrada + limite de tamanho de payload.

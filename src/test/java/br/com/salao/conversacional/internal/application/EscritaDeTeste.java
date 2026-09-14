@@ -1,6 +1,7 @@
 package br.com.salao.conversacional.internal.application;
 
 import br.com.salao.shared.agente.FerramentaDeEscrita;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -21,6 +22,7 @@ class EscritaDeTeste implements FerramentaDeEscrita {
     volatile Function<JsonNode, Simulacao> simulacao;
     final AtomicInteger simulacoes = new AtomicInteger();
     final AtomicInteger confirmacoes = new AtomicInteger();
+    volatile Optional<AceiteRegistrado> ultimoAceite = Optional.empty();
 
     EscritaDeTeste(String nome, String... permissoes) {
         this.nome = nome;
@@ -41,8 +43,10 @@ class EscritaDeTeste implements FerramentaDeEscrita {
     }
 
     @Override
-    public Efetivacao confirmar(UUID intencaoId, JsonNode comando) {
+    public Efetivacao confirmar(UUID intencaoId, JsonNode comando,
+                                Optional<AceiteRegistrado> aceite) {
         confirmacoes.incrementAndGet();
+        ultimoAceite = aceite;
         return new Efetivacao("feito: " + nome, JSON.createObjectNode().put("ok", true));
     }
 }

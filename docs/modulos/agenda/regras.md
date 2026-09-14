@@ -48,6 +48,12 @@ pior: some o compromisso da cliente sem ninguém avisar.
 `agenda:write:all` e justificativa registrada em auditoria.
 **Origem.** 2026-08-28
 
+
+**Desde RT-CNV-005/006 — o aceite como justificativa.** Pelo agente, ninguém digita justificativa. O
+horário fora da jornada só é forçado quando quem vai atender aceitou pelo WhatsApp, e a justificativa
+gravada na trilha é o aceite: "Fora da jornada, aceito por Ana pelo WhatsApp (final 4321) em 20/09 às
+14:32" (RN-CNV-018). Sem essa prova, `agendar` recusa como antes.
+
 ---
 
 ### RN-AGD-003 — Serviço define os blocos; o agendamento os materializa

@@ -19,6 +19,17 @@ import tools.jackson.databind.ObjectMapper;
  */
 public class ExecucoesJdbc {
 
+    /**
+     * RT-CNV-006 — de onde veio a execução.
+     *
+     * <p>{@code BOTAO} é o toque num botão de aceite: não passa pelo modelo, não entra no histórico de
+     * conversa (o id do botão carrega o token do aceite) e pode vir de quem não tem conta.
+     */
+    public enum Tipo {
+        CONVERSA,
+        BOTAO
+    }
+
     private final JdbcClient jdbc;
     private final ObjectMapper json;
 
@@ -30,17 +41,18 @@ public class ExecucoesJdbc {
     /** @return verdadeiro se entrou agora; o aviso repetido do outbox encontra a linha e sai */
     @Transactional
     public boolean enfileirar(UUID estabelecimentoId, UUID mensagemId, String telefone,
-                              String entrada, Instant agora) {
+                              String entrada, Tipo tipo, Instant agora) {
         return jdbc.sql("""
                 insert into execucao_do_agente
-                    (estabelecimento_id, mensagem_id, de_telefone, entrada, proxima_tentativa_em)
-                values (:estabelecimento, :mensagem, :telefone, :entrada, :agora)
+                    (estabelecimento_id, mensagem_id, de_telefone, entrada, tipo, proxima_tentativa_em)
+                values (:estabelecimento, :mensagem, :telefone, :entrada, :tipo, :agora)
                 on conflict (mensagem_id) do nothing
                 """)
                 .param("estabelecimento", estabelecimentoId)
                 .param("mensagem", mensagemId)
                 .param("telefone", telefone)
                 .param("entrada", entrada)
+                .param("tipo", tipo.name())
                 .param("agora", Timestamp.from(agora))
                 .update() == 1;
     }
@@ -51,6 +63,7 @@ public class ExecucoesJdbc {
         var trocas = new ArrayList<>(jdbc.sql("""
                 select entrada, resposta from execucao_do_agente
                  where de_telefone = :telefone and status = 'CONCLUIDA' and concluida_em >= :desde
+                   and tipo = 'CONVERSA'
                  order by concluida_em desc
                  limit :limite
                 """)
@@ -92,6 +105,8 @@ public class ExecucoesJdbc {
     /**
      * RT-CNV-005 — encerrada sem o modelo: a resposta a uma confirmação é do servidor, e não houve
      * ferramenta, token nem custo.
+     *
+     * @param usuarioEfetivoId nulo só no toque de botão de quem não é usuário (RT-CNV-006)
      */
     @Transactional
     public int concluirSemModelo(UUID id, UUID usuarioEfetivoId, String resposta, Instant agora) {

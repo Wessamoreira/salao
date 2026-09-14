@@ -71,10 +71,24 @@ public final class CodigoDeConfirmacao {
 
     /** O texto que a pessoa recebe. É do servidor — o modelo não escreve uma letra dele. */
     public static String pedido(String resumo, String codigo, LocalTime valeAte) {
-        return """
+        return pedido(resumo, codigo, valeAte, null, null);
+    }
+
+    /**
+     * RT-CNV-006 — o mesmo pedido, dizendo que depois do SIM ainda falta alguém aceitar. Sem isso a
+     * pessoa confirmaria achando que marcou.
+     */
+    public static String pedido(String resumo, String codigo, LocalTime valeAte, String aceiteDe,
+                                String motivoDoAceite) {
+        String pedido = """
                 Confirma?
                 %s
                 Para confirmar, responda SIM %s até %s."""
                 .formatted(resumo, codigo, HORA.format(valeAte));
+        if (aceiteDe == null) {
+            return pedido;
+        }
+        return pedido + "\nDepois do seu SIM, %s ainda precisa aceitar (%s)."
+                .formatted(aceiteDe, motivoDoAceite);
     }
 }

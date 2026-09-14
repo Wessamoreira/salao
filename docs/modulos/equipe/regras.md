@@ -291,3 +291,26 @@ a informação de quem sabe executá-lo se perder no caminho.
 `HabilidadesIT.servico_inexistente`, `HabilidadesIT.servico_desativado_ainda_serve`
 **Erro.** `ER-EQP-SERVICO_NAO_ENCONTRADO` (422) · **Configurável?** Não
 **Origem.** 2026-09-02
+
+---
+
+### RN-EQP-016 — O telefone do profissional é guardado em E.164, só dígitos
+
+**Enunciado.** O telefone informado no cadastro é normalizado com `shared.telefone.Telefone` — DDD e
+país padrão do salão para o que vier sem eles — e guardado só com dígitos. Número que não se normaliza
+é recusado com `ER-EQP-DADOS_INVALIDOS`, apontando o campo `telefone`. Telefone é opcional.
+
+**Motivo.** A V17 sempre disse "só dígitos, como o telefone do cliente", e o cadastro gravava como
+fosse digitado. Não fazia diferença enquanto ninguém lia. Desde RT-CNV-006 é o destino do pedido de
+aceite pelo WhatsApp e o único número cuja resposta vale (RN-CNV-019): um "(11) 98765-4321" guardado
+ali é mensagem que não sai — ou toque que não confere com o número de onde veio.
+
+Mesma normalização do cliente e do usuário. Duas regras de formato divergiriam na primeira mudança.
+
+O que foi cadastrado antes continua como estava; quem lê para mandar (`FerramentaAgendar`) normaliza de
+novo, e o que não se normaliza fica sem aceite possível.
+
+**Onde é garantida.** `CadastrarProfissionalUseCase.telefoneDe`.
+**Rotinas.** RT-EQP-001, RT-CNV-006 · **Teste.** `CadastroDeProfissionalIT.telefone_normalizado`,
+`.telefone_invalido`
+**Configurável?** O DDD e o país padrão, no salão · **Origem.** 2026-09-14

@@ -29,6 +29,12 @@ A decisão de fundo — canal interno com destinatário = usuário, ou nada — 
 mesma família do `usuario` sem `profissional_id`. Enquanto isso, cada rotina entrega o alerta como
 **consulta** e a tela decide o que mostrar.
 
+**Desde RT-CNV-006 existe um canal para a equipe — e ele não mora aqui.** O agente conversacional fala
+com a recepção e com a profissional pelo número do salão, por `mensagem_para_equipe`, no módulo
+`conversacional`, que é o dono do número. Não resolve os alertas acima: é um canal de conversa, para
+quem escreveu ou para quem precisa aceitar um pedido. Se um alerta de estoque um dia for pelo WhatsApp,
+a decisão de por onde passa continua em aberto — mas já há por onde sair.
+
 ## O que ele **não** guarda
 
 **Consentimento.** Quem conhece base legal, decisão e revogação é `cliente` (RT-CLI-004). Um

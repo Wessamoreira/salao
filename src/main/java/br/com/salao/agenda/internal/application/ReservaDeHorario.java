@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -47,8 +48,13 @@ final class ReservaDeHorario {
         this.relogio = relogio;
     }
 
-    /** O que sai da reserva: onde os blocos caem e qual o período total. */
-    record Reserva(List<BlocoDoAgendamento> blocos, Janela periodo) {
+    /**
+     * O que sai da reserva: onde os blocos caem e qual o período total.
+     *
+     * @param dentroDaJornada se todo bloco que ocupa o profissional cabe na jornada — informado mesmo
+     *                        quando a jornada foi forçada (RT-CNV-006)
+     */
+    record Reserva(List<BlocoDoAgendamento> blocos, Janela periodo, boolean dentroDaJornada) {
     }
 
     Reserva montar(UUID profissionalId, SequenciaDeBlocos receita, java.time.Instant inicio,
@@ -57,9 +63,17 @@ final class ReservaDeHorario {
         Janela periodo = MaterializadorDeBlocos.periodoTotal(noTempo);
 
         validarNaoRetroativo(periodo, forcamentos);
-        validarJornada(profissionalId, noTempo, fuso, forcamentos);
+        Optional<BlocoNoTempo> foraDaJornada = primeiroForaDaJornada(profissionalId, noTempo, fuso);
+        if (forcamentos.foraJornada()) {
+            forcamentos.exigirJustificativa();
+        } else if (foraDaJornada.isPresent()) {
+            throw new ErroDeDominio(ErrosDaAgenda.FORA_DA_JORNADA,
+                    "o trecho de " + foraDaJornada.get().janela().inicio() + " a "
+                            + foraDaJornada.get().janela().fim() + " está fora da jornada");
+        }
 
-        return new Reserva(alocar(profissionalId, noTempo, periodo), periodo);
+        return new Reserva(alocar(profissionalId, noTempo, periodo), periodo,
+                foraDaJornada.isEmpty());
     }
 
     /** Os dois "sim, eu sei" que o balcão pode dar, cada um com justificativa obrigatória. */
@@ -91,13 +105,14 @@ final class ReservaDeHorario {
      *
      * <p>Só os blocos ATIVO. A pausa pode cair no almoço: a cliente fica com a química agindo e a
      * profissional almoça — que é exatamente o que acontece no salão.
+     *
+     * <p>RT-CNV-006: devolve o trecho fora, em vez de lançar. Quem decide se é recusa é
+     * {@link #montar} — a gravação recusa sem forçamento, e a simulação do agente só quer saber, para
+     * pedir o aceite. Consultada sempre, inclusive com a jornada forçada: são duas consultas a mais no
+     * forçamento, que é o caso raro.
      */
-    private void validarJornada(UUID profissionalId, List<BlocoNoTempo> blocos, ZoneId fuso,
-                                Forcamentos forcamentos) {
-        if (forcamentos.foraJornada()) {
-            forcamentos.exigirJustificativa();
-            return;
-        }
+    private Optional<BlocoNoTempo> primeiroForaDaJornada(UUID profissionalId,
+                                                         List<BlocoNoTempo> blocos, ZoneId fuso) {
         var livres = new ArrayList<Janela>();
         // Dois dias: um serviço pode atravessar a meia-noite, e a jornada é por dia da semana.
         for (LocalDate data : diasTocados(blocos, fuso)) {
@@ -108,13 +123,10 @@ final class ReservaDeHorario {
                         data.atTime(intervalo.fim()).atZone(fuso).toInstant()));
             }
         }
-        for (BlocoNoTempo bloco : blocos) {
-            if (bloco.profissionalOcupado() && livres.stream().noneMatch(bloco.janela()::cabeEm)) {
-                throw new ErroDeDominio(ErrosDaAgenda.FORA_DA_JORNADA,
-                        "o trecho de " + bloco.janela().inicio() + " a " + bloco.janela().fim()
-                                + " está fora da jornada");
-            }
-        }
+        return blocos.stream()
+                .filter(BlocoNoTempo::profissionalOcupado)
+                .filter(bloco -> livres.stream().noneMatch(bloco.janela()::cabeEm))
+                .findFirst();
     }
 
     private Set<LocalDate> diasTocados(List<BlocoNoTempo> blocos, ZoneId fuso) {

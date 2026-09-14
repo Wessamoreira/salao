@@ -16,6 +16,13 @@ import br.com.salao.conversacional.internal.application.ModeloDeLinguagem;
 import br.com.salao.conversacional.internal.application.EnfileiradorDeInteracoes;
 import br.com.salao.conversacional.internal.application.ConcluirTranscricao;
 import br.com.salao.conversacional.internal.application.CatalogoDeFerramentas;
+import br.com.salao.conversacional.internal.application.ConcluirExecucao;
+import br.com.salao.conversacional.internal.application.DecidirAceite;
+import br.com.salao.conversacional.internal.application.EnviadorDoWhatsApp;
+import br.com.salao.conversacional.internal.infra.DespachanteParaEquipe;
+import br.com.salao.conversacional.internal.infra.EnviadorNaoConfigurado;
+import br.com.salao.conversacional.internal.infra.ExpiradorDeAceites;
+import br.com.salao.conversacional.internal.infra.MensagensParaEquipeJdbc;
 import br.com.salao.conversacional.internal.application.ConfirmarPeloCodigo;
 import br.com.salao.conversacional.internal.application.EfetivarIntencao;
 import br.com.salao.conversacional.internal.application.ProporIntencao;
@@ -241,11 +248,12 @@ public class ConversacionalConfig {
             ModeloDeLinguagem modelo, PrecoDoModelo preco, ConsumoDeIaJdbc consumo,
             LimitePorTelefone limite,
             @Value("${app.agente.teto-diario-usd:2.00}") BigDecimal tetoDiario,
-            ProporIntencao propor, ConfirmarPeloCodigo confirmar,
-            TransacaoSomenteLeitura somenteLeitura, Relogio relogio, MeterRegistry metricas) {
+            ProporIntencao propor, ConfirmarPeloCodigo confirmar, DecidirAceite decidirAceite,
+            ConcluirExecucao concluir, TransacaoSomenteLeitura somenteLeitura, Relogio relogio,
+            MeterRegistry metricas) {
         return new ProcessadorDeInteracoes(manutencao, execucoes, usuarios, estabelecimentos,
                 orquestrador, modelo, preco, consumo, limite, tetoDiario, propor, confirmar,
-                somenteLeitura, relogio, metricas);
+                decidirAceite, concluir, somenteLeitura, relogio, metricas);
     }
 
     // ------------------------------------------------------------------ RT-CNV-005
@@ -274,15 +282,62 @@ public class ConversacionalConfig {
     }
 
     @Bean
-    public EfetivarIntencao efetivarIntencao(IntencoesJdbc intencoes,
-                                             CatalogoDeFerramentas catalogo,
-                                             UsuarioEfetivoApi usuarios, Relogio relogio) {
-        return new EfetivarIntencao(intencoes, catalogo, usuarios, relogio);
+    public EfetivarIntencao efetivarIntencao(
+            IntencoesJdbc intencoes, CatalogoDeFerramentas catalogo, UsuarioEfetivoApi usuarios,
+            MensagensParaEquipeJdbc saida, EstabelecimentoApi estabelecimentos, Relogio relogio,
+            @Value("${app.agente.aceite.validade:PT2H}") String validadeDoAceite) {
+        return new EfetivarIntencao(intencoes, catalogo, usuarios, saida, estabelecimentos, relogio,
+                Duration.parse(validadeDoAceite));
     }
 
     @Bean
     public ConfirmarPeloCodigo confirmarPeloCodigo(IntencoesJdbc intencoes,
                                                    EfetivarIntencao efetivar, Relogio relogio) {
         return new ConfirmarPeloCodigo(intencoes, efetivar, relogio);
+    }
+
+    // ------------------------------------------------------------------ RT-CNV-006
+
+    @Bean
+    public MensagensParaEquipeJdbc mensagensParaEquipeJdbc(DataSource dataSource, ObjectMapper json) {
+        return new MensagensParaEquipeJdbc(JdbcClient.create(dataSource), json);
+    }
+
+    /**
+     * Sem provedor de envio contratado. Um adaptador real entra como bean {@code @Primary}; até lá, a
+     * saída espera na fila — e a subida diz isso, porque "esperando" e "esqueci a credencial" são
+     * indistinguíveis de fora.
+     */
+    @Bean
+    public EnviadorDoWhatsApp enviadorDoWhatsApp() {
+        log.warn("Nenhum provedor de envio do WhatsApp: respostas e pedidos para a equipe "
+                + "vão esperar na fila");
+        return new EnviadorNaoConfigurado();
+    }
+
+    @Bean
+    public DespachanteParaEquipe despachanteParaEquipe(ConexaoDeManutencao manutencao,
+                                                       EnviadorDoWhatsApp enviador,
+                                                       ObjectMapper json, Relogio relogio,
+                                                       MeterRegistry metricas) {
+        return new DespachanteParaEquipe(manutencao, enviador, json, relogio, metricas);
+    }
+
+    @Bean
+    public ConcluirExecucao concluirExecucao(ExecucoesJdbc execucoes,
+                                             MensagensParaEquipeJdbc saida,
+                                             IntencoesJdbc intencoes) {
+        return new ConcluirExecucao(execucoes, saida, intencoes);
+    }
+
+    @Bean
+    public DecidirAceite decidirAceite(EfetivarIntencao efetivar) {
+        return new DecidirAceite(efetivar);
+    }
+
+    @Bean
+    public ExpiradorDeAceites expiradorDeAceites(ConexaoDeManutencao manutencao, Relogio relogio,
+                                                 MeterRegistry metricas) {
+        return new ExpiradorDeAceites(manutencao, relogio, metricas);
     }
 }

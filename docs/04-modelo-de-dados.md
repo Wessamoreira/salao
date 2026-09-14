@@ -372,6 +372,10 @@ indefensável em qualquer reclamação.
 `resumo` e `codigo` não mudam depois de gravados; só as colunas da decisão têm `update`. Há uma
 pendente por telefone. É a resposta a "eu confirmei isso?".
 
+Desde RT-CNV-006 (`V55`) a intenção pode esperar o **aceite** de quem vai atender — quem, número e
+token gravados na simulação — e `mensagem_para_equipe` é a saída do que o agente diz à equipe: gravada
+junto com o fato que a produziu, na ordem por destino, e imutável para a aplicação.
+
 ## Retenção — o que apaga e quando
 
 Nenhuma tabela de log cresce para sempre. Job diário:
@@ -381,6 +385,7 @@ Nenhuma tabela de log cresce para sempre. Job diário:
 | `auditoria` | 5 anos (agenda e financeiro), 1 ano (resto) | Prazo de disputa |
 | `acao_ia` | 12 meses, com transcrição anonimizada aos 90 dias | LGPD: minimização |
 | `intencao_pendente` | 12 meses, como `acao_ia` — **job ainda não existe** (RT-CNV-005) | O resumo traz nome de cliente |
+| `mensagem_para_equipe` | 90 dias depois de enviada ou falha, como `conversa_mensagem` — **job ainda não existe** (RT-CNV-006) | O texto traz nomes e horários |
 | `conversa_mensagem` | 90 dias | Nada exige mais |
 | `idempotencia` | 7 dias | TTL da chave |
 | `event_publication` (Modulith) | Completos apagados em 7 dias | Senão cresce sem limite |

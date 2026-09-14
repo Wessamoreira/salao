@@ -39,6 +39,8 @@ public class ConfirmarPeloCodigo {
 
     public enum Desfecho {
         CONFIRMADA,
+        /** RT-CNV-006 — confirmada por quem pediu; o pedido foi a quem vai atender. */
+        AGUARDANDO_ACEITE,
         RECUSADA,
         VENCIDA,
         JA_DECIDIDA,
@@ -60,6 +62,8 @@ public class ConfirmarPeloCodigo {
             return switch (efetivar.executar(id, telefone, usuarioId, execucaoId)) {
                 case Decisao.Confirmada confirmada ->
                         new Resultado(Desfecho.CONFIRMADA, confirmada.resposta());
+                case Decisao.AguardandoAceite aguardando ->
+                        new Resultado(Desfecho.AGUARDANDO_ACEITE, aguardando.resposta());
                 case Decisao.Vencida vencida -> vencida(codigo);
                 case Decisao.JaDecidida decidida -> jaDecidida(codigo, decidida.status());
                 case Decisao.NaoEncontrada nao -> semPedido(codigo);
@@ -98,6 +102,9 @@ public class ConfirmarPeloCodigo {
         return switch (status) {
             case CONFIRMADA -> new Resultado(Desfecho.JA_DECIDIDA,
                     "O pedido %s já estava confirmado.".formatted(codigo));
+            case AGUARDANDO_ACEITE -> new Resultado(Desfecho.JA_DECIDIDA,
+                    "O pedido %s já foi confirmado e espera o aceite de quem vai atender."
+                            .formatted(codigo));
             case SUBSTITUIDA -> new Resultado(Desfecho.JA_DECIDIDA,
                     "O pedido %s foi trocado por um mais novo, e nada foi gravado com ele. "
                             .formatted(codigo) + "Confira o último resumo.");

@@ -11,6 +11,9 @@ import java.util.UUID;
  *
  * <p>Sem id e sem versão: não existe. {@code status} é o que ele teria ao nascer (RN-AGD-013), e
  * {@code blocos} já trazem as unidades de recurso que a gravação escolheria agora.
+ *
+ * <p>{@code foraDaJornada} (RT-CNV-006): a gravação sem forçamento recusaria. A simulação informa em
+ * vez de recusar, para quem simula decidir — o agente pede o aceite de quem vai atender.
  */
 public record AgendamentoSimulado(
         UUID clienteId,
@@ -19,7 +22,8 @@ public record AgendamentoSimulado(
         String servico,
         StatusAgendamento status,
         Janela periodo,
-        List<BlocoDoAgendamento> blocos) {
+        List<BlocoDoAgendamento> blocos,
+        boolean foraDaJornada) {
 
     public AgendamentoSimulado {
         blocos = List.copyOf(blocos);

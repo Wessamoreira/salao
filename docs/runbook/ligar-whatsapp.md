@@ -186,7 +186,7 @@ update transcricao_de_audio
 
 **`FALHOU` com "áudio recusado"** — os bytes não eram áudio. O arquivo `RECUSADO` fica registrado.
 
-## Agente (RT-CNV-004 / RT-CNV-005)
+## Agente (RT-CNV-004 / RT-CNV-005 / RT-CNV-006)
 
 ### Credencial e preço
 
@@ -198,7 +198,14 @@ AGENTE_PRECO_SAIDA=<dólares por milhão de tokens de saída>
 AGENTE_TETO_DIARIO_USD=2.00
 AGENTE_LIMITE_TELEFONE_HORA=30
 AGENTE_INTENCAO_VALIDADE=PT10M
+AGENTE_ACEITE_VALIDADE=PT2H
+WHATSAPP_SAIDA_INTERVALO=PT5S
 ```
+
+**Sem provedor de envio, nada sai** (RT-CNV-006): respostas, pedidos de confirmação e pedidos de aceite
+esperam em `mensagem_para_equipe`, sem gastar tentativa. A subida registra o aviso. Quando o provedor
+entrar, a fila é entregue na ordem. Fora da janela de 24h a Meta só entrega **modelo aprovado**: o
+pedido de aceite à profissional precisa de um modelo com dois botões de resposta rápida, aprovado antes.
 
 **Sem chave OU sem preço, o agente não roda** — as conversas esperam na fila. O preço não tem valor
 padrão de propósito: sem preço não há custo, e sem custo não há teto (R-17). Confira a tabela do
@@ -221,6 +228,12 @@ select status, motivo, count(*) from intencao_pendente
 
 -- pendentes que já venceram sem resposta (continuam PENDENTE; a próxima proposta as marca)
 select count(*) from intencao_pendente where status = 'PENDENTE' and expira_em < now();
+
+-- RT-CNV-006: esperando a profissional, e a saída para a equipe
+select count(*) from intencao_pendente where status = 'AGUARDANDO_ACEITE';
+select motivo, status, count(*) from mensagem_para_equipe group by 1, 2;
+select destino, motivo, tentativas, ultimo_erro from mensagem_para_equipe
+ where status = 'PENDENTE' and tentativas > 0 order by sequencia limit 20;
 ```
 
 Métrica: `conversacional_agente_total{desfecho}` — `concluida`, `recusada_identidade`,
@@ -262,5 +275,18 @@ transaction`: é defeito da ferramenta, e se corrige nela. **Nunca** tirar a tra
 e a confirmação. Nada foi gravado.
 
 **`confirmacao_sem_pedido` subindo** — código digitado errado, ou pedido de confirmação que não chegou
-à pessoa. **Hoje nenhum chega:** a entrega pelo WhatsApp ainda não existe (pendência de RT-CNV-004/005),
-e sem ela o agente não marca nada em produção.
+à pessoa. **Hoje nenhum chega:** não há provedor de envio, e a saída espera na fila (RT-CNV-006).
+
+**`mensagem_para_equipe` pendente só crescendo** — sem provedor configurado, é o esperado. Com provedor,
+olhar `ultimo_erro` das que têm tentativa: 429 e 5xx se resolvem sozinhos; número inexistente ou modelo
+não aprovado viram `FALHOU`.
+
+**`FALHOU` com "canal do WhatsApp do salão está desligado"** — o salão desligou o canal depois de a
+mensagem entrar na fila. Religar não reenvia o que falhou.
+
+**`aceite_nao_encontrado` em toque legítimo** — a profissional tocou de outro número (celular trocado,
+WhatsApp Business num aparelho diferente). O aceite só vale do número do cadastro (RN-CNV-019):
+corrigir o cadastro e pedir de novo. **Nunca** afrouxar a conferência do número.
+
+**Intenção `EXPIRADA` sem toque, e recepção sem aviso** — o expirador não está rodando
+(`app.agente.aceite.intervalo`), ou a saída está parada.

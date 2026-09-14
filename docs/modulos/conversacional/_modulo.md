@@ -36,8 +36,8 @@ Três consequências que atravessam o módulo inteiro:
 - **Não sabe quem é a pessoa.** O telefone entra como texto; ligá-lo a um `cliente` é RT-CNV-002.
 - **Não baixa mídia no webhook.** Áudio entra como *id*; o download e a transcrição são
   RT-CNV-003, numa fila fora de transação. Imagem e documento continuam só como *id*.
-- **Não entrega a resposta.** RT-CNV-004 conversa e registra a resposta, e RT-CNV-005 registra o
-  pedido de confirmação na intenção; enviá-los pelo WhatsApp ainda não existe.
+- **Não entrega de verdade, ainda.** Desde RT-CNV-006 respostas, pedidos e desfechos entram na saída
+  para a equipe, na ordem e junto com o fato — mas não há provedor de envio, e a fila espera.
 
 ## O que ele **não** guarda
 
@@ -76,6 +76,16 @@ fora do modelo, com as trancas resolvidas de novo e a intenção decidida no mes
 
 A primeira escrita é `agendar`, da `agenda`. Remarcar e cancelar entram pelo mesmo contrato.
 
+## Falar com a equipe — RT-CNV-006
+
+Este módulo é o dono do número do salão, e passou a ser o dono do envio também: `mensagem_para_equipe`
+e o port `EnviadorDoWhatsApp`. É por aqui que saem a resposta do agente, o pedido "SIM + código", o
+pedido de aceite com botões à profissional e o desfecho a quem pediu (RN-CNV-020). O adaptador não mora
+na `notificacao`, como ADR-0006 previa: o número está aqui, e o contrário seria dependência circular.
+
+Horário fora da jornada não é recusado: a profissional aceita ou recusa por botão, pelo telefone do
+cadastro, sem conta de usuário (RN-CNV-018, 019), e o aceite vence em duas horas (RN-CNV-021).
+
 RT-CNV-002 entregou, **no `iam`**, `UsuarioEfetivoApi` — é por ela que a orquestração (RT-CNV-004)
 vai agir em nome de quem escreveu. O módulo ainda não a usa: quem a usa é o primeiro caso de uso
 que age.
@@ -88,7 +98,8 @@ que age.
 | [RT-CNV-002](../iam/RT-CNV-002-usuario-efetivo.md) — usuário efetivo pelo telefone (mora no `iam`) | implementada |
 | [RT-CNV-003](RT-CNV-003-audio-transcricao.md) — áudio: download, guarda e transcrição | implementada, sem provedor de STT |
 | [RT-CNV-004](RT-CNV-004-orquestracao.md) — orquestração: ferramentas por permissão, teto, limite | implementada, sem provedor de LLM |
-| [RT-CNV-005](RT-CNV-005-agendar-pelo-agente.md) — marcar pelo agente: consultar, simular, confirmar pelo código | implementada, sem entrega da mensagem |
+| [RT-CNV-005](RT-CNV-005-agendar-pelo-agente.md) — marcar pelo agente: consultar, simular, confirmar pelo código | implementada |
+| [RT-CNV-006](RT-CNV-006-aceite-e-saida-para-equipe.md) — aceite da profissional por botão, validade, saída para a equipe | implementada, sem provedor de envio |
 
 ## Rotas
 
@@ -101,4 +112,4 @@ que age.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-CNV-001 a RN-CNV-017.
+Ver [regras.md](regras.md) — RN-CNV-001 a RN-CNV-021.

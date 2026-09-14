@@ -1,5 +1,7 @@
 package br.com.salao.shared.agente;
 
+import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import tools.jackson.databind.JsonNode;
 
@@ -23,6 +25,14 @@ import tools.jackson.databind.JsonNode;
  *
  * <p>O que a pessoa confirma é o resumo; o que executa é o comando gravado junto dele. Nenhum dos
  * dois pode ser alterado depois de gravado.
+ *
+ * <h2>Quando alguém de fora da conversa precisa aceitar — RT-CNV-006</h2>
+ *
+ * <p>A simulação pode dizer que a gravação depende de uma terceira pessoa: a profissional, para um
+ * horário fora da jornada dela. {@link Simulacao#aceite()} diz quem e por quê. O sistema pede o aceite
+ * DEPOIS da confirmação de quem pediu, e só então chama {@link #confirmar} — com a
+ * {@linkplain AceiteRegistrado prova} do aceite. Sem a prova, a ferramenta recusa gravar o que exigia
+ * aceite.
  */
 public non-sealed interface FerramentaDeEscrita extends Ferramenta {
 
@@ -35,26 +45,46 @@ public non-sealed interface FerramentaDeEscrita extends Ferramenta {
     Simulacao simular(JsonNode argumentos);
 
     /**
-     * Executa o comando que a pessoa confirmou, no contexto do usuário efetivo resolvido AGORA e
-     * dentro da transação que registra a confirmação: as duas coisas commitam juntas, ou nenhuma.
+     * Executa o comando confirmado, no contexto do usuário efetivo resolvido AGORA e dentro da
+     * transação que registra a decisão: as duas coisas commitam juntas, ou nenhuma.
      *
-     * <p>Recusa sai como {@code ErroDeDominio} com mensagem legível — ela chega à pessoa.
+     * <p>Recusa sai como {@code ErroDeDominio} com mensagem legível — ela chega às pessoas.
      *
      * @param intencaoId a intenção confirmada, para o rastro
      * @param comando    o {@link Simulacao#comando()} gravado na simulação, sem mudança
+     * @param aceite     a prova do aceite, quando a simulação o pediu; vazio quando não pediu
      */
-    Efetivacao confirmar(UUID intencaoId, JsonNode comando);
+    Efetivacao confirmar(UUID intencaoId, JsonNode comando, Optional<AceiteRegistrado> aceite);
 
     /**
      * @param resumo  o que a pessoa lê para decidir. Frase do servidor, com nomes do cadastro e
      *                horário no fuso do salão — é o que ela confirma
      * @param comando o que será executado se ela confirmar
+     * @param aceite  quem, além dela, precisa aceitar antes de gravar; {@code null} quando ninguém
      */
-    record Simulacao(String resumo, JsonNode comando) {
+    record Simulacao(String resumo, JsonNode comando, Aceite aceite) {
+
+        public Simulacao(String resumo, JsonNode comando) {
+            this(resumo, comando, null);
+        }
     }
 
     /**
-     * @param mensagem a resposta à pessoa
+     * RT-CNV-006 — alguém de fora da conversa precisa aceitar.
+     *
+     * @param nome     como a pessoa é chamada, para os textos
+     * @param telefone E.164, só dígitos: para onde vai o pedido, e o único número cuja resposta vale
+     * @param motivo   por que precisa aceitar, em texto de gente ("fora da jornada")
+     */
+    record Aceite(String nome, String telefone, String motivo) {
+    }
+
+    /** RT-CNV-006 — quem aceitou, por qual número, quando. */
+    record AceiteRegistrado(String nome, String telefone, Instant em) {
+    }
+
+    /**
+     * @param mensagem a resposta às pessoas
      * @param registro o que ficou gravado, para o rastro
      */
     record Efetivacao(String mensagem, JsonNode registro) {

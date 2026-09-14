@@ -11,6 +11,7 @@ import br.com.salao.equipe.internal.application.RegistrarBloqueioUseCase;
 import br.com.salao.equipe.internal.application.RemoverBloqueioUseCase;
 import br.com.salao.equipe.internal.infra.ProfissionaisJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
+import br.com.salao.iam.api.EstabelecimentoApi;
 import javax.sql.DataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,8 +41,9 @@ public class EquipeConfig {
 
     @Bean
     public CadastrarProfissionalUseCase cadastrarProfissionalUseCase(
-            ProfissionaisJdbc profissionais, AuditoriaApi auditoria) {
-        return new CadastrarProfissionalUseCase(profissionais, auditoria);
+            ProfissionaisJdbc profissionais, AuditoriaApi auditoria,
+            EstabelecimentoApi estabelecimentos) {
+        return new CadastrarProfissionalUseCase(profissionais, auditoria, estabelecimentos);
     }
 
     @Bean

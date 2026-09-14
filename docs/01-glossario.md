@@ -37,6 +37,8 @@ dono do salão. Em português, sem misturês (`AgendamentoRepository`, não `Boo
 | **FEFO** | *First Expired, First Out*. Sai primeiro o lote que vence primeiro | — |
 | **Conversa** | Sessão de diálogo com um contato em um canal (WhatsApp/Telegram) | `Conversa` |
 | **Intenção pendente** | Ação proposta pelo agente aguardando a confirmação da própria pessoa, com validade e máquina de estados; uma por telefone (RT-CNV-005) | `intencao_pendente`, `IntencoesJdbc` |
+| **Aceite** | A resposta, por botão no WhatsApp, de quem vai atender a um pedido que foge da regra — hoje, horário fora da jornada. Vale pelo número e pelo token do botão (RT-CNV-006) | `BotaoDeAceite`, `intencao_pendente.aceite_*` |
+| **Saída para a equipe** | A fila do que o agente diz a quem trabalha no salão: respostas, pedidos de confirmação e de aceite, desfechos | `mensagem_para_equipe`, `EnviadorDoWhatsApp` |
 | **Código de confirmação** | Os quatro dígitos que a pessoa responde ("SIM 4821") para gravar o que o agente propôs; reconhecido fora do modelo, nunca enviado a ele | `CodigoDeConfirmacao` |
 | **Simulação** | Prévia de uma escrita, sem gravar. Antecede toda confirmação | `Simulacao` |
 

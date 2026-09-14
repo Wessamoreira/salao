@@ -1,5 +1,6 @@
 package br.com.salao.conversacional.internal.application;
 
+import br.com.salao.conversacional.internal.domain.BotaoDeAceite;
 import br.com.salao.conversacional.internal.domain.CodigoDeConfirmacao;
 import br.com.salao.conversacional.internal.infra.IntencoesJdbc;
 import br.com.salao.iam.api.EstabelecimentoApi;
@@ -23,6 +24,10 @@ import tools.jackson.databind.node.JsonNodeFactory;
  *
  * <p>Uma pendente por telefone (RN-CNV-015): duas ao mesmo tempo fariam a pessoa confirmar uma
  * olhando para a outra.
+ *
+ * <p>RT-CNV-006: quando a simulação pede o aceite de alguém, quem, o número e o token do botão são
+ * gravados aqui, junto com o resto do que foi proposto — e o pedido de confirmação diz que, depois do
+ * SIM, ainda falta esse aceite.
  */
 public class ProporIntencao {
 
@@ -69,6 +74,12 @@ public class ProporIntencao {
             throw new IllegalStateException(
                     "a ferramenta " + proposta.ferramenta() + " simulou sem resumo ou sem comando");
         }
+        var aceite = simulacao.aceite();
+        if (aceite != null && (aceite.telefone() == null
+                || !aceite.telefone().matches("[0-9]{10,15}") || aceite.nome() == null)) {
+            throw new IllegalStateException(
+                    "a ferramenta " + proposta.ferramenta() + " pediu aceite sem nome ou telefone");
+        }
         UUID salao = TenantContext.obrigatorio();
         intencoes.travarTelefone(salao, proposta.telefone());
 
@@ -77,14 +88,17 @@ public class ProporIntencao {
                 intencoes.codigosDesde(proposta.telefone(), agora.minus(SEM_REPETIR)));
         Instant expira = agora.plus(validade);
         String pedido = CodigoDeConfirmacao.pedido(simulacao.resumo(), codigo,
-                expira.atZone(estabelecimentos.fusoDe(salao)).toLocalTime());
+                expira.atZone(estabelecimentos.fusoDe(salao)).toLocalTime(),
+                aceite == null ? null : aceite.nome(), aceite == null ? null : aceite.motivo());
 
         intencoes.encerrarPendente(proposta.telefone(), agora);
         UUID id = intencoes.inserir(salao, new IntencoesJdbc.Nova(proposta.execucaoId(),
                 proposta.telefone(), proposta.usuarioEfetivoId(), proposta.ferramenta(),
                 proposta.argumentos() == null ? JsonNodeFactory.instance.objectNode()
                         : proposta.argumentos(),
-                simulacao.comando(), simulacao.resumo(), pedido, codigo, agora, expira));
+                simulacao.comando(), simulacao.resumo(), pedido, codigo, agora, expira,
+                aceite == null ? null : new IntencoesJdbc.Aceite(aceite.nome(), aceite.telefone(),
+                        aceite.motivo(), BotaoDeAceite.novoToken(aleatorio), null)));
         return new Registrada(id, codigo, pedido, expira);
     }
 }

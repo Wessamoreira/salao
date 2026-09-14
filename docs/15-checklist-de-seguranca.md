@@ -93,6 +93,22 @@ fora. O que impede uma mensagem de gravar o que a pessoa não confirmou, em orde
 pessoa, de outro salão, horário tomado, permissão retirada, proposto imutável),
 `AgenteIT.leitura_que_grava`, `OrquestradorTest.modelo_comprometido`.
 
+### Quem aceita sem conta — RT-CNV-006
+
+A profissional aceita um horário fora da jornada tocando num botão, e ela não tem conta de usuário. O que
+impede o toque de outra pessoa de gravar:
+
+1. **o número de onde veio o toque tem de ser o número para onde o pedido foi** — atestado pela Meta, e
+   gravado na simulação, sem `update` (RN-CNV-019);
+2. **o id do botão carrega um token de 144 bits**, comparado em tempo constante: um id copiado de um
+   print não serve sozinho;
+3. **toda falha responde "não encontrei"**, sem dizer se o pedido existe;
+4. **aceitar não é permissão**: a gravação é em nome de quem pediu, com as trancas de RN-CNV-017 de novo;
+5. **a constraint `intencao_com_aceite_so_confirma_aceita`** impede confirmar sem o aceite registrado.
+
+**Onde verificar:** `AceiteDaProfissionalIT` (outro número, quem pediu tocando por ela, token forjado,
+a profissional mandando o código, permissão retirada), `BotaoDeAceiteTest`.
+
 ## 3. Senha protegida no banco ✅
 
 **Argon2id** — e a distinção importa: senha é **hasheada**, não criptografada. Criptografia é

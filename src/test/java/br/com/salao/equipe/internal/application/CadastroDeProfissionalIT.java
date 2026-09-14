@@ -286,4 +286,33 @@ class CadastroDeProfissionalIT extends AbstractPostgresIT {
                 TenantContext.executar(tenant, () -> cadastrar.executar(parceiro(CNPJ))))
                 .isInstanceOf(AccessDeniedException.class);
     }
+
+    // ------------------------------------------------------------------ RN-EQP-016
+
+    @Test
+    @DisplayName("telefone guardado em E.164, só dígitos, como o do cliente")
+    void telefone_normalizado() {
+        UUID tenant = salao();
+
+        var criado = TenantContext.obter(tenant, () -> cadastrar.executar(
+                new DadosDoProfissional("Marilda", null, CNPJ, TipoDeVinculo.PARCEIRO,
+                        "(11) 98765-4321", null, new BigDecimal("45.00"), null, null, null)));
+
+        assertThat(criado.telefone()).isEqualTo("5511987654321");
+    }
+
+    @Test
+    @DisplayName("telefone que não é telefone é recusado, apontando o campo")
+    void telefone_invalido() {
+        UUID tenant = salao();
+
+        Throwable erro = catchThrowable(() -> TenantContext.executar(tenant,
+                () -> cadastrar.executar(new DadosDoProfissional("Marilda", null, CNPJ,
+                        TipoDeVinculo.PARCEIRO, "123", null, new BigDecimal("45.00"), null, null,
+                        null))));
+
+        assertThat(codigoDe(erro)).isEqualTo("ER-EQP-DADOS_INVALIDOS");
+        assertThat(((ErroDeDominio) erro).campos()).singleElement().asString()
+                .contains("telefone");
+    }
 }

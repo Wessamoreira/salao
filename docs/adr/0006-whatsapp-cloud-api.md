@@ -29,3 +29,17 @@ isso não há produto para vender.
 24h só se envia template aprovado. **A verificação de negócio e a aprovação de template levam
 dias e são assíncronas — o cadastro na Meta começa na semana 1 da Fase 0, não na Fase 4**
 (risco R-03).
+
+## Nota de implementação — RT-CNV-006 (2026-09-14)
+
+**O adaptador de envio não ficou na `notificacao`.** O número do salão (`canal_whatsapp`) mora em
+`conversacional`, desde RT-CNV-001. Um adaptador na `notificacao` precisaria ler de lá, enquanto
+`conversacional` precisaria mandar por ele: dependência circular, que o teste de fronteira recusa. O
+port de envio é `EnviadorDoWhatsApp`, em `conversacional`. A notificação à cliente, quando tiver
+provedor, pode usá-lo por um `Mensageiro` implementado em `conversacional` — que depende da API da
+`notificacao`, e não o contrário.
+
+A decisão desta ADR — Cloud API oficial — não muda. Nenhum provedor está contratado: a saída espera na
+fila. Fora da janela de 24h, o pedido de aceite à profissional precisa de modelo aprovado com botão de
+resposta rápida, e o webhook já entende os dois formatos de toque (interativo e de modelo).
+
