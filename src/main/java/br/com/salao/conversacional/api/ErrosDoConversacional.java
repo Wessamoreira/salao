@@ -26,6 +26,16 @@ public enum ErrosDoConversacional implements CodigoDeErro {
     NUMERO_JA_EM_USO("ER-CNV-NUMERO_JA_EM_USO", HttpStatus.CONFLICT,
             "Este número já está ligado a outro estabelecimento"),
 
+    /**
+     * RT-CNV-005 — a pessoa confirmou uma ação que não existe mais no sistema.
+     *
+     * <p>Só acontece entre versões: a intenção foi proposta por uma ferramenta que a versão seguinte
+     * removeu ou transformou em leitura. A confirmação é recusada e registrada — executar "o que tiver
+     * o mesmo nome" seria executar outra coisa.
+     */
+    ACAO_INDISPONIVEL("ER-CNV-ACAO_INDISPONIVEL", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Ação indisponível pelo agente"),
+
     DADOS_INVALIDOS("ER-CNV-DADOS_INVALIDOS", HttpStatus.UNPROCESSABLE_ENTITY,
             "Dados do canal inválidos");
 

@@ -11,6 +11,8 @@ import br.com.salao.agenda.internal.application.EmpurrarAgendaUseCase;
 import br.com.salao.agenda.internal.application.CriarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.CriarRecorrenciaUseCase;
 import br.com.salao.agenda.internal.application.EncerrarRecorrenciaUseCase;
+import br.com.salao.agenda.internal.application.FerramentaAgendar;
+import br.com.salao.agenda.internal.application.FerramentaConsultarDisponibilidade;
 import br.com.salao.agenda.internal.application.PainelDoBalcaoUseCase;
 import br.com.salao.agenda.internal.application.RegistroDaSerie;
 import br.com.salao.agenda.internal.application.ReagendarUseCase;
@@ -35,6 +37,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import tools.jackson.databind.ObjectMapper;
 
 /** RT-AGD-001 — fiação do módulo agenda. */
 @Configuration(proxyBeanMethods = false)
@@ -201,5 +204,24 @@ public class AgendaConfig {
             Relogio relogio) {
         return new LembradorDeAgendamentos(manutencao, agenda, notificacao, clientes, equipe,
                 estabelecimentos, relogio);
+    }
+
+    // ------------------------------------------------------------------ RT-CNV-005
+
+    /** A disponibilidade, como ferramenta do agente — pelo caso de uso, com a tranca dele. */
+    @Bean
+    public FerramentaConsultarDisponibilidade ferramentaConsultarDisponibilidade(
+            ConsultarDisponibilidadeUseCase consultar, EstabelecimentoApi estabelecimentos,
+            ObjectMapper json) {
+        return new FerramentaConsultarDisponibilidade(consultar, estabelecimentos, json);
+    }
+
+    /** Marcar pelo agente: simula para o modelo, grava só com a confirmação da pessoa. */
+    @Bean
+    public FerramentaAgendar ferramentaAgendar(CriarAgendamentoUseCase criar, ServicoApi catalogo,
+                                               ClienteApi clientes, ProfissionalApi equipe,
+                                               EstabelecimentoApi estabelecimentos,
+                                               ObjectMapper json) {
+        return new FerramentaAgendar(criar, catalogo, clientes, equipe, estabelecimentos, json);
     }
 }

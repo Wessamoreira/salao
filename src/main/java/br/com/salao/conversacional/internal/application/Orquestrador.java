@@ -11,18 +11,23 @@ import br.com.salao.conversacional.internal.application.ModeloDeLinguagem.Result
 import br.com.salao.iam.api.ErrosDoIam;
 import br.com.salao.iam.api.UsuarioEfetivo;
 import br.com.salao.shared.agente.Ferramenta;
+import br.com.salao.shared.agente.FerramentaDeEscrita;
+import br.com.salao.shared.agente.FerramentaDeLeitura;
 import br.com.salao.shared.erro.ErroDeDominio;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 /**
- * RT-CNV-004 — conduz uma conversa: modelo, ferramentas, custo.
+ * RT-CNV-004 / RT-CNV-005 — conduz uma conversa: modelo, ferramentas, custo.
  *
  * <h2>O modelo é tratado como comprometido — RN-CNV-010</h2>
  *
@@ -32,8 +37,8 @@ import tools.jackson.databind.ObjectMapper;
  *
  * <ol>
  *   <li>o modelo só VÊ as ferramentas permitidas ({@link CatalogoDeFerramentas#permitidasPara});
- *   <li>qualquer pedido fora delas é RECUSADO aqui — inexistente, fora da lista ou de escrita —, e o
- *       resultado recusado volta ao modelo como erro, sem executar nada;
+ *   <li>qualquer pedido fora delas é RECUSADO aqui — inexistente ou fora da lista —, e o resultado
+ *       recusado volta ao modelo como erro, sem executar nada;
  *   <li>o que é executado passa pelo {@link ExecutorDeFerramenta}, que roda EM NOME DO usuário
  *       efetivo: o {@code @PreAuthorize} do caso de uso confere de novo, e recusa até a ferramenta
  *       que declarou permissão errada.
@@ -42,10 +47,13 @@ import tools.jackson.databind.ObjectMapper;
  * <p>Cada pedido fica registrado com o desfecho. Um ataque aparece no rastro como RECUSADO — e não
  * como silêncio.
  *
- * <h2>Escrita nunca é executada aqui</h2>
+ * <h2>Escrita não sai daqui gravada — RN-CNV-014</h2>
  *
- * <p>Nem se o usuário tiver permissão. Escrita passa por simular → confirmação humana explícita →
- * confirmar (RT-CNV-005/006). O LLM nunca escreve direto no domínio.
+ * <p>Pedir uma ferramenta de escrita produz uma SIMULAÇÃO e uma intenção pendente; o que volta ao
+ * modelo é o resumo e a informação de que nada foi gravado. Não é uma recusa num {@code if}: o
+ * {@link ExecutorDeFerramenta} não tem método que grave. Gravar é
+ * {@code FerramentaDeEscrita.confirmar}, e só a mensagem da própria pessoa com o código chega lá —
+ * sem passar por esta classe nem pelo modelo.
  *
  * <h2>Custo reservado antes de cada chamada — RN-CNV-011</h2>
  *
@@ -56,6 +64,8 @@ import tools.jackson.databind.ObjectMapper;
  * <p>Sem estado e sem transação: as chamadas ao modelo acontecem fora de qualquer conexão com o banco.
  */
 public class Orquestrador {
+
+    private static final Logger log = LoggerFactory.getLogger(Orquestrador.class);
 
     public static final int MAXIMO_DE_ITERACOES = 4;
     static final int MAX_TOKENS_DE_SAIDA = 1024;
@@ -95,8 +105,9 @@ public class Orquestrador {
 
     public enum DesfechoDaChamada {
         EXECUTADA,
+        /** Escrita simulada e intenção registrada para a pessoa confirmar. Nada foi gravado. */
+        PROPOSTA,
         INEXISTENTE,
-        ESCRITA_EXIGE_CONFIRMACAO,
         FORA_DA_LISTA,
         SEM_PERMISSAO,
         ERRO_DE_DOMINIO,
@@ -118,6 +129,7 @@ public class Orquestrador {
         List<FerramentaOferecida> ofertas = permitidas.stream()
                 .map(f -> new FerramentaOferecida(f.nome(), f.descricao(), f.esquemaDeEntrada()))
                 .toList();
+        boolean propoe = permitidas.stream().anyMatch(FerramentaDeEscrita.class::isInstance);
 
         var mensagens = new ArrayList<Mensagem>();
         for (Troca troca : conversa.historico()) {
@@ -134,7 +146,7 @@ public class Orquestrador {
         BigDecimal custo = BigDecimal.ZERO;
 
         for (int iteracao = 1; iteracao <= MAXIMO_DE_ITERACOES; iteracao++) {
-            Pedido pedido = new Pedido(sistema(conversa), List.copyOf(mensagens), ofertas,
+            Pedido pedido = new Pedido(sistema(conversa, propoe), List.copyOf(mensagens), ofertas,
                     MAX_TOKENS_DE_SAIDA);
             BigDecimal piorCaso = piorCaso(pedido);
             if (!orcamento.reservar(piorCaso)) {
@@ -177,9 +189,8 @@ public class Orquestrador {
     /**
      * Decide o que fazer com UM pedido de ferramenta.
      *
-     * <p>A ordem das recusas é para o diagnóstico: inexistente, depois escrita, depois fora da lista.
-     * Uma escrita nunca está na lista — mas dizer "escrita exige confirmação" explica melhor o que o
-     * modelo tentou do que "fora da lista".
+     * <p>Inexistente, depois fora da lista. Passou das duas: leitura executa, escrita propõe — e a
+     * forma da ferramenta decide qual, não uma declaração que pudesse mentir.
      */
     private ResultadoDeFerramenta avaliar(ChamadaDeFerramenta pedida, Set<String> permitidas,
                                           ExecutorDeFerramenta executor,
@@ -188,20 +199,30 @@ public class Orquestrador {
         if (ferramenta.isEmpty()) {
             return recusar(pedida, DesfechoDaChamada.INEXISTENTE, "ferramenta inexistente", registro);
         }
-        if (ferramenta.get().natureza() == Ferramenta.Natureza.ESCRITA) {
-            return recusar(pedida, DesfechoDaChamada.ESCRITA_EXIGE_CONFIRMACAO,
-                    "esta ação grava dados e exige confirmação humana; não pode ser executada daqui",
-                    registro);
-        }
         if (!permitidas.contains(pedida.nome())) {
             return recusar(pedida, DesfechoDaChamada.FORA_DA_LISTA,
                     "ferramenta não permitida para este usuário", registro);
         }
+        JsonNode argumentos = pedida.argumentos() == null || pedida.argumentos().isNull()
+                ? json.createObjectNode()
+                : pedida.argumentos();
         try {
-            JsonNode saida = executor.executar(ferramenta.get(), pedida.argumentos());
-            registro.add(new ChamadaRegistrada(pedida.nome(), pedida.argumentos(),
-                    DesfechoDaChamada.EXECUTADA));
-            return new ResultadoDeFerramenta(pedida.id(), json.writeValueAsString(saida), false);
+            return switch (ferramenta.get()) {
+                case FerramentaDeLeitura leitura -> {
+                    JsonNode saida = executor.executar(leitura, argumentos);
+                    registro.add(new ChamadaRegistrada(pedida.nome(), pedida.argumentos(),
+                            DesfechoDaChamada.EXECUTADA));
+                    yield new ResultadoDeFerramenta(pedida.id(), json.writeValueAsString(saida),
+                            false);
+                }
+                case FerramentaDeEscrita escrita -> {
+                    String resumo = executor.propor(escrita, argumentos);
+                    registro.add(new ChamadaRegistrada(pedida.nome(), pedida.argumentos(),
+                            DesfechoDaChamada.PROPOSTA));
+                    yield new ResultadoDeFerramenta(pedida.id(),
+                            json.writeValueAsString(proposta(resumo)), false);
+                }
+            };
         } catch (AccessDeniedException negado) {
             // A segunda tranca: a declaração de permissão da ferramenta estava errada, e o
             // @PreAuthorize do caso de uso recusou.
@@ -214,11 +235,31 @@ public class Orquestrador {
                     DesfechoDaChamada.ERRO_DE_DOMINIO));
             return new ResultadoDeFerramenta(pedida.id(), erro.getMessage(), true);
         } catch (RuntimeException falha) {
-            // Nada de stack trace para o modelo: é saída para entrada não confiável.
+            // Nada de stack trace para o modelo: é saída para entrada não confiável. E no log só a
+            // classe: a mensagem de uma exceção qualquer pode trazer dado pessoal, e o log sai do
+            // perímetro. A causa se reproduz no teste.
+            log.warn("Ferramenta {} falhou ({})", pedida.nome(), falha.getClass().getName());
             registro.add(new ChamadaRegistrada(pedida.nome(), pedida.argumentos(),
                     DesfechoDaChamada.FALHA));
             return new ResultadoDeFerramenta(pedida.id(), "a ferramenta falhou", true);
         }
+    }
+
+    /**
+     * O que o modelo fica sabendo de uma escrita: que nada foi gravado, e o que a pessoa vai ler.
+     *
+     * <p>O código de confirmação NÃO vai para o modelo. Não por ser segredo — vindo daqui ele não
+     * confirmaria nada —, mas porque o modelo não tem o que fazer com ele, e um código repetido no
+     * texto do modelo competiria com o pedido de confirmação do servidor.
+     */
+    private ObjectNode proposta(String resumo) {
+        ObjectNode saida = json.createObjectNode();
+        saida.put("situacao", "AGUARDANDO_CONFIRMACAO");
+        saida.put("gravado", false);
+        saida.put("resumo", resumo);
+        saida.put("confirmacao", "o sistema envia este resumo à pessoa com um código; "
+                + "só a resposta dela com o código grava");
+        return saida;
     }
 
     private static ResultadoDeFerramenta recusar(ChamadaDeFerramenta pedida,
@@ -233,15 +274,25 @@ public class Orquestrador {
      *
      * <p>"Não execute ações perigosas" num prompt é uma frase que a mensagem seguinte pode revogar. A
      * segurança está no que o modelo PODE fazer, e isso é decidido fora dele.
+     *
+     * <p>O parágrafo sobre gravação é descrição, não tranca: sem ele o modelo diria "marquei" ao
+     * receber o resumo. E só aparece para quem tem ferramenta de escrita — para os outros seria
+     * falar de uma porta que não existe.
      */
-    private static String sistema(Conversa conversa) {
-        return """
+    private static String sistema(Conversa conversa, boolean propoe) {
+        String base = """
                 Você é o assistente do salão %s e conversa pelo WhatsApp com %s, da equipe.
-                Agora no salão: %s.
+                Agora no salão: %s. Datas e horas são sempre as do salão.
                 Responda em português do Brasil, em poucas frases, como numa conversa de WhatsApp.
-                Use as ferramentas disponíveis para consultar informações; não invente dados.
-                Marcar, remarcar ou cancelar ainda não está disponível por aqui."""
+                Use as ferramentas disponíveis para consultar informações; não invente dados."""
                 .formatted(conversa.nomeDoSalao(), conversa.usuario().nome(), conversa.agoraNoSalao());
+        if (!propoe) {
+            return base;
+        }
+        return base + """
+
+                Ferramentas que gravam só preparam o pedido: o sistema envia à pessoa um resumo com \
+                um código, e nada é gravado até ela responder com o código.""";
     }
 
     private BigDecimal piorCaso(Pedido pedido) {

@@ -58,10 +58,15 @@ public enum StatusAgendamento {
      * <p>Quem marca no balcão já confirmou com a cliente ali — nasce {@code CONFIRMADO}. Quem
      * marca sozinho pelo site ou pelo WhatsApp nasce {@code SOLICITADO}, e o salão confirma: sem
      * essa distinção, a agenda de sábado encheria de horário que ninguém validou.
+     *
+     * <p>{@code AGENTE} nasce confirmado: quem marca é da equipe, e confirmou o resumo com o
+     * código (RT-CNV-005).
      */
     public static StatusAgendamento inicialPara(OrigemDoAgendamento origem) {
-        return origem == OrigemDoAgendamento.PAINEL || origem == OrigemDoAgendamento.RECORRENCIA
-                ? CONFIRMADO
-                : SOLICITADO;
+        // Switch exaustivo: uma origem nova não compila sem alguém decidir de que lado ela está.
+        return switch (origem) {
+            case PAINEL, RECORRENCIA, AGENTE -> CONFIRMADO;
+            case WEB, WHATSAPP -> SOLICITADO;
+        };
     }
 }

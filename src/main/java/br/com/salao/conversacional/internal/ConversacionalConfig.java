@@ -16,6 +16,13 @@ import br.com.salao.conversacional.internal.application.ModeloDeLinguagem;
 import br.com.salao.conversacional.internal.application.EnfileiradorDeInteracoes;
 import br.com.salao.conversacional.internal.application.ConcluirTranscricao;
 import br.com.salao.conversacional.internal.application.CatalogoDeFerramentas;
+import br.com.salao.conversacional.internal.application.ConfirmarPeloCodigo;
+import br.com.salao.conversacional.internal.application.EfetivarIntencao;
+import br.com.salao.conversacional.internal.application.ProporIntencao;
+import br.com.salao.conversacional.internal.application.TransacaoSomenteLeitura;
+import br.com.salao.conversacional.internal.infra.IntencoesJdbc;
+import java.security.SecureRandom;
+import java.time.Duration;
 import tools.jackson.databind.ObjectMapper;
 import br.com.salao.conversacional.internal.infra.TranscritorNaoConfigurado;
 import br.com.salao.conversacional.internal.infra.TranscricoesJdbc;
@@ -234,8 +241,48 @@ public class ConversacionalConfig {
             ModeloDeLinguagem modelo, PrecoDoModelo preco, ConsumoDeIaJdbc consumo,
             LimitePorTelefone limite,
             @Value("${app.agente.teto-diario-usd:2.00}") BigDecimal tetoDiario,
-            Relogio relogio, MeterRegistry metricas) {
+            ProporIntencao propor, ConfirmarPeloCodigo confirmar,
+            TransacaoSomenteLeitura somenteLeitura, Relogio relogio, MeterRegistry metricas) {
         return new ProcessadorDeInteracoes(manutencao, execucoes, usuarios, estabelecimentos,
-                orquestrador, modelo, preco, consumo, limite, tetoDiario, relogio, metricas);
+                orquestrador, modelo, preco, consumo, limite, tetoDiario, propor, confirmar,
+                somenteLeitura, relogio, metricas);
+    }
+
+    // ------------------------------------------------------------------ RT-CNV-005
+
+    @Bean
+    public IntencoesJdbc intencoesJdbc(DataSource dataSource, ObjectMapper json) {
+        return new IntencoesJdbc(JdbcClient.create(dataSource), json);
+    }
+
+    /** Bean, e não {@code new}: sem proxy, o {@code @Transactional(readOnly)} seria decoração. */
+    @Bean
+    public TransacaoSomenteLeitura transacaoSomenteLeitura() {
+        return new TransacaoSomenteLeitura();
+    }
+
+    /**
+     * {@code SecureRandom} sem que o código seja segredo — a identidade é o telefone atestado pela
+     * Meta —, mas também sem motivo para ele ser previsível.
+     */
+    @Bean
+    public ProporIntencao proporIntencao(
+            IntencoesJdbc intencoes, EstabelecimentoApi estabelecimentos, Relogio relogio,
+            @Value("${app.agente.intencao.validade:PT10M}") String validade) {
+        return new ProporIntencao(intencoes, estabelecimentos, new SecureRandom(), relogio,
+                Duration.parse(validade));
+    }
+
+    @Bean
+    public EfetivarIntencao efetivarIntencao(IntencoesJdbc intencoes,
+                                             CatalogoDeFerramentas catalogo,
+                                             UsuarioEfetivoApi usuarios, Relogio relogio) {
+        return new EfetivarIntencao(intencoes, catalogo, usuarios, relogio);
+    }
+
+    @Bean
+    public ConfirmarPeloCodigo confirmarPeloCodigo(IntencoesJdbc intencoes,
+                                                   EfetivarIntencao efetivar, Relogio relogio) {
+        return new ConfirmarPeloCodigo(intencoes, efetivar, relogio);
     }
 }

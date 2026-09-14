@@ -2,7 +2,7 @@ package br.com.salao.catalogo.internal.application;
 
 import br.com.salao.catalogo.api.ServicoResumo;
 import br.com.salao.iam.api.Permissao;
-import br.com.salao.shared.agente.Ferramenta;
+import br.com.salao.shared.agente.FerramentaDeLeitura;
 import java.util.Set;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -19,7 +19,7 @@ import tools.jackson.databind.node.ArrayNode;
  * {@code config:manage}, mas pelo canal o {@code :own} nunca chega (RN-IAM-021) e quem tem
  * {@code config:manage} exige segundo fator e não conversa (RN-IAM-020).
  */
-public class FerramentaListarServicos implements Ferramenta {
+public class FerramentaListarServicos implements FerramentaDeLeitura {
 
     private final ListarServicosUseCase listar;
     private final ObjectMapper json;
@@ -48,11 +48,6 @@ public class FerramentaListarServicos implements Ferramenta {
     @Override
     public Set<String> permissoesExigidas() {
         return Set.of(Permissao.AGENDA_LER_TODAS);
-    }
-
-    @Override
-    public Natureza natureza() {
-        return Natureza.LEITURA;
     }
 
     @Override

@@ -44,6 +44,11 @@ recusa. Sem `emNomeDe`, a mutação mostra: a chamada sai sem contexto de segura
 **Escrita nunca é executada aqui**, nem com permissão. Marcar, remarcar e cancelar passam por
 simular → confirmação humana explícita → confirmar (RT-CNV-005/006).
 
+> **Atualizado por RT-CNV-005.** A escrita deixou de ser uma `Natureza` recusada num `if`
+> (`ESCRITA_EXIGE_CONFIRMACAO`): o contrato foi selado em leitura e escrita, pedir uma escrita produz
+> uma `PROPOSTA`, e só a mensagem da pessoa com o código grava (RN-CNV-014). Os testes e mutações
+> abaixo são os desta rotina, com os nomes da época.
+
 E nenhuma frase de segurança no prompt. "Não execute ações perigosas" é uma instrução que a
 mensagem seguinte pode revogar.
 
@@ -185,7 +190,8 @@ terceira tranca depende de `emNomeDe`, e não de a ferramenta ser bem-comportada
       ferramentas, desfechos, tokens e custo — está em `execucao_do_agente`, sem a retenção e a
       anonimização que `04-modelo` prevê para `acao_ia`.
 - [ ] **Argumentos de ferramenta não são validados contra o esquema.** Cada ferramenta valida os
-      seus, como uma rota HTTP faria; um validador de JSON Schema central ainda não existe.
+      seus, como uma rota HTTP faria — desde RT-CNV-005 com `ArgumentosDaFerramenta`; um validador de
+      JSON Schema central ainda não existe.
 - [ ] **O teto é um valor só para todos os salões.** O controle é por salão; o número, não. Um
       campo na configuração do salão é o próximo passo quando alguém pedir.
 - [ ] **O limite por telefone é por instância.** Com N instâncias, é N vezes maior. O teto, no

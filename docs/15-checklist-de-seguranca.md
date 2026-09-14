@@ -71,6 +71,28 @@ Fora de `/api` de propósito: o limitador de taxa por IP (item 4) conta por orig
 `WebhookDoWhatsAppWebIT` (a rota passa assinada e é recusada sem assinatura, e o cadastro do canal
 continua exigindo 401), `WebhookDoWhatsAppControllerTest` (503, 403, 413 e a ordem entre eles).
 
+### O agente que grava, e o que o segura — RT-CNV-005
+
+A outra porta de escrita sem tela: um modelo de linguagem, tratado como comprometido, lendo texto de
+fora. O que impede uma mensagem de gravar o que a pessoa não confirmou, em ordem:
+
+1. **o modelo só vê o que o usuário efetivo pode** — lista calculada no servidor (RN-CNV-010);
+2. **escrita não tem `executar`**: o contrato é selado, e o que o modelo alcança é a simulação
+   (RN-CNV-014);
+3. **leitura e simulação rodam em transação somente leitura** — nem a ferramenta que mente sobre a
+   própria forma consegue gravar;
+4. **grava só a mensagem inteira "SIM" + código**, reconhecida antes do modelo; o código não vai ao
+   modelo, e o resumo que a pessoa confirma é do servidor (RN-CNV-015);
+5. **na confirmação, identidade, dono, validade e permissões são resolvidos de novo**, e o
+   `@PreAuthorize` do caso de uso confere por último (RN-CNV-017);
+6. **intenção e gravação no mesmo commit, sob trava**, e o proposto é imutável por grant de coluna
+   (RN-CNV-016).
+
+**Onde verificar:** `ArquiteturaTest.so_a_confirmacao_da_pessoa_grava_pelo_agente`,
+`IntencaoPendenteIT` (o modelo não confirma, código errado, vencido, trocado, simultâneo, de outra
+pessoa, de outro salão, horário tomado, permissão retirada, proposto imutável),
+`AgenteIT.leitura_que_grava`, `OrquestradorTest.modelo_comprometido`.
+
 ## 3. Senha protegida no banco ✅
 
 **Argon2id** — e a distinção importa: senha é **hasheada**, não criptografada. Criptografia é

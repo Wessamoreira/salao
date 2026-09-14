@@ -1,15 +1,21 @@
 package br.com.salao.conversacional.internal.infra;
 
+import br.com.salao.conversacional.internal.application.ConfirmarPeloCodigo;
 import br.com.salao.conversacional.internal.application.ExecutorDeFerramenta;
 import br.com.salao.conversacional.internal.application.FalhaPermanente;
 import br.com.salao.conversacional.internal.application.ModeloDeLinguagem;
 import br.com.salao.conversacional.internal.application.Orcamento;
 import br.com.salao.conversacional.internal.application.Orquestrador;
 import br.com.salao.conversacional.internal.application.PrecoDoModelo;
+import br.com.salao.conversacional.internal.application.ProporIntencao;
+import br.com.salao.conversacional.internal.application.TransacaoSomenteLeitura;
+import br.com.salao.conversacional.internal.domain.CodigoDeConfirmacao;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.api.Identificacao;
 import br.com.salao.iam.api.UsuarioEfetivo;
 import br.com.salao.iam.api.UsuarioEfetivoApi;
+import br.com.salao.shared.agente.FerramentaDeEscrita;
+import br.com.salao.shared.agente.FerramentaDeLeitura;
 import br.com.salao.shared.manutencao.ConexaoDeManutencao;
 import br.com.salao.shared.tempo.EsperaEntreTentativas;
 import br.com.salao.shared.tempo.Relogio;
@@ -29,9 +35,10 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
+import tools.jackson.databind.JsonNode;
 
 /**
- * RT-CNV-004 — quem tira a conversa da fila e a conduz.
+ * RT-CNV-004 / RT-CNV-005 — quem tira a conversa da fila e a conduz.
  *
  * <p>Na ordem, e cada passo pode encerrar sem gastar nada:
  *
@@ -39,15 +46,18 @@ import org.springframework.scheduling.annotation.Scheduled;
  *   <li><b>identidade</b> (RT-CNV-002): quem não é da equipe, ou é e o canal não atende, é RECUSADO sem
  *       chamar o modelo — docs/05, "o bot responde como desconhecido e não executa nada";
  *   <li><b>limite por telefone</b>: um número em laço não consome o dia do salão;
+ *   <li><b>confirmação</b> (RT-CNV-005): "SIM 4821" é reconhecido aqui e decidido sem o modelo — nem
+ *       custo, nem conversa, e nenhum caminho do modelo até a gravação;
  *   <li><b>teto de custo</b>: reservado antes de cada chamada, dentro do orquestrador;
- *   <li><b>conversa</b>, fora de transação, com as ferramentas executadas em nome do usuário efetivo.
+ *   <li><b>conversa</b>, fora de transação, com as ferramentas executadas em nome do usuário efetivo e
+ *       dentro de uma transação somente leitura.
  * </ol>
  *
  * <p>A reserva da linha é a mesma do processador de áudio (RN-CNV-008): um comando atômico, que vence.
  *
- * <p><strong>Nada é enviado a ninguém daqui.</strong> A resposta fica registrada; entregá-la pelo
- * WhatsApp é uma pendência explícita da rotina — não existe hoje um mensageiro real, e o sistema não
- * sabe falar com a própria equipe pela fila de notificação.
+ * <p><strong>Nada é enviado a ninguém daqui.</strong> A resposta fica registrada, e o pedido de
+ * confirmação fica na intenção; entregá-los pelo WhatsApp é uma pendência explícita — não existe hoje
+ * um mensageiro real, e o sistema não sabe falar com a própria equipe pela fila de notificação.
  */
 public class ProcessadorDeInteracoes {
 
@@ -84,6 +94,9 @@ public class ProcessadorDeInteracoes {
     private final ConsumoDeIaJdbc consumo;
     private final LimitePorTelefone limite;
     private final BigDecimal tetoDiario;
+    private final ProporIntencao propor;
+    private final ConfirmarPeloCodigo confirmar;
+    private final TransacaoSomenteLeitura somenteLeitura;
     private final Relogio relogio;
     private final MeterRegistry metricas;
 
@@ -91,7 +104,9 @@ public class ProcessadorDeInteracoes {
                                    UsuarioEfetivoApi usuarios, EstabelecimentoApi estabelecimentos,
                                    Orquestrador orquestrador, ModeloDeLinguagem modelo,
                                    PrecoDoModelo preco, ConsumoDeIaJdbc consumo,
-                                   LimitePorTelefone limite, BigDecimal tetoDiario, Relogio relogio,
+                                   LimitePorTelefone limite, BigDecimal tetoDiario,
+                                   ProporIntencao propor, ConfirmarPeloCodigo confirmar,
+                                   TransacaoSomenteLeitura somenteLeitura, Relogio relogio,
                                    MeterRegistry metricas) {
         this.manutencao = manutencao;
         this.execucoes = execucoes;
@@ -103,12 +118,18 @@ public class ProcessadorDeInteracoes {
         this.consumo = consumo;
         this.limite = limite;
         this.tetoDiario = tetoDiario;
+        this.propor = propor;
+        this.confirmar = confirmar;
+        this.somenteLeitura = somenteLeitura;
         this.relogio = relogio;
         this.metricas = metricas;
     }
 
     private record Reservada(UUID id, UUID estabelecimentoId, String telefone, String entrada,
                              int tentativas) {
+    }
+
+    private record Simulada(UUID usuarioId, FerramentaDeEscrita.Simulacao simulacao) {
     }
 
     @Scheduled(fixedDelayString = "${app.agente.intervalo:PT15S}",
@@ -122,7 +143,8 @@ public class ProcessadorDeInteracoes {
 
     /** Exposto para teste e para acionamento manual pelo runbook. */
     public int executar() {
-        // Sem modelo ou sem preço, nada é reservado: as conversas esperam sem gastar tentativa.
+        // Sem modelo ou sem preço, nada é reservado: as conversas esperam sem gastar tentativa. Nem
+        // as confirmações andam — mas sem modelo não nasce intenção, e a que ficou vence sozinha.
         if (!modelo.configurado() || !preco.configurado()) {
             return 0;
         }
@@ -194,6 +216,18 @@ public class ProcessadorDeInteracoes {
             return;
         }
 
+        // RT-CNV-005 — a confirmação é reconhecida, nunca interpretada: esta mensagem não chega ao
+        // modelo, e a resposta a ela é do servidor.
+        var codigo = CodigoDeConfirmacao.codigoEm(r.entrada());
+        if (codigo.isPresent()) {
+            var decisao = confirmar.executar(r.telefone(), usuario.usuarioId(), r.id(),
+                    codigo.get());
+            execucoes.concluirSemModelo(r.id(), usuario.usuarioId(), decisao.resposta(),
+                    relogio.agora());
+            contar(desfechoDaConfirmacao(decisao.desfecho()));
+            return;
+        }
+
         ZoneId fuso = estabelecimentos.fusoDe(salao);
         LocalDate dia = relogio.hojeEm(fuso);
         String nomeDoSalao = estabelecimentos.configuracao(salao).map(c -> c.nome()).orElse("");
@@ -212,9 +246,27 @@ public class ProcessadorDeInteracoes {
                 consumo.liquidar(salao, dia, reservado, real, entrada, saida);
             }
         };
-        // Cada ferramenta roda EM NOME DE quem escreveu — resolvido de novo na hora (RN-IAM-019).
-        ExecutorDeFerramenta executor = (ferramenta, argumentos) ->
-                usuarios.emNomeDe(r.telefone(), u -> ferramenta.executar(argumentos));
+
+        // Cada ferramenta roda EM NOME DE quem escreveu — resolvido de novo na hora (RN-IAM-019) — e
+        // numa transação somente leitura: nem a leitura nem a simulação conseguem gravar.
+        ExecutorDeFerramenta executor = new ExecutorDeFerramenta() {
+            @Override
+            public JsonNode executar(FerramentaDeLeitura ferramenta, JsonNode argumentos) {
+                return usuarios.emNomeDe(r.telefone(),
+                        u -> somenteLeitura.executar(() -> ferramenta.executar(argumentos)));
+            }
+
+            @Override
+            public String propor(FerramentaDeEscrita ferramenta, JsonNode argumentos) {
+                Simulada simulada = usuarios.emNomeDe(r.telefone(), u -> new Simulada(
+                        u.usuarioId(),
+                        somenteLeitura.executar(() -> ferramenta.simular(argumentos))));
+                propor.executar(new ProporIntencao.Proposta(r.id(), r.telefone(),
+                        simulada.usuarioId(), ferramenta.nome(), argumentos,
+                        simulada.simulacao()));
+                return simulada.simulacao().resumo();
+            }
+        };
 
         var resultado = orquestrador.conduzir(new Orquestrador.Conversa(usuario, nomeDoSalao,
                 agoraNoSalao, r.entrada(), historico), orcamento, executor);
@@ -227,6 +279,16 @@ public class ProcessadorDeInteracoes {
         }
         execucoes.concluir(r.id(), usuario.usuarioId(), resultado, relogio.agora());
         contar("concluida");
+    }
+
+    private static String desfechoDaConfirmacao(ConfirmarPeloCodigo.Desfecho desfecho) {
+        return switch (desfecho) {
+            case CONFIRMADA -> "confirmada";
+            case RECUSADA -> "confirmacao_recusada";
+            case VENCIDA -> "confirmacao_vencida";
+            case JA_DECIDIDA -> "confirmacao_ja_decidida";
+            case SEM_PEDIDO -> "confirmacao_sem_pedido";
+        };
     }
 
     private void registrar(Reservada r, Runnable gravacao) {

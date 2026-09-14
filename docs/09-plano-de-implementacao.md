@@ -170,6 +170,11 @@ automático, e criar uma migration sem `estabelecimento_id` quebra o build.
 `confirmar`. O LLM nunca escreve direto no domínio. Mensagem de cliente é entrada não confiável;
 a defesa contra prompt injection é a permissão do usuário efetivo, não o system prompt.
 
+**Como RT-CNV-005 implementou o padrão:** `confirmar` não é ferramenta do modelo — a confirmação é a
+mensagem "SIM" + código da própria pessoa, reconhecida fora dele. Por isso a `IntencaoPendente`
+(validade, estados, uma por telefone) nasceu em RT-CNV-005, e RT-CNV-006 fica com a negociação com o
+profissional e os botões.
+
 ---
 
 ## Fase 5 — Conciliação

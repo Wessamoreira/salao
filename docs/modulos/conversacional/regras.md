@@ -257,11 +257,15 @@ própria recusa.
 
 ### RN-CNV-010 — O modelo é tratado como comprometido: três trancas, nenhuma no prompt
 
-**Enunciado.** O modelo só vê as ferramentas permitidas ao usuário efetivo — de leitura, e com TODAS
-as permissões declaradas presentes. Qualquer pedido fora delas é recusado pelo orquestrador, com o
-motivo registrado: `INEXISTENTE`, `ESCRITA_EXIGE_CONFIRMACAO` ou `FORA_DA_LISTA`. O que passa é
-executado **em nome do** usuário efetivo, e o `@PreAuthorize` do caso de uso confere de novo
-(`SEM_PERMISSAO`). Escrita nunca é executada pelo orquestrador, nem com permissão.
+**Enunciado.** O modelo só vê as ferramentas permitidas ao usuário efetivo — com TODAS as permissões
+declaradas presentes. Qualquer pedido fora delas é recusado pelo orquestrador, com o motivo
+registrado: `INEXISTENTE` ou `FORA_DA_LISTA`. O que passa é executado **em nome do** usuário
+efetivo, e o `@PreAuthorize` do caso de uso confere de novo (`SEM_PERMISSAO`). Escrita nunca é
+executada pelo orquestrador, nem com permissão: vira `PROPOSTA` (RN-CNV-014).
+
+> **Revisada em RT-CNV-005.** Até ali a escrita era recusada num `if`, com o desfecho
+> `ESCRITA_EXIGE_CONFIRMACAO`. O contrato foi selado em leitura e escrita, e o orquestrador deixou de
+> ter como gravar — não há mais o que recusar.
 
 **Motivo.** docs/05: prompt injection "tem que esbarrar em permissão, não em prompt". A pergunta de
 projeto não é como impedir o modelo de ser enganado — é o que acontece quando ele for. Resposta:
@@ -276,9 +280,9 @@ seguinte revoga.
 
 **Onde é garantida.** `CatalogoDeFerramentas.permitidasPara` · `Orquestrador.avaliar` ·
 `ProcessadorDeInteracoes` (executor por `UsuarioEfetivoApi.emNomeDe`).
-**Rotinas.** RT-CNV-004 · **Teste.** `OrquestradorTest.modelo_comprometido`, `.so_ve_a_lista`,
-`.escrita_com_permissao`, `AgenteIT.modelo_comprometido`, `CatalogoDeFerramentasTest.escrita_nunca`,
-`.sem_declaracao`
+**Rotinas.** RT-CNV-004, RT-CNV-005 · **Teste.** `OrquestradorTest.modelo_comprometido`,
+`.so_ve_a_lista`, `.escrita_vira_proposta`, `AgenteIT.modelo_comprometido`,
+`CatalogoDeFerramentasTest.escrita_com_permissao`, `.sem_declaracao`
 **Configurável?** Não · **Origem.** 2026-09-13
 
 ---
@@ -334,8 +338,9 @@ pede ferramenta sem fim consumiria o dia do salão numa conversa só.
 ### RN-CNV-013 — Ferramenta é contribuída pelo módulo dono, e declara o que exige
 
 **Enunciado.** O contrato `Ferramenta` mora em `shared.agente`. Cada módulo publica as suas como
-beans, chamando os PRÓPRIOS casos de uso. Toda ferramenta declara nome
-(`[a-zA-Z0-9_-]{1,64}`), natureza e permissões exigidas; sem permissão declarada, nunca é oferecida.
+beans, chamando os PRÓPRIOS casos de uso. Toda ferramenta declara nome (`[a-zA-Z0-9_-]{1,64}`) e
+permissões exigidas, e tem uma de duas formas — leitura ou escrita (RN-CNV-014); sem permissão
+declarada, nunca é oferecida.
 Nome repetido ou fora do formato derruba a aplicação na subida.
 
 **Motivo.** A segunda tranca de RN-CNV-010 só existe se a ferramenta chamar o caso de uso com o
@@ -348,7 +353,117 @@ Ferramenta que não diz o que exige é tratada como perigosa. E dois beans com o
 modelo pedir um e o sistema executar o outro, sem erro nenhum — por isso a falha é na subida.
 
 **Onde é garantida.** `shared.agente.Ferramenta` · `CatalogoDeFerramentas` (construtor) ·
-`FerramentaListarServicos` (a primeira, do `catalogo`).
+`FerramentaListarServicos` (a primeira, do `catalogo`) · desde RT-CNV-005, `FerramentaBuscarClientes`
+(`cliente`), `FerramentaConsultarDisponibilidade` e `FerramentaAgendar` (`agenda`).
 **Rotinas.** RT-CNV-004 · **Teste.** `CatalogoDeFerramentasTest.nome_repetido`, `.nome_invalido`,
 `.todas_as_permissoes`, `AgenteIT.recepcao_conversa`
+**Configurável?** Não · **Origem.** 2026-09-13
+
+---
+
+### RN-CNV-014 — A escrita pelo agente não tem `executar`: o modelo propõe, a pessoa grava
+
+**Enunciado.** Ferramenta tem duas formas, seladas: leitura (`executar`) e escrita (`simular` e
+`confirmar`). O que o modelo alcança de uma escrita é `simular`, que produz uma **intenção pendente**
+com resumo do servidor, comando e código. `confirmar` só é chamado por `EfetivarIntencao`, que só é
+alcançada pela mensagem da própria pessoa com o código. Leitura e simulação rodam dentro de uma
+transação somente leitura: o banco recusa escrita vinda delas.
+
+**Motivo.** O padrão inegociável do plano: toda escrita passa por simular → confirmação humana
+explícita → confirmar, e o LLM nunca escreve no domínio. Com `confirmar` como ferramenta do modelo,
+quem decidiria que houve confirmação seria o modelo — tratado como comprometido (RN-CNV-010). Um ataque
+que o fizesse simular e confirmar na mesma volta gravaria sem ninguém confirmar nada.
+
+Selada porque a forma proibida — escrita com `executar` — passa a não compilar; o `if` que a recusava
+em RT-CNV-004 dependia de alguém declarar a natureza certa. A regra de arquitetura cobre o que o tipo
+não cobre: outra classe chamando `confirmar`.
+
+A transação somente leitura existe porque a forma é declarada por quem escreve a ferramenta, e pode
+estar errada. Uma "leitura" que grava, ou uma simulação que grava, esbarra no banco.
+
+**Onde é garantida.** `shared.agente.Ferramenta` (`sealed`) · `ExecutorDeFerramenta` (não tem método
+que grave) · `TransacaoSomenteLeitura` · `CriarAgendamentoUseCase.simular` (`readOnly`) ·
+`ArquiteturaTest.so_a_confirmacao_da_pessoa_grava_pelo_agente`.
+**Rotinas.** RT-CNV-005 · **Teste.** `OrquestradorTest.escrita_vira_proposta`,
+`.modelo_comprometido`, `AgenteIT.leitura_que_grava`, `IntencaoPendenteIT.o_modelo_nao_confirma`,
+`.caminho_completo`, `FerramentasDaAgendaIT.simular_nao_grava`
+**Configurável?** Não · **Origem.** 2026-09-13
+
+---
+
+### RN-CNV-015 — Confirmação é a mensagem inteira "SIM + código", reconhecida antes do modelo
+
+**Enunciado.** Mensagem cujo texto INTEIRO é "SIM" seguido do código de quatro dígitos é reconhecida
+pelo processador **antes** de qualquer chamada ao modelo, e decidida sem ele, com resposta escrita pelo
+servidor. Com qualquer outra coisa na mensagem, não é confirmação. Cada telefone tem no máximo UMA
+intenção pendente: a nova substitui a anterior. A intenção vale por dez minutos. O código não repete
+os do mesmo telefone nas últimas 24 horas e não é enviado ao modelo.
+
+**Motivo.** "Sim" responde a qualquer pergunta — a "quer ver outro horário?" também. O código amarra a
+resposta a UM resumo: quem responde "SIM 4821" confirmou aquele texto, e não o que estiver pendente
+quando a mensagem for processada. A mensagem inteira, porque "sim 4821 e cancela o resto" com o
+reconhecimento parcial seria uma confirmação carregando um pedido; assim, vai ao modelo, que não grava.
+
+O código não é segredo — quem manda mensagem daquele número é a pessoa, atestada pela Meta
+(RN-CNV-001). É vínculo e intenção. Não vai ao modelo porque ele não tem o que fazer com o código, e um
+código no texto do modelo competiria com o pedido de confirmação do servidor.
+
+Uma pendente por telefone porque duas fariam a pessoa confirmar uma olhando para a outra. A validade
+porque um "SIM" de amanhã confirma um resumo que já não descreve a agenda de hoje.
+
+**Onde é garantida.** `CodigoDeConfirmacao` (expressão sobre o texto inteiro, sorteio, pedido) ·
+`ProcessadorDeInteracoes.conduzir` (antes do orçamento e do modelo) · `ProporIntencao` (encerra a
+anterior no mesmo commit) · `V54`, índice `uma_intencao_pendente_por_telefone`.
+**Rotinas.** RT-CNV-005 · **Teste.** `CodigoDeConfirmacaoTest` (reconhece, não reconhece, sorteio,
+pedido), `IntencaoPendenteIT.caminho_completo` (o modelo não é chamado), `.codigo_errado`, `.vencida`,
+`.nova_proposta_substitui`
+**Configurável?** A validade (`app.agente.intencao.validade`) · **Origem.** 2026-09-13
+
+---
+
+### RN-CNV-016 — Confirmar grava exatamente uma vez: intenção e gravação no mesmo commit
+
+**Enunciado.** A intenção passa a `CONFIRMADA` na MESMA transação em que a ferramenta grava, sob trava
+da linha da intenção. Recusa da gravação desfaz a transação inteira, e é registrada numa transação
+própria (`RECUSADA`, com o código do erro). O que foi proposto — `comando`, `resumo`,
+`pedido_de_confirmacao`, `codigo` — não pode ser alterado nem apagado pela aplicação.
+
+**Motivo.** "No máximo uma vez" sem chave de idempotência: se o processo cair entre gravar e marcar,
+não houve gravação; duas confirmações se enfileiram na trava e a segunda encontra `CONFIRMADA`; a
+mensagem que volta à fila depois de uma queda responde "já estava confirmado". Uma chave de
+idempotência repetiria a mesma garantia em outra tabela.
+
+A recusa fora da transação é a lição de RN-ARQ-003: registrada dentro, seria desfeita junto com a
+gravação que ela recusou.
+
+A imutabilidade é o que dá sentido à confirmação. Se o comando pudesse mudar depois do "SIM", a pessoa
+teria confirmado um texto e o sistema executado outro.
+
+**Onde é garantida.** `EfetivarIntencao` (`@Transactional`, `IntencoesJdbc.travar`) ·
+`ConfirmarPeloCodigo` (registro da recusa) · `V54` (`revoke update, delete` e `grant update` só nas
+colunas da decisão).
+**Rotinas.** RT-CNV-005 · **Teste.** `IntencaoPendenteIT.confirmacoes_simultaneas`,
+`.confirmacao_repetida`, `.horario_tomado_no_meio`, `.proposto_e_imutavel`
+**Configurável?** Não · **Origem.** 2026-09-13
+
+---
+
+### RN-CNV-017 — Na confirmação, as trancas são resolvidas de novo
+
+**Enunciado.** Ao confirmar, o usuário efetivo é resolvido pelo telefone NAQUELE instante e precisa ser
+o mesmo que propôs, ter as permissões que a ferramenta declara e passar pelo `@PreAuthorize` do caso de
+uso. Intenção de outra pessoa ou de outro salão é tratada como inexistente.
+
+**Motivo.** docs/05: permissões são resolvidas na hora da ação, nunca guardadas com a mensagem. Entre o
+resumo e o "SIM" a recepcionista pode ter sido desativada, mudado de perfil, ou o número pode ter
+passado a outra pessoa. Nada do momento da proposta autoriza a gravação.
+
+"Não encontrei", e não "é de outra pessoa": confirmar a existência de um pedido alheio seria dizer a
+quem não é dono que existe algo ali.
+
+**Onde é garantida.** `EfetivarIntencao` (`emNomeDe`, `CatalogoDeFerramentas.podeUsar`, comparação
+com `usuario_efetivo_id`) · `ConfirmarPeloCodigo` (filtra pelo usuário) · RLS de `intencao_pendente`.
+**Rotinas.** RT-CNV-005 · **Teste.** `IntencaoPendenteIT.permissao_retirada_no_meio`,
+`.telefone_trocou_de_dono` (a comparação com o dono — a busca por telefone não a cobre),
+`.outra_pessoa_nao_confirma`, `.outro_salao`, `FerramentasDaAgendaIT.confirmar_confere_de_novo`
 **Configurável?** Não · **Origem.** 2026-09-13

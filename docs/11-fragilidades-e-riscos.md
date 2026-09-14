@@ -81,7 +81,10 @@ perfil do usuário efetivo; escrita só via `simular` → confirmação humana �
 custo; log completo em `acao_ia`.
 **Teste obrigatório:** suíte de mensagens adversariais que devem falhar por autorização.
 **Estado:** coberto em RT-CNV-004 — `OrquestradorTest.modelo_comprometido` e
-`AgenteIT.modelo_comprometido`, com o modelo roteirizado para obedecer ao ataque.
+`AgenteIT.modelo_comprometido`, com o modelo roteirizado para obedecer ao ataque. A escrita, em
+RT-CNV-005: o modelo só propõe, e grava apenas a resposta da pessoa com o código, reconhecida fora do
+modelo — `IntencaoPendenteIT.o_modelo_nao_confirma`, `AgenteIT.leitura_que_grava` e
+`ArquiteturaTest.so_a_confirmacao_da_pessoa_grava_pelo_agente`. Falta o log em `acao_ia` (RT-CNV-007).
 
 ### R-11 · Ampere ARM indisponível na Oracle
 **Dano:** o plano de infra gratuito não se materializa.

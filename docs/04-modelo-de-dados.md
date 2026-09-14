@@ -367,6 +367,11 @@ create table acao_ia (
 é "o bot, a pedido da recepção, às 14h32, com esta transcrição". Sem essa tabela, a Fase 4 é
 indefensável em qualquer reclamação.
 
+`intencao_pendente` (RT-CNV-005, `V54`) é o outro lado: não o que o agente fez, mas o que ele
+**propôs** e alguém decidiu — resumo, comando, código, validade e a mensagem que decidiu. `comando`,
+`resumo` e `codigo` não mudam depois de gravados; só as colunas da decisão têm `update`. Há uma
+pendente por telefone. É a resposta a "eu confirmei isso?".
+
 ## Retenção — o que apaga e quando
 
 Nenhuma tabela de log cresce para sempre. Job diário:
@@ -375,6 +380,7 @@ Nenhuma tabela de log cresce para sempre. Job diário:
 |---|---|---|
 | `auditoria` | 5 anos (agenda e financeiro), 1 ano (resto) | Prazo de disputa |
 | `acao_ia` | 12 meses, com transcrição anonimizada aos 90 dias | LGPD: minimização |
+| `intencao_pendente` | 12 meses, como `acao_ia` — **job ainda não existe** (RT-CNV-005) | O resumo traz nome de cliente |
 | `conversa_mensagem` | 90 dias | Nada exige mais |
 | `idempotencia` | 7 dias | TTL da chave |
 | `event_publication` (Modulith) | Completos apagados em 7 dias | Senão cresce sem limite |

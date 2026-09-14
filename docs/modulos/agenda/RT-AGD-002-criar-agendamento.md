@@ -283,6 +283,7 @@ Nenhum efeito em estoque ou financeiro. Agendamento não movimenta dinheiro — 
 | Alocar recurso na criação | Alocar no atendimento | Recurso alocado tarde vira conflito na hora, com a cliente presente |
 | Jornada na aplicação | Constraint de banco | Jornada é de outro módulo e muda retroativamente |
 | Rejeitar 404 no escopo `:own` | 403 | 403 confirma que o recurso existe |
+| `simular` no mesmo caso de uso (RT-CNV-005) | Um `SimularAgendamentoUseCase` à parte | As duas passam por `preparar`; duas cópias da validação divergiriam, e a divergente seria a que o agente mostra à pessoa |
 
 ## 18. Pendências
 

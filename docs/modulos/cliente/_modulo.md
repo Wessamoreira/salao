@@ -45,6 +45,13 @@ e que ninguém saberia invalidar.
 | [RT-CLI-006](RT-CLI-006-tela-de-clientes.md) — tela de clientes | implementada |
 | [RT-CLI-007](RT-CLI-007-editar-cliente.md) — editar cliente | implementada |
 
+## Ferramentas do agente
+
+`buscar_clientes` (RT-CNV-005) — a busca de RT-CLI-002 para o agente conversacional, chamando
+`BuscarClientesUseCase` com o `@PreAuthorize` dele. Devolve **só** id, nome, apelido e os quatro
+últimos dígitos do telefone: o resultado vai para o provedor de LLM, e o número inteiro e o e-mail não
+têm o que fazer numa conversa. Dez resultados no máximo — dez Marias pedem um termo melhor.
+
 ## Regras
 
 Ver [regras.md](regras.md) — RN-CLI-001 a RN-CLI-030.

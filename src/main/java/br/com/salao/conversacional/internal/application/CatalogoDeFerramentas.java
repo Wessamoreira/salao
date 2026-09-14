@@ -15,9 +15,12 @@ import java.util.regex.Pattern;
  * <h2>A lista permitida é calculada no servidor, das permissões</h2>
  *
  * <p>docs/05: "a defesa é a allowlist de tools resolvida no servidor pelo perfil do usuário efetivo —
- * nunca uma instrução no system prompt". Uma ferramenta é oferecida quando é de LEITURA e o usuário
- * tem TODAS as permissões que ela declara. Ferramenta sem permissão declarada nunca é oferecida:
- * quem não disse o que exige é tratado como perigoso, não como livre.
+ * nunca uma instrução no system prompt". Uma ferramenta é oferecida quando o usuário tem TODAS as
+ * permissões que ela declara. Ferramenta sem permissão declarada nunca é oferecida: quem não disse o
+ * que exige é tratado como perigoso, não como livre.
+ *
+ * <p>Desde RT-CNV-005 a de escrita também é oferecida — e o que o modelo alcança dela é só a
+ * SIMULAÇÃO. O caminho até a gravação não passa pelo modelo (RN-CNV-014).
  *
  * <h2>Falha na subida, não na conversa</h2>
  *
@@ -50,9 +53,17 @@ public class CatalogoDeFerramentas {
 
     public List<Ferramenta> permitidasPara(UsuarioEfetivo usuario) {
         return porNome.values().stream()
-                .filter(f -> f.natureza() == Ferramenta.Natureza.LEITURA)
-                .filter(f -> f.permissoesExigidas() != null && !f.permissoesExigidas().isEmpty())
-                .filter(f -> usuario.permissoes().containsAll(f.permissoesExigidas()))
+                .filter(f -> podeUsar(usuario, f))
                 .toList();
+    }
+
+    /**
+     * A primeira tranca, numa pergunta só — a oferta e a confirmação (RT-CNV-005) perguntam aqui, e
+     * não cada uma do seu jeito.
+     */
+    public static boolean podeUsar(UsuarioEfetivo usuario, Ferramenta ferramenta) {
+        return ferramenta.permissoesExigidas() != null
+                && !ferramenta.permissoesExigidas().isEmpty()
+                && usuario.permissoes().containsAll(ferramenta.permissoesExigidas());
     }
 }

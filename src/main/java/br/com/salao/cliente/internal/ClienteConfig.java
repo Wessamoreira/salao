@@ -9,6 +9,7 @@ import br.com.salao.cliente.internal.application.ConsultarClienteUseCase;
 import br.com.salao.cliente.internal.application.ConsultarConsentimentosUseCase;
 import br.com.salao.cliente.internal.application.RegistrarConsentimentoUseCase;
 import br.com.salao.cliente.internal.application.DetectarDuplicadosUseCase;
+import br.com.salao.cliente.internal.application.FerramentaBuscarClientes;
 import br.com.salao.cliente.internal.application.MesclarClientesUseCase;
 import br.com.salao.cliente.internal.infra.ClientesJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
@@ -19,6 +20,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import tools.jackson.databind.ObjectMapper;
 
 /** RT-CLI-001 — fiação do módulo cliente. */
 @Configuration(proxyBeanMethods = false)
@@ -93,5 +95,12 @@ public class ClienteConfig {
     public MesclarClientesUseCase mesclarClientesUseCase(ClientesJdbc clientes,
                                                          AuditoriaApi auditoria, Relogio relogio) {
         return new MesclarClientesUseCase(clientes, auditoria, relogio);
+    }
+
+    /** RT-CNV-005 — a busca de clientes, como ferramenta do agente. */
+    @Bean
+    public FerramentaBuscarClientes ferramentaBuscarClientes(BuscarClientesUseCase buscar,
+                                                             ObjectMapper json) {
+        return new FerramentaBuscarClientes(buscar, json);
     }
 }

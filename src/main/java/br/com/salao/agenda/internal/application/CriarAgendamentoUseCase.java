@@ -53,6 +53,12 @@ import org.springframework.transaction.annotation.Transactional;
  * {@code profissional_id}. Aceitar {@code :own} aqui seria tratá-lo como {@code :all} — um
  * profissional marcando na agenda de qualquer colega. Falhar fechado é a única saída honesta
  * enquanto o vínculo não existir; está registrado como pendência bloqueante.
+ *
+ * <h2>Simular é criar sem gravar — RT-CNV-005</h2>
+ *
+ * <p>{@link #simular} e {@link #executar} passam pelo mesmo {@link #preparar}. Duas cópias da
+ * validação divergiriam, e a divergente seria a da simulação: é ela que o agente mostra à pessoa, e
+ * ninguém a vê falhar.
  */
 public class CriarAgendamentoUseCase {
 
@@ -98,7 +104,42 @@ public class CriarAgendamentoUseCase {
                 pedido, AgendamentoResumo.class, () -> criar(pedido)).valor();
     }
 
-    private AgendamentoResumo criar(NovoAgendamento pedido) {
+    /**
+     * RT-CNV-005 — o que {@link #executar} gravaria, sem gravar.
+     *
+     * <p><strong>Somente leitura, no banco.</strong> A transação é {@code readOnly}: se alguém um dia
+     * puser uma escrita em {@link #preparar}, a simulação quebra em vez de gravar.
+     *
+     * <p>Uma pergunta a mais que a gravação: o conflito com outro atendimento do profissional. Na
+     * gravação quem decide é a exclusion constraint (RN-AGD-004); sem o insert ela não fala, e um
+     * resumo que oferecesse um horário tomado seria confirmado só para falhar. A resposta continua
+     * não sendo garantia — entre simular e confirmar cabe outra marcação, e ali o banco decide.
+     */
+    @PreAuthorize("hasAuthority('" + Permissao.AGENDA_ESCREVER_TODAS + "')")
+    @Transactional(readOnly = true)
+    public AgendamentoSimulado simular(NovoAgendamento pedido) {
+        Preparado preparado = preparar(pedido);
+        Janela periodo = preparado.reserva().periodo();
+        List<Janela> tomadas = agenda.ocupacoesEm(periodo).doProfissional(pedido.profissionalId());
+        for (BlocoDoAgendamento bloco : preparado.reserva().blocos()) {
+            if (bloco.profissionalId() != null
+                    && tomadas.stream().anyMatch(bloco.janela()::cruzaCom)) {
+                throw new ErroDeDominio(ErrosDaAgenda.CONFLITO_HORARIO,
+                        "o profissional já tem atendimento entre " + bloco.janela().inicio()
+                                + " e " + bloco.janela().fim());
+            }
+        }
+        return new AgendamentoSimulado(pedido.clienteId(), pedido.profissionalId(),
+                pedido.servicoId(), preparado.servico().nome(), preparado.status(), periodo,
+                preparado.reserva().blocos());
+    }
+
+    /** Tudo o que a gravação confere antes do insert — e nada que grave. */
+    private record Preparado(UUID tenant, ServicoResumo servico, SequenciaDeBlocos receita,
+                             ReservaDeHorario.Reserva reserva, StatusAgendamento status) {
+    }
+
+    private Preparado preparar(NovoAgendamento pedido) {
         UUID tenant = TenantContext.obrigatorio();
         ServicoResumo servico = servicoAtivo(pedido.servicoId());
 
@@ -121,10 +162,18 @@ public class CriarAgendamentoUseCase {
                 estabelecimentos.fusoDe(tenant),
                 new ReservaDeHorario.Forcamentos(pedido.forcarForaJornada(),
                         pedido.forcarPassado(), pedido.justificativa()));
-        Janela periodo = montada.periodo();
-        List<BlocoDoAgendamento> blocos = montada.blocos();
+        return new Preparado(tenant, servico, receita, montada,
+                StatusAgendamento.inicialPara(pedido.origem()));
+    }
 
-        StatusAgendamento status = StatusAgendamento.inicialPara(pedido.origem());
+    private AgendamentoResumo criar(NovoAgendamento pedido) {
+        Preparado preparado = preparar(pedido);
+        UUID tenant = preparado.tenant();
+        SequenciaDeBlocos receita = preparado.receita();
+        Janela periodo = preparado.reserva().periodo();
+        List<BlocoDoAgendamento> blocos = preparado.reserva().blocos();
+        StatusAgendamento status = preparado.status();
+
         UUID id;
         try {
             id = agenda.inserirCabeca(tenant, pedido.clienteId(), pedido.profissionalId(),

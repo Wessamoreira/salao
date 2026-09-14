@@ -36,8 +36,8 @@ Três consequências que atravessam o módulo inteiro:
 - **Não sabe quem é a pessoa.** O telefone entra como texto; ligá-lo a um `cliente` é RT-CNV-002.
 - **Não baixa mídia no webhook.** Áudio entra como *id*; o download e a transcrição são
   RT-CNV-003, numa fila fora de transação. Imagem e documento continuam só como *id*.
-- **Não entrega a resposta.** RT-CNV-004 conversa e registra a resposta; enviá-la pelo WhatsApp
-  ainda não existe.
+- **Não entrega a resposta.** RT-CNV-004 conversa e registra a resposta, e RT-CNV-005 registra o
+  pedido de confirmação na intenção; enviá-los pelo WhatsApp ainda não existe.
 
 ## O que ele **não** guarda
 
@@ -66,6 +66,16 @@ pelo telefone.
 Não depende de `cliente`, `agenda` nem `notificacao`. Vai depender, e a ordem importa: a
 dependência entra quando a rotina que precisa dela chegar, não antes.
 
+## O que o agente grava — e quem grava
+
+Nada pelo modelo. RT-CNV-005 selou o contrato de ferramenta em **leitura** e **escrita**, e a escrita
+não tem `executar`: o modelo alcança só a simulação, que vira uma intenção pendente com resumo do
+servidor e um código. Grava a mensagem da própria pessoa — "SIM" e o código —, reconhecida antes e
+fora do modelo, com as trancas resolvidas de novo e a intenção decidida no mesmo commit da gravação
+(RN-CNV-014 a 017).
+
+A primeira escrita é `agendar`, da `agenda`. Remarcar e cancelar entram pelo mesmo contrato.
+
 RT-CNV-002 entregou, **no `iam`**, `UsuarioEfetivoApi` — é por ela que a orquestração (RT-CNV-004)
 vai agir em nome de quem escreveu. O módulo ainda não a usa: quem a usa é o primeiro caso de uso
 que age.
@@ -78,6 +88,7 @@ que age.
 | [RT-CNV-002](../iam/RT-CNV-002-usuario-efetivo.md) — usuário efetivo pelo telefone (mora no `iam`) | implementada |
 | [RT-CNV-003](RT-CNV-003-audio-transcricao.md) — áudio: download, guarda e transcrição | implementada, sem provedor de STT |
 | [RT-CNV-004](RT-CNV-004-orquestracao.md) — orquestração: ferramentas por permissão, teto, limite | implementada, sem provedor de LLM |
+| [RT-CNV-005](RT-CNV-005-agendar-pelo-agente.md) — marcar pelo agente: consultar, simular, confirmar pelo código | implementada, sem entrega da mensagem |
 
 ## Rotas
 
@@ -90,4 +101,4 @@ que age.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-CNV-001 a RN-CNV-013.
+Ver [regras.md](regras.md) — RN-CNV-001 a RN-CNV-017.

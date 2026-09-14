@@ -154,6 +154,13 @@ efetivo; pedido fora dela é recusado e registrado; o que passa roda em nome do 
 teto é reservado antes de cada chamada, e há limite por telefone. A suíte R-10 usa um modelo
 roteirizado para obedecer ao ataque — e prova que nada passa.
 
+**E a escrita, em RT-CNV-005** (RN-CNV-014 a 017): o contrato de ferramenta é selado em leitura e
+escrita, e a escrita não tem `executar`. O modelo alcança só a simulação, que roda em transação somente
+leitura e vira uma intenção pendente com resumo do servidor e um código. Grava apenas a mensagem da
+própria pessoa — "SIM" e o código —, reconhecida antes e fora do modelo, com identidade e permissões
+resolvidas de novo e a intenção decidida no mesmo commit da gravação. Nem uma ferramenta que se declara
+leitura consegue gravar: o banco recusa.
+
 ## Aplicação
 
 - Bean Validation em todo DTO de entrada + limite de tamanho de payload.

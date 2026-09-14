@@ -186,7 +186,7 @@ update transcricao_de_audio
 
 **`FALHOU` com "áudio recusado"** — os bytes não eram áudio. O arquivo `RECUSADO` fica registrado.
 
-## Agente (RT-CNV-004)
+## Agente (RT-CNV-004 / RT-CNV-005)
 
 ### Credencial e preço
 
@@ -197,6 +197,7 @@ AGENTE_PRECO_ENTRADA=<dólares por milhão de tokens de entrada, da tabela do pr
 AGENTE_PRECO_SAIDA=<dólares por milhão de tokens de saída>
 AGENTE_TETO_DIARIO_USD=2.00
 AGENTE_LIMITE_TELEFONE_HORA=30
+AGENTE_INTENCAO_VALIDADE=PT10M
 ```
 
 **Sem chave OU sem preço, o agente não roda** — as conversas esperam na fila. O preço não tem valor
@@ -213,10 +214,18 @@ select status, motivo_recusa, count(*) from execucao_do_agente group by 1, 2;
 
 select dia, chamadas, custo_confirmado_usd, custo_reservado_usd
   from consumo_de_ia where estabelecimento_id = '<salão>' order by dia desc limit 7;
+
+-- RT-CNV-005: o que o agente propôs, e o que foi decidido
+select status, motivo, count(*) from intencao_pendente
+ where criada_em > now() - interval '7 days' group by 1, 2;
+
+-- pendentes que já venceram sem resposta (continuam PENDENTE; a próxima proposta as marca)
+select count(*) from intencao_pendente where status = 'PENDENTE' and expira_em < now();
 ```
 
 Métrica: `conversacional_agente_total{desfecho}` — `concluida`, `recusada_identidade`,
-`recusada_limite`, `recusada_teto`, `adiada`, `falhou`.
+`recusada_limite`, `recusada_teto`, `adiada`, `falhou`; e, das confirmações, `confirmada`,
+`confirmacao_recusada`, `confirmacao_vencida`, `confirmacao_ja_decidida`, `confirmacao_sem_pedido`.
 
 ### Modos de falha
 
@@ -237,3 +246,21 @@ salão. Subir o teto é decisão de custo, não correção.
 **Ferramenta com desfecho `SEM_PERMISSAO` em conversa legítima** — a ferramenta declara uma
 permissão e o caso de uso exige outra. Corrigir a DECLARAÇÃO da ferramenta; nunca afrouxar o caso de
 uso.
+
+**Ferramenta com desfecho `FALHA`** — o log registra `Ferramenta <nome> falhou (<classe da exceção>)`,
+sem a mensagem, que pode trazer dado pessoal. Para ver a causa, reproduza no IT. Se a ferramenta grava
+no caminho de leitura ou de simulação, o Postgres recusa com `cannot execute ... in a read-only
+transaction`: é defeito da ferramenta, e se corrige nela. **Nunca** tirar a transação somente leitura
+(RN-CNV-014).
+
+**Intenção `RECUSADA` com `ER-AGD-CONFLITO_HORARIO`** — o horário foi tomado entre o resumo e o "SIM".
+É o esperado: a simulação não reserva nada. A pessoa pede de novo.
+
+**Intenção `RECUSADA` com `SEM_PERMISSAO`** — o perfil mudou entre o resumo e o "SIM" (RN-CNV-017).
+
+**Intenção `RECUSADA` com `ER-CNV-ACAO_INDISPONIVEL`** — um deploy tirou a ferramenta entre a proposta
+e a confirmação. Nada foi gravado.
+
+**`confirmacao_sem_pedido` subindo** — código digitado errado, ou pedido de confirmação que não chegou
+à pessoa. **Hoje nenhum chega:** a entrega pelo WhatsApp ainda não existe (pendência de RT-CNV-004/005),
+e sem ela o agente não marca nada em produção.

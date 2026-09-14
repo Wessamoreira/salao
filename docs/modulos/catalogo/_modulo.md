@@ -56,4 +56,5 @@ Ver [regras.md](regras.md) — RN-CAT-001 a RN-CAT-014.
 
 `listar_servicos` (RT-CNV-004) — o cardápio para o agente conversacional, chamando
 `ListarServicosUseCase` com o `@PreAuthorize` dele. É a ferramenta de referência de RN-CNV-013: o
-módulo dono contribui a ferramenta, e o agente esbarra na mesma tranca que a tela.
+módulo dono contribui a ferramenta, e o agente esbarra na mesma tranca que a tela. Desde RT-CNV-005 é
+uma `FerramentaDeLeitura` — o contrato foi selado em leitura e escrita (RN-CNV-014).

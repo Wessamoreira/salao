@@ -254,8 +254,8 @@ recepção mostrariam horários desencontrados (9h05 numa, 9h00 na outra) e o di
 
 ### RN-AGD-013 — Quem marca decide o status inicial
 
-**Enunciado.** Agendamento criado com origem `PAINEL` ou `RECORRENCIA` nasce `CONFIRMADO`; com
-origem `WEB` ou `WHATSAPP`, nasce `SOLICITADO`.
+**Enunciado.** Agendamento criado com origem `PAINEL`, `RECORRENCIA` ou `AGENTE` nasce `CONFIRMADO`;
+com origem `WEB` ou `WHATSAPP`, nasce `SOLICITADO`.
 
 **Motivo.** Quem marca no balcão já falou com a cliente ali — pedir confirmação seria criar
 trabalho para confirmar o que acabou de ser combinado. Quem marca sozinho pelo site ou pelo
@@ -265,9 +265,16 @@ que ninguém validou, e o salão descobriria no sábado.
 Os dois ocupam a agenda igualmente (`StatusAgendamento.OCUPAM_A_AGENDA`) — a diferença é sobre
 quem precisa olhar, não sobre reservar o horário.
 
+`AGENTE` (RT-CNV-005) é alguém da **equipe** marcando pelo agente conversacional, depois de confirmar
+o resumo com o código: é o balcão por outro caminho, e nasce confirmado. `WHATSAPP` diria o contrário
+— é a cliente sozinha. E `PAINEL` apagaria da agenda que a marcação veio do agente.
+
+O `switch` é exaustivo: uma origem nova não compila sem alguém decidir de que lado ela está.
+
 **Onde é garantida.** `StatusAgendamento.inicialPara`.
 **Rotinas.** RT-AGD-002, RT-AGD-004, RT-CNV-005 · **Teste.**
-`CriarAgendamentoIT.origem_decide_o_status`
+`CriarAgendamentoIT.origem_decide_o_status`, `StatusAgendamentoTest.status_inicial_por_origem`,
+`FerramentasDaAgendaIT.confirmar_grava`
 **Configurável?** Não hoje. É candidato natural a virar configuração do salão
 **Origem.** 2026-09-04
 

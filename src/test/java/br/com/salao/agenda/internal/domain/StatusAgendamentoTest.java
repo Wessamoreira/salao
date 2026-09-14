@@ -96,5 +96,8 @@ class StatusAgendamentoTest {
                 .isEqualTo(StatusAgendamento.SOLICITADO);
         assertThat(StatusAgendamento.inicialPara(OrigemDoAgendamento.WHATSAPP))
                 .isEqualTo(StatusAgendamento.SOLICITADO);
+        assertThat(StatusAgendamento.inicialPara(OrigemDoAgendamento.AGENTE))
+                .as("a equipe confirmou o resumo com o código (RT-CNV-005)")
+                .isEqualTo(StatusAgendamento.CONFIRMADO);
     }
 }

@@ -5,11 +5,13 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noFields;
 
 import br.com.salao.SalaoApplication;
+import br.com.salao.shared.agente.FerramentaDeEscrita;
 import br.com.salao.shared.evento.EventoDeDominio;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.core.domain.JavaMethodCall;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
@@ -309,6 +311,29 @@ class ArquiteturaTest {
                 .haveFullyQualifiedName("br.com.salao.arquivos.internal.application.IngestaoDeArquivo")
                 .because("a ingestão pelo servidor dispensa permissão porque nenhuma requisição a "
                         + "alcança; um controller usando-a seria upload sem tranca")
+                .check(CLASSES);
+    }
+
+    /**
+     * RT-CNV-005 / RN-CNV-014 — pelo agente, só a confirmação da pessoa grava.
+     *
+     * <p>{@code FerramentaDeEscrita.confirmar} é a porta da gravação. Quem a chama é
+     * {@code EfetivarIntencao}, alcançada só pela resposta da pessoa com o código — nunca pelo modelo.
+     * Se o orquestrador, ou qualquer outra classe, passar a chamá-la, o modelo ganha um caminho até o
+     * domínio; o build reprova antes. Vale também para a chamada pelo tipo concreto
+     * ({@code FerramentaAgendar.confirmar}), que a regra pelo dono da interface deixaria passar.
+     */
+    @Test
+    void so_a_confirmacao_da_pessoa_grava_pelo_agente() {
+        DescribedPredicate<JavaMethodCall> confirmarDeEscrita = DescribedPredicate.describe(
+                "confirmar de uma FerramentaDeEscrita",
+                chamada -> chamada.getTarget().getName().equals("confirmar")
+                        && chamada.getTarget().getOwner().isAssignableTo(FerramentaDeEscrita.class));
+        noClasses().that().doNotHaveFullyQualifiedName(
+                        "br.com.salao.conversacional.internal.application.EfetivarIntencao")
+                .should().callMethodWhere(confirmarDeEscrita)
+                .because("RN-CNV-014: o LLM nunca escreve no domínio — a gravação pelo agente só "
+                        + "acontece quando a própria pessoa responde com o código")
                 .check(CLASSES);
     }
 

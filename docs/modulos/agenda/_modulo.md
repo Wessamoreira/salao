@@ -45,6 +45,21 @@ uma rotina da agenda, não uma do atendimento.
 
 `AgendamentoResumo` **não** expõe entidade JPA nem dados de cliente além de id e nome.
 
+## Ferramentas do agente
+
+Contribuídas ao agente conversacional (RN-CNV-013), chamando os casos de uso com o `@PreAuthorize`
+deles — RT-CNV-005:
+
+| Ferramenta | Forma | Exige | Caso de uso |
+|---|---|---|---|
+| `consultar_disponibilidade` | leitura | `agenda:read:all` | `ConsultarDisponibilidadeUseCase` |
+| `agendar` | escrita | `agenda:write:all` | `CriarAgendamentoUseCase.simular`; `.executar` só na confirmação da pessoa |
+
+As duas falam **data e hora do salão** (`2026-09-17T13:00`), nunca UTC. `CriarAgendamentoUseCase.simular`
+passa pelo mesmo `preparar` da gravação, em transação somente leitura, com uma pergunta a mais — o
+conflito com outro atendimento do profissional, que na gravação é o banco quem responde. A marcação
+nasce com origem `AGENTE`, `CONFIRMADO` (RN-AGD-013).
+
 ## Eventos publicados
 
 | ID | Evento | Quando | Consumidores | Tipo |
@@ -108,6 +123,9 @@ Escopo `:own` é filtro de query, não de tela. Acesso a id de outro devolve **4
 
 `catalogo` (serviço, blocos, recursos) · `equipe` (jornada, exceções, habilidade, duração) ·
 `cliente` (**só `existe`**, para validar o vínculo sem carregar dado pessoal).
+
+`FerramentaAgendar` lê também `ClienteApi.nomesDe` para escrever o resumo que a pessoa confirma — é
+exibição, como na grade (RT-AGD-011), e não entra em decisão nenhuma. Não é uma fonte nova.
 
 Três é o teto, e ele foi atingido em RT-AGD-002. Uma quarta **fonte** exige revisar a fronteira:
 cada uma é um lugar de onde a agenda precisa saber algo para tomar sua decisão, e mais de três

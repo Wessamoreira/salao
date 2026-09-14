@@ -90,6 +90,25 @@ public class ExecucoesJdbc {
     }
 
     /**
+     * RT-CNV-005 — encerrada sem o modelo: a resposta a uma confirmação é do servidor, e não houve
+     * ferramenta, token nem custo.
+     */
+    @Transactional
+    public int concluirSemModelo(UUID id, UUID usuarioEfetivoId, String resposta, Instant agora) {
+        return jdbc.sql("""
+                update execucao_do_agente
+                   set status = 'CONCLUIDA', usuario_efetivo_id = :usuario, resposta = :resposta,
+                       concluida_em = :agora, reservada_ate = null, ultimo_erro = null
+                 where id = :id and status = 'PENDENTE'
+                """)
+                .param("id", id)
+                .param("usuario", usuarioEfetivoId)
+                .param("resposta", resposta)
+                .param("agora", Timestamp.from(agora))
+                .update();
+    }
+
+    /**
      * Encerra sem conversa. {@code parcial} é o que chegou a acontecer antes do corte — o teto pode
      * ser atingido depois de algumas chamadas, e o custo delas precisa ficar registrado.
      */
