@@ -70,7 +70,11 @@ public enum ErrosDoFinanceiro implements CodigoDeErro {
      * <p>Código próprio porque o arquivo pode estar certo: o que falta é a escolha na prévia.
      */
     MAPEAMENTO_INCOMPLETO("ER-FIN-MAPEAMENTO_INCOMPLETO", HttpStatus.UNPROCESSABLE_ENTITY,
-            "Faltam colunas no mapeamento do extrato");
+            "Faltam colunas no mapeamento do extrato"),
+
+    /** RT-FIN-010 — período invertido ou longo demais, ou cursor que não veio da tela. */
+    FILTRO_INVALIDO("ER-FIN-FILTRO_INVALIDO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Filtro da conciliação inválido");
 
     private final String codigo;
     private final HttpStatus status;

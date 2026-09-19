@@ -20,6 +20,7 @@ import br.com.salao.shared.seguranca.UsuarioAtual;
 import br.com.salao.shared.tempo.Relogio;
 import br.com.salao.shared.tenant.TenantContext;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -58,25 +59,32 @@ public class ImportarExtratoUseCase {
     private final MapeamentosDeExtratoJdbc mapeamentos;
     private final EstabelecimentoApi estabelecimentos;
     private final AuditoriaApi auditoria;
+    private final Conciliador conciliador;
     private final Relogio relogio;
 
     public ImportarExtratoUseCase(TransacoesDoAdquirenteJdbc transacoes,
                                   ImportacoesDeExtratoJdbc importacoes,
                                   MapeamentosDeExtratoJdbc mapeamentos,
                                   EstabelecimentoApi estabelecimentos, AuditoriaApi auditoria,
-                                  Relogio relogio) {
+                                  Conciliador conciliador, Relogio relogio) {
         this.transacoes = transacoes;
         this.importacoes = importacoes;
         this.mapeamentos = mapeamentos;
         this.estabelecimentos = estabelecimentos;
         this.auditoria = auditoria;
+        this.conciliador = conciliador;
         this.relogio = relogio;
     }
 
-    /** @param recusas as primeiras {@value #RECUSAS_GUARDADAS}; o total está em {@code recusadas} */
+    /**
+     * @param recusas     as primeiras {@value #RECUSAS_GUARDADAS}; o total está em {@code recusadas}
+     * @param casadas     RT-FIN-010: vendas que casaram com pagamentos na rodada ao fim da importação
+     * @param divergentes das casadas, quantas com alguma diferença
+     */
     public record ResultadoDaImportacao(UUID id, Instant importadaEm, int linhas, int novas,
                                         int canceladas, int repetidas, int ignoradas,
-                                        int recusadas, List<LinhaDoExtrato.Recusada> recusas) {
+                                        int recusadas, List<LinhaDoExtrato.Recusada> recusas,
+                                        int casadas, int divergentes) {
     }
 
     @PreAuthorize("hasAuthority('" + Permissao.FINANCEIRO_CONCILIAR + "')")
@@ -101,12 +109,19 @@ public class ImportarExtratoUseCase {
         int repetidas = 0;
         int ignoradas = 0;
         List<LinhaDoExtrato.Recusada> recusas = new ArrayList<>();
+        LocalDate periodoDe = null;
+        LocalDate periodoAte = null;
 
         for (LinhaDoExtrato linha : InterpretadorDoExtrato.interpretar(tabela, mapeamento)) {
             switch (linha) {
                 case LinhaDoExtrato.Ignorada i -> ignoradas++;
                 case LinhaDoExtrato.Recusada r -> recusas.add(r);
                 case LinhaDoExtrato.Lida(int n, TransacaoLida venda) -> {
+                    // O período que o arquivo cobre, no dia do salão — o que "só no sistema"
+                    // considera (RT-FIN-010). Contado antes de saber se a venda é nova.
+                    LocalDate dia = venda.capturadaEm().toLocalDate();
+                    periodoDe = periodoDe == null || dia.isBefore(periodoDe) ? dia : periodoDe;
+                    periodoAte = periodoAte == null || dia.isAfter(periodoAte) ? dia : periodoAte;
                     Instant capturadaEm = venda.capturadaEm().atZone(fuso).toInstant();
                     if (transacoes.inserir(adquirente, venda, capturadaEm, importacaoId, agora)
                             .isPresent()) {
@@ -138,9 +153,11 @@ public class ImportarExtratoUseCase {
         var guardadas = List.copyOf(recusas.subList(0, Math.min(recusas.size(), RECUSAS_GUARDADAS)));
         importacoes.registrar(new ImportacoesDeExtratoJdbc.Nova(importacaoId, adquirente,
                 ImpressaoDoArquivo.de(arquivo), nome(nomeDoArquivo), agora, UsuarioAtual.idOuNulo(),
-                linhas, novas, canceladas, repetidas, ignoradas, recusas.size(), guardadas,
+                periodoDe, periodoAte, linhas, novas, canceladas, repetidas, ignoradas, recusas.size(), guardadas,
                 mapeamento));
         mapeamentos.salvar(adquirente, mapeamento, agora);
+        // RT-FIN-010 — casa na mesma transação: o resultado já diz quantas vendas bateram.
+        var rodada = conciliador.conciliar(agora);
 
         var contas = new LinkedHashMap<String, Object>();
         contas.put("linhas", linhas);
@@ -156,7 +173,7 @@ public class ImportarExtratoUseCase {
                 ignoradas, recusas.size());
 
         return new ResultadoDaImportacao(importacaoId, agora, linhas, novas, canceladas, repetidas,
-                ignoradas, recusas.size(), guardadas);
+                ignoradas, recusas.size(), guardadas, rodada.casadas(), rodada.divergentes());
     }
 
     /** Só o nome, sem caminho — navegador antigo manda "C:\\...\\vendas.csv". */

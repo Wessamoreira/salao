@@ -106,6 +106,6 @@ valor do que saiu.
       lista, aviso nem baixa posterior
 - [ ] **Não há razão.** `lancamento` está no modelo e não existe em código; sem ele, "quanto entrou
       em março" é uma soma de pagamentos, não um livro
-- [ ] **Nada valida NSU repetido.** Dois pagamentos com o mesmo NSU passam, e a conciliação da Fase
-      5 vai encontrar os dois
+- [x] ~~Nada valida NSU repetido~~ — a conciliação (RT-FIN-010) trata: NSU repetido não casa por NSU,
+      cai para valor e hora (RN-FIN-029). Dois pagamentos com o mesmo NSU continuam entrando
 - [ ] **Não há tela.** As rotas existem; a tela de fechamento em um passo é RT-ATD-008

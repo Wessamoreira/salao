@@ -66,19 +66,55 @@ const HISTORICO = [
     recusadas: 0 },
 ];
 
+const totais = (quantidade: number, valor: number) => ({ quantidade, valor });
+const RESUMO = { de: '2026-09-01', ate: '2026-09-19', conciliadas: totais(410, 38420.5),
+  divergentes: totais(3, 340), soNaMaquininha: totais(2, 215), soNoSistema: totais(1, 90),
+  semExtrato: totais(0, 0) };
+
+const item = (id: string, hora: string, valor: number, produto: string, forma: string | null,
+  divergencias: string[], registro?: string, valorPagamento?: number) => ({
+  id, instante: `2026-09-18T${hora}:00Z`, vendaId: forma === null && !registro ? null : id,
+  idNaAdquirente: `ST8F${id.toUpperCase()}`, capturadaEm: `2026-09-18T${hora}:00Z`,
+  horaInformada: true, valorVenda: valor, produto, bandeira: 'VISA', parcelas: 1,
+  pagamentoId: forma ? `p-${id}` : null, registradoEm: registro ? `2026-09-18T${registro}:00Z` : null,
+  valorPagamento: valorPagamento ?? (forma ? valor : null), forma, criterio: forma ? 'VALOR_E_HORA' : null,
+  divergencias });
+
+const ITENS: Record<string, unknown[]> = {
+  DIVERGENTES: [
+    item('a1', '13:05', 80, 'CREDITO', 'DEBITO', ['FORMA'], '13:02'),
+    item('a2', '15:40', 180, 'CREDITO', 'CREDITO', ['CANCELADA_NA_ADQUIRENTE'], '15:38'),
+    { ...item('a3', '17:10', 80, 'CREDITO', 'CREDITO', ['VALOR'], '11:00', 85), criterio: 'NSU' },
+  ],
+  SO_NA_MAQUININHA: [item('b1', '16:20', 120, 'DEBITO', null, []),
+    item('b2', '18:45', 95, 'CREDITO', null, [])],
+  SO_NO_SISTEMA: [{ ...item('c1', '12:00', 90, 'CREDITO', 'CREDITO', [], '12:00'), vendaId: null,
+    idNaAdquirente: null, capturadaEm: null, valorVenda: null, produto: null }],
+  CONCILIADAS: [item('d1', '10:14', 180, 'CREDITO', 'CREDITO', [], '10:15'),
+    item('d2', '11:02', 95, 'DEBITO', 'DEBITO', [], '11:05')],
+};
+
 window.fetch = async (entrada: RequestInfo | URL, init?: RequestInit) => {
   const url = String(entrada);
   let corpo: unknown;
   if (url.includes('/me/capabilities')) {
     corpo = { estabelecimento: { id: 'e1', nome: 'Studio Marilda', timezone: 'America/Sao_Paulo',
       moeda: 'BRL' }, permissoes: ['financeiro:reconcile'], grupos: [], menus: [] };
+  } else if (url.includes('/conciliacao/resumo')) {
+    corpo = RESUMO;
+  } else if (url.includes('/conciliacao/itens')) {
+    const recorte = new URL(url, 'http://x').searchParams.get('recorte') ?? 'DIVERGENTES';
+    corpo = { itens: ITENS[recorte] ?? [], proximoCursor: null, temMais: false };
+  } else if (url.includes('/conciliacao/casamentos')) {
+    corpo = { casadas: 1, divergentes: 0, canceladasDepois: 0 };
   } else if (url.endsWith('/previa')) {
     corpo = await previa(init?.body as FormData);
   } else if (init?.method === 'POST') {
     corpo = { id: 'i3', importadaEm: new Date().toISOString(), linhas: 128, novas: 118,
       canceladas: 2, repetidas: 1, ignoradas: 5, recusadas: 2,
       recusas: [{ linha: 6, motivo: 'data não reconhecida: 31/02/2026 12:10' },
-        { linha: 91, motivo: 'Stone ID ST8F4410 já importado com valor bruto R$ 80,00; o arquivo diz R$ 85,00' }] };
+        { linha: 91, motivo: 'Stone ID ST8F4410 já importado com valor bruto R$ 80,00; o arquivo diz R$ 85,00' }],
+      casadas: 110, divergentes: 2 };
   } else {
     corpo = { itens: HISTORICO, proximoCursor: null, temMais: false };
   }

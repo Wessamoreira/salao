@@ -625,3 +625,67 @@ duzentas e noventa e nove — nem esconder a que falhou.
 **Rotinas.** RT-FIN-009 · **Teste.** `ImportarExtratoIT.linhas_ruins_nao_derrubam`,
 `InterpretadorDoExtratoTest`
 **Configurável?** Não · **Origem.** 2026-09-19
+
+### RN-FIN-029 — Casa pela prova mais forte, dentro de duas horas, o mais próximo primeiro
+
+**Enunciado.** Três passadas: NSU igual, quando único dos dois lados; autorização igual dentro da janela,
+quando única; valor exato dentro da janela, do par mais próximo no tempo para o mais distante — na mesma
+distância, a mesma forma primeiro. Cada pagamento e cada venda casam uma vez. A janela é de **duas horas**
+entre o registro no sistema e a venda; venda sem hora no arquivo casa com pagamento do mesmo dia do salão.
+
+**Motivo.** A recepção registra forma e valor ao fechar a comanda; NSU quase nunca. O tempo é a prova
+física, e por isso vem antes da forma — preferir a forma casaria vendas distantes e deixaria sem par o
+engano comum. Empate de valor casa pela ordem de horário (decisão do dono): trocar dois pares de mesmo
+valor e forma não muda dinheiro. Código repetido não prova nada.
+
+**Onde é garantida.** `Casador` · `Conciliador.JANELA`.
+**Rotinas.** RT-FIN-010 · **Teste.** `CasadorTest`, `ConciliacaoIT.janela_de_duas_horas`, `.empate`,
+`.nsu`
+**Configurável?** Não — a janela é constante · **Origem.** 2026-09-19, decisão do dono
+
+### RN-FIN-030 — Divergência só do que foi informado; forma trocada casa divergente; cancelada não casa
+
+**Enunciado.** Um par é divergente pela forma (débito × crédito), pelo valor (quando casou por código),
+pela bandeira e pelas parcelas (só quando a recepção informou o dado), ou porque a venda foi cancelada na
+adquirente depois de casada. Venda já cancelada não casa. O pagamento acompanha: `CONCILIADO` ou
+`DIVERGENTE`.
+
+**Motivo.** Forma trocada é a mesma venda registrada errado — e importa porque a taxa difere (decisão do
+dono). Comparar o "1 parcela" que o sistema assume com o "3x" da adquirente marcaria toda venda parcelada, e
+aviso que dispara sempre deixa de ser lido. Venda cancelada não é dinheiro; a cancelada depois de casada é
+dinheiro que o sistema conta e não vem.
+
+**Onde é garantida.** `Casador.divergencias` · `ConciliacaoJdbc.vendasACasar`, `.marcarCanceladas`.
+**Rotinas.** RT-FIN-010 · **Teste.** `CasadorTest.so_o_informado`, `.distancia_antes_da_forma`,
+`ConciliacaoIT.forma_trocada`, `.cancelada_depois`, `.cancelada_nao_casa`
+**Configurável?** Não · **Origem.** 2026-09-19, decisão do dono
+
+### RN-FIN-031 — "Só no sistema" só nos dias que alguma importação cobre
+
+**Enunciado.** Cada importação guarda o período que o arquivo cobre — a primeira e a última venda lida, no
+dia do salão. Pagamento no cartão sem par conta como "só no sistema" apenas nesses dias; fora deles, é
+"sem extrato importado", à parte.
+
+**Motivo.** Um mês ainda não importado não é divergência do salão — é falta de arquivo. Misturar os dois
+encheria a conferência de falso alarme até a próxima importação.
+
+**Onde é garantida.** `ConciliacaoJdbc` (o trecho `{coberto}`) · `ImportarExtratoUseCase` (o período) ·
+`V59`.
+**Rotinas.** RT-FIN-010 · **Teste.** `ConciliacaoIT.sem_extrato`, `.janela_de_duas_horas`
+**Configurável?** Não · **Origem.** 2026-09-19
+
+### RN-FIN-032 — O par não se desfaz pela aplicação; o estorno do pagamento o desfaz; rodar de novo é inofensivo
+
+**Enunciado.** O casamento roda ao fim de cada importação e no "Conciliar agora". Cada lado tem no máximo
+um par (`unique` dos dois), e duas rodadas simultâneas disputam a mesma linha. A aplicação não apaga nem
+reescreve o par — só acrescenta a divergência da venda cancelada depois. O estorno da comanda apaga o
+pagamento, e o par vai junto (`cascade`): a venda volta a "só na maquininha".
+
+**Motivo.** Desfazer um par é uma decisão, com motivo — é RT-FIN-011, não um efeito colateral. Já o estorno
+muda a verdade: depois dele, a venda da maquininha não tem mais pagamento no sistema.
+
+**Onde é garantida.** `V59` (`um_par_por_pagamento`, `um_par_por_venda`, `cascade`, grants) ·
+`ConciliacaoJdbc.gravar`.
+**Rotinas.** RT-FIN-010 · **Teste.** `ConciliacaoIT.rodar_de_novo`, `.pagamento_apagado`, `.imutavel`,
+`.conciliar_agora`
+**Configurável?** Não · **Origem.** 2026-09-19

@@ -5,6 +5,7 @@ import br.com.salao.financeiro.internal.domain.MapeamentoDoExtrato;
 import br.com.salao.shared.tenant.TenantContext;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +28,8 @@ public class ImportacoesDeExtratoJdbc {
     }
 
     public record Nova(UUID id, String adquirente, String impressao, String nomeDoArquivo,
-                       Instant importadaEm, UUID importadaPor, int linhas, int novas,
+                       Instant importadaEm, UUID importadaPor, LocalDate periodoDe,
+                       LocalDate periodoAte, int linhas, int novas,
                        int canceladas, int repetidas, int ignoradas, int recusadas,
                        List<LinhaDoExtrato.Recusada> recusas, MapeamentoDoExtrato mapeamento) {
     }
@@ -42,9 +44,10 @@ public class ImportacoesDeExtratoJdbc {
         jdbc.sql("""
                 insert into importacao_de_extrato
                     (id, estabelecimento_id, adquirente, impressao_do_arquivo, nome_do_arquivo,
-                     importada_em, importada_por, linhas, novas, canceladas, repetidas, ignoradas,
-                     recusadas, recusas, mapeamento)
-                values (:id, :estabelecimento, :adquirente, :impressao, :nome, :em, :por, :linhas,
+                     importada_em, importada_por, periodo_de, periodo_ate, linhas, novas,
+                     canceladas, repetidas, ignoradas, recusadas, recusas, mapeamento)
+                values (:id, :estabelecimento, :adquirente, :impressao, :nome, :em, :por, :de, :ate,
+                        :linhas,
                         :novas, :canceladas, :repetidas, :ignoradas, :recusadas,
                         cast(:recusas as jsonb), cast(:mapeamento as jsonb))
                 """)
@@ -55,6 +58,8 @@ public class ImportacoesDeExtratoJdbc {
                 .param("nome", importacao.nomeDoArquivo())
                 .param("em", Timestamp.from(importacao.importadaEm()))
                 .param("por", importacao.importadaPor())
+                .param("de", importacao.periodoDe())
+                .param("ate", importacao.periodoAte())
                 .param("linhas", importacao.linhas())
                 .param("novas", importacao.novas())
                 .param("canceladas", importacao.canceladas())

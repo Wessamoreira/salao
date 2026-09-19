@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import {
-  useImportacoes, useImportar, usePrevia,
-  type Campo, type Formato, type LinhaDaPrevia, type Mapeamento, type Previa, type Resultado,
+  useConciliarAgora, useImportacoes, useImportar, useItensDaConciliacao, usePrevia,
+  useResumoDaConciliacao,
+  type Campo, type Formato, type ItemDaConciliacao, type LinhaDaPrevia, type Mapeamento,
+  type Previa, type Recorte, type Resultado,
 } from '../../api/conciliacao';
 import { useCapacidades } from '../../api/capacidades';
 import { ErroDaApi } from '../../api/http';
 import { Esqueleto, Falha, Pagina } from '../../layout/Pagina';
-import { formatar } from '../../layout/tempo';
+import { diaCivil, formatar } from '../../layout/tempo';
 import './conciliacao.css';
 
 /**
@@ -105,6 +107,7 @@ export function Conciliacao() {
     <Pagina>
       <div className="cnc-tela">
         {etapa}
+        <ConferenciaDoMes fuso={fuso} />
         <Historico fuso={fuso} />
       </div>
     </Pagina>
@@ -320,6 +323,12 @@ function ResultadoDaImportacao({ resultado, aoRecomecar }: {
         <Total numero={resultado.recusadas}
           rotulo={resultado.recusadas === 1 ? 'recusada' : 'recusadas'} />
       </p>
+      <p className="cnc-ajuda" role="status">
+        {resultado.casadas === 0 ? 'Nenhuma venda casou com pagamento do sistema nesta importação.'
+          : `${resultado.casadas} ${resultado.casadas === 1 ? 'venda casou' : 'vendas casaram'} com `
+            + `pagamentos do sistema${resultado.divergentes > 0
+              ? `, ${resultado.divergentes} com diferença — veja em Divergentes` : ''}.`}
+      </p>
       {resultado.recusas.length > 0 && (
         <>
           <h3 className="cnc-secao">Linhas recusadas — confira no arquivo</h3>
@@ -406,6 +415,261 @@ function Historico({ fuso }: { fuso: string }) {
     </section>
   );
 }
+
+// ------------------------------------------------------------------ RT-FIN-010 — a conferência
+
+/**
+ * As quatro perguntas do mês, e cada uma é a porta para a sua lista.
+ *
+ * As contas não são enfeite em cima da tabela: são o seletor. O dono lê o mês inteiro numa linha e
+ * escolhe por onde começar — normalmente pelo que difere, que é onde há dinheiro a acertar.
+ */
+function ConferenciaDoMes({ fuso }: { fuso: string }) {
+  const opcoes = meses(fuso);
+  const [mes, definirMes] = useState(opcoes[0].valor);
+  const [recorte, definirRecorte] = useState<Recorte>('DIVERGENTES');
+  const periodo = opcoes.find((opcao) => opcao.valor === mes) ?? opcoes[0];
+  const resumo = useResumoDaConciliacao(periodo.de, periodo.ate);
+  const conciliar = useConciliarAgora();
+
+  return (
+    <section className="cnc-bloco" aria-labelledby="cnc-conferencia-mes">
+      <header className="cnc-cabecalho">
+        <h2 id="cnc-conferencia-mes" className="cnc-titulo">Conferência</h2>
+        <div className="cnc-controles">
+          <label className="cnc-mes">
+            <span>Mês</span>
+            <select value={mes} onChange={(e) => definirMes(e.target.value)}>
+              {opcoes.map((opcao) => (
+                <option key={opcao.valor} value={opcao.valor}>{opcao.rotulo}</option>
+              ))}
+            </select>
+          </label>
+          <button className="pagina-acao discreta" type="button" disabled={conciliar.isPending}
+            onClick={() => conciliar.mutate()}>
+            {conciliar.isPending ? 'Conciliando…' : 'Conciliar agora'}
+          </button>
+        </div>
+      </header>
+
+      {conciliar.isSuccess && (
+        <p className="cnc-ajuda" role="status">
+          {conciliar.data.casadas === 0 ? 'Nada novo para casar.'
+            : `${conciliar.data.casadas} ${conciliar.data.casadas === 1 ? 'venda casou' : 'vendas casaram'} agora.`}
+        </p>
+      )}
+      {conciliar.isError && <p className="erro" role="alert">{mensagem(conciliar.error)}</p>}
+
+      {resumo.isPending ? <Esqueleto linhas={1} altura={64} />
+        : resumo.isError ? <Falha aoTentar={() => resumo.refetch()}>{mensagem(resumo.error)}</Falha>
+          : (
+            <>
+              <div className="cnc-contas-do-mes" role="group" aria-label="Mostrar">
+                {RECORTES.map(({ valor, rotulo, chave }) => (
+                  <button key={valor} type="button" className="cnc-conta" data-recorte={valor}
+                    aria-pressed={recorte === valor} onClick={() => definirRecorte(valor)}>
+                    <strong className="cnc-numero">{resumo.data[chave].quantidade}</strong>
+                    <span className="cnc-conta-rotulo">{rotulo}</span>
+                    <span className="cnc-conta-valor">{reais(resumo.data[chave].valor)}</span>
+                  </button>
+                ))}
+              </div>
+              {resumo.data.semExtrato.quantidade > 0 && (
+                <p className="cnc-aviso" role="status">
+                  {resumo.data.semExtrato.quantidade}{' '}
+                  {resumo.data.semExtrato.quantidade === 1 ? 'pagamento' : 'pagamentos'} no cartão
+                  ({reais(resumo.data.semExtrato.valor)}) em dias sem extrato importado — importe a
+                  Lista de vendas desses dias para conferir.
+                </p>
+              )}
+              <ListaDoRecorte recorte={recorte} de={periodo.de} ate={periodo.ate} fuso={fuso} />
+            </>
+          )}
+    </section>
+  );
+}
+
+function ListaDoRecorte({ recorte, de, ate, fuso }: {
+  recorte: Recorte; de: string; ate: string; fuso: string;
+}) {
+  const consulta = useItensDaConciliacao(recorte, de, ate);
+  const itens = consulta.data?.pages.flatMap((pagina) => pagina.itens) ?? [];
+  const sentido = SENTIDO[recorte];
+
+  return (
+    <div className="cnc-recorte">
+      <p className="cnc-ajuda">{sentido.explica}</p>
+      {consulta.isPending ? <Esqueleto linhas={4} altura={36} />
+        : consulta.isError ? <Falha aoTentar={() => consulta.refetch()}>{mensagem(consulta.error)}</Falha>
+          : itens.length === 0 ? <p className="cnc-nada">{sentido.nada}</p>
+            : (
+              <div className="cnc-rolagem">
+                <table className="cnc-tabela">
+                  <thead>
+                    <tr>{sentido.colunas.map((coluna) => (
+                      <th key={coluna} className={COLUNAS_NUMERICAS.has(coluna) ? 'num' : undefined}>
+                        {coluna}
+                      </th>
+                    ))}</tr>
+                  </thead>
+                  <tbody>
+                    {itens.map((item) => (
+                      <tr key={item.id} data-recorte={recorte}>
+                        {celulas(recorte, item, fuso)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+      {consulta.hasNextPage && (
+        <div className="cnc-mais">
+          <button className="pagina-acao discreta" type="button"
+            disabled={consulta.isFetchingNextPage} onClick={() => consulta.fetchNextPage()}>
+            {consulta.isFetchingNextPage ? 'Carregando…' : 'Carregar mais'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function celulas(recorte: Recorte, item: ItemDaConciliacao, fuso: string) {
+  const venda = item.capturadaEm ? momento(item.capturadaEm, fuso, item.horaInformada ?? true) : '—';
+  const registro = item.registradoEm ? momento(item.registradoEm, fuso, true) : '—';
+  switch (recorte) {
+    case 'DIVERGENTES':
+      return (
+        <>
+          <td>{venda}</td>
+          <td>{registro}</td>
+          <td className="num">{valores(item)}</td>
+          <td>{formas(item)}</td>
+          <td>{item.idNaAdquirente}</td>
+          <td>{item.divergencias.map((d) => (
+            <span key={d} className="cnc-etiqueta cnc-divergencia">{DIVERGENCIA[d]}</span>
+          ))}</td>
+        </>
+      );
+    case 'SO_NA_MAQUININHA':
+      return (
+        <>
+          <td>{venda}</td>
+          <td className="num">{reais(item.valorVenda)}</td>
+          <td>{item.produto ? PRODUTO[item.produto] : '—'}</td>
+          <td>{item.bandeira ?? '—'}</td>
+          <td className="num">{parcelas(item.parcelas)}</td>
+          <td>{item.idNaAdquirente}</td>
+        </>
+      );
+    case 'SO_NO_SISTEMA':
+      return (
+        <>
+          <td>{registro}</td>
+          <td className="num">{reais(item.valorPagamento)}</td>
+          <td>{item.forma ? PRODUTO[item.forma] : '—'}</td>
+        </>
+      );
+    case 'CONCILIADAS':
+      return (
+        <>
+          <td>{venda}</td>
+          <td className="num">{reais(item.valorVenda)}</td>
+          <td>{item.forma ? PRODUTO[item.forma] : '—'}</td>
+          <td>{item.idNaAdquirente}</td>
+          <td>{item.criterio ? CRITERIO[item.criterio] : '—'}</td>
+        </>
+      );
+  }
+}
+
+/** Os dois valores só quando diferem — quando batem, repetir seria ruído. */
+function valores(item: ItemDaConciliacao): string {
+  if (item.valorPagamento == null || item.valorVenda == null
+    || item.valorPagamento === item.valorVenda) return reais(item.valorVenda);
+  return `${reais(item.valorPagamento)} no sistema · ${reais(item.valorVenda)} na Stone`;
+}
+
+function formas(item: ItemDaConciliacao): string {
+  const sistema = item.forma ? PRODUTO[item.forma] : '—';
+  if (!item.divergencias.includes('FORMA') || !item.produto) return sistema;
+  return `${sistema} no sistema · ${PRODUTO[item.produto]} na Stone`;
+}
+
+function parcelas(quantas: number | null): string {
+  return quantas == null ? '—' : quantas === 1 ? 'À vista' : `${quantas}x`;
+}
+
+/** Os meses que a tela oferece: o corrente, até hoje, e os onze anteriores, inteiros. */
+function meses(fuso: string) {
+  const hoje = diaCivil(new Date(), fuso);
+  let [ano, mes] = hoje.split('-').map(Number);
+  const lista: { valor: string; rotulo: string; de: string; ate: string }[] = [];
+  for (let i = 0; i < 12; i++) {
+    const dois = String(mes).padStart(2, '0');
+    const ultimo = new Date(Date.UTC(ano, mes, 0)).getUTCDate();
+    const nome = new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC', month: 'long', year: 'numeric' })
+      .format(new Date(Date.UTC(ano, mes - 1, 15)));
+    lista.push({
+      valor: `${ano}-${dois}`,
+      rotulo: nome.charAt(0).toLocaleUpperCase('pt-BR') + nome.slice(1),
+      de: `${ano}-${dois}-01`,
+      ate: i === 0 ? hoje : `${ano}-${dois}-${String(ultimo).padStart(2, '0')}`,
+    });
+    mes -= 1;
+    if (mes === 0) { mes = 12; ano -= 1; }
+  }
+  return lista;
+}
+
+function momento(instante: string, fuso: string, comHora: boolean): string {
+  return formatar(new Date(instante), fuso, comHora
+    ? { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }
+    : { day: '2-digit', month: '2-digit' });
+}
+
+const RECORTES: { valor: Recorte; rotulo: string;
+  chave: 'divergentes' | 'soNaMaquininha' | 'soNoSistema' | 'conciliadas' }[] = [
+  { valor: 'DIVERGENTES', rotulo: 'divergentes', chave: 'divergentes' },
+  { valor: 'SO_NA_MAQUININHA', rotulo: 'só na maquininha', chave: 'soNaMaquininha' },
+  { valor: 'SO_NO_SISTEMA', rotulo: 'só no sistema', chave: 'soNoSistema' },
+  { valor: 'CONCILIADAS', rotulo: 'conciliadas', chave: 'conciliadas' },
+];
+
+const SENTIDO: Record<Recorte, { explica: string; nada: string; colunas: string[] }> = {
+  DIVERGENTES: {
+    explica: 'A venda e o pagamento são o mesmo, mas algo difere — a forma registrada, o valor, ou a '
+      + 'venda foi cancelada na Stone depois.',
+    nada: 'Nenhuma divergência neste mês.',
+    colunas: ['Venda', 'Registro', 'Valor', 'Forma', 'Stone ID', 'O que difere'],
+  },
+  SO_NA_MAQUININHA: {
+    explica: 'Venda no cartão sem pagamento no sistema: comanda esquecida, ou dinheiro que entrou sem '
+      + 'comanda.',
+    nada: 'Toda venda da maquininha neste mês tem pagamento no sistema.',
+    colunas: ['Venda', 'Valor', 'Produto', 'Bandeira', 'Parcelas', 'Stone ID'],
+  },
+  SO_NO_SISTEMA: {
+    explica: 'Pagamento no cartão sem venda na maquininha: forma registrada errado, ou passado em outra '
+      + 'máquina.',
+    nada: 'Todo pagamento no cartão deste mês tem venda na maquininha.',
+    colunas: ['Registro', 'Valor', 'Forma'],
+  },
+  CONCILIADAS: {
+    explica: 'Batem: mesmo valor e mesma forma, com até duas horas entre a maquininha e o registro.',
+    nada: 'Nenhuma venda conciliada neste mês ainda.',
+    colunas: ['Venda', 'Valor', 'Forma', 'Stone ID', 'Casou por'],
+  },
+};
+
+const COLUNAS_NUMERICAS = new Set(['Valor', 'Parcelas']);
+
+const DIVERGENCIA = {
+  VALOR: 'Valor', FORMA: 'Forma', BANDEIRA: 'Bandeira', PARCELAS: 'Parcelas',
+  CANCELADA_NA_ADQUIRENTE: 'Cancelada na Stone',
+} as const;
+
+const CRITERIO = { NSU: 'NSU', AUTORIZACAO: 'Autorização', VALOR_E_HORA: 'Valor e hora' } as const;
 
 // ------------------------------------------------------------------ texto
 

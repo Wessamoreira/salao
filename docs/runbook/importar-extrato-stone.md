@@ -52,3 +52,31 @@ para mostrar.
 
 **Coluna que sumiu da sugestão** — o portal mudou o nome. A prévia mostra o campo sem coluna; escolher a
 certa. Se for de vez, acrescentar o nome novo aos apelidos de `CampoDoExtrato`.
+
+## A conferência (RT-FIN-010)
+
+Depois de importar, a conferência do mês mostra quatro contas — clique em cada uma para ver a lista:
+
+- **Divergentes** — a mesma venda com algo diferente: a forma registrada (débito × crédito), o valor, ou a
+  venda cancelada na Stone depois. Corrigir o pagamento na comanda.
+- **Só na maquininha** — venda no cartão sem pagamento no sistema: comanda esquecida, ou dinheiro que
+  entrou sem comanda.
+- **Só no sistema** — pagamento no cartão sem venda na maquininha: forma registrada errado, ou passado em
+  outra máquina.
+- **Conciliadas** — batem.
+
+"Conciliar agora" casa o que foi registrado depois da última importação. Pagamentos em dias sem extrato
+aparecem num aviso à parte: importe a Lista de vendas desses dias.
+
+```sql
+-- os pares do mês, por critério e se divergem
+select c.criterio, c.divergencias <> '[]'::jsonb as diverge, count(*)
+  from conciliacao_de_venda c join transacao_do_adquirente t on t.id = c.transacao_id
+ where t.estabelecimento_id = '<salão>' and t.capturada_em >= '<início do mês>'
+ group by 1, 2;
+```
+
+**Casou errado?** Em valores iguais, trocar dois pares não muda dinheiro. Um par realmente errado —
+valores diferentes — só casa por NSU ou autorização; desfazer com motivo é RT-FIN-011. **Nunca** apagar a
+linha no banco.
+

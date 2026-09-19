@@ -87,6 +87,28 @@ class ImportacoesDeExtratoWebIT extends AbstractPostgresIT {
     }
 
     @Test
+    @DisplayName("RT-FIN-010: a conferência pelo HTTP — resumo, lista e \"Conciliar agora\"")
+    void conferencia() throws Exception {
+        tornar(Perfil.GERENTE);
+        String token = entrarComMfa();
+        enviar(ROTA, token, arquivo(CSV.getBytes(StandardCharsets.UTF_8)), mapeamento(MAPEAMENTO));
+
+        var resumo = get("/api/v1/conciliacao/resumo?de=2026-09-18&ate=2026-09-18", token);
+        var lista = get("/api/v1/conciliacao/itens?recorte=SO_NA_MAQUININHA&de=2026-09-18&ate=2026-09-18",
+                token);
+        var rodada = postJson("/api/v1/conciliacao/casamentos", "", token);
+        var invertido = get("/api/v1/conciliacao/resumo?de=2026-09-18&ate=2026-09-01", token);
+
+        assertThat(resumo.statusCode()).isEqualTo(200);
+        assertThat(resumo.body()).contains("\"soNaMaquininha\":{\"quantidade\":1");
+        assertThat(lista.body()).contains("\"idNaAdquirente\":\"ST1\"");
+        assertThat(rodada.statusCode()).isEqualTo(200);
+        assertThat(rodada.body()).contains("\"casadas\":0");
+        assertThat(invertido.statusCode()).isEqualTo(422);
+        assertThat(invertido.body()).contains("ER-FIN-FILTRO_INVALIDO");
+    }
+
+    @Test
     @DisplayName("a recepção não importa extrato")
     void recepcao_nao_importa() throws Exception {
         tornar(Perfil.RECEPCAO);
@@ -96,6 +118,7 @@ class ImportacoesDeExtratoWebIT extends AbstractPostgresIT {
 
         assertThat(resposta.statusCode()).isEqualTo(403);
         assertThat(resposta.body()).contains("ER-INF-ACESSO_NEGADO");
+        assertThat(get("/api/v1/conciliacao/resumo", token).statusCode()).isEqualTo(403);
     }
 
     @Test

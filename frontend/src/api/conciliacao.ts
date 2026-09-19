@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './http';
 
 /**
@@ -69,6 +69,9 @@ export interface Resultado {
   recusadas: number;
   /** As primeiras 500; o total está em `recusadas`. */
   recusas: { linha: number; motivo: string }[];
+  /** RT-FIN-010: vendas que casaram com pagamentos do sistema ao fim da importação. */
+  casadas: number;
+  divergentes: number;
 }
 
 export interface ImportacaoResumo {
@@ -116,7 +119,8 @@ export function useImportar() {
   return useMutation({
     mutationFn: ({ arquivo, mapeamento }: { arquivo: File; mapeamento: Mapeamento }) =>
       api<Resultado>(ROTA, { method: 'POST', body: corpo(arquivo, mapeamento) }),
-    onSuccess: () => fila.invalidateQueries({ queryKey: chaveDoHistorico }),
+    // A importação também casa (RT-FIN-010): o histórico e a conferência mudam juntos.
+    onSuccess: () => fila.invalidateQueries({ queryKey: ['conciliacao'] }),
   });
 }
 
@@ -129,3 +133,83 @@ export function useImportacoes() {
     getNextPageParam: (ultima) => (ultima.temMais ? ultima.proximoCursor : null),
   });
 }
+
+// ------------------------------------------------------------------ RT-FIN-010 — a conferência
+
+/** As quatro perguntas: o que difere, o que só a maquininha tem, o que só o sistema tem, o que bate. */
+export type Recorte = 'DIVERGENTES' | 'SO_NA_MAQUININHA' | 'SO_NO_SISTEMA' | 'CONCILIADAS';
+
+export interface Totais {
+  quantidade: number;
+  valor: number;
+}
+
+export interface ResumoDaConciliacao {
+  de: string;
+  ate: string;
+  conciliadas: Totais;
+  divergentes: Totais;
+  soNaMaquininha: Totais;
+  soNoSistema: Totais;
+  /** Pagamentos no cartão em dias que nenhuma importação cobre — falta de arquivo, e não problema. */
+  semExtrato: Totais;
+}
+
+/** Nos pares, os dois lados; nas sobras, só o que existe. Instantes em UTC. */
+export interface ItemDaConciliacao {
+  id: string;
+  instante: string;
+  vendaId: string | null;
+  idNaAdquirente: string | null;
+  capturadaEm: string | null;
+  horaInformada: boolean | null;
+  valorVenda: number | null;
+  produto: 'CREDITO' | 'DEBITO' | 'OUTRO' | null;
+  bandeira: string | null;
+  parcelas: number | null;
+  pagamentoId: string | null;
+  registradoEm: string | null;
+  valorPagamento: number | null;
+  forma: 'CREDITO' | 'DEBITO' | null;
+  criterio: 'NSU' | 'AUTORIZACAO' | 'VALOR_E_HORA' | null;
+  divergencias: ('VALOR' | 'FORMA' | 'BANDEIRA' | 'PARCELAS' | 'CANCELADA_NA_ADQUIRENTE')[];
+}
+
+export interface Rodada {
+  casadas: number;
+  divergentes: number;
+  canceladasDepois: number;
+}
+
+interface PaginaDeItens {
+  itens: ItemDaConciliacao[];
+  proximoCursor: string | null;
+  temMais: boolean;
+}
+
+export function useResumoDaConciliacao(de: string, ate: string) {
+  return useQuery({
+    queryKey: ['conciliacao', 'resumo', de, ate],
+    queryFn: () => api<ResumoDaConciliacao>(`/v1/conciliacao/resumo?de=${de}&ate=${ate}`),
+  });
+}
+
+export function useItensDaConciliacao(recorte: Recorte, de: string, ate: string) {
+  return useInfiniteQuery({
+    queryKey: ['conciliacao', 'itens', recorte, de, ate],
+    queryFn: ({ pageParam }) => api<PaginaDeItens>(`/v1/conciliacao/itens?recorte=${recorte}`
+      + `&de=${de}&ate=${ate}${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''}`),
+    initialPageParam: null as string | null,
+    getNextPageParam: (ultima) => (ultima.temMais ? ultima.proximoCursor : null),
+  });
+}
+
+/** "Conciliar agora": casa o que ficou sem par desde a última importação. */
+export function useConciliarAgora() {
+  const fila = useQueryClient();
+  return useMutation({
+    mutationFn: () => api<Rodada>('/v1/conciliacao/casamentos', { method: 'POST' }),
+    onSuccess: () => fila.invalidateQueries({ queryKey: ['conciliacao'] }),
+  });
+}
+

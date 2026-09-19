@@ -256,7 +256,7 @@ olhava "CSV", que as duas mensagens têm. F08 sobreviveria; agora o teste exige 
       dono escolhe — e o nome certo entra na lista de apelidos.
 - [ ] **API de Conciliação da Stone** (XML diário, com taxas e recebíveis): segundo adapter de ADR-0007,
       quando houver credencial de parceiro. O domínio não muda.
-- [ ] **Casar com os pagamentos** é RT-FIN-010; **taxa e previsão de recebimento**, RT-FIN-012.
+- [x] ~~Casar com os pagamentos~~ — RT-FIN-010. **Taxa e previsão de recebimento** continuam em RT-FIN-012.
 - [ ] **Proxy de produção:** quando o Caddy for configurado (RT-INF-009), o limite de corpo não pode ficar
       abaixo de 6 MB, senão o 413 vem dele, sem a mensagem do sistema.
 - [ ] **Retenção** de `transacao_do_adquirente` e `importacao_de_extrato`: é dado financeiro; o prazo

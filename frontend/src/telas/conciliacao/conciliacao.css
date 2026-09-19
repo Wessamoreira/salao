@@ -338,7 +338,105 @@
 
 .cnc-erro { border-left: 3px solid var(--status-falta); }
 
+/* ------------------------------------------------------------------ RT-FIN-010: a conferência */
+
+.cnc-controles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-3);
+}
+.cnc-mes {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-2);
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+}
+.cnc-mes select {
+  min-height: 32px;
+  padding: 0 var(--e-3);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-weight: var(--p-normal);
+}
+
+/*
+ * As quatro contas do mês são o seletor. A barra no topo diz o que cada uma significa; o rótulo diz o
+ * mesmo por extenso — cor nunca sozinha.
+ */
+.cnc-contas-do-mes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--e-3);
+}
+.cnc-conta {
+  display: grid;
+  gap: var(--e-1);
+  padding: var(--e-3) var(--e-4) var(--e-4);
+  color: var(--tinta);
+  text-align: left;
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-top: 3px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color var(--mov-imediato) var(--mov-curva),
+    background var(--mov-imediato) var(--mov-curva);
+}
+.cnc-conta:hover { background: var(--papel-fundo); }
+.cnc-conta[data-recorte='DIVERGENTES'] { border-top-color: var(--status-falta); }
+.cnc-conta[data-recorte='SO_NA_MAQUININHA'],
+.cnc-conta[data-recorte='SO_NO_SISTEMA'] { border-top-color: var(--status-solicitado); }
+.cnc-conta[data-recorte='CONCILIADAS'] { border-top-color: var(--status-confirmado); }
+.cnc-conta[aria-pressed='true'] {
+  background: var(--papel-fundo);
+  border-color: var(--tinta);
+  border-top-width: 3px;
+}
+.cnc-conta:focus-visible,
+.cnc-mes select:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: 2px;
+}
+.cnc-conta-rotulo {
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+}
+.cnc-conta-valor {
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  font-feature-settings: var(--numerais);
+}
+
+.cnc-recorte { display: grid; gap: var(--e-3); }
+.cnc-nada {
+  margin: 0;
+  padding: var(--e-5) 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-14);
+  text-align: center;
+}
+/* Nos divergentes o texto é explicação ("R$ 85,00 no sistema · R$ 80,00 na Stone"): a célula quebra,
+   a etiqueta não. Numa linha só, a tabela passava da borda e a última coluna sumia. */
+.cnc-tabela tr[data-recorte='DIVERGENTES'] td { white-space: normal; }
+/* Data e Stone ID não quebram: "18/09," numa linha e "10:05" na outra não se lê de relance. */
+.cnc-tabela tr[data-recorte='DIVERGENTES'] td:nth-child(-n+2),
+.cnc-tabela tr[data-recorte='DIVERGENTES'] td:nth-child(5) { white-space: nowrap; }
+.cnc-tabela tr[data-recorte='DIVERGENTES'] td:last-child { min-width: 132px; }
+.cnc-divergencia { margin: 0 var(--e-1) var(--e-1) 0; white-space: nowrap; }
+.cnc-divergencia {
+  background: var(--status-falta-fundo);
+  border-style: solid;
+  border-color: var(--status-falta);
+}
+
 @media (max-width: 820px) {
+  .cnc-contas-do-mes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cnc-bloco { padding: var(--e-4); }
   .cnc-campo {
     grid-template-columns: minmax(0, 1fr);

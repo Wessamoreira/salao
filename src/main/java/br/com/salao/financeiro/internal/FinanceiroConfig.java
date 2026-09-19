@@ -7,6 +7,9 @@ import br.com.salao.financeiro.internal.application.Anulacao;
 import br.com.salao.financeiro.internal.application.CancelarValeUseCase;
 import br.com.salao.financeiro.internal.application.CascataDeComissao;
 import br.com.salao.financeiro.internal.application.Competencia;
+import br.com.salao.financeiro.internal.application.Conciliador;
+import br.com.salao.financeiro.internal.application.ConciliarUseCase;
+import br.com.salao.financeiro.internal.application.ConsultarConciliacaoUseCase;
 import br.com.salao.financeiro.internal.application.ConsultarExtratoUseCase;
 import br.com.salao.financeiro.internal.application.ContasDoPeriodo;
 import br.com.salao.financeiro.internal.application.DefinirRegraDeComissaoUseCase;
@@ -25,6 +28,7 @@ import br.com.salao.financeiro.internal.application.PreverImportacaoUseCase;
 import br.com.salao.financeiro.internal.application.Razao;
 import br.com.salao.financeiro.internal.application.RegistrarValeUseCase;
 import br.com.salao.financeiro.internal.application.RemoverRegraDeComissaoUseCase;
+import br.com.salao.financeiro.internal.infra.ConciliacaoJdbc;
 import br.com.salao.financeiro.internal.infra.FechamentosJdbc;
 import br.com.salao.financeiro.internal.infra.ImportacoesDeExtratoJdbc;
 import br.com.salao.financeiro.internal.infra.LancamentosJdbc;
@@ -223,9 +227,33 @@ public class FinanceiroConfig {
                                                          ImportacoesDeExtratoJdbc importacoes,
                                                          MapeamentosDeExtratoJdbc mapeamentos,
                                                          EstabelecimentoApi estabelecimentos,
-                                                         AuditoriaApi auditoria, Relogio relogio) {
+                                                         AuditoriaApi auditoria,
+                                                         Conciliador conciliador, Relogio relogio) {
         return new ImportarExtratoUseCase(transacoes, importacoes, mapeamentos, estabelecimentos,
-                auditoria, relogio);
+                auditoria, conciliador, relogio);
+    }
+
+    // ------------------------------------------------------------------ RT-FIN-010 — casamento
+
+    @Bean
+    public ConciliacaoJdbc conciliacaoJdbc(DataSource dataSource, ObjectMapper json) {
+        return new ConciliacaoJdbc(JdbcClient.create(dataSource), json);
+    }
+
+    @Bean
+    public Conciliador conciliador(ConciliacaoJdbc conciliacao, EstabelecimentoApi estabelecimentos) {
+        return new Conciliador(conciliacao, estabelecimentos);
+    }
+
+    @Bean
+    public ConciliarUseCase conciliarUseCase(Conciliador conciliador, Relogio relogio) {
+        return new ConciliarUseCase(conciliador, relogio);
+    }
+
+    @Bean
+    public ConsultarConciliacaoUseCase consultarConciliacaoUseCase(
+            ConciliacaoJdbc conciliacao, EstabelecimentoApi estabelecimentos, Relogio relogio) {
+        return new ConsultarConciliacaoUseCase(conciliacao, estabelecimentos, relogio);
     }
 
     @Bean
