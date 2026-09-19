@@ -484,3 +484,17 @@ para responder "quem apontou este telefone para esta conta", e mascarada não re
 `.mesmo_telefone_em_dois_saloes`, `.remover_telefone`, `.telefone_invalido`, `.sem_permissao`,
 `.auditoria_do_telefone`, `.sem_nono_digito`, `.isolamento`
 **Configurável?** Não · **Origem.** 2026-09-12
+
+### RN-IAM-023 — Contato para clientes: telefone normalizado ou link https, opcional
+
+**Enunciado.** `estabelecimento.contato_para_clientes` é opcional. Telefone sai normalizado como todo
+telefone do sistema, com o DDD padrão do salão. Link, só `https://`, com host de verdade, até 200
+caracteres. `http://` é recusado com mensagem própria.
+
+**Motivo.** É o que o aviso de IA oferece a quem escreve para o número do assistente (RN-CNV-027), e é o
+que a cliente toca. Um link `http` poderia ser trocado no caminho.
+
+**Onde é garantida.** `DadosDoEstabelecimento` · check `contato_para_clientes_valido` (`V57`).
+**Rotinas.** RT-CFG-001, RT-CNV-008 · **Teste.** `DadosDoEstabelecimentoTest.contato_*`,
+`ConfiguracaoIT.contato_para_clientes`
+**Configurável?** É a própria configuração · **Origem.** 2026-09-19

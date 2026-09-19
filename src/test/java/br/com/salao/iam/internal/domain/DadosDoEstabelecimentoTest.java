@@ -14,7 +14,7 @@ class DadosDoEstabelecimentoTest {
 
     private DadosDoEstabelecimento comFuso(String fuso) {
         return DadosDoEstabelecimento.comFuso("Salão Teste", "12345678000199", fuso, "BRL",
-                BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, "11");
+                BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, "11", null);
     }
 
     @Test
@@ -43,7 +43,7 @@ class DadosDoEstabelecimentoTest {
     @Test
     void recusa_nome_vazio() {
         assertThatThrownBy(() -> DadosDoEstabelecimento.comFuso("  ", null, "America/Sao_Paulo",
-                "BRL", BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, "11"))
+                "BRL", BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, "11", null))
                 .isInstanceOf(DadosDoEstabelecimentoInvalidosException.class);
     }
 
@@ -52,21 +52,73 @@ class DadosDoEstabelecimentoTest {
         // "011" faria todo telefone normalizado nascer com um zero extra e nunca completar a
         // chamada — um erro que só apareceria quando alguém tentasse ligar para a cliente.
         assertThatThrownBy(() -> DadosDoEstabelecimento.comFuso("Salão", null, "America/Sao_Paulo",
-                "BRL", BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, "011"))
+                "BRL", BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, "011", null))
                 .isInstanceOf(DadosDoEstabelecimentoInvalidosException.class);
     }
 
     @Test
     void aceita_sem_ddd_padrao() {
         assertThat(DadosDoEstabelecimento.comFuso("Salão", null, "America/Sao_Paulo", "BRL",
-                BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, null).dddPadrao())
+                BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, null, null).dddPadrao())
                 .isNull();
     }
 
     @Test
     void recusa_moeda_desconhecida() {
         assertThatThrownBy(() -> DadosDoEstabelecimento.comFuso("Salão", null, "America/Sao_Paulo",
-                "XYZ", BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, "11"))
+                "XYZ", BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, "11", null))
                 .isInstanceOf(DadosDoEstabelecimentoInvalidosException.class);
+    }
+
+    // ------------------------------------------------------------------ RT-CNV-008: contato para clientes
+
+    private static DadosDoEstabelecimento comContato(String contato) {
+        return DadosDoEstabelecimento.comFuso("Salão", null, "America/Sao_Paulo", "BRL",
+                BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, "11", contato);
+    }
+
+    @Test
+    @DisplayName("contato: telefone com máscara ou sem DDD sai normalizado, como todo telefone")
+    void contato_telefone_normalizado() {
+        assertThat(comContato("(11) 3456-7890").contatoParaClientes()).isEqualTo("551134567890");
+        assertThat(comContato("3456-7890").contatoParaClientes()).isEqualTo("551134567890");
+        assertThat(comContato("+55 11 98765-4321").contatoParaClientes()).isEqualTo("5511987654321");
+    }
+
+    @Test
+    @DisplayName("contato: link https fica como foi escrito")
+    void contato_link_https() {
+        assertThat(comContato("  https://studio.exemplo/agendar ").contatoParaClientes())
+                .isEqualTo("https://studio.exemplo/agendar");
+    }
+
+    @Test
+    @DisplayName("contato: http é recusado — é o link que a cliente toca")
+    void contato_http_recusado() {
+        // A mensagem específica: a genérica ("telefone ou link https://") também contém "https://",
+        // e sem esta asserção a recusa de http poderia sumir e o teste continuaria verde.
+        assertThatThrownBy(() -> comContato("http://studio.exemplo"))
+                .isInstanceOf(DadosDoEstabelecimentoInvalidosException.class)
+                .hasMessageContaining("precisa começar com https://");
+    }
+
+    @Test
+    @DisplayName("contato: o que não é telefone nem link é recusado dizendo o que se espera")
+    void contato_invalido() {
+        assertThatThrownBy(() -> comContato("www.studio"))
+                .isInstanceOf(DadosDoEstabelecimentoInvalidosException.class)
+                .hasMessageContaining("telefone ou um link");
+        assertThatThrownBy(() -> comContato("https://localhost/agenda"))
+                .isInstanceOf(DadosDoEstabelecimentoInvalidosException.class);
+        assertThatThrownBy(() -> comContato("https://" + "a".repeat(200) + ".com"))
+                .isInstanceOf(DadosDoEstabelecimentoInvalidosException.class)
+                .hasMessageContaining("200");
+    }
+
+    @Test
+    @DisplayName("contato: vazio vale — o aviso sai sem a linha do contato")
+    void contato_vazio() {
+        assertThat(comContato("   ").contatoParaClientes()).isNull();
+        assertThat(comContato(null).contatoParaClientes()).isNull();
     }
 }

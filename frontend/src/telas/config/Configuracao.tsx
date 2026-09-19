@@ -75,6 +75,7 @@ export function Configuracao() {
             descontoAfetaComissao: form.descontoAfetaComissao,
             periodicidadeDeFechamento: form.periodicidade,
             dddPadrao: form.ddd.trim() || null,
+            contatoParaClientes: form.contato.trim() || null,
           },
           { onSuccess: () => setSalvo(true) },
         );
@@ -126,6 +127,22 @@ export function Configuracao() {
           </select>
           <span className="campo-ajuda">
             Define o que é “hoje” na agenda. Muda também como os horários já marcados aparecem.
+          </span>
+        </label>
+
+        <label className="campo">
+          <span>Como clientes falam com o salão (opcional)</span>
+          <input
+            value={form.contato}
+            onChange={(e) => alterar('contato', e.target.value)}
+            placeholder="(11) 3456-7890 ou https://…"
+          />
+          {/* RT-CNV-008: o campo só faz sentido sabendo onde ele aparece. Sem isso, parece
+              cadastro de contato do salão — e é a saída que o aviso de IA oferece. */}
+          <span className="campo-ajuda">
+            Quem não é da equipe e escreve para o WhatsApp do assistente recebe, uma vez, um aviso
+            de que ali atende uma inteligência artificial usada só pela equipe — e este contato.
+            Telefone, ou link que comece com https://.
           </span>
         </label>
       </section>
@@ -186,6 +203,7 @@ interface Formulario {
   nome: string;
   documento: string;
   ddd: string;
+  contato: string;
   fuso: string;
   baseComissao: BaseDeComissao;
   descontoAfetaComissao: boolean;
@@ -193,7 +211,7 @@ interface Formulario {
 }
 
 function deConfiguracao(c: {
-  nome: string; fuso: string; dddPadrao: string | null;
+  nome: string; fuso: string; dddPadrao: string | null; contatoParaClientes?: string | null;
   baseComissao: BaseDeComissao; descontoAfetaComissao: boolean;
   periodicidadeDeFechamento: Periodicidade;
 }): Formulario {
@@ -201,11 +219,25 @@ function deConfiguracao(c: {
     nome: c.nome,
     documento: '',
     ddd: c.dddPadrao ?? '',
+    contato: exibirContato(c.contatoParaClientes ?? null),
     fuso: c.fuso,
     baseComissao: c.baseComissao,
     descontoAfetaComissao: c.descontoAfetaComissao,
     periodicidade: c.periodicidadeDeFechamento,
   };
+}
+
+/**
+ * O telefone chega como o banco guarda — só dígitos, com o país. No campo, volta a ser o número que
+ * a pessoa reconhece; o servidor normaliza de novo ao salvar, seja qual for o formato.
+ */
+function exibirContato(contato: string | null): string {
+  if (!contato) return '';
+  const nacional = /^55(\d{10,11})$/.exec(contato)?.[1];
+  if (!nacional) return contato;
+  const [ddd, resto] = [nacional.slice(0, 2), nacional.slice(2)];
+  const corte = resto.length - 4;
+  return `(${ddd}) ${resto.slice(0, corte)}-${resto.slice(corte)}`;
 }
 
 function mensagem(erro: unknown): string {

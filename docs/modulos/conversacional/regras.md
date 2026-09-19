@@ -647,3 +647,50 @@ não reescrever o que aconteceu.
 constraint `acao_anonimizada_sem_conteudo`).
 **Rotinas.** RT-CNV-007 · **Teste.** `AcaoIaIT.retencao`
 **Configurável?** Os prazos (`app.agente.acao-ia.anonimizar-apos`, `apagar-apos`) · **Origem.** 2026-09-14
+
+### RN-CNV-027 — Quem não é da equipe recebe, uma vez, um aviso fixo: é IA, não atende clientes, e o contato do salão
+
+**Enunciado.** A primeira mensagem de um número desconhecido — texto, áudio ou qualquer outro tipo,
+menos toque de botão — faz enfileirar uma mensagem fixa: o número é atendido por um assistente de
+inteligência artificial que trabalha só para a equipe, ele não atende clientes, ninguém lê o que chega
+ali, e o contato que o salão cadastrou. Nasce na chegada da mensagem, e não no processador de conversas.
+
+**Motivo.** Transparência sobre IA (LGPD, docs/05). Na v1 a cliente não conversa com o agente
+(pergunta 8), e até aqui a resposta a ela era silêncio — sem saber que ninguém lia. Na chegada porque o
+processador não roda sem modelo configurado, e o aviso não pode esperar um LLM para dizer que ali atende
+um; e porque áudio esperaria um provedor de transcrição.
+
+**Onde é garantida.** `AvisarQuemNaoEDaEquipe` · `AvisoDeIa` · motivo `AVISO_DE_IA` na saída.
+**Rotinas.** RT-CNV-008 · **Teste.** `AvisoDeIaIT.avisado_uma_vez_sem_modelo`, `.audio_avisa`,
+`.sai_como_resposta`, `AvisoDeIaTest`
+**Configurável?** O contato (RN-IAM-023) · **Origem.** 2026-09-19, decisão do dono
+
+### RN-CNV-028 — O aviso é igual para todo desconhecido, não passa pelo modelo, e não vai para a equipe
+
+**Enunciado.** Só `TELEFONE_DESCONHECIDO` recebe o aviso. Conta inativa, bloqueada, com perfil que exige
+segundo fator ou de dispositivo é da equipe e não recebe. O texto só tem o nome e o contato do salão —
+nada do que a pessoa escreveu, nada sobre o número dela.
+
+**Motivo.** "Não atende clientes" não se aplica a quem é da equipe. E um texto único, montado sem modelo,
+não pode ser induzido a dizer nada, nem conta se aquele número tem conta no salão.
+
+**Onde é garantida.** `AvisarQuemNaoEDaEquipe` · `AvisoDeIa`.
+**Rotinas.** RT-CNV-008 · **Teste.** `AvisoDeIaIT.equipe_nao_recebe`, `.botao_nao_avisa`,
+`AvisoDeIaTest`
+**Configurável?** Não · **Origem.** 2026-09-19
+
+### RN-CNV-029 — "Já avisado" é a impressão com chave do salão e do número, nunca o número
+
+**Enunciado.** `aviso_de_ia` guarda, por salão, um HMAC-SHA256 do salão junto com o número, com a chave
+do cofre de campo. Único por salão: duas mensagens juntas do mesmo número novo disputam a linha, e sai
+um aviso só. A aplicação só insere e lê. Registrar e enfileirar são a mesma transação.
+
+**Motivo.** Um SHA-256 sem chave de telefone brasileiro se desfaz por força bruta em minutos. Com o salão
+na conta, a mesma pessoa não deixa o mesmo rastro em dois salões. Na mesma transação, porque separados
+uma queda deixaria o número marcado e ninguém avisado.
+
+**Onde é garantida.** `CofreDeCampo.impressao` · `AvisosDeIaJdbc` (`MANDATORY`) · `V57`
+(`um_aviso_por_numero`, `revoke update, delete`).
+**Rotinas.** RT-CNV-008 · **Teste.** `AvisoDeIaIT.guarda_so_a_impressao`, `.contato_por_salao`,
+`.aplicacao_nao_apaga`, `.avisado_uma_vez_sem_modelo`, `CofreDeCampoTest`
+**Configurável?** Não · **Origem.** 2026-09-19, decisão do dono

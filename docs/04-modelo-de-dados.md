@@ -388,6 +388,10 @@ Desde RT-CNV-006 (`V55`) a intenção pode esperar o **aceite** de quem vai aten
 token gravados na simulação — e `mensagem_para_equipe` é a saída do que o agente diz à equipe: gravada
 junto com o fato que a produziu, na ordem por destino, e imutável para a aplicação.
 
+Desde RT-CNV-008 (`V57`) a saída leva também o **aviso de IA** a quem não é da equipe, e `aviso_de_ia`
+lembra quem já o recebeu — pela impressão com chave do salão e do número, nunca o número. O salão ganhou
+`contato_para_clientes`, telefone ou link https, que o aviso oferece.
+
 ## Retenção — o que apaga e quando
 
 Nenhuma tabela de log cresce para sempre. Job diário:
@@ -398,6 +402,7 @@ Nenhuma tabela de log cresce para sempre. Job diário:
 | `acao_ia` | 12 meses; pedido, resposta, telefone, argumentos e resumos anonimizados aos 90 dias — `PurgadorDeAcoesDoAgente` (RT-CNV-007) | LGPD: minimização |
 | `intencao_pendente` | 12 meses, como `acao_ia` — **job ainda não existe** (RT-CNV-005) | O resumo traz nome de cliente |
 | `mensagem_para_equipe` | 90 dias depois de enviada ou falha, como `conversa_mensagem` — **job ainda não existe** (RT-CNV-006) | O texto traz nomes e horários |
+| `aviso_de_ia` | Enquanto o salão existir — é o que faz o aviso sair uma vez só (RT-CNV-008) | Guarda só a impressão com chave: sem a chave, não identifica ninguém |
 | `conversa_mensagem` | 90 dias | Nada exige mais |
 | `idempotencia` | 7 dias | TTL da chave |
 | `event_publication` (Modulith) | Completos apagados em 7 dias | Senão cresce sem limite |

@@ -50,12 +50,22 @@ class ConfiguracaoIT extends AbstractPostgresIT {
 
     private ConfiguracaoCommand comDdd(String ddd) {
         return new ConfiguracaoCommand("Studio Marilda", null, "America/Sao_Paulo", "BRL",
-                BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, ddd);
+                BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, ddd, null);
     }
 
     private String dddDe(UUID tenant) {
         return TenantContext.obter(tenant,
                 () -> estabelecimentos.configuracao(tenant).orElseThrow().dddPadrao());
+    }
+
+    private ConfiguracaoCommand comContato(String contato) {
+        return new ConfiguracaoCommand("Studio Marilda", null, "America/Sao_Paulo", "BRL",
+                BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, "11", contato);
+    }
+
+    private String contatoDe(UUID tenant) {
+        return TenantContext.obter(tenant,
+                () -> estabelecimentos.configuracao(tenant).orElseThrow().contatoParaClientes());
     }
 
     private String codigoDe(Throwable e) {
@@ -130,7 +140,7 @@ class ConfiguracaoIT extends AbstractPostgresIT {
 
         var erro = catchThrowable(() -> TenantContext.executar(tenant,
                 () -> atualizar.executar(new ConfiguracaoCommand("Studio", null, "-03:00", "BRL",
-                        BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, "11"))));
+                        BaseDeComissao.BRUTO, false, PeriodicidadeDeFechamento.MENSAL, "11", null))));
 
         assertThat(codigoDe(erro)).isEqualTo("ER-IAM-DADOS_INVALIDOS");
     }
@@ -143,7 +153,7 @@ class ConfiguracaoIT extends AbstractPostgresIT {
         var salva = TenantContext.obter(tenant, () -> atualizar.executar(
                 new ConfiguracaoCommand("Studio Marilda", "12345678000199", "America/Manaus",
                         "BRL", BaseDeComissao.LIQUIDO, true,
-                        PeriodicidadeDeFechamento.QUINZENAL, "92")));
+                        PeriodicidadeDeFechamento.QUINZENAL, "92", null)));
 
         assertThat(salva.baseComissao()).isEqualTo(BaseDeComissao.LIQUIDO);
         assertThat(salva.descontoAfetaComissao()).isTrue();
@@ -162,7 +172,7 @@ class ConfiguracaoIT extends AbstractPostgresIT {
 
         TenantContext.executar(tenant, () -> atualizar.executar(
                 new ConfiguracaoCommand("Studio", null, "America/Sao_Paulo", "BRL",
-                        BaseDeComissao.LIQUIDO, true, PeriodicidadeDeFechamento.MENSAL, "11")));
+                        BaseDeComissao.LIQUIDO, true, PeriodicidadeDeFechamento.MENSAL, "11", null)));
 
         try (var st = comoOwner().createStatement();
              var rs = st.executeQuery("""
@@ -195,5 +205,24 @@ class ConfiguracaoIT extends AbstractPostgresIT {
         assertThatThrownBy(() -> TenantContext.executar(tenant,
                 () -> atualizar.executar(comDdd("11"))))
                 .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("RT-CNV-008: o contato para clientes — telefone normalizado, link https, http recusado")
+    void contato_para_clientes() {
+        UUID tenant = salaoSemDdd();
+
+        TenantContext.obter(tenant, () -> atualizar.executar(comContato("(11) 3456-7890")));
+        assertThat(contatoDe(tenant)).isEqualTo("551134567890");
+
+        TenantContext.obter(tenant,
+                () -> atualizar.executar(comContato("https://studio.exemplo/agendar")));
+        assertThat(contatoDe(tenant)).isEqualTo("https://studio.exemplo/agendar");
+
+        Throwable erro = org.assertj.core.api.Assertions.catchThrowable(() -> TenantContext.obter(
+                tenant, () -> atualizar.executar(comContato("http://studio.exemplo"))));
+        assertThat(codigoDe(erro)).isEqualTo("ER-IAM-DADOS_INVALIDOS");
+        assertThat(contatoDe(tenant)).as("o recusado não grava")
+                .isEqualTo("https://studio.exemplo/agendar");
     }
 }

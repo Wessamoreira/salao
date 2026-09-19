@@ -15,6 +15,8 @@ export interface Configuracao {
   periodicidadeDeFechamento: Periodicidade;
   paisPadrao: string;
   dddPadrao: string | null;
+  /** RT-CNV-008 — telefone (só dígitos) ou link https que o aviso de IA oferece. */
+  contatoParaClientes: string | null;
   ativo: boolean;
 }
 
@@ -32,6 +34,7 @@ export function useSalvarConfiguracao() {
       nome: string; documento: string | null; fusoIana: string; moeda: string;
       baseComissao: BaseDeComissao; descontoAfetaComissao: boolean;
       periodicidadeDeFechamento: Periodicidade; dddPadrao: string | null;
+      contatoParaClientes: string | null;
     }) => api<Configuracao>('/v1/configuracao', { method: 'PUT', body: JSON.stringify(dados) }),
     onSuccess: () => {
       fila.invalidateQueries({ queryKey: ['configuracao'] });

@@ -198,5 +198,5 @@ terceira tranca depende de `emNomeDe`, e não de a ferramenta ser bem-comportada
 - [ ] **Retentativa depois de queda repete o custo.** Uma conversa interrompida no meio volta do
       começo e chama o modelo de novo. As ferramentas são de leitura, então não há efeito repetido
       — só custo.
-- [ ] **Remetente desconhecido não recebe resposta.** É a regra da v1 (pergunta 8); o aviso de IA à
-      cliente é RT-CNV-008.
+- [x] ~~Remetente desconhecido não recebe resposta~~ — desde RT-CNV-008 recebe, uma vez, o aviso fixo
+      de IA. O agente continua sem responder a ele (pergunta 8).

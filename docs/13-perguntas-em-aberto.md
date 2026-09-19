@@ -38,7 +38,7 @@ resposta muda com o tempo de qualquer forma.
 
 | # | Pergunta | Recomendação |
 |---|---|---|
-| 8 | Cliente agenda sozinho pelo WhatsApp na v1? | **Não.** Muda o modelo de identidade inteiro — hoje cliente não tem login e passaria a ter identidade por telefone — e abre superfície de abuso que a Fase 4 não prevê. v2 |
+| 8 | Cliente agenda sozinho pelo WhatsApp na v1? | **Não.** Muda o modelo de identidade inteiro — hoje cliente não tem login e passaria a ter identidade por telefone — e abre superfície de abuso que a Fase 4 não prevê. v2. Desde RT-CNV-008, quem não é da equipe recebe só um aviso fixo de IA, uma vez |
 | 9 | Política de no-show: cobra, bloqueia ou só registra? | Começar por **só registrar**. Cobrar exige política escrita, aviso prévio ao cliente e forma de cobrança |
 
 ## Bloqueiam a Fase 5

@@ -31,7 +31,12 @@ public class MensagensParaEquipeJdbc {
         /** O pedido, com botões, a quem precisa aceitar. */
         PEDIDO_DE_ACEITE,
         /** O que aconteceu com o aceite, para quem pediu. */
-        DESFECHO_DO_ACEITE
+        DESFECHO_DO_ACEITE,
+        /**
+         * RT-CNV-008 — o aviso de IA a quem não é da equipe, uma vez por número. O único motivo cujo
+         * destino não é da equipe: a fila é a saída do número do salão, e o nome ficou do começo.
+         */
+        AVISO_DE_IA
     }
 
     private final JdbcClient jdbc;

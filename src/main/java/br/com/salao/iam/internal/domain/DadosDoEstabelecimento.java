@@ -2,9 +2,14 @@ package br.com.salao.iam.internal.domain;
 
 import br.com.salao.iam.api.BaseDeComissao;
 import br.com.salao.iam.api.PeriodicidadeDeFechamento;
+import br.com.salao.shared.telefone.Telefone;
+import br.com.salao.shared.telefone.TelefoneInvalidoException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.DateTimeException;
 import java.time.ZoneId;
 import java.util.Currency;
+import java.util.Locale;
 
 /**
  * RT-IAM-001 / RT-CFG-001 — os dados de um estabelecimento, já validados.
@@ -28,7 +33,8 @@ public record DadosDoEstabelecimento(
         BaseDeComissao baseComissao,
         boolean descontoAfetaComissao,
         PeriodicidadeDeFechamento periodicidadeDeFechamento,
-        String dddPadrao) {
+        String dddPadrao,
+        String contatoParaClientes) {
 
     public DadosDoEstabelecimento {
         if (nome == null || nome.isBlank()) {
@@ -59,6 +65,7 @@ public record DadosDoEstabelecimento(
             throw new DadosDoEstabelecimentoInvalidosException(
                     "DDD padrão deve ter 2 dígitos: " + dddPadrao);
         }
+        contatoParaClientes = contato(contatoParaClientes, dddPadrao);
         if (baseComissao == null || periodicidadeDeFechamento == null) {
             throw new DadosDoEstabelecimentoInvalidosException(
                     "base de comissão e periodicidade são obrigatórias");
@@ -76,9 +83,52 @@ public record DadosDoEstabelecimento(
                                               String moeda, BaseDeComissao baseComissao,
                                               boolean descontoAfetaComissao,
                                               PeriodicidadeDeFechamento periodicidade,
-                                              String dddPadrao) {
+                                              String dddPadrao, String contatoParaClientes) {
         return new DadosDoEstabelecimento(nome, documento, interpretarFuso(fusoIana), moeda,
-                baseComissao, descontoAfetaComissao, periodicidade, dddPadrao);
+                baseComissao, descontoAfetaComissao, periodicidade, dddPadrao,
+                contatoParaClientes);
+    }
+
+    /**
+     * RT-CNV-008 — como clientes falam com o salão (RN-IAM-023): telefone ou link {@code https://}.
+     *
+     * <p>É o que o aviso de IA passa a quem escreve para o número do agente. Telefone sai normalizado,
+     * como todo telefone do sistema, com o DDD do salão. Link, só {@code https}: é o que a cliente toca,
+     * e {@code http} poderia ser trocado no caminho. Vazio vale — o aviso sai sem a linha do contato.
+     */
+    private static String contato(String informado, String dddPadrao) {
+        if (informado == null || informado.isBlank()) {
+            return null;
+        }
+        String valor = informado.strip();
+        if (valor.length() > 200) {
+            throw new DadosDoEstabelecimentoInvalidosException(
+                    "contato para clientes acima de 200 caracteres");
+        }
+        String minusculo = valor.toLowerCase(Locale.ROOT);
+        if (minusculo.startsWith("http://")) {
+            throw new DadosDoEstabelecimentoInvalidosException(
+                    "o link do contato para clientes precisa começar com https://");
+        }
+        if (minusculo.startsWith("https://")) {
+            try {
+                String host = new URI(valor).getHost();
+                if (host != null && host.contains(".")) {
+                    return valor;
+                }
+            } catch (URISyntaxException e) {
+                // cai na recusa abaixo, com a mesma mensagem para qualquer link malformado
+            }
+            throw new DadosDoEstabelecimentoInvalidosException(
+                    "link do contato para clientes inválido: " + valor);
+        }
+        try {
+            return Telefone.de(valor, null, dddPadrao).e164();
+        } catch (TelefoneInvalidoException e) {
+            throw new DadosDoEstabelecimentoInvalidosException(
+                    "contato para clientes: informe um telefone ou um link https:// ("
+                            + e.getMessage() + ")");
+        }
     }
 
     private static ZoneId interpretarFuso(String fusoIana) {

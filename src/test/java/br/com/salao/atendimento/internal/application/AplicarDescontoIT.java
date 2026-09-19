@@ -231,7 +231,7 @@ class AplicarDescontoIT extends AbstractPostgresIT {
         TenantContext.executar(tenant, () -> atualizarConfiguracao.executar(
                 new ConfiguracaoCommand(atual.nome(), null, atual.fuso().getId(), atual.moeda(),
                         atual.baseComissao(), true, atual.periodicidadeDeFechamento(),
-                        atual.dddPadrao())));
+                        atual.dddPadrao(), atual.contatoParaClientes())));
 
         var detalhada = descontar(null, new BigDecimal("50"));
 
@@ -274,7 +274,7 @@ class AplicarDescontoIT extends AbstractPostgresIT {
         TenantContext.executar(tenant, () -> atualizarConfiguracao.executar(
                 new ConfiguracaoCommand(atual.nome(), null, atual.fuso().getId(), atual.moeda(),
                         atual.baseComissao(), true, atual.periodicidadeDeFechamento(),
-                        atual.dddPadrao())));
+                        atual.dddPadrao(), atual.contatoParaClientes())));
 
         var executantes = descontar(null, new BigDecimal("50")).itens().get(0).executantes();
 

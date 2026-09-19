@@ -186,7 +186,7 @@ update transcricao_de_audio
 
 **`FALHOU` com "áudio recusado"** — os bytes não eram áudio. O arquivo `RECUSADO` fica registrado.
 
-## Agente (RT-CNV-004 a RT-CNV-007)
+## Agente (RT-CNV-004 a RT-CNV-008)
 
 ### Credencial e preço
 
@@ -309,3 +309,26 @@ corrigir o cadastro e pedir de novo. **Nunca** afrouxar a conferência do númer
 
 **Intenção `EXPIRADA` sem toque, e recepção sem aviso** — o expirador não está rodando
 (`app.agente.aceite.intervalo`), ou a saída está parada.
+
+### Aviso de IA (RT-CNV-008)
+
+Quem não é da equipe e escreve para o número recebe, uma vez, a mensagem fixa: é IA, não atende
+clientes, ninguém lê, e o contato cadastrado em *Configurações → Como clientes falam com o salão*.
+
+```sql
+-- avisos enfileirados, por estado
+select status, count(*) from mensagem_para_equipe where motivo = 'AVISO_DE_IA' group by 1;
+
+-- quantos números já foram avisados, por salão (só a impressão está guardada)
+select estabelecimento_id, count(*) from aviso_de_ia group by 1;
+```
+
+**Aviso sem o contato** — o salão não preencheu o campo. Preencher; os próximos avisos já saem com ele.
+Quem já foi avisado não recebe de novo.
+
+**Aviso `FALHOU` com erro de janela da Meta** — o provedor ficou fora mais de 24h e a janela da conversa
+fechou. Não há o que reenviar: a pessoa escreveu há mais de um dia.
+
+**Alguém da equipe recebeu o aviso** — o telefone dele não está ligado à conta
+(`PUT /api/v1/usuarios/{id}/telefone`), ou está sem o nono dígito (RT-CNV-002). Ligar o número certo.
+

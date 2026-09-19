@@ -88,7 +88,8 @@ public class AtualizarConfiguracaoUseCase {
             return DadosDoEstabelecimento.comFuso(comando.nome(), comando.documento(),
                     comando.fusoIana(), comando.moeda(), comando.baseComissao(),
                     Boolean.TRUE.equals(comando.descontoAfetaComissao()),
-                    comando.periodicidadeDeFechamento(), comando.dddPadrao());
+                    comando.periodicidadeDeFechamento(), comando.dddPadrao(),
+                    comando.contatoParaClientes());
         } catch (DadosDoEstabelecimentoInvalidosException e) {
             throw new ErroDeDominio(ErrosDoIam.DADOS_INVALIDOS, e.getMessage());
         }
@@ -109,6 +110,7 @@ public class AtualizarConfiguracaoUseCase {
         mapa.put("periodicidade", config.periodicidadeDeFechamento().name());
         mapa.put("fuso", config.fuso().getId());
         mapa.put("dddPadrao", config.dddPadrao());
+        mapa.put("contatoParaClientes", config.contatoParaClientes());
         return mapa;
     }
 
@@ -119,6 +121,7 @@ public class AtualizarConfiguracaoUseCase {
         mapa.put("periodicidade", String.valueOf(comando.periodicidadeDeFechamento()));
         mapa.put("fuso", comando.fusoIana());
         mapa.put("dddPadrao", comando.dddPadrao());
+        mapa.put("contatoParaClientes", comando.contatoParaClientes());
         return mapa;
     }
 }

@@ -1,68 +1,71 @@
 package br.com.salao.conversacional.internal;
 
-import org.springframework.beans.factory.ObjectProvider;
-import java.math.BigDecimal;
-import br.com.salao.shared.agente.Ferramenta;
-import br.com.salao.iam.api.UsuarioEfetivoApi;
-import br.com.salao.iam.api.EstabelecimentoApi;
-import br.com.salao.conversacional.internal.infra.ProcessadorDeInteracoes;
-import br.com.salao.conversacional.internal.infra.LimitePorTelefone;
-import br.com.salao.conversacional.internal.infra.ExecucoesJdbc;
-import br.com.salao.conversacional.internal.infra.ConsumoDeIaJdbc;
-import br.com.salao.conversacional.internal.infra.ClaudeMessagesApi;
-import br.com.salao.conversacional.internal.application.PrecoDoModelo;
-import br.com.salao.conversacional.internal.application.Orquestrador;
-import br.com.salao.conversacional.internal.application.ModeloDeLinguagem;
-import br.com.salao.conversacional.internal.application.EnfileiradorDeInteracoes;
-import br.com.salao.conversacional.internal.application.ConcluirTranscricao;
-import br.com.salao.conversacional.internal.application.CatalogoDeFerramentas;
-import br.com.salao.conversacional.internal.application.ConsultarAcoesDoAgenteUseCase;
-import br.com.salao.conversacional.internal.infra.AcoesDoAgenteJdbc;
-import br.com.salao.conversacional.internal.infra.PurgadorDeAcoesDoAgente;
-import br.com.salao.iam.api.NomesDeUsuariosApi;
-import br.com.salao.conversacional.internal.application.ConcluirExecucao;
-import br.com.salao.conversacional.internal.application.DecidirAceite;
-import br.com.salao.conversacional.internal.application.EnviadorDoWhatsApp;
-import br.com.salao.conversacional.internal.infra.DespachanteParaEquipe;
-import br.com.salao.conversacional.internal.infra.EnviadorNaoConfigurado;
-import br.com.salao.conversacional.internal.infra.ExpiradorDeAceites;
-import br.com.salao.conversacional.internal.infra.MensagensParaEquipeJdbc;
-import br.com.salao.conversacional.internal.application.ConfirmarPeloCodigo;
-import br.com.salao.conversacional.internal.application.EfetivarIntencao;
-import br.com.salao.conversacional.internal.application.ProporIntencao;
-import br.com.salao.conversacional.internal.application.TransacaoSomenteLeitura;
-import br.com.salao.conversacional.internal.infra.IntencoesJdbc;
-import java.security.SecureRandom;
-import java.time.Duration;
-import tools.jackson.databind.ObjectMapper;
-import br.com.salao.conversacional.internal.infra.TranscritorNaoConfigurado;
-import br.com.salao.conversacional.internal.infra.TranscricoesJdbc;
-import br.com.salao.conversacional.internal.infra.ProcessadorDeAudios;
-import br.com.salao.conversacional.internal.infra.MidiaDoWhatsAppGraph;
-import br.com.salao.conversacional.internal.application.Transcritor;
-import br.com.salao.conversacional.internal.application.MidiaDoWhatsApp;
-import br.com.salao.conversacional.internal.application.GuardarAudioBaixado;
-import br.com.salao.conversacional.internal.application.EnfileiradorDeAudios;
 import br.com.salao.arquivos.api.IngestaoDeArquivoApi;
+import br.com.salao.conversacional.internal.application.AvisarQuemNaoEDaEquipe;
+import br.com.salao.conversacional.internal.application.CatalogoDeFerramentas;
+import br.com.salao.conversacional.internal.application.ConcluirExecucao;
+import br.com.salao.conversacional.internal.application.ConcluirTranscricao;
+import br.com.salao.conversacional.internal.application.ConfirmarPeloCodigo;
+import br.com.salao.conversacional.internal.application.ConsultarAcoesDoAgenteUseCase;
 import br.com.salao.conversacional.internal.application.ConsultarCanalUseCase;
+import br.com.salao.conversacional.internal.application.DecidirAceite;
+import br.com.salao.conversacional.internal.application.EfetivarIntencao;
+import br.com.salao.conversacional.internal.application.EnfileiradorDeAudios;
+import br.com.salao.conversacional.internal.application.EnfileiradorDeInteracoes;
+import br.com.salao.conversacional.internal.application.EnviadorDoWhatsApp;
 import br.com.salao.conversacional.internal.application.GravarMensagemRecebidaUseCase;
+import br.com.salao.conversacional.internal.application.GuardarAudioBaixado;
+import br.com.salao.conversacional.internal.application.MidiaDoWhatsApp;
+import br.com.salao.conversacional.internal.application.ModeloDeLinguagem;
+import br.com.salao.conversacional.internal.application.Orquestrador;
+import br.com.salao.conversacional.internal.application.PrecoDoModelo;
+import br.com.salao.conversacional.internal.application.ProporIntencao;
 import br.com.salao.conversacional.internal.application.ReceberLoteDoWhatsAppUseCase;
 import br.com.salao.conversacional.internal.application.RegistrarCanalDoWhatsAppUseCase;
+import br.com.salao.conversacional.internal.application.TransacaoSomenteLeitura;
+import br.com.salao.conversacional.internal.application.Transcritor;
 import br.com.salao.conversacional.internal.domain.AssinaturaDoWebhook;
+import br.com.salao.conversacional.internal.infra.AcoesDoAgenteJdbc;
+import br.com.salao.conversacional.internal.infra.AvisosDeIaJdbc;
 import br.com.salao.conversacional.internal.infra.CanaisJdbc;
+import br.com.salao.conversacional.internal.infra.ClaudeMessagesApi;
+import br.com.salao.conversacional.internal.infra.ConsumoDeIaJdbc;
+import br.com.salao.conversacional.internal.infra.DespachanteParaEquipe;
+import br.com.salao.conversacional.internal.infra.EnviadorNaoConfigurado;
+import br.com.salao.conversacional.internal.infra.ExecucoesJdbc;
+import br.com.salao.conversacional.internal.infra.ExpiradorDeAceites;
+import br.com.salao.conversacional.internal.infra.IntencoesJdbc;
+import br.com.salao.conversacional.internal.infra.LimitePorTelefone;
+import br.com.salao.conversacional.internal.infra.MensagensParaEquipeJdbc;
 import br.com.salao.conversacional.internal.infra.MensagensRecebidasJdbc;
+import br.com.salao.conversacional.internal.infra.MidiaDoWhatsAppGraph;
+import br.com.salao.conversacional.internal.infra.ProcessadorDeAudios;
+import br.com.salao.conversacional.internal.infra.ProcessadorDeInteracoes;
+import br.com.salao.conversacional.internal.infra.PurgadorDeAcoesDoAgente;
+import br.com.salao.conversacional.internal.infra.TranscricoesJdbc;
+import br.com.salao.conversacional.internal.infra.TranscritorNaoConfigurado;
 import br.com.salao.iam.api.AuditoriaApi;
+import br.com.salao.iam.api.EstabelecimentoApi;
+import br.com.salao.iam.api.NomesDeUsuariosApi;
+import br.com.salao.iam.api.UsuarioEfetivoApi;
+import br.com.salao.shared.agente.Ferramenta;
+import br.com.salao.shared.cripto.CofreDeCampo;
 import br.com.salao.shared.manutencao.ConexaoDeManutencao;
 import br.com.salao.shared.tempo.Relogio;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.math.BigDecimal;
+import java.security.SecureRandom;
+import java.time.Duration;
 import javax.sql.DataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import tools.jackson.databind.ObjectMapper;
 
 /** RT-CNV-001 — fiação do módulo conversacional. */
 @Configuration(proxyBeanMethods = false)
@@ -236,6 +239,25 @@ public class ConversacionalConfig {
                                                              ExecucoesJdbc execucoes,
                                                              Relogio relogio) {
         return new EnfileiradorDeInteracoes(mensagens, execucoes, relogio);
+    }
+
+    /** RT-CNV-008 — quem já foi avisado, pela impressão do número. */
+    @Bean
+    public AvisosDeIaJdbc avisosDeIaJdbc(DataSource dataSource) {
+        return new AvisosDeIaJdbc(JdbcClient.create(dataSource));
+    }
+
+    /** RT-CNV-008 — o aviso a quem não é da equipe, na chegada da mensagem, sem depender do modelo. */
+    @Bean
+    public AvisarQuemNaoEDaEquipe avisarQuemNaoEDaEquipe(MensagensRecebidasJdbc mensagens,
+                                                         UsuarioEfetivoApi usuarios,
+                                                         EstabelecimentoApi estabelecimentos,
+                                                         AvisosDeIaJdbc avisos,
+                                                         MensagensParaEquipeJdbc saida,
+                                                         CofreDeCampo cofre, Relogio relogio,
+                                                         MeterRegistry metricas) {
+        return new AvisarQuemNaoEDaEquipe(mensagens, usuarios, estabelecimentos, avisos, saida,
+                cofre, relogio, metricas);
     }
 
     @Bean

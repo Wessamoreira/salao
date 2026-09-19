@@ -6,6 +6,7 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
 import javax.crypto.Cipher;
+import javax.crypto.Mac;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -41,7 +42,10 @@ public class CofreDeCampo {
     private static final int BYTES_DO_IV = 12;
     private static final int BITS_DA_CHAVE = 256;
 
+    private static final String HMAC = "HmacSHA256";
+
     private final SecretKeySpec chave;
+    private final SecretKeySpec chaveDeImpressao;
     private final SecureRandom aleatorio = new SecureRandom();
 
     public CofreDeCampo(String chaveBase64) {
@@ -58,6 +62,31 @@ public class CofreDeCampo {
                     "app.cripto.chave precisa ter 32 bytes (256 bits) em Base64");
         }
         this.chave = new SecretKeySpec(bytes, "AES");
+        // Uma chave por propósito, derivada da mesma: a do AES nunca serve de chave HMAC direto.
+        this.chaveDeImpressao = new SecretKeySpec(
+                hmac(new SecretKeySpec(bytes, HMAC), "impressao:v1"), HMAC);
+    }
+
+    /**
+     * RT-CNV-008 — a impressão de um valor: o mesmo valor dá sempre os mesmos 32 bytes, e sem a chave
+     * não se volta a ele.
+     *
+     * <p>HMAC, e não SHA-256 simples: um telefone brasileiro tem algumas centenas de milhões de valores
+     * possíveis, e um hash sem chave se desfaz por força bruta em minutos. Serve para guardar "este
+     * número já passou por aqui" sem guardar o número.
+     */
+    public byte[] impressao(String valor) {
+        return hmac(chaveDeImpressao, valor);
+    }
+
+    private static byte[] hmac(SecretKeySpec chave, String valor) {
+        try {
+            var mac = Mac.getInstance(HMAC);
+            mac.init(chave);
+            return mac.doFinal(valor.getBytes(StandardCharsets.UTF_8));
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("falha ao calcular a impressão", e);
+        }
     }
 
     /** @return {@code IV || texto cifrado}, pronto para uma coluna {@code bytea} */

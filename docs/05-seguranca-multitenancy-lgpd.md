@@ -195,7 +195,7 @@ O salão guarda dado de cliente. Isso não é opcional.
 | Consentimento e revogação | Histórico append-only por finalidade, com canal e data. Revogar usa a mesma rota que consentir (art. 8 §5). Oposição é honrada mesmo onde a base é contrato (art. 18 §2) |
 | Dado sensível | Foto e ficha de química indicam alergia/condição de saúde. Acesso por permissão própria (`cliente:ficha:read`) + criptografia de campo (AES-GCM, chave fora do banco) |
 | Direito de exclusão | **Anonimização**, não delete: `cliente_anonimizado`, preservando o histórico financeiro que a legislação fiscal exige |
-| Transparência sobre IA | Aviso ao cliente na primeira interação com o agente |
+| Transparência sobre IA | Aviso fixo, uma vez por número e por salão, a quem não é da equipe e escreve para o número do assistente: é IA, não atende clientes, ninguém lê, e o contato do salão. Sem modelo, e "já avisado" é uma impressão com chave, nunca o número (RT-CNV-008) |
 | Retenção | Definida por tipo (tabela em `04-modelo-de-dados.md`), com job diário |
 | Log sem PII | Nunca telefone completo, nome ou conteúdo de mensagem em log |
 | Auditoria sem PII | A trilha guarda `entidade_id` e o verbo, nunca o dado da pessoa. Ela é append-only e a anonimização não a alcança — dado pessoal ali seria uma segunda base fora de alcance (RN-CLI-007, corrigida em 30/08) |

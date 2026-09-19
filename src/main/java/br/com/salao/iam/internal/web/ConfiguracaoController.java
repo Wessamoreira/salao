@@ -56,13 +56,15 @@ public class ConfiguracaoController {
             @NotNull PeriodicidadeDeFechamento periodicidadeDeFechamento,
             /* Sem @Pattern: o DDD chega como "(11)" ou "011" e quem sabe normalizá-lo é o
                domínio, que também sabe recusar o que sobra. */
-            @Size(max = 5) String dddPadrao) {
+            @Size(max = 5) String dddPadrao,
+            /* Telefone ou link https: o domínio decide qual é, e normaliza (RN-IAM-023). */
+            @Size(max = 200) String contatoParaClientes) {
     }
 
     @PutMapping
     public ConfiguracaoDoEstabelecimento salvar(@Valid @RequestBody ConfiguracaoRequest req) {
         return atualizar.executar(new ConfiguracaoCommand(req.nome(), req.documento(),
                 req.fusoIana(), req.moeda(), req.baseComissao(), req.descontoAfetaComissao(),
-                req.periodicidadeDeFechamento(), req.dddPadrao()));
+                req.periodicidadeDeFechamento(), req.dddPadrao(), req.contatoParaClientes()));
     }
 }

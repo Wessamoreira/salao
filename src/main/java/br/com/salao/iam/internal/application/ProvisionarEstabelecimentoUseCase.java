@@ -127,7 +127,7 @@ public class ProvisionarEstabelecimentoUseCase {
             return DadosDoEstabelecimento.comFuso(
                     comando.nome(), comando.documento(), comando.fusoIana(), comando.moeda(),
                     comando.baseComissao(), comando.descontoAfetaComissao(),
-                    comando.periodicidadeDeFechamento(), comando.dddPadrao());
+                    comando.periodicidadeDeFechamento(), comando.dddPadrao(), null);
         } catch (DadosDoEstabelecimentoInvalidosException e) {
             throw new ErroDeDominio(ErrosDoIam.DADOS_INVALIDOS, e.getMessage());
         }

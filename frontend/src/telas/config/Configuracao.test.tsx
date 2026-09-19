@@ -92,4 +92,37 @@ describe('configuração do salão', () => {
     expect(screen.getByLabelText(/A comissão incide sobre/)).toHaveValue('LIQUIDO');
     expect(screen.getByLabelText(/Fechamento do período/)).toHaveValue('QUINZENAL');
   });
+
+  it('explica onde o contato para clientes aparece, e o envia ao salvar', async () => {
+    // O campo sozinho parece cadastro do salão. É a saída que o aviso de IA oferece a quem
+    // escreve para o número do assistente (RT-CNV-008).
+    montar();
+
+    const campo = await screen.findByLabelText(/Como clientes falam com o salão/);
+    expect(screen.getByText(/atende uma inteligência artificial usada só pela equipe/))
+      .toBeInTheDocument();
+    await userEvent.type(campo, '(11) 3456-7890');
+    await userEvent.click(screen.getByRole('button', { name: /Salvar/ }));
+
+    expect(chamar).toHaveBeenCalledWith('/v1/configuracao', expect.objectContaining({
+      method: 'PUT',
+      body: expect.stringContaining('"contatoParaClientes":"(11) 3456-7890"'),
+    }));
+  });
+
+  it('o telefone gravado em dígitos volta formatado; o link, como foi escrito', async () => {
+    montar({ ...ATUAL, contatoParaClientes: '551134567890' });
+    expect(await screen.findByLabelText(/Como clientes falam com o salão/))
+      .toHaveValue('(11) 3456-7890');
+  });
+
+  it('vazio vai como nulo, não como texto em branco', async () => {
+    montar();
+
+    await userEvent.click(await screen.findByRole('button', { name: /Salvar/ }));
+
+    expect(chamar).toHaveBeenCalledWith('/v1/configuracao', expect.objectContaining({
+      body: expect.stringContaining('"contatoParaClientes":null'),
+    }));
+  });
 });

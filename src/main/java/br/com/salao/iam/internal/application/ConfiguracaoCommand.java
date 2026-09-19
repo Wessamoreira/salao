@@ -17,5 +17,6 @@ public record ConfiguracaoCommand(
         BaseDeComissao baseComissao,
         Boolean descontoAfetaComissao,
         PeriodicidadeDeFechamento periodicidadeDeFechamento,
-        String dddPadrao) {
+        String dddPadrao,
+        String contatoParaClientes) {
 }

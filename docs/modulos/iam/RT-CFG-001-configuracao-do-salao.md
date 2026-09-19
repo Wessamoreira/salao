@@ -8,8 +8,8 @@ status: implementado
 depende_de: [RT-IAM-007, RT-INF-007, RT-INF-010]
 permissoes: [config:manage]
 eventos: []
-regras: [RN-IAM-017, RN-IAM-018]
-atualizado_em: 2026-08-30
+regras: [RN-IAM-017, RN-IAM-018, RN-IAM-023]
+atualizado_em: 2026-09-19
 ---
 
 # RT-CFG-001 — Configuração do salão
@@ -130,7 +130,14 @@ resolve com o **primeiro** elemento que aparece, e a asserção rodava antes da 
 Agora espera pela contagem esperada. Teste que falha sob carga ensina a rodar de novo em vez de
 investigar — e é assim que uma falha real passa despercebida um dia.
 
-## 11. Pendências
+## 11. O contato para clientes — RT-CNV-008
+
+Um campo a mais, opcional: *Como clientes falam com o salão*. Telefone (normalizado como todo telefone,
+com o DDD do salão) ou link `https://` (RN-IAM-023). É o que o aviso de IA oferece a quem escreve para o
+número do assistente. A tela diz isso logo abaixo do campo — sozinho, ele pareceria cadastro de contato
+do salão — e mostra o telefone formatado, embora o banco guarde só dígitos.
+
+## 12. Pendências
 
 - [ ] **A moeda não é editável.** Está fixa em BRL na tela, e o backend aceita trocar. Um salão
       fora do Brasil precisaria dela — e hoje o resto do sistema (DDD, CPF/CNPJ, fusos oferecidos)

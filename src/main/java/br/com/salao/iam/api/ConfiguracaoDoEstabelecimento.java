@@ -29,6 +29,11 @@ public record ConfiguracaoDoEstabelecimento(
         String paisPadrao,
         String dddPadrao,
         /**
+         * RT-CNV-008 — como clientes falam com o salão: telefone em E.164 ou link {@code https://}.
+         * Opcional. É o que o aviso de IA passa a quem escreve para o número do agente.
+         */
+        String contatoParaClientes,
+        /**
          * RT-AGD-001 — de quantos em quantos minutos a agenda oferece horário.
          *
          * <p>É do salão porque uns marcam de 15 em 15, outros de 30, e barbearia costuma

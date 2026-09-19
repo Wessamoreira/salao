@@ -70,7 +70,7 @@ class SaidaParaEquipeIT extends AbstractAgenteIT {
     }
 
     @Test
-    @DisplayName("conversa recusada não responde nada a ninguém")
+    @DisplayName("conversa recusada: o agente não responde nada")
     void recusada_nao_responde() throws SQLException {
         Salao salao = salao();
         naFila(salao, telefoneNovo(), "wamid.1", "oi, quem é?");
@@ -78,7 +78,11 @@ class SaidaParaEquipeIT extends AbstractAgenteIT {
         processador.executar();
 
         assertThat(execucao(salao.tenant(), "wamid.1")).containsEntry("status", "RECUSADA");
-        assertThat(saida(salao.tenant())).isEmpty();
+        // Desde RT-CNV-008 o desconhecido recebe o aviso de IA — por outro caminho, na chegada da
+        // mensagem, e provado em AvisoDeIaIT. Aqui, o que importa continua: o agente não respondeu.
+        assertThat(saida(salao.tenant()))
+                .filteredOn(mensagem -> !"AVISO_DE_IA".equals(mensagem.get("motivo")))
+                .isEmpty();
     }
 
     @Test

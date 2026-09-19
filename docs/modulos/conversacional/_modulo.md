@@ -32,7 +32,8 @@ Três consequências que atravessam o módulo inteiro:
 
 ## O que ele **não** faz (ainda)
 
-- **Não responde.** Mandar mensagem é do `notificacao`, e por ora `RT-CNV-001` só recebe.
+- **Não conversa com cliente.** O agente só atende a equipe; quem não é dela recebe, uma vez, o aviso de
+  IA (RT-CNV-008) — e mais nada.
 - **Não sabe quem é a pessoa.** O telefone entra como texto; ligá-lo a um `cliente` é RT-CNV-002.
 - **Não baixa mídia no webhook.** Áudio entra como *id*; o download e a transcrição são
   RT-CNV-003, numa fila fora de transação. Imagem e documento continuam só como *id*.
@@ -94,6 +95,12 @@ pedido, as ferramentas com o desfecho de cada tranca, as intenções, se gravou,
 custou (RN-CNV-022 a 024). O dono e a gerência leem em `/agente`, com `agente:review` (RN-CNV-025). O
 conteúdo sai aos 90 dias e a linha, aos 12 meses (RN-CNV-026).
 
+## Quem não é da equipe — RT-CNV-008
+
+A primeira mensagem de um número desconhecido faz sair, uma vez, um aviso fixo: é IA, não atende
+clientes, ninguém lê, e o contato do salão. Nasce na chegada da mensagem, sem modelo; "já avisado" é uma
+impressão com chave, nunca o número (RN-CNV-027 a 029).
+
 RT-CNV-002 entregou, **no `iam`**, `UsuarioEfetivoApi` — é por ela que a orquestração (RT-CNV-004)
 vai agir em nome de quem escreveu. O módulo ainda não a usa: quem a usa é o primeiro caso de uso
 que age.
@@ -109,6 +116,7 @@ que age.
 | [RT-CNV-005](RT-CNV-005-agendar-pelo-agente.md) — marcar pelo agente: consultar, simular, confirmar pelo código | implementada |
 | [RT-CNV-006](RT-CNV-006-aceite-e-saida-para-equipe.md) — aceite da profissional por botão, validade, saída para a equipe | implementada, sem provedor de envio |
 | [RT-CNV-007](RT-CNV-007-trilha-do-agente.md) — trilha do agente (`acao_ia`) e painel de revisão | implementada |
+| [RT-CNV-008](RT-CNV-008-aviso-de-ia.md) — aviso de IA, uma vez, a quem não é da equipe | implementada, sem provedor de envio |
 
 ## Rotas
 
@@ -124,4 +132,4 @@ que age.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-CNV-001 a RN-CNV-026.
+Ver [regras.md](regras.md) — RN-CNV-001 a RN-CNV-029.
