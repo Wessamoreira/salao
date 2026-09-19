@@ -573,3 +573,77 @@ da jornada ela, por definição, não está trabalhando.
 **Rotinas.** RT-CNV-006 · **Teste.** `AceiteDaProfissionalIT.vencido_pelo_expirador`,
 `.toque_depois_do_prazo`
 **Configurável?** A validade (`app.agente.aceite.validade`) e o intervalo · **Origem.** 2026-09-14
+
+### RN-CNV-022 — Toda conversa encerrada deixa uma linha na trilha, no mesmo commit do encerramento
+
+**Enunciado.** Concluída, recusada ou que falhou; conversa ou toque de botão: ao encerrar, a execução
+grava uma linha em `acao_ia` na mesma transação. Nenhum caminho encerra uma execução sem passar por
+`ConcluirExecucao`.
+
+**Motivo.** A tentativa que as trancas recusaram é justamente a que mais importa revisar — o número
+desconhecido pedindo para cancelar tudo não pode sumir por ter sido recusado cedo. E separado do
+encerramento, uma queda entre os dois deixaria conversa encerrada sem rastro, sem rodada que a
+reencontrasse.
+
+**Onde é garantida.** `ConcluirExecucao` (`conduzida`, `semModelo`, `recusada`, `falhou`) ·
+`AcoesDoAgenteJdbc.registrar` com `Propagation.MANDATORY` · `unique (execucao_id)`.
+**Rotinas.** RT-CNV-007 · **Teste.** `AcaoIaIT.conversa_vira_acao`, `.desconhecido_na_trilha`,
+`.falhou_na_trilha`, `.audio_na_trilha`
+**Configurável?** Não · **Origem.** 2026-09-14
+
+### RN-CNV-023 — A trilha é um retrato: imutável, e com "gravou" e "bloqueada" decididos ao registrar
+
+**Enunciado.** A aplicação só insere e lê `acao_ia`. `bloqueada` é verdadeiro quando a conversa foi
+recusada ou quando alguma chamada parou numa tranca (`INEXISTENTE`, `FORA_DA_LISTA`,
+`SEM_PERMISSAO`); virar proposta ou esbarrar em regra do domínio não é bloqueio. `gravou` é verdadeiro
+quando foi esta conversa que confirmou — o SIM de uma intenção sem aceite, ou o toque de aceite.
+
+**Motivo.** A trilha vale 12 meses e as tabelas de onde ela vem, menos: calcular na leitura
+dependeria do que o expurgo já apagou. E trilha que a aplicação pode reescrever não prova nada
+(RN-IAM-017).
+
+**Onde é garantida.** `REGISTRAR` em `AcoesDoAgenteJdbc` · `V56` (`revoke update, delete`).
+**Rotinas.** RT-CNV-007 · **Teste.** `AcaoIaIT.cada_tranca_bloqueia`, `.confirmacao_gravou`,
+`.trilha_imutavel`, `AceiteDaProfissionalIT.caminho_completo`
+**Configurável?** Não · **Origem.** 2026-09-14
+
+### RN-CNV-024 — O token do aceite não entra na trilha
+
+**Enunciado.** No toque de botão, `pedido` é "Aceitar", "Recusar" ou "Botão" — nunca o id do botão.
+
+**Motivo.** O id carrega o token que, junto com o número, decide o aceite (RN-CNV-019). A trilha é lida
+por mais gente, e por mais tempo, do que a fila que o usa.
+
+**Onde é garantida.** `REGISTRAR` em `AcoesDoAgenteJdbc`.
+**Rotinas.** RT-CNV-007 · **Teste.** `AcaoIaIT.botao_sem_token`
+**Configurável?** Não · **Origem.** 2026-09-14
+
+### RN-CNV-025 — Revisar é do dono e da gerência, só leitura, no dia do salão, com teto de 92 dias
+
+**Enunciado.** O painel exige `agente:review` (ADMIN e GERENTE). Os dias são civis no fuso do salão;
+sem período, os últimos sete, e no máximo 92. Quem pediu aparece pelo nome de hoje; sem usuário, só os
+quatro últimos dígitos do telefone — com usuário, nem isso. Nada no painel altera a trilha.
+
+**Motivo.** A tela mostra mensagens de quem não é da equipe e o que o agente consultou em nome de cada
+pessoa. Um ano inteiro de trilha numa consulta é relatório, e relatório é outra rotina.
+
+**Onde é garantida.** `ConsultarAcoesDoAgenteUseCase` (`@PreAuthorize`, `periodo`, `acao`) ·
+`MapaDePermissoes`.
+**Rotinas.** RT-CNV-007 · **Teste.** `AcaoIaIT.sem_permissao`, `.periodo`,
+`.recortes_pessoa_e_resumo`, `.isolamento`, `AcoesDoAgenteWebIT`
+**Configurável?** Não · **Origem.** 2026-09-14
+
+### RN-CNV-026 — Aos 90 dias o conteúdo sai; aos 12 meses, a linha
+
+**Enunciado.** Um expurgo diário anonimiza as linhas com mais de 90 dias — pedido, resposta, telefone,
+argumentos e resumos — e apaga as com mais de 12 meses. O esqueleto que fica responde "o agente fez
+isso?" sem guardar a conversa.
+
+**Motivo.** Minimização (LGPD): o conteúdo só é útil enquanto uma reclamação ainda pode chegar. A
+conexão de manutenção só tem `update` nas colunas de conteúdo — o expurgo pode apagar o que foi dito,
+não reescrever o que aconteceu.
+
+**Onde é garantida.** `PurgadorDeAcoesDoAgente` · `V56` (política e grants de `salao_manutencao`,
+constraint `acao_anonimizada_sem_conteudo`).
+**Rotinas.** RT-CNV-007 · **Teste.** `AcaoIaIT.retencao`
+**Configurável?** Os prazos (`app.agente.acao-ia.anonimizar-apos`, `apagar-apos`) · **Origem.** 2026-09-14

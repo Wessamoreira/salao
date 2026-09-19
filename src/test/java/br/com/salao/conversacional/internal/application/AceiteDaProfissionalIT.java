@@ -257,6 +257,26 @@ class AceiteDaProfissionalIT extends AbstractAgenteIT {
                         .startsWith("Obrigado! Ficou marcado:"));
         assertThat(toque).as("a gravação foi em nome de quem pediu")
                 .containsEntry("usuario_efetivo_id", proposta.get("usuario_efetivo_id"));
+        // RT-CNV-007: na trilha, quem gravou foi o toque da Ana — nem a proposta, nem o SIM da Bia.
+        assertThat(trilhaDoAgente(c.tenant()))
+                .containsExactly("CONVERSA:false", "CONVERSA:false", "BOTAO:Aceitar:true");
+    }
+
+    private List<String> trilhaDoAgente(UUID tenant) throws SQLException {
+        var linhas = new java.util.ArrayList<String>();
+        try (var ps = comoOwner().prepareStatement("""
+                select tipo, pedido, gravou from acao_ia
+                 where estabelecimento_id = ? order by ocorrida_em""")) {
+            ps.setObject(1, tenant);
+            try (var rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    linhas.add("BOTAO".equals(rs.getString(1))
+                            ? "BOTAO:" + rs.getString(2) + ":" + rs.getBoolean(3)
+                            : rs.getString(1) + ":" + rs.getBoolean(3));
+                }
+            }
+        }
+        return linhas;
     }
 
     @Test

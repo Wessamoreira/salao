@@ -63,6 +63,8 @@ class CapacidadesIT extends AbstractPostgresIT {
         assertThat(c.estabelecimento().moeda()).isEqualTo("BRL");
         assertThat(c.mfaObrigatorio()).isTrue();
         assertThat(c.mfaAtivo()).isFalse();
+        assertThat(c.permissoes()).contains(Permissao.AGENTE_REVISAR);
+        assertThat(c.menus()).extracting(m -> m.id()).as("RT-CNV-007").contains("agente");
     }
 
     @Test
@@ -77,7 +79,7 @@ class CapacidadesIT extends AbstractPostgresIT {
 
         assertThat(c.menus()).extracting(m -> m.id())
                 .contains("agenda", "atendimento", "clientes", "estoque")
-                .doesNotContain("financeiro", "configuracao");
+                .doesNotContain("financeiro", "configuracao", "agente");
         assertThat(c.limites()).containsEntry("descontoMaximoPercentual", 10);
         assertThat(c.flags()).containsEntry("podeVerValorDeOutros", false);
         assertThat(c.mfaObrigatorio()).isFalse();

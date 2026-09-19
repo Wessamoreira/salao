@@ -55,6 +55,17 @@
         "previa:login"
       ],
       "port": 5174
+    },
+    {
+      "name": "previa-agente",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "previa:agente"
+      ],
+      "port": 5174
     }
   ]
 }

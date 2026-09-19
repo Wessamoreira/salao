@@ -106,6 +106,7 @@ no código para quem vier depois não precisar redescobrir.
 - [x] ~~Ator `BOT`~~ — entrou em RT-CNV-002. Com o agente agindo em nome de alguém, `ator = BOT` e
       `usuario_id` é a pessoa (`UsuarioAtual.ehAgente`). Teste: `UsuarioEfetivoIT.auditoria_diz_bot`
 - [ ] Consulta da trilha por tela: hoje só existe por SQL. Precisa de decisão de UI e de permissão
-      própria — nem todo perfil deve ver quem alterou o quê
+      própria — nem todo perfil deve ver quem alterou o quê. *RT-CNV-007 fez isso para a trilha do
+      agente (`agente:review`, tela `/agente`); a `auditoria` geral continua por SQL.*
 - [ ] Auditar login e logout. Hoje ficam em log; como são eventos de segurança e não alterações
       de dado, a decisão de onde eles moram ainda não foi tomada

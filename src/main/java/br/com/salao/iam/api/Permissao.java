@@ -64,4 +64,13 @@ public final class Permissao {
     public static final String USUARIO_GERENCIAR = "usuario:manage";
     public static final String CONFIG_GERENCIAR = "config:manage";
     public static final String RELATORIO_LER = "relatorio:read";
+
+    /**
+     * Revisar o que o agente conversacional fez (RT-CNV-007).
+     *
+     * <p>Separada porque o painel mostra a mensagem de quem escreveu — inclusive de número
+     * desconhecido e de cliente — e o que o agente consultou em nome de cada pessoa da equipe. É o
+     * dono olhando o agente, não a recepção olhando a si mesma.
+     */
+    public static final String AGENTE_REVISAR = "agente:review";
 }

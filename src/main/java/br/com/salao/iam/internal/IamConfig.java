@@ -4,6 +4,8 @@ import br.com.salao.iam.internal.application.ResolvedorDeUsuarioEfetivo;
 import br.com.salao.iam.internal.application.DefinirTelefoneDoUsuarioUseCase;
 import br.com.salao.iam.api.UsuarioEfetivoApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
+import br.com.salao.iam.api.NomesDeUsuariosApi;
+import br.com.salao.iam.internal.infra.NomesDeUsuariosJdbc;
 import br.com.salao.iam.internal.application.AtualizarConfiguracaoUseCase;
 import br.com.salao.iam.internal.application.AutenticarUseCase;
 import br.com.salao.iam.internal.application.AbridorDeSessao;
@@ -237,5 +239,11 @@ public class IamConfig {
     public DefinirTelefoneDoUsuarioUseCase definirTelefoneDoUsuarioUseCase(
             UsuariosJdbc usuarios, EstabelecimentoApi estabelecimentos, AuditoriaApi auditoria) {
         return new DefinirTelefoneDoUsuarioUseCase(usuarios, estabelecimentos, auditoria);
+    }
+
+    /** RT-CNV-007 — nomes por id, para quem mostra quem sem ler o cadastro. */
+    @Bean
+    public NomesDeUsuariosApi nomesDeUsuariosApi(DataSource dataSource) {
+        return new NomesDeUsuariosJdbc(JdbcClient.create(dataSource));
     }
 }

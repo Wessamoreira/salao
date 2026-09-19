@@ -1,0 +1,423 @@
+/*
+ * RT-CNV-007 — revisão do agente.
+ *
+ * Papel e tinta. Cor só em três lugares, e sempre com forma junto:
+ *   gravou     → barra lateral contínua, verde de confirmado
+ *   bloqueada  → barra lateral interrompida, vermelho de falta
+ *   pedido     → borda tracejada, âmbar de solicitado (o que ainda espera alguém)
+ * Em preto e branco, contínua, interrompida e tracejada continuam dizendo a mesma coisa.
+ */
+
+.agt-tela {
+  --agt-hora: 48px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+/* ------------------------------------------------------------------ barra */
+
+.agt-recorte { display: flex; gap: var(--e-1); }
+.agt-recorte button {
+  min-height: 32px;
+  padding: 0 var(--e-3);
+  color: var(--tinta-fraca);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-12);
+  cursor: pointer;
+}
+.agt-recorte button:hover:not([aria-pressed='true']) { color: var(--tinta); border-color: var(--tinta-tenue); }
+.agt-recorte button[aria-pressed='true'] {
+  color: var(--papel);
+  background: var(--tinta);
+  border-color: var(--tinta);
+  font-weight: var(--p-forte);
+}
+
+.agt-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-2);
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+}
+.agt-filtro select {
+  min-height: 32px;
+  max-width: 220px;
+  padding: 0 var(--e-3);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-weight: var(--p-normal);
+  cursor: pointer;
+}
+
+.agt-recorte button:focus-visible,
+.agt-filtro select:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ totais */
+
+/*
+ * Uma linha de livro-caixa, não quatro cartões: os totais se leem como frase, e a Bodoni
+ * aparece só nos números — o único lugar desta tela onde ela tem direito de estar.
+ */
+.agt-resumo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e-2) var(--e-8);
+  margin: 0;
+  padding: var(--e-2) 0 var(--e-5);
+  border-bottom: 1px solid var(--regua);
+}
+.agt-resumo-espera { padding-bottom: var(--e-5); }
+.agt-total {
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+}
+.agt-numero {
+  margin-right: var(--e-1);
+  color: var(--tinta);
+  font-family: var(--fonte-identidade);
+  font-size: var(--t-30);
+  font-weight: var(--p-medio);
+  letter-spacing: var(--tr-display);
+  line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* ------------------------------------------------------------------ lista */
+
+.agt-dia {
+  margin: var(--e-6) 0 var(--e-2);
+  color: var(--tinta-fraca);
+  font-size: var(--t-10);
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+
+.agt-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-3);
+  overflow: hidden;
+}
+
+.agt-item { position: relative; }
+.agt-item + .agt-item { border-top: 1px solid var(--regua); }
+
+.agt-item[data-marca]::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+}
+.agt-item[data-marca='gravou']::before { background: var(--status-confirmado); }
+.agt-item[data-marca='bloqueada']::before {
+  background: repeating-linear-gradient(180deg,
+    var(--status-falta) 0 var(--e-2), transparent var(--e-2) var(--e-3));
+}
+
+.agt-linha {
+  display: grid;
+  grid-template-columns: var(--agt-hora) minmax(120px, 176px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--e-4);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--e-2) var(--e-4) var(--e-2) var(--e-5);
+  color: var(--tinta);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  transition: background var(--mov-imediato) var(--mov-curva);
+}
+.agt-linha:hover,
+.agt-linha[aria-expanded='true'] { background: var(--papel-fundo); }
+.agt-linha:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: -2px;
+}
+
+.agt-hora {
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  font-feature-settings: var(--numerais);
+}
+.agt-quem {
+  overflow: hidden;
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agt-pedido {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  min-width: 0;
+  font-size: var(--t-14);
+}
+.agt-pedido-texto {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agt-pedido-texto.apagado { color: var(--tinta-fraca); }
+
+.agt-etiqueta {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 var(--e-2);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-1);
+  font-size: var(--t-10);
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.agt-etiqueta.gravou,
+.agt-etiqueta[data-status='CONFIRMADA'] {
+  background: var(--status-confirmado-fundo);
+  border-color: var(--status-confirmado);
+}
+.agt-etiqueta.bloqueada,
+.agt-etiqueta[data-status='RECUSADA'] {
+  background: var(--status-falta-fundo);
+  border-color: var(--status-falta);
+}
+.agt-etiqueta.falhou { border-style: dashed; }
+.agt-etiqueta[data-status='PENDENTE'],
+.agt-etiqueta[data-status='AGUARDANDO_ACEITE'] {
+  background: var(--status-solicitado-fundo);
+  border-color: var(--status-solicitado);
+  border-style: dashed;
+}
+
+.agt-mais {
+  display: flex;
+  justify-content: center;
+  padding: var(--e-5) 0 var(--e-2);
+}
+
+/* ------------------------------------------------------------------ detalhe */
+
+.agt-detalhe {
+  display: grid;
+  gap: var(--e-5);
+  padding: var(--e-2) var(--e-5) var(--e-5) calc(var(--e-5) + var(--agt-hora) + var(--e-4));
+  background: var(--papel-fundo);
+}
+
+.agt-motivo {
+  margin: 0;
+  padding: var(--e-2) var(--e-3);
+  background: var(--status-falta-fundo);
+  border-radius: var(--raio-1);
+  box-shadow: inset 3px 0 0 var(--status-falta);
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+}
+.agt-motivo.neutro {
+  background: var(--papel);
+  box-shadow: inset 3px 0 0 var(--regua-forte);
+}
+
+.agt-apagado {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  line-height: 1.55;
+}
+
+.agt-fala {
+  display: grid;
+  gap: var(--e-3);
+  max-width: 72ch;
+  margin: 0;
+}
+.agt-fala dt {
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+}
+.agt-fala dd {
+  margin: var(--e-1) 0 0;
+  font-size: var(--t-14);
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.agt-bloco-titulo {
+  margin: 0 0 var(--e-1);
+  color: var(--tinta-fraca);
+  font-size: var(--t-10);
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+.agt-bloco-ajuda {
+  max-width: 72ch;
+  margin: 0 0 var(--e-3);
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  line-height: 1.5;
+}
+
+/* O trilho: cada tranca é um passo, ligado ao anterior por um traço. */
+.agt-trilho {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agt-chamada {
+  display: grid;
+  grid-template-columns: minmax(140px, 200px) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--e-1) var(--e-4);
+}
+.agt-ferramenta {
+  padding-top: var(--e-1);
+  font-family: var(--fonte-mono);
+  font-size: var(--t-12);
+  overflow-wrap: anywhere;
+}
+
+.agt-passos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-1) 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agt-passo {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-2);
+  min-height: 24px;
+  font-size: var(--t-12);
+}
+.agt-passo + .agt-passo { margin-left: var(--e-6); }
+.agt-passo + .agt-passo::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: calc(100% + var(--e-1));
+  width: var(--e-4);
+  border-top: 1px solid var(--regua-forte);
+}
+.agt-passo[data-estado='nao-chegou'] { color: var(--tinta-fraca); }
+.agt-passo[data-estado='nao-chegou']::before { border-top-style: dashed; }
+.agt-passo[data-estado='barrou'] {
+  padding: 0 var(--e-2) 0 var(--e-3);
+  background: var(--status-falta-fundo);
+  border-radius: var(--raio-1);
+  box-shadow: inset 3px 0 0 var(--status-falta);
+  font-weight: var(--p-forte);
+}
+
+.agt-resultado {
+  padding: 0 var(--e-2);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-1);
+  background: var(--papel);
+  font-weight: var(--p-forte);
+}
+.agt-resultado[data-resultado='pedido'] {
+  background: var(--status-solicitado-fundo);
+  border: 1px dashed var(--status-solicitado);
+}
+.agt-resultado[data-resultado='recusou'] {
+  background: var(--status-falta-fundo);
+  border-color: var(--status-falta);
+}
+
+.agt-argumentos {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-1) var(--e-4);
+  margin: 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-11);
+}
+.agt-argumentos div { display: flex; gap: var(--e-1); min-width: 0; }
+.agt-argumentos dt { font-weight: var(--p-forte); }
+.agt-argumentos dd {
+  margin: 0;
+  color: var(--tinta);
+  font-family: var(--fonte-mono);
+  overflow-wrap: anywhere;
+}
+
+.agt-intencoes {
+  display: grid;
+  gap: var(--e-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agt-intencao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-1) var(--e-3);
+  font-size: var(--t-14);
+}
+.agt-intencao-papel {
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+}
+.agt-intencao-motivo {
+  flex-basis: 100%;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+}
+
+.agt-rodape {
+  margin: 0;
+  padding-top: var(--e-3);
+  color: var(--tinta-fraca);
+  border-top: 1px solid var(--regua);
+  font-size: var(--t-11);
+  font-feature-settings: var(--numerais);
+}
+
+@media (max-width: 820px) {
+  .agt-linha {
+    grid-template-columns: var(--agt-hora) minmax(0, 1fr) auto;
+    row-gap: var(--e-1);
+  }
+  .agt-pedido { grid-column: 2 / -1; }
+  .agt-detalhe { padding: var(--e-2) var(--e-4) var(--e-5) var(--e-5); }
+  .agt-chamada { grid-template-columns: minmax(0, 1fr); }
+  .agt-argumentos { grid-column: 1; }
+  .agt-numero { font-size: var(--t-25); }
+  .agt-resumo { gap: var(--e-2) var(--e-5); }
+}

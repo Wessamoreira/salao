@@ -168,6 +168,11 @@ app.agente:
   aceite:
     validade: ${AGENTE_ACEITE_VALIDADE:PT2H}
     intervalo: ${AGENTE_ACEITE_INTERVALO:PT1M}
+  # RT-CNV-007 — a trilha do agente (acao_ia). O conteúdo — mensagem, resposta, telefone, argumentos —
+  # sai aos 90 dias; a linha, aos 12 meses (docs/04). ISO-8601.
+  acao-ia:
+    anonimizar-apos: ${AGENTE_ACAO_IA_ANONIMIZAR:P90D}
+    apagar-apos: ${AGENTE_ACAO_IA_APAGAR:P365D}
 
 app.cripto:
   # AES-256 em Base64 (32 bytes). Sem padrão: a aplicação não sobe sem chave, porque

@@ -185,7 +185,7 @@ public class ProcessadorDeInteracoes {
             TenantContext.executar(r.estabelecimentoId(), () -> conduzir(r));
             return 1;
         } catch (FalhaPermanente e) {
-            registrar(r, () -> execucoes.falhar(r.id(), recortar(e.getMessage())));
+            registrar(r, () -> concluir.falhou(r.id(), recortar(e.getMessage()), relogio.agora()));
             contar("falhou");
             log.warn("Conversa {} falhou de vez: {}", r.id(), e.getMessage());
         } catch (RuntimeException e) {
@@ -194,7 +194,7 @@ public class ProcessadorDeInteracoes {
             String erro = recortar(e.getMessage());
             registrar(r, () -> {
                 if (desistir) {
-                    execucoes.falhar(r.id(), erro);
+                    concluir.falhou(r.id(), erro, relogio.agora());
                 } else {
                     execucoes.adiar(r.id(), erro, proxima);
                 }
@@ -218,14 +218,14 @@ public class ProcessadorDeInteracoes {
         // entre elas, a segunda viria NaoIdentificado e o cast estouraria.
         var identificacao = usuarios.identificarPorTelefone(r.telefone());
         if (identificacao instanceof Identificacao.NaoIdentificado(var motivo)) {
-            execucoes.recusar(r.id(), motivo.name(), null, null, agora);
+            concluir.recusada(r.id(), motivo.name(), null, null, agora);
             contar("recusada_identidade");
             return;
         }
         UsuarioEfetivo usuario = ((Identificacao.Identificado) identificacao).usuario();
 
         if (!limite.consumir(salao, r.telefone())) {
-            execucoes.recusar(r.id(), "LIMITE_POR_TELEFONE", usuario.usuarioId(), null, agora);
+            concluir.recusada(r.id(), "LIMITE_POR_TELEFONE", usuario.usuarioId(), null, agora);
             contar("recusada_limite");
             return;
         }
@@ -290,7 +290,8 @@ public class ProcessadorDeInteracoes {
                 agoraNoSalao, r.entrada(), historico), orcamento, executor);
 
         if (resultado.desfecho() == Orquestrador.Desfecho.TETO_ATINGIDO) {
-            execucoes.recusar(r.id(), "TETO_DE_CUSTO", usuario.usuarioId(), resultado, relogio.agora());
+            concluir.recusada(r.id(), "TETO_DE_CUSTO", usuario.usuarioId(), resultado,
+                    relogio.agora());
             contar("recusada_teto");
             log.warn("Salão {} atingiu o teto diário de custo do agente", salao);
             return;
@@ -308,7 +309,7 @@ public class ProcessadorDeInteracoes {
      */
     private void conduzirBotao(Reservada r) {
         if (!limite.consumir(r.estabelecimentoId(), r.telefone())) {
-            execucoes.recusar(r.id(), "LIMITE_POR_TELEFONE", null, null, relogio.agora());
+            concluir.recusada(r.id(), "LIMITE_POR_TELEFONE", null, null, relogio.agora());
             contar("recusada_limite");
             return;
         }

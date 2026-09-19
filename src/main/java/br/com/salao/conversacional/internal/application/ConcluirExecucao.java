@@ -1,5 +1,6 @@
 package br.com.salao.conversacional.internal.application;
 
+import br.com.salao.conversacional.internal.infra.AcoesDoAgenteJdbc;
 import br.com.salao.conversacional.internal.infra.ExecucoesJdbc;
 import br.com.salao.conversacional.internal.infra.IntencoesJdbc;
 import br.com.salao.conversacional.internal.infra.MensagensParaEquipeJdbc;
@@ -9,7 +10,8 @@ import java.util.UUID;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * RT-CNV-006 — encerrar a conversa E pôr a resposta na saída, no mesmo commit.
+ * RT-CNV-006 / RT-CNV-007 — encerrar a conversa, pôr a resposta na saída e deixar o rastro na trilha
+ * do agente, no mesmo commit.
  *
  * <p>Separados, uma queda entre os dois deixaria a conversa encerrada e ninguém avisado — e nenhuma
  * rodada seguinte a encontraria de novo, porque ela já não está pendente. Juntos, a conversa que volta
@@ -22,19 +24,28 @@ import org.springframework.transaction.annotation.Transactional;
  * pelo código". Enfileirar o pedido ali o faria chegar antes da resposta. E conversa que não terminou —
  * parou no teto, falhou — não entrega pedido de confirmação a quem não recebeu resposta.
  *
- * <p>Conversa RECUSADA não passa por aqui: recusa não responde nada a ninguém (RN-CNV-012).
+ * <p>Conversa RECUSADA não responde nada a ninguém (RN-CNV-012) — mas passa por aqui, porque deixa
+ * rastro: a tentativa do número desconhecido é exatamente o que o painel de revisão precisa mostrar.
+ *
+ * <h2>Toda conversa encerrada vira uma linha de {@code acao_ia} — RN-CNV-022</h2>
+ *
+ * <p>Concluída, recusada ou que falhou de vez. No mesmo commit do encerramento: separada, uma queda
+ * entre as duas deixaria a conversa encerrada sem rastro, e nada a reencontraria. É por isso que todo
+ * encerramento do processador passa por esta classe, e nenhum chama {@code ExecucoesJdbc} direto.
  */
 public class ConcluirExecucao {
 
     private final ExecucoesJdbc execucoes;
     private final MensagensParaEquipeJdbc saida;
     private final IntencoesJdbc intencoes;
+    private final AcoesDoAgenteJdbc acoes;
 
     public ConcluirExecucao(ExecucoesJdbc execucoes, MensagensParaEquipeJdbc saida,
-                            IntencoesJdbc intencoes) {
+                            IntencoesJdbc intencoes, AcoesDoAgenteJdbc acoes) {
         this.execucoes = execucoes;
         this.saida = saida;
         this.intencoes = intencoes;
+        this.acoes = acoes;
     }
 
     @Transactional
@@ -49,6 +60,7 @@ public class ConcluirExecucao {
         intencoes.pendenteDaExecucao(execucaoId).ifPresent(pedido ->
                 saida.enfileirar(MensagensParaEquipeJdbc.Motivo.PEDIDO_DE_CONFIRMACAO, pedido.id(),
                         telefone, pedido.texto(), List.of(), agora));
+        acoes.registrar(execucaoId, agora);
     }
 
     @Transactional
@@ -59,5 +71,26 @@ public class ConcluirExecucao {
         }
         saida.enfileirar(MensagensParaEquipeJdbc.Motivo.RESPOSTA, execucaoId, telefone, resposta,
                 List.of(), agora);
+        acoes.registrar(execucaoId, agora);
+    }
+
+    /**
+     * Recusada sem conversa — identidade, limite, teto. {@code parcial} é o que chegou a acontecer
+     * antes do corte, e vai para o rastro também.
+     */
+    @Transactional
+    public void recusada(UUID execucaoId, String motivo, UUID usuarioEfetivoId,
+                         Orquestrador.Resultado parcial, Instant agora) {
+        if (execucoes.recusar(execucaoId, motivo, usuarioEfetivoId, parcial, agora) == 1) {
+            acoes.registrar(execucaoId, agora);
+        }
+    }
+
+    /** Falhou de vez: sem mais tentativas, ou falha que tentar de novo não resolve. */
+    @Transactional
+    public void falhou(UUID execucaoId, String erro, Instant agora) {
+        if (execucoes.falhar(execucaoId, erro) == 1) {
+            acoes.registrar(execucaoId, agora);
+        }
     }
 }

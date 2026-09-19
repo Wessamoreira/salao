@@ -186,7 +186,7 @@ update transcricao_de_audio
 
 **`FALHOU` com "áudio recusado"** — os bytes não eram áudio. O arquivo `RECUSADO` fica registrado.
 
-## Agente (RT-CNV-004 / RT-CNV-005 / RT-CNV-006)
+## Agente (RT-CNV-004 a RT-CNV-007)
 
 ### Credencial e preço
 
@@ -234,7 +234,18 @@ select count(*) from intencao_pendente where status = 'AGUARDANDO_ACEITE';
 select motivo, status, count(*) from mensagem_para_equipe group by 1, 2;
 select destino, motivo, tentativas, ultimo_erro from mensagem_para_equipe
  where status = 'PENDENTE' and tentativas > 0 order by sequencia limit 20;
+
+-- RT-CNV-007: a trilha dos últimos 7 dias — o que gravou e o que foi bloqueado
+select desfecho, gravou, bloqueada, count(*) from acao_ia
+ where ocorrida_em > now() - interval '7 days' group by 1, 2, 3;
+
+-- conversa encerrada sem linha na trilha: TEM de dar zero (para as encerradas depois da V56)
+select count(*) from execucao_do_agente e
+ where e.status <> 'PENDENTE' and e.concluida_em > '<data do deploy da V56>'
+   and not exists (select 1 from acao_ia a where a.execucao_id = e.id);
 ```
+
+A trilha também se lê pela tela, em `/agente`, com `agente:review`.
 
 Métrica: `conversacional_agente_total{desfecho}` — `concluida`, `recusada_identidade`,
 `recusada_limite`, `recusada_teto`, `adiada`, `falhou`; e, das confirmações, `confirmada`,
@@ -270,6 +281,14 @@ transaction`: é defeito da ferramenta, e se corrige nela. **Nunca** tirar a tra
 É o esperado: a simulação não reserva nada. A pessoa pede de novo.
 
 **Intenção `RECUSADA` com `SEM_PERMISSAO`** — o perfil mudou entre o resumo e o "SIM" (RN-CNV-017).
+
+**Conversa encerrada sem linha em `acao_ia`** — não deveria existir: o registro é `MANDATORY`, no mesmo
+commit do encerramento (RN-CNV-022). Consulta acima diferente de zero é defeito: abrir incidente, e
+**nunca** inserir a linha à mão — trilha escrita depois não prova nada.
+
+**Expurgo da trilha** — roda às 3h45 (`PurgadorDeAcoesDoAgente`). Sem log é o normal. Linha com mais de
+90 dias ainda com `pedido` preenchido indica que o job não rodou: conferir o agendador e rodar
+`executar()` pelo console de manutenção.
 
 **Intenção `RECUSADA` com `ER-CNV-ACAO_INDISPONIVEL`** — um deploy tirou a ferramenta entre a proposta
 e a confirmação. Nada foi gravado.

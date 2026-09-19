@@ -16,6 +16,10 @@ import br.com.salao.conversacional.internal.application.ModeloDeLinguagem;
 import br.com.salao.conversacional.internal.application.EnfileiradorDeInteracoes;
 import br.com.salao.conversacional.internal.application.ConcluirTranscricao;
 import br.com.salao.conversacional.internal.application.CatalogoDeFerramentas;
+import br.com.salao.conversacional.internal.application.ConsultarAcoesDoAgenteUseCase;
+import br.com.salao.conversacional.internal.infra.AcoesDoAgenteJdbc;
+import br.com.salao.conversacional.internal.infra.PurgadorDeAcoesDoAgente;
+import br.com.salao.iam.api.NomesDeUsuariosApi;
 import br.com.salao.conversacional.internal.application.ConcluirExecucao;
 import br.com.salao.conversacional.internal.application.DecidirAceite;
 import br.com.salao.conversacional.internal.application.EnviadorDoWhatsApp;
@@ -326,8 +330,8 @@ public class ConversacionalConfig {
     @Bean
     public ConcluirExecucao concluirExecucao(ExecucoesJdbc execucoes,
                                              MensagensParaEquipeJdbc saida,
-                                             IntencoesJdbc intencoes) {
-        return new ConcluirExecucao(execucoes, saida, intencoes);
+                                             IntencoesJdbc intencoes, AcoesDoAgenteJdbc acoes) {
+        return new ConcluirExecucao(execucoes, saida, intencoes, acoes);
     }
 
     @Bean
@@ -339,5 +343,29 @@ public class ConversacionalConfig {
     public ExpiradorDeAceites expiradorDeAceites(ConexaoDeManutencao manutencao, Relogio relogio,
                                                  MeterRegistry metricas) {
         return new ExpiradorDeAceites(manutencao, relogio, metricas);
+    }
+
+    // ------------------------------------------------------------------ RT-CNV-007
+
+    @Bean
+    public AcoesDoAgenteJdbc acoesDoAgenteJdbc(DataSource dataSource, ObjectMapper json) {
+        return new AcoesDoAgenteJdbc(JdbcClient.create(dataSource), json);
+    }
+
+    @Bean
+    public ConsultarAcoesDoAgenteUseCase consultarAcoesDoAgenteUseCase(
+            AcoesDoAgenteJdbc acoes, NomesDeUsuariosApi nomes, EstabelecimentoApi estabelecimentos,
+            Relogio relogio) {
+        return new ConsultarAcoesDoAgenteUseCase(acoes, nomes, estabelecimentos, relogio);
+    }
+
+    /** Os prazos de docs/04: o conteúdo sai aos 90 dias, a linha aos 12 meses. */
+    @Bean
+    public PurgadorDeAcoesDoAgente purgadorDeAcoesDoAgente(
+            ConexaoDeManutencao manutencao,
+            @Value("${app.agente.acao-ia.anonimizar-apos:P90D}") String anonimizarApos,
+            @Value("${app.agente.acao-ia.apagar-apos:P365D}") String apagarApos) {
+        return new PurgadorDeAcoesDoAgente(manutencao, Duration.parse(anonimizarApos),
+                Duration.parse(apagarApos));
     }
 }

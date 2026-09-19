@@ -97,6 +97,10 @@ public class ConsultarCapacidadesUseCase {
                 || permissoes.contains(Permissao.FINANCEIRO_LER_TODOS)) {
             menus.add(new Capacidades.Menu("financeiro", "Financeiro", "/financeiro", "cifrao", "gestao"));
         }
+        // RT-CNV-007 — em Gestão: é o dono conferindo o agente, não a operação do dia.
+        if (permissoes.contains(Permissao.AGENTE_REVISAR)) {
+            menus.add(new Capacidades.Menu("agente", "Agente", "/agente", "balao", "gestao"));
+        }
         if (permissoes.contains(Permissao.CONFIG_GERENCIAR)) {
             menus.add(new Capacidades.Menu("configuracao", "Configurações", "/config", "engrenagem", "sistema"));
         }

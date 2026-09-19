@@ -241,8 +241,12 @@ abstract class AbstractAgenteIT extends AbstractPostgresIT {
     }
 
     protected String pessoa(Salao salao, Perfil perfil, String telefone) {
+        return pessoa(salao, perfil, telefone, "Bia");
+    }
+
+    protected String pessoa(Salao salao, Perfil perfil, String telefone, String nome) {
         TenantContext.executar(salao.tenant(), () -> com(() -> {
-            UUID id = criarUsuario.executar("Bia", "bia-" + UUID.randomUUID() + "@salao.test",
+            UUID id = criarUsuario.executar(nome, "p-" + UUID.randomUUID() + "@salao.test",
                     "senha-bem-comprida-1", perfil);
             definirTelefone.executar(id, telefone);
             return null;

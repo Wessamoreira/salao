@@ -186,9 +186,8 @@ terceira tranca depende de `emNomeDe`, e não de a ferramenta ser bem-comportada
 - [ ] **O dado vai para o provedor.** Mensagem, nome de quem escreve e resultado de ferramenta são
       enviados ao LLM: é operação de tratamento por terceiro, e pede contrato de processamento de
       dados (LGPD) antes de ligar em produção.
-- [ ] **`acao_ia` e o painel de revisão** são RT-CNV-007. O rastro operacional desta rotina —
-      ferramentas, desfechos, tokens e custo — está em `execucao_do_agente`, sem a retenção e a
-      anonimização que `04-modelo` prevê para `acao_ia`.
+- [x] ~~`acao_ia` e o painel de revisão~~ — entraram em RT-CNV-007: toda conversa encerrada vira
+      linha imutável em `acao_ia`, com a retenção e a anonimização de `04-modelo`.
 - [ ] **Argumentos de ferramenta não são validados contra o esquema.** Cada ferramenta valida os
       seus, como uma rota HTTP faria — desde RT-CNV-005 com `ArgumentosDaFerramenta`; um validador de
       JSON Schema central ainda não existe.

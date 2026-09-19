@@ -352,20 +352,32 @@ create table auditoria (
   ip inet, user_agent text, trace_id text
 );
 
-create table acao_ia (
+create table acao_ia (                          -- V56 · RT-CNV-007
   id uuid primary key default gen_random_uuid(),
-  estabelecimento_id uuid not null,
-  conversa_id uuid not null, usuario_efetivo_id uuid not null,
-  mensagem_original text, transcricao text,
-  tools_chamadas jsonb not null, resultado jsonb,
-  tokens_entrada integer, tokens_saida integer, custo_estimado numeric(19,6),
-  criado_em timestamptz not null default now()
+  estabelecimento_id uuid not null references estabelecimento(id),
+  execucao_id uuid not null unique,             -- sem FK: o retrato não depende da execução
+  ocorrida_em timestamptz not null,
+  tipo text not null,                           -- CONVERSA | BOTAO
+  desfecho text not null,                       -- CONCLUIDA | RECUSADA | FALHOU
+  motivo_recusa text,
+  usuario_efetivo_id uuid, de_telefone text,    -- nulo/útil justamente na recusa de identidade
+  veio_de_audio boolean not null, pedido text, resposta text,
+  ferramentas jsonb not null, intencoes jsonb not null,
+  gravou boolean not null, bloqueada boolean not null,
+  modelo text, tokens_entrada integer not null, tokens_saida integer not null,
+  custo_estimado_usd numeric(19,6) not null,
+  anonimizada_em timestamptz
 );
 ```
 
 `acao_ia` é o que permite responder "quem cancelou o agendamento da cliente?" quando a resposta
 é "o bot, a pedido da recepção, às 14h32, com esta transcrição". Sem essa tabela, a Fase 4 é
 indefensável em qualquer reclamação.
+
+Desde RT-CNV-007 ela é um **retrato**: gravada no mesmo commit em que a conversa se encerra, imutável
+para a aplicação e sem chave estrangeira, porque os prazos dela e da caixa de entrada são diferentes.
+`gravou` e `bloqueada` são decididos ao registrar (RN-CNV-023). O id do botão, que carrega o token do
+aceite, não entra.
 
 `intencao_pendente` (RT-CNV-005, `V54`) é o outro lado: não o que o agente fez, mas o que ele
 **propôs** e alguém decidiu — resumo, comando, código, validade e a mensagem que decidiu. `comando`,
@@ -383,7 +395,7 @@ Nenhuma tabela de log cresce para sempre. Job diário:
 | Tabela | Retenção | Motivo |
 |---|---|---|
 | `auditoria` | 5 anos (agenda e financeiro), 1 ano (resto) | Prazo de disputa |
-| `acao_ia` | 12 meses, com transcrição anonimizada aos 90 dias | LGPD: minimização |
+| `acao_ia` | 12 meses; pedido, resposta, telefone, argumentos e resumos anonimizados aos 90 dias — `PurgadorDeAcoesDoAgente` (RT-CNV-007) | LGPD: minimização |
 | `intencao_pendente` | 12 meses, como `acao_ia` — **job ainda não existe** (RT-CNV-005) | O resumo traz nome de cliente |
 | `mensagem_para_equipe` | 90 dias depois de enviada ou falha, como `conversa_mensagem` — **job ainda não existe** (RT-CNV-006) | O texto traz nomes e horários |
 | `conversa_mensagem` | 90 dias | Nada exige mais |

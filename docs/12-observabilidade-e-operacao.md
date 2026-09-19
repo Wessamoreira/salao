@@ -29,6 +29,7 @@ conteúdo de mensagem de cliente.
 | Saída para a equipe | RT-CNV-006. `conversacional_saida_total{desfecho=enviada\|adiada\|falhou}`, e o tamanho de `mensagem_para_equipe` pendente — sem provedor, ele só cresce, e é o que avisa que ninguém está recebendo resposta |
 | Aceites da profissional | RT-CNV-006. `conversacional_agente_total{desfecho=aceite_aceita\|aceite_recusada\|aceite_vencida\|aceite_vencido\|aceite_nao_encontrado\|aceite_falhou}`. `aceite_nao_encontrado` subindo é toque de número errado — ou telefone de profissional mal cadastrado |
 | Confirmações pelo agente | RT-CNV-005. Mesma métrica: `confirmada`, `confirmacao_recusada`, `confirmacao_vencida`, `confirmacao_ja_decidida`, `confirmacao_sem_pedido`. `confirmacao_sem_pedido` subindo é código digitado errado — ou pedido de confirmação que não chegou à pessoa |
+| Trilha do agente | RT-CNV-007. Tabela `acao_ia`, lida no painel `/agente` (bloqueadas subindo é ataque ou cadastro errado). O expurgo diário registra `Trilha do agente: N apagadas, M anonimizadas`; silêncio é o normal |
 | Taxa de 5xx e de 409 | 409 subindo = corrida real na agenda |
 
 ## Alertas mínimos

@@ -16,7 +16,8 @@
     "previa:comandas": "vite --port 5174 --open /preview/comandas.html",
     "previa:casca": "vite --port 5174 --open /preview/casca.html",
     "previa:login": "vite --port 5174 --open /preview/login.html",
-    "previa:sistema": "vite --port 5174 --open /preview/sistema.html"
+    "previa:sistema": "vite --port 5174 --open /preview/sistema.html",
+    "previa:agente": "vite --port 5174 --open /preview/agente.html"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",

@@ -84,7 +84,9 @@ custo; log completo em `acao_ia`.
 `AgenteIT.modelo_comprometido`, com o modelo roteirizado para obedecer ao ataque. A escrita, em
 RT-CNV-005: o modelo só propõe, e grava apenas a resposta da pessoa com o código, reconhecida fora do
 modelo — `IntencaoPendenteIT.o_modelo_nao_confirma`, `AgenteIT.leitura_que_grava` e
-`ArquiteturaTest.so_a_confirmacao_da_pessoa_grava_pelo_agente`. Falta o log em `acao_ia` (RT-CNV-007).
+`ArquiteturaTest.so_a_confirmacao_da_pessoa_grava_pelo_agente`. O log, em RT-CNV-007: toda conversa
+encerrada vira linha imutável em `acao_ia`, e o painel de revisão separa as bloqueadas —
+`AcaoIaIT.cada_tranca_bloqueia`, `.desconhecido_na_trilha`, `.trilha_imutavel`.
 
 ### R-11 · Ampere ARM indisponível na Oracle
 **Dano:** o plano de infra gratuito não se materializa.
@@ -119,7 +121,8 @@ PIN para sair do quiosque, revogação individual do dispositivo.
 
 ### R-17 · Custo de LLM e STT sem teto
 **Estado:** teto de LLM por salão por dia implementado em RT-CNV-004 (RN-CNV-011). STT ainda sem
-teto — não há provedor, e sem provedor não há tabela de preço.
+teto — não há provedor, e sem provedor não há tabela de preço. O custo por conversa é registrado em
+`acao_ia` e somado no painel de revisão (RT-CNV-007); o alerta em 80% do teto ainda não existe.
 Áudio é caro e a Fase 4 pode consumir orçamento sem ninguém ver. Teto por estabelecimento por dia,
 corte automático, custo registrado por ação em `acao_ia`, alerta em 80% do teto.
 

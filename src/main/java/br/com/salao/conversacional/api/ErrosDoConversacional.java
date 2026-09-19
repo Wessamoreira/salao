@@ -37,7 +37,11 @@ public enum ErrosDoConversacional implements CodigoDeErro {
             "Ação indisponível pelo agente"),
 
     DADOS_INVALIDOS("ER-CNV-DADOS_INVALIDOS", HttpStatus.UNPROCESSABLE_ENTITY,
-            "Dados do canal inválidos");
+            "Dados do canal inválidos"),
+
+    /** RT-CNV-007 — período invertido, longo demais, ou cursor que não veio do painel. */
+    FILTRO_INVALIDO("ER-CNV-FILTRO_INVALIDO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Filtro da revisão inválido");
 
     private final String codigo;
     private final HttpStatus status;

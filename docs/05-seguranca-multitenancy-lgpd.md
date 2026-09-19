@@ -154,6 +154,10 @@ efetivo; pedido fora dela é recusado e registrado; o que passa roda em nome do 
 teto é reservado antes de cada chamada, e há limite por telefone. A suíte R-10 usa um modelo
 roteirizado para obedecer ao ataque — e prova que nada passa.
 
+**A trilha, em RT-CNV-007** (RN-CNV-022 a 026): toda conversa encerrada — inclusive a recusada na
+identidade — deixa uma linha imutável em `acao_ia`, lida só por quem tem `agente:review`. O telefone
+sai pelo final e só quando não há usuário; o token do aceite não entra; o conteúdo sai aos 90 dias.
+
 **E a escrita, em RT-CNV-005** (RN-CNV-014 a 017): o contrato de ferramenta é selado em leitura e
 escrita, e a escrita não tem `executar`. O modelo alcança só a simulação, que roda em transação somente
 leitura e vira uma intenção pendente com resumo do servidor e um código. Grava apenas a mensagem da

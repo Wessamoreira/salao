@@ -59,7 +59,8 @@ pelo telefone.
 
 - `iam` — `AuditoriaApi` (cadastro do canal) e `Permissao.CONFIG_GERENCIAR`
 - `arquivos` — `IngestaoDeArquivoApi` (o áudio guardado e relido, RT-CNV-003)
-- `iam` — `UsuarioEfetivoApi` e `EstabelecimentoApi` (em nome de quem, e o fuso do teto, RT-CNV-004)
+- `iam` — `UsuarioEfetivoApi` e `EstabelecimentoApi` (em nome de quem, e o fuso do teto, RT-CNV-004);
+  `NomesDeUsuariosApi` (o nome de hoje de quem pediu, no painel, RT-CNV-007)
 - `shared.agente` — `Ferramenta`, que os outros módulos implementam (RN-CNV-013)
 - `shared` — `ConexaoDeManutencao` (o roteamento roda sem tenant), `Relogio`, `ErroDeDominio`
 
@@ -86,6 +87,13 @@ na `notificacao`, como ADR-0006 previa: o número está aqui, e o contrário ser
 Horário fora da jornada não é recusado: a profissional aceita ou recusa por botão, pelo telefone do
 cadastro, sem conta de usuário (RN-CNV-018, 019), e o aceite vence em duas horas (RN-CNV-021).
 
+## A trilha — RT-CNV-007
+
+Toda conversa encerrada vira uma linha imutável em `acao_ia`, no mesmo commit do encerramento: o que foi
+pedido, as ferramentas com o desfecho de cada tranca, as intenções, se gravou, se foi bloqueada, quanto
+custou (RN-CNV-022 a 024). O dono e a gerência leem em `/agente`, com `agente:review` (RN-CNV-025). O
+conteúdo sai aos 90 dias e a linha, aos 12 meses (RN-CNV-026).
+
 RT-CNV-002 entregou, **no `iam`**, `UsuarioEfetivoApi` — é por ela que a orquestração (RT-CNV-004)
 vai agir em nome de quem escreveu. O módulo ainda não a usa: quem a usa é o primeiro caso de uso
 que age.
@@ -100,6 +108,7 @@ que age.
 | [RT-CNV-004](RT-CNV-004-orquestracao.md) — orquestração: ferramentas por permissão, teto, limite | implementada, sem provedor de LLM |
 | [RT-CNV-005](RT-CNV-005-agendar-pelo-agente.md) — marcar pelo agente: consultar, simular, confirmar pelo código | implementada |
 | [RT-CNV-006](RT-CNV-006-aceite-e-saida-para-equipe.md) — aceite da profissional por botão, validade, saída para a equipe | implementada, sem provedor de envio |
+| [RT-CNV-007](RT-CNV-007-trilha-do-agente.md) — trilha do agente (`acao_ia`) e painel de revisão | implementada |
 
 ## Rotas
 
@@ -109,7 +118,10 @@ que age.
 | `POST /webhooks/whatsapp` | recebe o lote de mensagens | **pública** — HMAC `X-Hub-Signature-256` |
 | `GET /api/v1/canais/whatsapp` | qual número está ligado | `config:manage` |
 | `PUT /api/v1/canais/whatsapp` | liga, troca ou desliga o número | `config:manage` |
+| `GET /api/v1/agente/acoes` | a trilha, com recorte, pessoa, período e cursor | `agente:review` |
+| `GET /api/v1/agente/acoes/resumo` | os totais do período | `agente:review` |
+| `GET /api/v1/agente/acoes/pessoas` | quem conversou no período | `agente:review` |
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-CNV-001 a RN-CNV-021.
+Ver [regras.md](regras.md) — RN-CNV-001 a RN-CNV-026.
