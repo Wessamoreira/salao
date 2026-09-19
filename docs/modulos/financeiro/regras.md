@@ -546,3 +546,82 @@ apontando para si. Mesma forma de RN-FIN-010 e RN-FIN-013.
 `EstornoIT.estorno_de_lancamento_e_idempotente`,
 `EstornoIT.estorno_de_fechamento_exige_motivo`
 **Configurável?** Não · **Origem.** 2026-09-12
+
+### RN-FIN-024 — O extrato é lido pelo mapeamento que o dono confere; nada é gravado antes
+
+**Enunciado.** A importação tem duas etapas. A prévia lê o arquivo, sugere qual coluna é qual campo e
+mostra as primeiras vendas já interpretadas, sem gravar nada. A importação recebe o mesmo arquivo com o
+mapeamento confirmado. O mapeamento é pelo **nome** da coluna, e o último confirmado fica salvo para o
+salão. Os apelidos são sugestão, não contrato.
+
+**Motivo.** A Stone não publica as colunas da Lista de vendas. Um leitor fixo teria de adivinhar nomes,
+e um nome errado ou um formato de número trocado vira divergência falsa em dinheiro. Quem confere é quem
+vê as vendas lidas. Pelo nome, e não pela posição, porque a ordem mudar não pode trocar bruto por
+líquido.
+
+**Onde é garantida.** `PreverImportacaoUseCase` · `ImportarExtratoUseCase` · `MapeamentoDoExtrato`.
+**Rotinas.** RT-FIN-009 · **Teste.** `ImportarExtratoIT.previa`, `.mapeamento_salvo`,
+`.mapeamento_incompleto`, `MapeamentoDoExtratoTest`
+**Configurável?** O mapeamento, pelo dono · **Origem.** 2026-09-19, decisão do dono
+
+### RN-FIN-025 — Reimportar é inofensivo, e dinheiro não é sobrescrito em silêncio
+
+**Enunciado.** Uma venda por salão, adquirente e Stone ID. O mesmo Stone ID de novo, igual, é
+**repetida**; aprovada que volta cancelada **muda de situação**; com outro valor, ou cancelada que volta
+aprovada, é **recusada** com o motivo — e o que está gravado não muda. A aplicação não pode reescrever
+valor nem apagar venda.
+
+**Motivo.** O dono vai importar períodos que se sobrepõem, e o mesmo arquivo duas vezes. Nenhum dos dois
+pode duplicar. Já uma contradição é exatamente o que a conciliação existe para mostrar: resolvê-la sozinha
+esconderia o problema.
+
+**Onde é garantida.** `ImportarExtratoUseCase` · `TransacoesDoAdquirenteJdbc` · `V58`
+(`uma_transacao_por_id`, grants por coluna).
+**Rotinas.** RT-FIN-009 · **Teste.** `ImportarExtratoIT.reimportar_nao_duplica`, `.cancelada_depois`,
+`.valor_diferente_recusado`, `.cancelada_nao_volta`, `.imutavel`
+**Configurável?** Não · **Origem.** 2026-09-19
+
+### RN-FIN-026 — Número e data em modo estrito; a hora do arquivo é a do salão
+
+**Enunciado.** O número é conferido na forma inteira do formato escolhido antes de converter — milhar em
+grupos de três, até quatro casas —; o que não casa é recusado. Data em modo estrito (31/02 é recusada).
+Valor bruto tem de ser positivo; cancelamento vem pela situação. A hora do arquivo é lida no fuso do salão;
+sem hora, a venda fica marcada como tal.
+
+**Motivo.** Leitura tolerante não falha: grava valor errado. "1.234,56" lido como internacional virava
+1,23456 sem erro nenhum — o teste pegou. O portal mostra a hora local, e o casamento (RT-FIN-010) depende
+dela.
+
+**Onde é garantida.** `FormatoDeNumero` · `InterpretadorDoExtrato` · `ImportarExtratoUseCase`.
+**Rotinas.** RT-FIN-009 · **Teste.** `FormatoDeNumeroTest.formato_trocado_recusa`,
+`InterpretadorDoExtratoTest.data_estrita`, `.formato_trocado`, `ImportarExtratoIT.hora_do_salao`
+**Configurável?** O formato de número, na prévia · **Origem.** 2026-09-19
+
+### RN-FIN-027 — O arquivo do extrato não fica guardado
+
+**Enunciado.** Da importação ficam a impressão SHA-256 do arquivo, as contas, as recusas e os campos de
+cada venda. O arquivo, não — nem o cartão, mesmo mascarado. A impressão avisa "este arquivo já foi
+importado em …".
+
+**Motivo.** Minimização (LGPD): a conciliação não precisa do cartão, e guardar o arquivo seria guardar
+dado de pagamento sem finalidade. A impressão basta para provar qual arquivo entrou.
+
+**Onde é garantida.** `ImportarExtratoUseCase` · `V58` (nenhuma coluna de cartão) · as duas etapas não
+guardam o arquivo entre elas.
+**Rotinas.** RT-FIN-009 · **Teste.** `ImportarExtratoIT.reimportar_nao_duplica` (o aviso),
+`.auditoria`
+**Configurável?** Não · **Origem.** 2026-09-19
+
+### RN-FIN-028 — Linha ruim não derruba o arquivo, e as contas fecham
+
+**Enunciado.** Cada linha vira nova, cancelada, repetida, ignorada (Pix, negada, pré-autorização) ou
+recusada, com o número da linha e o motivo. As cinco somam o total de linhas — a `V58` recusa a importação
+cujas contas não fecham.
+
+**Motivo.** Um arquivo de trezentas vendas com uma data impossível não pode travar as outras
+duzentas e noventa e nove — nem esconder a que falhou.
+
+**Onde é garantida.** `InterpretadorDoExtrato` · `ImportarExtratoUseCase` · check `contas_fecham`.
+**Rotinas.** RT-FIN-009 · **Teste.** `ImportarExtratoIT.linhas_ruins_nao_derrubam`,
+`InterpretadorDoExtratoTest`
+**Configurável?** Não · **Origem.** 2026-09-19

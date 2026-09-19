@@ -10,8 +10,11 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -143,6 +146,24 @@ public class ManipuladorGlobalDeErros {
         return montar(ErrosDaInfra.OPERACAO_EM_ANDAMENTO,
                 "Esta operação está sendo processada. Tente de novo em instantes.",
                 List.of(), java.util.Map.of());
+    }
+
+    /**
+     * RT-FIN-009 — o primeiro upload do sistema.
+     *
+     * <p>Sem estes tratadores, arquivo grande demais e envio malformado caíam no genérico abaixo e
+     * viravam 500 — "algo quebrou aqui dentro" sobre um arquivo que só passou do limite.
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ProblemDetail tratarArquivoGrandeDemais(MaxUploadSizeExceededException erro) {
+        return montar(ErrosDaInfra.ARQUIVO_GRANDE_DEMAIS,
+                "O arquivo passa do limite de envio (5 MB).", List.of(), java.util.Map.of());
+    }
+
+    @ExceptionHandler({MissingServletRequestPartException.class, MultipartException.class})
+    public ProblemDetail tratarEnvioDeArquivoInvalido(Exception erro) {
+        return montar(ErrosDaInfra.DADOS_INVALIDOS, "Envio de arquivo inválido.", List.of(),
+                java.util.Map.of());
     }
 
     @ExceptionHandler(Exception.class)

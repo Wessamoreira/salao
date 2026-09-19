@@ -7,7 +7,7 @@ import {
 import { useCapacidades } from '../../api/capacidades';
 import { ErroDaApi } from '../../api/http';
 import { Esqueleto, Falha, Pagina, Vazio } from '../../layout/Pagina';
-import { diaCivil, formatar, periodoDe, somarDias } from './periodo';
+import { diaCivil, formatar, periodoDe, somarDias } from '../../layout/tempo';
 import './agente.css';
 
 /**

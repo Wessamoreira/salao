@@ -1,40 +1,48 @@
 package br.com.salao.financeiro.internal;
 
-import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.catalogo.api.ServicoApi;
+import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.financeiro.api.RazaoApi;
+import br.com.salao.financeiro.internal.application.Anulacao;
 import br.com.salao.financeiro.internal.application.CancelarValeUseCase;
 import br.com.salao.financeiro.internal.application.CascataDeComissao;
 import br.com.salao.financeiro.internal.application.Competencia;
 import br.com.salao.financeiro.internal.application.ConsultarExtratoUseCase;
-import br.com.salao.financeiro.internal.application.Anulacao;
 import br.com.salao.financeiro.internal.application.ContasDoPeriodo;
+import br.com.salao.financeiro.internal.application.DefinirRegraDeComissaoUseCase;
 import br.com.salao.financeiro.internal.application.EstornarFechamentoUseCase;
 import br.com.salao.financeiro.internal.application.EstornarLancamentoUseCase;
 import br.com.salao.financeiro.internal.application.FecharPeriodoUseCase;
+import br.com.salao.financeiro.internal.application.ImportarExtratoUseCase;
 import br.com.salao.financeiro.internal.application.ListarFechamentosUseCase;
+import br.com.salao.financeiro.internal.application.ListarImportacoesUseCase;
+import br.com.salao.financeiro.internal.application.ListarRegrasDeComissaoUseCase;
 import br.com.salao.financeiro.internal.application.ListarValesUseCase;
+import br.com.salao.financeiro.internal.application.Pagamentos;
 import br.com.salao.financeiro.internal.application.PeriodoDeFechamento;
 import br.com.salao.financeiro.internal.application.PreverFechamentoUseCase;
-import br.com.salao.financeiro.internal.application.RegistrarValeUseCase;
-import br.com.salao.financeiro.internal.application.DefinirRegraDeComissaoUseCase;
-import br.com.salao.financeiro.internal.application.ListarRegrasDeComissaoUseCase;
-import br.com.salao.financeiro.internal.application.RemoverRegraDeComissaoUseCase;
+import br.com.salao.financeiro.internal.application.PreverImportacaoUseCase;
 import br.com.salao.financeiro.internal.application.Razao;
+import br.com.salao.financeiro.internal.application.RegistrarValeUseCase;
+import br.com.salao.financeiro.internal.application.RemoverRegraDeComissaoUseCase;
+import br.com.salao.financeiro.internal.infra.FechamentosJdbc;
+import br.com.salao.financeiro.internal.infra.ImportacoesDeExtratoJdbc;
 import br.com.salao.financeiro.internal.infra.LancamentosJdbc;
+import br.com.salao.financeiro.internal.infra.MapeamentosDeExtratoJdbc;
+import br.com.salao.financeiro.internal.infra.PagamentosJdbc;
+import br.com.salao.financeiro.internal.infra.RegrasDeComissaoJdbc;
+import br.com.salao.financeiro.internal.infra.TransacoesDoAdquirenteJdbc;
+import br.com.salao.financeiro.internal.infra.ValesJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
-import br.com.salao.financeiro.internal.application.Pagamentos;
-import br.com.salao.financeiro.internal.infra.RegrasDeComissaoJdbc;
-import br.com.salao.financeiro.internal.infra.PagamentosJdbc;
-import br.com.salao.financeiro.internal.infra.FechamentosJdbc;
-import br.com.salao.financeiro.internal.infra.ValesJdbc;
+import br.com.salao.iam.api.NomesDeUsuariosApi;
 import br.com.salao.shared.idempotencia.Idempotencia;
 import br.com.salao.shared.tempo.Relogio;
 import javax.sql.DataSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import tools.jackson.databind.ObjectMapper;
 
 /** RT-FIN-001 — fiação do módulo financeiro. */
 @Configuration(proxyBeanMethods = false)
@@ -183,5 +191,46 @@ public class FinanceiroConfig {
     public ListarRegrasDeComissaoUseCase listarRegrasDeComissaoUseCase(
             RegrasDeComissaoJdbc regras) {
         return new ListarRegrasDeComissaoUseCase(regras);
+    }
+
+    // ------------------------------------------------------------------ RT-FIN-009 — extrato
+
+    @Bean
+    public TransacoesDoAdquirenteJdbc transacoesDoAdquirenteJdbc(DataSource dataSource) {
+        return new TransacoesDoAdquirenteJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public ImportacoesDeExtratoJdbc importacoesDeExtratoJdbc(DataSource dataSource,
+                                                             ObjectMapper json) {
+        return new ImportacoesDeExtratoJdbc(JdbcClient.create(dataSource), json);
+    }
+
+    @Bean
+    public MapeamentosDeExtratoJdbc mapeamentosDeExtratoJdbc(DataSource dataSource,
+                                                             ObjectMapper json) {
+        return new MapeamentosDeExtratoJdbc(JdbcClient.create(dataSource), json);
+    }
+
+    @Bean
+    public PreverImportacaoUseCase preverImportacaoUseCase(MapeamentosDeExtratoJdbc mapeamentos,
+                                                           ImportacoesDeExtratoJdbc importacoes) {
+        return new PreverImportacaoUseCase(mapeamentos, importacoes);
+    }
+
+    @Bean
+    public ImportarExtratoUseCase importarExtratoUseCase(TransacoesDoAdquirenteJdbc transacoes,
+                                                         ImportacoesDeExtratoJdbc importacoes,
+                                                         MapeamentosDeExtratoJdbc mapeamentos,
+                                                         EstabelecimentoApi estabelecimentos,
+                                                         AuditoriaApi auditoria, Relogio relogio) {
+        return new ImportarExtratoUseCase(transacoes, importacoes, mapeamentos, estabelecimentos,
+                auditoria, relogio);
+    }
+
+    @Bean
+    public ListarImportacoesUseCase listarImportacoesUseCase(ImportacoesDeExtratoJdbc importacoes,
+                                                             NomesDeUsuariosApi nomes) {
+        return new ListarImportacoesUseCase(importacoes, nomes);
     }
 }

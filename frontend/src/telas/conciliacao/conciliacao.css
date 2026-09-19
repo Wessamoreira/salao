@@ -1,0 +1,350 @@
+/*
+ * RT-FIN-009 — importar o relatório de vendas da Stone.
+ *
+ * Papel e tinta. Cor só onde informa, e sempre com forma junto:
+ *   campo obrigatório sem coluna → barra lateral de falta e o texto "escolha a coluna"
+ *   linha recusada               → barra interrompida, vermelha, e a etiqueta "Recusada"
+ *   linha ignorada               → sem cor: tracejado neutro e a etiqueta "Ignorada"
+ */
+
+.cnc-tela {
+  display: grid;
+  gap: var(--e-8);
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.cnc-bloco {
+  display: grid;
+  gap: var(--e-5);
+  padding: var(--e-6);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-3);
+}
+
+/* Botão no bloco tem o tamanho do texto: a grade esticaria até a borda. */
+.cnc-bloco > .pagina-acao { justify-self: start; }
+
+.cnc-titulo {
+  margin: 0;
+  font-size: var(--t-20);
+  font-weight: var(--p-forte);
+  letter-spacing: var(--tr-titulo);
+  overflow-wrap: anywhere;
+}
+.cnc-ajuda {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-14);
+  line-height: 1.55;
+}
+.cnc-ajuda strong { color: var(--tinta); }
+
+.cnc-secao {
+  margin: 0;
+  padding-top: var(--e-3);
+  color: var(--tinta-fraca);
+  border-top: 1px solid var(--regua);
+  font-size: var(--t-10);
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------ escolher o arquivo */
+
+.cnc-zona {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--e-1);
+  padding: var(--e-10) var(--e-6);
+  background: var(--papel-fundo);
+  border: 1px dashed var(--regua-forte);
+  border-radius: var(--raio-2);
+  cursor: pointer;
+  transition: background var(--mov-imediato) var(--mov-curva),
+    border-color var(--mov-imediato) var(--mov-curva);
+}
+.cnc-zona:hover,
+.cnc-zona.arrastando {
+  background: var(--papel-afundado);
+  border-color: var(--tinta-tenue);
+}
+.cnc-zona:focus-within {
+  outline: 2px solid var(--foco);
+  outline-offset: 2px;
+}
+.cnc-arquivo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.cnc-zona-acao {
+  padding: var(--e-2) var(--e-4);
+  color: var(--papel);
+  background: var(--tinta);
+  border-radius: var(--raio-2);
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+}
+.cnc-zona-dica {
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+}
+
+/* ------------------------------------------------------------------ conferir */
+
+.cnc-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--e-3) var(--e-6);
+}
+.cnc-contas {
+  margin: var(--e-1) 0 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  font-feature-settings: var(--numerais);
+}
+
+.cnc-aviso {
+  margin: 0;
+  padding: var(--e-3) var(--e-4);
+  background: var(--status-solicitado-fundo);
+  border: 1px dashed var(--status-solicitado);
+  border-radius: var(--raio-2);
+  font-size: var(--t-12);
+  line-height: 1.5;
+}
+
+.cnc-mapa { display: grid; gap: var(--e-3); }
+.cnc-mapa[aria-busy='true'] { opacity: 0.6; }
+.cnc-mapa-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--e-3);
+}
+/* A régua da seção atravessa o bloco inteiro, e não só o título: o formato de número é parte dela. */
+.cnc-mapa-topo {
+  padding-top: var(--e-3);
+  border-top: 1px solid var(--regua);
+}
+.cnc-mapa-topo .cnc-secao {
+  flex: 1;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.cnc-formato { display: flex; gap: var(--e-1); }
+.cnc-formato button {
+  min-height: 32px;
+  padding: 0 var(--e-3);
+  color: var(--tinta-fraca);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-12);
+  font-feature-settings: var(--numerais);
+  cursor: pointer;
+}
+.cnc-formato button[aria-pressed='true'] {
+  color: var(--papel);
+  background: var(--tinta);
+  border-color: var(--tinta);
+  font-weight: var(--p-forte);
+}
+
+/* Cada campo: o nome, a coluna escolhida, e o que foi lido dela — a conferência é esta linha. */
+.cnc-campos {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.cnc-campo {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(160px, 260px) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--e-4);
+  min-height: 44px;
+  padding: var(--e-1) var(--e-3);
+}
+.cnc-campo + .cnc-campo { border-top: 1px solid var(--regua); }
+.cnc-campo[data-faltando] {
+  background: var(--status-falta-fundo);
+  box-shadow: inset 3px 0 0 var(--status-falta);
+}
+.cnc-campo-rotulo {
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+}
+.cnc-obrigatorio {
+  color: var(--tinta-fraca);
+  font-weight: var(--p-normal);
+}
+.cnc-campo select {
+  min-height: 32px;
+  width: 100%;
+  padding: 0 var(--e-2);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-12);
+}
+.cnc-campo-lido {
+  overflow: hidden;
+  color: var(--tinta);
+  font-size: var(--t-14);
+  font-feature-settings: var(--numerais);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cnc-campo-lido::before {
+  content: '→ ';
+  color: var(--tinta-tenue);
+}
+.cnc-campo[data-faltando] .cnc-campo-lido { font-weight: var(--p-forte); }
+
+.cnc-formato button:focus-visible,
+.cnc-campo select:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ tabelas */
+
+.cnc-rolagem { overflow-x: auto; }
+.cnc-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-12);
+  font-feature-settings: var(--numerais);
+}
+.cnc-tabela caption {
+  padding-bottom: var(--e-2);
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  text-align: left;
+}
+.cnc-tabela th {
+  padding: var(--e-2) var(--e-3);
+  color: var(--tinta-fraca);
+  border-bottom: 1px solid var(--regua-forte);
+  font-size: var(--t-10);
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.cnc-tabela td {
+  padding: var(--e-2) var(--e-3);
+  border-bottom: 1px solid var(--regua);
+  white-space: nowrap;
+}
+.cnc-tabela .num { text-align: right; }
+.cnc-tabela tr[data-estado] td[colspan] { white-space: normal; }
+.cnc-tabela tr[data-estado='recusada'] td:first-child {
+  box-shadow: inset 3px 0 0 var(--status-falta);
+}
+.cnc-tabela tr[data-estado='ignorada'] td { color: var(--tinta-fraca); }
+.cnc-tabela td[data-atencao] { font-weight: var(--p-forte); }
+
+.cnc-etiqueta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 var(--e-2);
+  color: var(--tinta);
+  border: 1px dashed var(--regua-forte);
+  border-radius: var(--raio-1);
+  font-size: var(--t-10);
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+.cnc-tabela tr[data-estado='recusada'] .cnc-etiqueta {
+  background: var(--status-falta-fundo);
+  border-color: var(--status-falta);
+}
+
+.cnc-rodape {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--e-3);
+}
+.cnc-rodape .erro { flex-basis: 100%; margin: 0; }
+
+/* ------------------------------------------------------------------ resultado */
+
+.cnc-totais {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e-2) var(--e-8);
+  margin: 0;
+}
+.cnc-total {
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+}
+.cnc-numero {
+  margin-right: var(--e-1);
+  color: var(--tinta);
+  font-family: var(--fonte-identidade);
+  font-size: var(--t-30);
+  font-weight: var(--p-medio);
+  letter-spacing: var(--tr-display);
+  line-height: 1;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.cnc-recusas {
+  display: grid;
+  gap: var(--e-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-12);
+}
+.cnc-recusas li {
+  display: flex;
+  gap: var(--e-3);
+  padding: var(--e-2) var(--e-3);
+  background: var(--status-falta-fundo);
+  box-shadow: inset 3px 0 0 var(--status-falta);
+  border-radius: var(--raio-1);
+}
+.cnc-linha {
+  flex: none;
+  font-weight: var(--p-forte);
+  font-feature-settings: var(--numerais);
+}
+
+.cnc-historico { display: grid; gap: var(--e-3); }
+.cnc-mais { display: flex; justify-content: center; }
+
+.cnc-erro { border-left: 3px solid var(--status-falta); }
+
+@media (max-width: 820px) {
+  .cnc-bloco { padding: var(--e-4); }
+  .cnc-campo {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--e-1);
+    padding: var(--e-2) var(--e-3);
+  }
+  .cnc-numero { font-size: var(--t-25); }
+  .cnc-totais { gap: var(--e-2) var(--e-5); }
+}

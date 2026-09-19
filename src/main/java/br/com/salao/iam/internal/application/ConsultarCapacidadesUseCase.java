@@ -97,6 +97,10 @@ public class ConsultarCapacidadesUseCase {
                 || permissoes.contains(Permissao.FINANCEIRO_LER_TODOS)) {
             menus.add(new Capacidades.Menu("financeiro", "Financeiro", "/financeiro", "cifrao", "gestao"));
         }
+        // RT-FIN-009 — conferir o que a maquininha diz é outro ato que ler o financeiro.
+        if (permissoes.contains(Permissao.FINANCEIRO_CONCILIAR)) {
+            menus.add(new Capacidades.Menu("conciliacao", "Conciliação", "/conciliacao", "setas", "gestao"));
+        }
         // RT-CNV-007 — em Gestão: é o dono conferindo o agente, não a operação do dia.
         if (permissoes.contains(Permissao.AGENTE_REVISAR)) {
             menus.add(new Capacidades.Menu("agente", "Agente", "/agente", "balao", "gestao"));

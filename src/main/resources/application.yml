@@ -2,6 +2,13 @@ spring:
   application.name: salao
   threads.virtual.enabled: true
 
+  # RT-FIN-009 — o extrato da maquininha é o primeiro upload. Um mês de vendas de um salão fica longe
+  # disso; o caso de uso confere o mesmo limite.
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
   datasource:
     # A aplicação conecta como salao_app, que NÃO é dona das tabelas (RN-INF-004).
     # Sem isso, a RLS é ignorada em silêncio para o owner.
@@ -61,6 +68,13 @@ spring.modulith.events:
 app.outbox:
   retencao-arquivo: ${OUTBOX_RETENCAO:P14D}
   idade-minima-para-reenvio: ${OUTBOX_IDADE_REENVIO:PT5M}
+
+server:
+  tomcat:
+    # RT-FIN-009 — sem isto, um upload acima do limite fazia o Tomcat fechar a conexão sem ler o
+    # resto do corpo, e quem enviou via "a conexão caiu" em vez do 413 que explica o limite. Lê e
+    # descarta até 10 MB para responder direito; acima disso, fecha — ler sem teto seria porta aberta.
+    max-swallow-size: 10MB
 
 management:
   # Porta separada: enquanto não houver Spring Security (RT-IAM-002), tirar o

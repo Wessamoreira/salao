@@ -45,7 +45,7 @@ resposta muda com o tempo de qualquer forma.
 
 | # | Pergunta | Impacto |
 |---|---|---|
-| 12 | Qual adquirente o salão usa hoje? | Define D3. Sem API pública, a Fase 5 é importação de extrato, e isso precisa ser dito antes de prometer |
+| 12 | ~~Qual adquirente o salão usa hoje?~~ **Respondida em 19/09/2026: Stone.** | Definiu D3: a Fase 5 começa pela importação da Lista de vendas (RT-FIN-009); a API de conciliação da Stone exige credencial de parceiro |
 
 ## Comerciais e de dimensionamento
 

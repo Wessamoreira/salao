@@ -1,6 +1,6 @@
 # ADR-0007: Conciliação atrás de uma camada de anticorrupção, com plano B por extrato
 
-- **Status:** proposta — depende da pergunta 12 · **Data:** 2026-08-28
+- **Status:** aceita em 2026-09-19 (pergunta 12 respondida: Stone) · **Data:** 2026-08-28
 
 ## Contexto
 
@@ -25,3 +25,13 @@ custa um adapter.
 da Fase 2, não na entrega.
 
 **Revisitar** assim que a pergunta 12 for respondida.
+
+## Revisitada em 2026-09-19
+
+**Adquirente: Stone.** O primeiro adapter é a importação da **Lista de vendas** do portal (RT-FIN-009).
+A Stone não publica as colunas desse arquivo, então ele é lido por um **mapeamento conferido pelo dono
+numa prévia** — com as vendas já interpretadas à vista — e não por um leitor fixo sobre nomes adivinhados.
+
+A Stone tem uma **API de Conciliação** (XML diário, layout 2.4, com NSU, autorização, parcelas, taxas e
+recebíveis). Ela exige credencial de parceiro e é o segundo adapter. O domínio — `TransacaoLida` e
+`transacao_do_adquirente` — não depende de qual dos dois trouxe a venda.

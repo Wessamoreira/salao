@@ -72,7 +72,9 @@ async function enviar(caminho: string, init: RequestInit, token: string | null) 
       signal: init.signal ?? controlador?.signal,
       credentials: 'include',
       headers: {
-        'Content-Type': 'application/json',
+        // FormData leva a própria fronteira do multipart no Content-Type, e só o navegador sabe
+        // qual é: definir aqui quebraria o envio de arquivo (RT-FIN-009).
+        ...(init.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...init.headers,
       },

@@ -6,7 +6,7 @@ Oito decisões que definem o resto. Mudar depois custa reescrita. Cada uma tem A
 |---|---|---|---|---|---|
 | D1 | Multi-tenant no dia 0? | **Sim.** `estabelecimento_id` em toda tabela + RLS | Isolamento colado depois vira vazamento entre clientes | Altíssimo — toca 100% das queries | [0002](adr/0002-multi-tenant-rls.md) |
 | D2 | Provedor WhatsApp | **Cloud API oficial da Meta** | Biblioteca não-oficial derruba o número do salão. Não dá para vender produto em cima disso | Médio — troca de adapter | [0006](adr/0006-whatsapp-cloud-api.md) |
-| D3 | Adquirente | **Definir qual antes de prometer automação** | Viabilidade depende de haver API/webhook. Plano B é importar CSV/OFX | Baixo, com anticorruption layer | [0007](adr/0007-conciliacao-adquirente.md) |
+| D3 | Adquirente | **Stone** (19/09/2026). Importação da Lista de vendas, com mapeamento conferido na prévia (RT-FIN-009); a API de conciliação entra quando houver credencial | Viabilidade depende de haver API/webhook. Plano B é importar CSV/OFX | Baixo, com anticorruption layer | [0007](adr/0007-conciliacao-adquirente.md) |
 | D4 | Cache | **Caffeine local + invalidação por `LISTEN/NOTIFY`** | Custo zero de infra e resolve o problema real, que é coerência entre instâncias | Baixo | [0004](adr/0004-cache-caffeine-notify.md) |
 | D5 | Identidade | **Auth próprio** com Spring Security (JWT + refresh rotativo) | Keycloak é mais um contêiner comendo RAM. SSO corporativo não é requisito | Médio | [0008](adr/0008-auth-proprio.md) |
 | D6 | Fuso e dinheiro | `timestamptz` UTC + fuso **por estabelecimento**; `BigDecimal`/`numeric(19,4)` | `double` em dinheiro e data local em agenda são bugs garantidos | Altíssimo | [0009](adr/0009-tempo-e-dinheiro.md) |

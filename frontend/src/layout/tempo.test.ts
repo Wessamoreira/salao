@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { periodoDe } from './periodo';
+import { periodoDe } from './tempo';
 
 describe('período do salão', () => {
   it('termina no dia do salão, não no da máquina', () => {

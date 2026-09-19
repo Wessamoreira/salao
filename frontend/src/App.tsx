@@ -13,6 +13,7 @@ import { Clientes } from './telas/clientes/Clientes';
 import { Comandas } from './telas/comandas/Comandas';
 import { Configuracao } from './telas/config/Configuracao';
 import { RevisaoDoAgente } from './telas/agente/RevisaoDoAgente';
+import { Conciliacao } from './telas/conciliacao/Conciliacao';
 import { EmBreve } from './telas/EmBreve';
 import { Conectividade } from './pwa/Conectividade';
 
@@ -73,6 +74,7 @@ export function App() {
               <Route path="/estoque" element={<EmBreve titulo="Estoque" rotina="RT-EST-001" />} />
               <Route path="/financeiro" element={<EmBreve titulo="Financeiro" rotina="RT-FIN-004" />} />
               <Route path="/agente" element={<RevisaoDoAgente />} />
+              <Route path="/conciliacao" element={<Conciliacao />} />
               <Route path="/config" element={<Configuracao />} />
             </Route>
 

@@ -66,6 +66,17 @@
         "previa:agente"
       ],
       "port": 5174
+    },
+    {
+      "name": "previa-conciliacao",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "previa:conciliacao"
+      ],
+      "port": 5174
     }
   ]
 }

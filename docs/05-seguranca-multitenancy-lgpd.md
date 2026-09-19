@@ -197,6 +197,7 @@ O salão guarda dado de cliente. Isso não é opcional.
 | Direito de exclusão | **Anonimização**, não delete: `cliente_anonimizado`, preservando o histórico financeiro que a legislação fiscal exige |
 | Transparência sobre IA | Aviso fixo, uma vez por número e por salão, a quem não é da equipe e escreve para o número do assistente: é IA, não atende clientes, ninguém lê, e o contato do salão. Sem modelo, e "já avisado" é uma impressão com chave, nunca o número (RT-CNV-008) |
 | Retenção | Definida por tipo (tabela em `04-modelo-de-dados.md`), com job diário |
+| Dado de pagamento do extrato | O arquivo da maquininha não é guardado — só a impressão SHA-256 e os campos da venda. Cartão, nem mascarado (RT-FIN-009, RN-FIN-027) |
 | Log sem PII | Nunca telefone completo, nome ou conteúdo de mensagem em log |
 | Auditoria sem PII | A trilha guarda `entidade_id` e o verbo, nunca o dado da pessoa. Ela é append-only e a anonimização não a alcança — dado pessoal ali seria uma segunda base fora de alcance (RN-CLI-007, corrigida em 30/08) |
 

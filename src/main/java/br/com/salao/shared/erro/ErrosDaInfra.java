@@ -46,6 +46,10 @@ public enum ErrosDaInfra implements CodigoDeErro {
      */
     ACESSO_NEGADO("ER-INF-ACESSO_NEGADO", HttpStatus.FORBIDDEN, "Acesso negado"),
 
+    /** RT-FIN-009 — o upload passou do limite do multipart. 413, e não 500. */
+    ARQUIVO_GRANDE_DEMAIS("ER-INF-ARQUIVO_GRANDE_DEMAIS", HttpStatus.CONTENT_TOO_LARGE,
+            "Arquivo grande demais"),
+
     ERRO_INTERNO("ER-INF-ERRO_INTERNO", HttpStatus.INTERNAL_SERVER_ERROR, "Erro interno");
 
     private final String codigo;

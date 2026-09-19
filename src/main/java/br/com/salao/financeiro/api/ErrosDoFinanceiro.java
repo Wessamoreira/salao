@@ -58,7 +58,19 @@ public enum ErrosDoFinanceiro implements CodigoDeErro {
      * correção é trocar a forma ou tirar as parcelas.
      */
     SO_CREDITO_PARCELA("ER-FIN-SO_CREDITO_PARCELA", HttpStatus.UNPROCESSABLE_ENTITY,
-            "Só crédito é parcelado");
+            "Só crédito é parcelado"),
+
+    /** RT-FIN-009 — o arquivo do extrato não dá para ler: vazio, planilha, sem colunas, grande. */
+    ARQUIVO_INVALIDO("ER-FIN-ARQUIVO_INVALIDO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Arquivo do extrato inválido"),
+
+    /**
+     * RT-FIN-009 — falta dizer qual coluna é o Stone ID, a data ou o valor bruto.
+     *
+     * <p>Código próprio porque o arquivo pode estar certo: o que falta é a escolha na prévia.
+     */
+    MAPEAMENTO_INCOMPLETO("ER-FIN-MAPEAMENTO_INCOMPLETO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Faltam colunas no mapeamento do extrato");
 
     private final String codigo;
     private final HttpStatus status;

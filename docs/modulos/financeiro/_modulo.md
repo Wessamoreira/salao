@@ -35,7 +35,8 @@ Isso não é omissão — é a direção da dependência, e ela precisa ser esta
 - `equipe` — `ProfissionalApi` (o percentual da ficha é um nível da cascata; e o nome de quem
   recebeu o vale)
 - `catalogo` — `ServicoApi` (conferir que o serviço da regra existe neste salão)
-- `iam` — `Permissao`, `AuditoriaApi`, `UsuarioAtual`
+- `iam` — `Permissao`, `AuditoriaApi`, `UsuarioAtual`; `EstabelecimentoApi` (o fuso do extrato) e
+  `NomesDeUsuariosApi` (quem importou), RT-FIN-009
 
 **RT-FIN-001 dizia "nenhum módulo de negócio, e é de propósito".** RT-FIN-002 desfez isso, e a frase
 é que estava larga demais: o que precisa valer é que **ninguém depende do financeiro para decidir**
@@ -56,7 +57,7 @@ de origem opaco (RN-FIN-002), e é isso que impede o ciclo com `atendimento`.
 | [RT-FIN-005](RT-FIN-005-vale.md) — vale / adiantamento | implementada |
 | [RT-FIN-006](RT-FIN-006-fechamento-e-repasse.md) — fechamento de período e repasse | implementada |
 | [RT-FIN-007](RT-FIN-007-estorno-de-lancamento.md) — estorno de lançamento e de fechamento | implementada |
-| [RT-FIN-006](RT-FIN-006-fechamento-e-repasse.md) — fechamento de período e repasse | em validação |
+| [RT-FIN-009](RT-FIN-009-importar-extrato-do-adquirente.md) — importar o relatório de vendas da Stone, com prévia e mapeamento | implementada |
 
 ## Rotas
 
@@ -73,10 +74,13 @@ de origem opaco (RN-FIN-002), e é isso que impede o ciclo com `atendimento`.
 | `GET /api/v1/fechamentos/previa?de&ate` | valores e versão que precisam ser confirmados | `financeiro:close` |
 | `POST /api/v1/fechamentos` | fecha o período usando a versão da prévia | `financeiro:close` |
 | `GET /api/v1/fechamentos?profissionalId&de&ate` | documentos congelados do período | `financeiro:read:all` |
+| `POST /api/v1/conciliacao/importacoes/previa` | lê o extrato e mostra como seria importado (multipart) | `financeiro:reconcile` |
+| `POST /api/v1/conciliacao/importacoes` | importa o extrato com o mapeamento confirmado (multipart) | `financeiro:reconcile` |
+| `GET /api/v1/conciliacao/importacoes` | as importações, das mais recentes para trás | `financeiro:reconcile` |
 
 O **pagamento** não tem rota própria: é registrado pela rota da comanda
 (`POST /api/v1/comandas/{id}/pagamentos`), porque é lá que a regra de "quanto falta" existe.
 
 ## Regras
 
-Ver [regras.md](regras.md) — RN-FIN-001 a RN-FIN-023.
+Ver [regras.md](regras.md) — RN-FIN-001 a RN-FIN-028.

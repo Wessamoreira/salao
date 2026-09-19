@@ -1,5 +1,6 @@
 /*
- * RT-CNV-007 — o calendário do salão, para a revisão do agente.
+ * O calendário do salão — nasceu na revisão do agente (RT-CNV-007) e serve a toda tela que mostra
+ * data ou hora do salão.
  *
  * Os dias são dias civis NO FUSO DO SALÃO (ADR-0009): às 23h30 de São Paulo, o servidor em UTC já
  * está no dia seguinte, e "hoje" na tela tem de ser o hoje de quem está no balcão.

@@ -31,6 +31,7 @@ conteúdo de mensagem de cliente.
 | Confirmações pelo agente | RT-CNV-005. Mesma métrica: `confirmada`, `confirmacao_recusada`, `confirmacao_vencida`, `confirmacao_ja_decidida`, `confirmacao_sem_pedido`. `confirmacao_sem_pedido` subindo é código digitado errado — ou pedido de confirmação que não chegou à pessoa |
 | Trilha do agente | RT-CNV-007. Tabela `acao_ia`, lida no painel `/agente` (bloqueadas subindo é ataque ou cadastro errado). O expurgo diário registra `Trilha do agente: N apagadas, M anonimizadas`; silêncio é o normal |
 | Aviso de IA a quem não é da equipe | RT-CNV-008. `conversacional_aviso_de_ia_total{desfecho=enfileirado\|ja_avisado\|equipe}`. `enfileirado` subindo muito num dia é o número divulgado para clientes — o que o aviso existe para corrigir |
+| Importação do extrato da maquininha | RT-FIN-009. Log `Extrato importado: N linhas — …` e auditoria `IMPORTACAO_DE_EXTRATO_CRIADO`, só com contas. Recusadas subindo de um mês para o outro é o portal mudando o formato — a prévia mostra qual coluna |
 | Taxa de 5xx e de 409 | 409 subindo = corrida real na agenda |
 
 ## Alertas mínimos
