@@ -414,6 +414,11 @@ alvo tem no máximo uma resolução valendo, e pode ter várias ao longo do temp
 reescreve — `revoke update, delete`, com `grant update` só das três colunas da reabertura. O razão passa a
 aceitar `CONCILIACAO` como origem, e é por ela que a reabertura estorna o ajuste.
 
+RT-EST-010 (`V62`) acrescenta `politica_de_preco` — a margem mínima do salão, uma linha — e
+`sugestao_de_preco`, a sugestão aberta de cada produto com os números que a geraram e o racional por
+extenso. Uma por produto (`unique`); gerar de novo apaga e reescreve. A sugestão não se edita
+(`revoke update`): decidir sobre ela é RT-EST-011.
+
 ## Retenção — o que apaga e quando
 
 Nenhuma tabela de log cresce para sempre. Job diário:

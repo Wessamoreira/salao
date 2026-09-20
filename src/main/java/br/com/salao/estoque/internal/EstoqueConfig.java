@@ -30,6 +30,11 @@ import br.com.salao.estoque.api.ProdutoApi;
 import br.com.salao.estoque.internal.infra.InventariosJdbc;
 import br.com.salao.estoque.internal.infra.LotesJdbc;
 import br.com.salao.estoque.internal.infra.ProdutosJdbc;
+import br.com.salao.estoque.internal.application.ConsultarSugestoesDePrecoUseCase;
+import br.com.salao.estoque.internal.application.DefinirPoliticaDePrecoUseCase;
+import br.com.salao.estoque.internal.application.GerarSugestoesDePrecoUseCase;
+import br.com.salao.estoque.internal.infra.PoliticaDePrecoJdbc;
+import br.com.salao.estoque.internal.infra.SugestoesDePrecoJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.shared.tempo.Relogio;
@@ -203,5 +208,36 @@ public class EstoqueConfig {
     @Bean
     public ListarProdutosUseCase listarProdutosUseCase(ProdutosJdbc produtos) {
         return new ListarProdutosUseCase(produtos);
+    }
+
+    // ------------------------------------------------------------------ RT-EST-010 — sugestão de preço
+
+    @Bean
+    public PoliticaDePrecoJdbc politicaDePrecoJdbc(DataSource dataSource) {
+        return new PoliticaDePrecoJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public SugestoesDePrecoJdbc sugestoesDePrecoJdbc(DataSource dataSource) {
+        return new SugestoesDePrecoJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public DefinirPoliticaDePrecoUseCase definirPoliticaDePrecoUseCase(
+            PoliticaDePrecoJdbc politica, AuditoriaApi auditoria, Relogio relogio) {
+        return new DefinirPoliticaDePrecoUseCase(politica, auditoria, relogio);
+    }
+
+    @Bean
+    public GerarSugestoesDePrecoUseCase gerarSugestoesDePrecoUseCase(
+            SugestoesDePrecoJdbc sugestoes, PoliticaDePrecoJdbc politica,
+            EstabelecimentoApi estabelecimentos, Relogio relogio) {
+        return new GerarSugestoesDePrecoUseCase(sugestoes, politica, estabelecimentos, relogio);
+    }
+
+    @Bean
+    public ConsultarSugestoesDePrecoUseCase consultarSugestoesDePrecoUseCase(
+            SugestoesDePrecoJdbc sugestoes, PoliticaDePrecoJdbc politica) {
+        return new ConsultarSugestoesDePrecoUseCase(sugestoes, politica);
     }
 }

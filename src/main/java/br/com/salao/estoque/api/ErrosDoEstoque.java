@@ -6,6 +6,15 @@ import org.springframework.http.HttpStatus;
 /** RT-EST-001 — catálogo de erros do módulo. Ver docs/modulos/estoque/regras.md. */
 public enum ErrosDoEstoque implements CodigoDeErro {
 
+    /**
+     * RT-EST-010 — pedir sugestões antes de definir a margem mínima.
+     *
+     * <p>{@code 409} e não {@code 422}: nada no pedido está errado — falta uma decisão do dono que
+     * ainda não foi tomada, e a correção é tomá-la, não corrigir um campo.
+     */
+    SEM_POLITICA_DE_PRECO("ER-EST-SEM_POLITICA", HttpStatus.CONFLICT,
+            "Defina a margem mínima antes de pedir sugestões de preço"),
+
     DADOS_INVALIDOS("ER-EST-DADOS_INVALIDOS", HttpStatus.UNPROCESSABLE_ENTITY,
             "Dados do produto inválidos"),
 

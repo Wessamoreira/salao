@@ -670,3 +670,70 @@ número, quem bipou não sabe em qual dos dois está.
 `Comandas.test.tsx` — *bipar o código escolhe o produto, e lançar continua sendo do humano*,
 *código que não é de nenhum produto do balcão não seleciona nada e diz qual foi*
 **Configurável?** Não · **Origem.** 2026-09-12
+
+### RN-EST-030 — Nenhuma sugestão abaixo do custo médio × (1 + margem mínima)
+
+**Enunciado.** O salão define **uma** margem mínima. Nenhum preço sugerido fica abaixo de
+`custo médio × (1 + margem mínima)`. Produto **sem custo médio** — nada em estoque — não recebe
+sugestão nenhuma. Sem margem mínima definida, a rotina recusa gerar.
+
+**Motivo.** É o ponto inteiro da rotina: uma sugestão que furasse a margem seria o sistema
+recomendando vender no prejuízo, com a autoridade de quem fez a conta. Chão sobre custo desconhecido
+seria chão inventado, e chão escolhido pelo próprio sistema seria um número que ninguém decidiu
+aparecendo na tela como se alguém tivesse decidido.
+
+**Onde é garantida.** `MotorDePreco.avaliar` — invariante, e não checagem no fim: todo motivo parte do
+chão ou de um valor acima dele, e a régua só arredonda para cima ·
+`GerarSugestoesDePrecoUseCase` (a recusa sem política).
+**Rotinas.** RT-EST-010 · **Teste.** `MotorDePrecoTest.nunca_abaixo_do_chao`, `.sem_custo_medio`,
+`.margem_zero`, `SugestaoDePrecoIT.sem_politica`, `.nunca_abaixo_do_chao`
+**Configurável?** A margem mínima, por salão · **Origem.** 2026-09-20, decisão do dono
+
+### RN-EST-031 — Um motivo por produto, na ordem; encalhado só sugere para baixo
+
+**Enunciado.** Quatro motivos, avaliados nesta ordem: margem abaixo do mínimo · encalhado (60 dias sem
+vender com 3 ou mais em estoque) · margem acima do dobro da mínima · preço fora da régua. O primeiro
+que se aplica é o único que aparece. **Encalhado e margem alta só sugerem quando o preço resultante é
+menor que o de hoje.**
+
+**Motivo.** Dois motivos no mesmo produto viram duas frases concorrentes sobre o mesmo preço, e o dono
+fica sem saber qual atender. A ordem é a do prejuízo: margem abaixo do mínimo é dinheiro saindo hoje;
+preço quebrado é acabamento. E promoção que não baixa o preço não é promoção — se o produto parado já é
+vendido no chão, não há o que fazer sem furar a margem.
+
+**Onde é garantida.** `MotorDePreco.avaliar` (a cascata) · `MotivoDaSugestao` (a ordem da declaração).
+**Rotinas.** RT-EST-010 · **Teste.** `MotorDePrecoTest.um_motivo_so`, `.encalhado_ja_no_chao`,
+`.encalhado_precisa_de_saldo`, `.sem_historico_nao_encalha`, `SugestaoDePrecoIT.encalhado_pelos_movimentos`,
+`.venda_recente_nao_encalha`
+**Configurável?** Não — os limiares são decisão do dono, no código · **Origem.** 2026-09-20
+
+### RN-EST-032 — Todo preço sugerido está na régua de 9,90, arredondado para cima
+
+**Enunciado.** 9,90 · 19,90 · 29,90 · 39,90… Arredonda sempre **para cima**, nunca para baixo.
+
+**Motivo.** Preço de balcão se lê de relance. Para cima, e não para o mais próximo, porque arredondar
+para baixo poderia levar o preço para debaixo do chão de margem — e aí a régua estaria desfazendo a
+única garantia da rotina. O efeito conhecido e aceito: em produto barato a margem sugerida sobe bem
+acima da mínima, e a tela mostra a margem resultante para a decisão ser tomada com o número à vista.
+
+**Onde é garantida.** `ReguaDePreco.arredondar`.
+**Rotinas.** RT-EST-010 · **Teste.** `ReguaDePrecoTest.sobe`, `.ja_na_regua`, `.nunca_baixa`,
+`MotorDePrecoTest.nunca_abaixo_do_chao`
+**Configurável?** Não · **Origem.** 2026-09-20, decisão do dono
+
+### RN-EST-033 — A conta é do sistema e fica registrada; a IA nunca altera o número
+
+**Enunciado.** O preço sugerido sai de uma conta auditável — custo médio, margem mínima, saldo, dias sem
+venda — e a sugestão é gravada com os números que a geraram e o racional por extenso. Modelo de
+linguagem, quando entrar, só redige a frase que explica; se ele não responder, a sugestão sai igual.
+Nada nesta rotina altera um preço: aprovar e aplicar é RT-EST-011.
+
+**Motivo.** Aplicação direta da regra do projeto — o modelo nunca escreve no domínio, e preço é domínio.
+E guardar os números junto da sugestão é o que faz "por que 49,90?" ter resposta depois: recalcular com
+o custo de hoje daria outro número, porque o custo já é outro.
+
+**Onde é garantida.** `MotorDePreco` (sem dependência de modelo) · `sugestao_de_preco` (`V62`, com
+`revoke update`) · `GerarSugestoesDePrecoUseCase`.
+**Rotinas.** RT-EST-010 · **Teste.** `SugestaoDePrecoIT.custo_medio_chega_ao_motor`, `.imutavel`,
+`.gerar_de_novo_substitui`
+**Configurável?** Não · **Origem.** 2026-09-20, decisão do dono
