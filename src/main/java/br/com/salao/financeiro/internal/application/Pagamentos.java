@@ -35,10 +35,12 @@ public class Pagamentos implements PagamentoApi {
     private static final Logger log = LoggerFactory.getLogger(Pagamentos.class);
 
     private final PagamentosJdbc pagamentos;
+    private final PrevisaoDeRecebimento previsao;
     private final Relogio relogio;
 
-    public Pagamentos(PagamentosJdbc pagamentos, Relogio relogio) {
+    public Pagamentos(PagamentosJdbc pagamentos, PrevisaoDeRecebimento previsao, Relogio relogio) {
         this.pagamentos = pagamentos;
+        this.previsao = previsao;
         this.relogio = relogio;
     }
 
@@ -55,9 +57,14 @@ public class Pagamentos implements PagamentoApi {
         }
         int parcelas = parcelasValidas(dados);
 
+        // RT-FIN-012: fotografa a taxa e o prazo de hoje. Nulo quando a faixa não tem contrato —
+        // previsão só existe onde houve negociação (RN-FIN-037).
+        var prevista = previsao.para(dados.forma(), dados.valor(), parcelas);
+
         UUID id = pagamentos.inserir(TenantContext.obrigatorio(), comandaId, dados.forma(),
                 dados.valor(), dados.bandeira(), parcelas, dados.nsu(), dados.autorizacao(),
-                conciliacaoInicial(dados.forma()), relogio.agora(), UsuarioAtual.idOuNulo());
+                conciliacaoInicial(dados.forma()), prevista, relogio.agora(),
+                UsuarioAtual.idOuNulo());
         log.info("Pagamento {} de {} em {} na comanda {}", id, dados.valor(), dados.forma(),
                 comandaId);
         return pagamentos.porId(id).orElseThrow();

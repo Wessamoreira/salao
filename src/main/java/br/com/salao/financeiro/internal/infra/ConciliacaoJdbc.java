@@ -79,13 +79,44 @@ public class ConciliacaoJdbc {
             + " and (t2.capturada_em at time zone :fuso)::date"
             + " = (t.capturada_em at time zone :fuso)::date) ";
 
+    /**
+     * RT-FIN-012 — a faixa de taxa de uma venda da adquirente, do jeito que {@code FaixaDeTaxa.de}
+     * decide (RN-FIN-040). Só crédito e débito: "outro" (voucher, pré-pago) não tem contrato.
+     */
+    private static final String FAIXA_DA_VENDA = " case"
+            + " when t.produto = 'DEBITO' then 'DEBITO'"
+            + " when t.parcelas <= 1 then 'CREDITO_A_VISTA'"
+            + " when t.parcelas <= 6 then 'CREDITO_2_6'"
+            + " else 'CREDITO_7_12' end ";
+
+    /**
+     * Quanto a adquirente reteve <strong>a mais</strong> do que o contrato diz, por venda.
+     *
+     * <p>Um centavo de tolerância: a adquirente arredonda para centavos e o contrato tem quatro casas.
+     * Sem a folga, metade das vendas apareceria como cobrança a mais — e aviso que dispara sempre deixa
+     * de ser lido.
+     */
+    private static final String DIFERENCA_DE_TAXA =
+            " (t.valor_bruto - t.valor_liquido) - (t.valor_bruto * x.percentual / 100) ";
+
+    private static final String VENDAS_COM_TAXA_ACIMA = " from transacao_do_adquirente t"
+            + " join taxa_do_adquirente x on x.adquirente = t.adquirente"
+            + " and x.faixa = {faixaDaVenda}"
+            + " where t.situacao = 'APROVADA' and t.valor_liquido is not null"
+            + " and t.produto in ('CREDITO', 'DEBITO')"
+            + " and t.capturada_em >= :de and t.capturada_em < :ate"
+            + " and {diferencaDeTaxa} > 0.01 ";
+
     /** Troca os marcadores pelos trechos acima. Nunca some texto ao fim de um bloco. */
     private static String montar(String sql) {
         return sql.replace("{coberto}", COBERTO)
                 .replace("{parPendente}", PAR_PENDENTE)
                 .replace("{vendaPendente}", VENDA_PENDENTE)
                 .replace("{pagamentoPendente}", PAGAMENTO_PENDENTE)
-                .replace("{possivelRefeita}", POSSIVEL_REFEITA);
+                .replace("{possivelRefeita}", POSSIVEL_REFEITA)
+                .replace("{vendasComTaxaAcima}", VENDAS_COM_TAXA_ACIMA)
+                .replace("{diferencaDeTaxa}", DIFERENCA_DE_TAXA)
+                .replace("{faixaDaVenda}", FAIXA_DA_VENDA);
     }
 
     private final JdbcClient jdbc;
@@ -213,7 +244,7 @@ public class ConciliacaoJdbc {
 
     /** As contas do período, cada uma em quantidade e valor. */
     public record Contas(Totais conciliadas, Totais divergentes, Totais soNaMaquininha,
-                         Totais soNoSistema, Totais semExtrato) {
+                         Totais soNoSistema, Totais semExtrato, Totais taxaAcimaDoContrato) {
     }
 
     /** O período em {@code [de, ate)}: pela hora da venda nos pares e na maquininha, do registro no sistema. */
@@ -264,14 +295,18 @@ public class ConciliacaoJdbc {
                   (select coalesce(sum(p.valor), 0) from pagamento p
                     where p.criado_em >= :de and p.criado_em < :ate
                       and p.forma in ('CREDITO', 'DEBITO') and p.status_conciliacao = 'PENDENTE'
-                      and {pagamentoPendente} and not {coberto}) as sem_extrato_v
+                      and {pagamentoPendente} and not {coberto}) as sem_extrato_v,
+                  -- RT-FIN-012: a adquirente está cobrando o que combinou? (RN-FIN-040)
+                  (select count(*) {vendasComTaxaAcima}) as taxa_acima_n,
+                  (select coalesce(sum({diferencaDeTaxa}), 0) {vendasComTaxaAcima}) as taxa_acima_v
                 """))
                 .param("de", Timestamp.from(de))
                 .param("ate", Timestamp.from(ate))
                 .param("fuso", fuso.getId())
                 .query((rs, n) -> new Contas(
                         totais(rs, "conciliadas"), totais(rs, "divergentes"),
-                        totais(rs, "maquininha"), totais(rs, "sistema"), totais(rs, "sem_extrato")))
+                        totais(rs, "maquininha"), totais(rs, "sistema"), totais(rs, "sem_extrato"),
+                        totais(rs, "taxa_acima")))
                 .single();
     }
 

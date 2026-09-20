@@ -401,6 +401,12 @@ Desde RT-FIN-010 (`V59`) cada importação guarda o período que cobre, e `conci
 um pagamento do salão e uma venda da adquirente, com o critério e as divergências. Um par por lado; o
 estorno do pagamento o apaga junto (`cascade`); a aplicação só acrescenta divergência.
 
+RT-FIN-012 (`V61`) acrescenta `taxa_do_adquirente` — o percentual e o prazo negociados em cada uma das
+quatro faixas (débito, crédito à vista, 2-6x, 7-12x) —, e `pagamento` passa a guardar a previsão
+fotografada: `taxa_prevista`, `previsao_recebimento` e `dias_para_receber`. O razão aceita `ADQUIRENTE`
+como origem, por onde entra a taxa real do extrato. `update` na taxa é o caminho normal (renegociar);
+`delete`, não.
+
 RT-FIN-011 (`V60`) fecha a conferência com `resolucao_de_conciliacao`: a decisão sobre **um** alvo — o
 par, a venda sem pagamento ou o pagamento sem venda (`num_nonnulls(...) = 1`) —, com a ação, o motivo
 escrito, o efeito por extenso e quem decidiu. Índice único **parcial** por alvo enquanto não reaberta: um
@@ -420,6 +426,7 @@ Nenhuma tabela de log cresce para sempre. Job diário:
 | `mensagem_para_equipe` | 90 dias depois de enviada ou falha, como `conversa_mensagem` — **job ainda não existe** (RT-CNV-006) | O texto traz nomes e horários |
 | `aviso_de_ia` | Enquanto o salão existir — é o que faz o aviso sair uma vez só (RT-CNV-008) | Guarda só a impressão com chave: sem a chave, não identifica ninguém |
 | `transacao_do_adquirente`, `importacao_de_extrato`, `conciliacao_de_venda`, `resolucao_de_conciliacao` | Como o financeiro: 5 anos — **job ainda não existe** (RT-FIN-009) | Dado financeiro; sem cartão, sem arquivo |
+| `taxa_do_adquirente` | Enquanto o salão existir — é o contrato vigente (RT-FIN-012) | Não tem dado pessoal |
 | `conversa_mensagem` | 90 dias | Nada exige mais |
 | `idempotencia` | 7 dias | TTL da chave |
 | `event_publication` (Modulith) | Completos apagados em 7 dias | Senão cresce sem limite |

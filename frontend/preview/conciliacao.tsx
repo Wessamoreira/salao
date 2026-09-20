@@ -8,6 +8,9 @@
  * A conferência traz as cinco contas e as resoluções de RT-FIN-011: uma venda marcada como possível
  * refeita (o aviso de dobrar o caixa) e a trilha com duas decisões.
  *
+ * De RT-FIN-012: a previsão de recebíveis com quatro dias e duas vendas sem previsão, e o cadastro de
+ * taxas com a faixa de 7 a 12x ainda vazia — o estado em que o botão de salvar fica desabilitado.
+ *
  *   npm run previa:conciliacao   →   http://localhost:5174/preview/conciliacao.html
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -70,6 +73,24 @@ const HISTORICO = [
 ];
 
 const totais = (quantidade: number, valor: number) => ({ quantidade, valor });
+const TAXAS = [
+  { faixa: 'DEBITO', rotulo: 'Débito', percentual: 1.99, diasParaReceber: 1 },
+  { faixa: 'CREDITO_A_VISTA', rotulo: 'Crédito à vista', percentual: 3.49, diasParaReceber: 30 },
+  { faixa: 'CREDITO_2_6', rotulo: 'Crédito 2 a 6x', percentual: 4.29, diasParaReceber: 30 },
+  { faixa: 'CREDITO_7_12', rotulo: 'Crédito 7 a 12x', percentual: null, diasParaReceber: null },
+];
+
+const RECEBIVEIS = {
+  de: '2026-09-20', ate: '2026-12-19', bruto: 42300, taxa: 1584.75, liquido: 40715.25,
+  semPrevisao: 2,
+  dias: [
+    { dia: '2026-09-21', parcelas: 7, bruto: 820, taxa: 16.32, liquido: 803.68 },
+    { dia: '2026-09-22', parcelas: 5, bruto: 610, taxa: 12.14, liquido: 597.86 },
+    { dia: '2026-10-19', parcelas: 22, bruto: 4180, taxa: 145.88, liquido: 4034.12 },
+    { dia: '2026-11-17', parcelas: 9, bruto: 1740, taxa: 74.65, liquido: 1665.35 },
+  ],
+};
+
 const RESOLVIDAS = [
   { id: 'r1', resolvidaEm: '2026-09-19T14:02:00Z', quemResolveu: 'Joana', acao: 'CORRIGIR',
     motivo: 'recepção registrou débito; a Stone mostra crédito no comprovante', alvo: 'PAR',
@@ -83,7 +104,8 @@ const RESOLVIDAS = [
 
 const RESUMO = { de: '2026-09-01', ate: '2026-09-19', conciliadas: totais(410, 38420.5),
   divergentes: totais(3, 340), soNaMaquininha: totais(2, 215), soNoSistema: totais(1, 90),
-  semExtrato: totais(0, 0), resolvidas: totais(2, 260) };
+  semExtrato: totais(0, 0), resolvidas: totais(2, 260),
+  taxaAcimaDoContrato: totais(4, 18.4) };
 
 const item = (id: string, hora: string, valor: number, produto: string, forma: string | null,
   divergencias: string[], registro?: string, valorPagamento?: number) => ({
@@ -122,6 +144,10 @@ window.fetch = async (entrada: RequestInfo | URL, init?: RequestInit) => {
   } else if (url.includes('/conciliacao/itens')) {
     const recorte = new URL(url, 'http://x').searchParams.get('recorte') ?? 'DIVERGENTES';
     corpo = { itens: ITENS[recorte] ?? [], proximoCursor: null, temMais: false };
+  } else if (url.includes('/adquirente/taxas')) {
+    corpo = TAXAS;
+  } else if (url.includes('/recebiveis')) {
+    corpo = RECEBIVEIS;
   } else if (url.includes('/conciliacao/resolucoes')) {
     corpo = init?.method === 'POST'
       ? { id: 'r9', acao: 'CORRIGIR', formaDe: 'DEBITO', formaPara: 'CREDITO', lancado: null,

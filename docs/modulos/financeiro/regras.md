@@ -764,3 +764,74 @@ silêncio que a conferência existe para não ter.
 `.reabrir_estorna_o_lancamento`, `.reabrir_duas_vezes`, `.resolver_de_novo_depois_de_reabrir`,
 `.cancelada_depois_reabre_a_resolucao`, `.imutavel`
 **Configurável?** Não · **Origem.** 2026-09-19, decisão do dono
+
+### RN-FIN-037 — A taxa é cadastrada por faixa; sem cadastro não há previsão
+
+**Enunciado.** O salão cadastra o que negociou com a adquirente em **quatro faixas** — débito, crédito à
+vista, crédito de 2 a 6 parcelas e de 7 a 12 —, cada uma com percentual e dias até a primeira parcela.
+As quatro de uma vez: cadastro parcial é recusado. Faixa sem contrato faz o pagamento nascer **sem**
+previsão, e a tela diz isso — nulo não é zero, que significaria taxa isenta.
+
+**Motivo.** Por produto e parcela, e não por bandeira: é como o contrato do salão é negociado, e a
+recepção quase nunca informa a bandeira — uma taxa por bandeira ficaria sem saber qual usar na maioria
+das vendas. E um percentual chutado vira número na tela do dono, que vira decisão.
+
+**Onde é garantida.** `FaixaDeTaxa` · `DefinirTaxasDoAdquirenteUseCase.conferir` ·
+`PrevisaoDeRecebimento.para` · `V61`.
+**Rotinas.** RT-FIN-012 · **Teste.** `RecebimentoTest.faixa`, `.sem_faixa`,
+`RecebiveisIT.cadastro_parcial_recusado`, `.valores_invalidos`, `.sem_contrato_sem_previsao`
+**Configurável?** É a própria configuração · **Origem.** 2026-09-20, decisão do dono
+
+### RN-FIN-038 — A previsão é fotografada no pagamento, parcela a parcela, em dia útil bancário
+
+**Enunciado.** Ao registrar um pagamento no cartão, o sistema grava a taxa prevista, a data da primeira
+parcela e o **prazo contratado**. A primeira parcela cai no prazo da faixa; as seguintes, de 30 em 30 —
+todas contadas **a partir do dia da venda**. Data que cai em fim de semana ou feriado bancário vai para o
+próximo dia útil. A soma das parcelas é exatamente o valor da venda.
+
+**Motivo.** Fotografada porque renegociar a taxa em dezembro não pode mudar o que o sistema prometeu em
+setembro — a mesma decisão do snapshot da comissão (RN-ATD-010), e é por isso que o prazo também é
+guardado: sem ele a segunda parcela sairia da data da primeira, já empurrada, e dois dias de erro na
+primeira virariam duas semanas na décima segunda. Dia útil bancário não é dia de salão aberto: o salão
+trabalha no feriado, o dinheiro não.
+
+**Onde é garantida.** `Recebimento.cronograma` · `CalendarioBancario` · `PrevisaoDeRecebimento` ·
+`PreverRecebiveisUseCase` · `V61` (`pagamento.dias_para_receber`).
+**Rotinas.** RT-FIN-012 · **Teste.** `CalendarioBancarioTest` (8), `RecebimentoTest.debito`,
+`.credito_a_vista`, `.parcelas_contam_da_venda`, `.rateio_fecha`,
+`RecebiveisIT.previsao_no_pagamento`, `.parcelado_vira_uma_linha_por_parcela`
+**Configurável?** O percentual e o prazo, por faixa · **Origem.** 2026-09-20, decisão do dono
+
+### RN-FIN-039 — O razão recebe a taxa real do extrato, uma vez por venda, na competência da venda
+
+**Enunciado.** A taxa que entra no razão é `bruto − líquido` do extrato — nunca a prevista. Uma linha
+`TAXA_ADQUIRENTE` negativa por venda, com origem `ADQUIRENTE`; venda cancelada na adquirente tem a taxa
+estornada. Sem valor líquido no arquivo não há linha, e taxa zero não vira linha. A competência é o
+**dia da venda**.
+
+**Motivo.** Nenhum número estimado soma no resultado do mês (decisão do dono). Uma vez por venda é
+garantido pelo próprio razão, sem marca nenhuma — a mesma forma do vale (RT-FIN-005) —, e é o que torna
+reimportar o mesmo arquivo inofensivo. A competência é a da venda, ao contrário do ajuste de RT-FIN-011,
+porque aqui a taxa é custo conhecido de uma venda datada; é seguro porque a contraparte é o salão, e
+nenhum repasse já pago muda de valor.
+
+**Onde é garantida.** `TaxaNoRazao.lancar` · `ImportarExtratoUseCase` · `V61` (origem `ADQUIRENTE`).
+**Rotinas.** RT-FIN-012 · **Teste.** `RecebiveisIT.taxa_real_no_razao`, `.taxa_uma_vez_so`,
+`.taxa_estornada_quando_cancela`, `.sem_liquido_sem_lancamento`, `.taxa_zero_nao_vira_linha`
+**Configurável?** Não · **Origem.** 2026-09-20, decisão do dono
+
+### RN-FIN-040 — Taxa real acima da contratada vira aviso na conferência
+
+**Enunciado.** A conferência do mês conta as vendas em que `bruto − líquido` passou do percentual
+contratado para a faixa, e soma a diferença. Tolerância de **um centavo por venda**.
+
+**Motivo.** É o que justifica ter escolhido cadastro em vez de só aprender do extrato: quem só aprende do
+extrato passa a achar normal o que a adquirente cobrar. A tolerância existe porque a adquirente arredonda
+para centavos e o contrato tem quatro casas — sem ela, metade das vendas apareceria como cobrança a
+mais, e o aviso deixaria de ser lido (mesma razão de RN-FIN-030).
+
+**Onde é garantida.** `ConciliacaoJdbc` (os trechos `{faixaDaVenda}`, `{diferencaDeTaxa}`,
+`{vendasComTaxaAcima}`) · `ConsultarConciliacaoUseCase.Resumo`.
+**Rotinas.** RT-FIN-012 · **Teste.** `RecebiveisIT.taxa_acima_do_contrato`,
+`.taxa_dentro_do_contrato`, `.taxa_sem_contrato_nao_avisa`, `Conciliacao.test.tsx`
+**Configurável?** Não · **Origem.** 2026-09-20, decisão do dono

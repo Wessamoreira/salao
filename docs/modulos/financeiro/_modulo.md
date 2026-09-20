@@ -60,6 +60,7 @@ de origem opaco (RN-FIN-002), e é isso que impede o ciclo com `atendimento`.
 | [RT-FIN-009](RT-FIN-009-importar-extrato-do-adquirente.md) — importar o relatório de vendas da Stone, com prévia e mapeamento | implementada |
 | [RT-FIN-010](RT-FIN-010-casar-vendas-com-pagamentos.md) — casar as vendas da Stone com os pagamentos do salão | implementada |
 | [RT-FIN-011](RT-FIN-011-resolver-divergencia.md) — resolver a divergência à mão, com motivo e trilha | implementada |
+| [RT-FIN-012](RT-FIN-012-taxa-e-recebiveis.md) — taxa da adquirente e previsão de recebíveis | implementada |
 
 ## Rotas
 
@@ -85,6 +86,9 @@ de origem opaco (RN-FIN-002), e é isso que impede o ciclo com `atendimento`.
 | `POST /api/v1/conciliacao/resolucoes` | decide uma linha da conferência, com motivo | `financeiro:reconcile` |
 | `GET /api/v1/conciliacao/resolucoes?de&ate&cursor` | a trilha do período | `financeiro:reconcile` |
 | `POST /api/v1/conciliacao/resolucoes/{id}/reabertura` | devolve a linha à conferência, desfazendo | `financeiro:reconcile` |
+| `GET /api/v1/adquirente/taxas` | o que foi negociado, nas quatro faixas | `financeiro:read:all` |
+| `PUT /api/v1/adquirente/taxas` | grava as quatro faixas de uma vez | `config:manage` |
+| `GET /api/v1/recebiveis?de&ate` | quanto cai, e em que dia | `financeiro:read:all` |
 
 O **pagamento** não tem rota própria: é registrado pela rota da comanda
 (`POST /api/v1/comandas/{id}/pagamentos`), porque é lá que a regra de "quanto falta" existe.

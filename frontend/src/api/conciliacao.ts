@@ -155,6 +155,8 @@ export interface ResumoDaConciliacao {
   semExtrato: Totais;
   /** RT-FIN-011: o que saiu da conferência por decisão de alguém. */
   resolvidas: Totais;
+  /** RT-FIN-012: vendas em que a Stone reteve mais do que a faixa contratada, e quanto a mais. */
+  taxaAcimaDoContrato: Totais;
 }
 
 /** Nos pares, os dois lados; nas sobras, só o que existe. Instantes em UTC. */
@@ -305,5 +307,65 @@ export function useResolvidas(de: string, ate: string) {
       + `${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''}`),
     initialPageParam: null as string | null,
     getNextPageParam: (ultima) => (ultima.temMais ? ultima.proximoCursor : null),
+  });
+}
+
+// ------------------------------------------------------------------ RT-FIN-012 — taxa e prazo
+
+/** As quatro faixas em que a adquirente cobra. Por produto e parcela, não por bandeira. */
+export type Faixa = 'DEBITO' | 'CREDITO_A_VISTA' | 'CREDITO_2_6' | 'CREDITO_7_12';
+
+/** `percentual` e `diasParaReceber` nulos quando a faixa ainda não foi negociada. */
+export interface TaxaContratada {
+  faixa: Faixa;
+  rotulo: string;
+  percentual: number | null;
+  diasParaReceber: number | null;
+}
+
+export interface DiaARecebe {
+  dia: string;
+  parcelas: number;
+  bruto: number;
+  taxa: number;
+  liquido: number;
+}
+
+export interface PrevisaoDeRecebiveis {
+  de: string;
+  ate: string;
+  bruto: number;
+  taxa: number;
+  liquido: number;
+  /** Vendas recentes no cartão sem previsão — faixa sem contrato na hora do pagamento. */
+  semPrevisao: number;
+  dias: DiaARecebe[];
+}
+
+const TAXAS = '/v1/adquirente/taxas';
+
+export function useTaxasDoAdquirente() {
+  return useQuery({
+    queryKey: ['conciliacao', 'taxas'],
+    queryFn: () => api<TaxaContratada[]>(TAXAS),
+  });
+}
+
+/** As quatro de uma vez: o contrato é um documento só (RN-FIN-037). */
+export function useSalvarTaxas() {
+  const fila = useQueryClient();
+  return useMutation({
+    mutationFn: (faixas: { faixa: Faixa; percentual: number; diasParaReceber: number }[]) =>
+      api<TaxaContratada[]>(TAXAS, { method: 'PUT', body: JSON.stringify({ faixas }) }),
+    // A previsão das próximas vendas muda junto.
+    onSuccess: () => fila.invalidateQueries({ queryKey: ['conciliacao'] }),
+  });
+}
+
+export function useRecebiveis(de?: string, ate?: string) {
+  const busca = [de && `de=${de}`, ate && `ate=${ate}`].filter(Boolean).join('&');
+  return useQuery({
+    queryKey: ['conciliacao', 'recebiveis', de ?? '', ate ?? ''],
+    queryFn: () => api<PrevisaoDeRecebiveis>(`/v1/recebiveis${busca ? `?${busca}` : ''}`),
   });
 }

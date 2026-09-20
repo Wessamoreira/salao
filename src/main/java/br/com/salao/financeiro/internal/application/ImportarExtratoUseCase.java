@@ -60,19 +60,22 @@ public class ImportarExtratoUseCase {
     private final EstabelecimentoApi estabelecimentos;
     private final AuditoriaApi auditoria;
     private final Conciliador conciliador;
+    private final TaxaNoRazao taxaNoRazao;
     private final Relogio relogio;
 
     public ImportarExtratoUseCase(TransacoesDoAdquirenteJdbc transacoes,
                                   ImportacoesDeExtratoJdbc importacoes,
                                   MapeamentosDeExtratoJdbc mapeamentos,
                                   EstabelecimentoApi estabelecimentos, AuditoriaApi auditoria,
-                                  Conciliador conciliador, Relogio relogio) {
+                                  Conciliador conciliador, TaxaNoRazao taxaNoRazao,
+                                  Relogio relogio) {
         this.transacoes = transacoes;
         this.importacoes = importacoes;
         this.mapeamentos = mapeamentos;
         this.estabelecimentos = estabelecimentos;
         this.auditoria = auditoria;
         this.conciliador = conciliador;
+        this.taxaNoRazao = taxaNoRazao;
         this.relogio = relogio;
     }
 
@@ -156,6 +159,9 @@ public class ImportarExtratoUseCase {
                 periodoDe, periodoAte, linhas, novas, canceladas, repetidas, ignoradas, recusas.size(), guardadas,
                 mapeamento));
         mapeamentos.salvar(adquirente, mapeamento, agora);
+        // RT-FIN-012 — a taxa real vai para o razão antes do casamento: ela é custo da venda, e não
+        // depende de haver pagamento no sistema para existir (RN-FIN-039).
+        taxaNoRazao.lancar(importacaoId, agora);
         // RT-FIN-010 — casa na mesma transação: o resultado já diz quantas vendas bateram.
         var rodada = conciliador.conciliar(agora);
 

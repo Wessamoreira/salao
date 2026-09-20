@@ -3,12 +3,14 @@ package br.com.salao.financeiro.internal.infra;
 import br.com.salao.financeiro.api.FormaDePagamento;
 import br.com.salao.financeiro.api.PagamentoResumo;
 import br.com.salao.financeiro.api.StatusDeConciliacao;
+import br.com.salao.financeiro.internal.domain.Recebimento;
 import br.com.salao.shared.dinheiro.Money;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -34,14 +36,15 @@ public class PagamentosJdbc {
     @Transactional
     public UUID inserir(UUID estabelecimentoId, UUID comandaId, FormaDePagamento forma,
                         Money valor, String bandeira, int parcelas, String nsu,
-                        String autorizacao, StatusDeConciliacao conciliacao, Instant criadoEm,
-                        UUID criadoPor) {
+                        String autorizacao, StatusDeConciliacao conciliacao,
+                        Recebimento.Previsao previsao, Instant criadoEm, UUID criadoPor) {
         return jdbc.sql("""
                 insert into pagamento (estabelecimento_id, comanda_id, forma, valor, bandeira,
                                        parcelas, nsu, autorizacao, status_conciliacao,
+                                       taxa_prevista, previsao_recebimento, dias_para_receber,
                                        criado_em, criado_por)
                 values (:estabelecimento, :comanda, :forma, :valor, :bandeira, :parcelas, :nsu,
-                        :autorizacao, :conciliacao, :criadoEm, :por)
+                        :autorizacao, :conciliacao, :taxa, :previsao, :dias, :criadoEm, :por)
                 returning id
                 """)
                 .param("estabelecimento", estabelecimentoId)
@@ -53,9 +56,70 @@ public class PagamentosJdbc {
                 .param("nsu", nsu)
                 .param("autorizacao", autorizacao)
                 .param("conciliacao", conciliacao.name())
+                // RT-FIN-012: nulos quando a faixa não está cadastrada — previsão chutada vira
+                // número na tela do dono, e número na tela do dono vira decisão (RN-FIN-037).
+                .param("taxa", previsao == null ? null : previsao.taxaTotal().valor())
+                .param("previsao", previsao == null ? null
+                        : Date.valueOf(previsao.primeiraParcela()))
+                .param("dias", previsao == null ? null : previsao.diasParaReceber())
                 .param("criadoEm", OffsetDateTime.ofInstant(criadoEm, ZoneOffset.UTC))
                 .param("por", criadoPor)
                 .query(UUID.class)
+                .single();
+    }
+
+    // ------------------------------------------------------------------ RT-FIN-012
+
+    /** Um pagamento no cartão com previsão fotografada, pronto para virar cronograma. */
+    public record ComPrevisao(UUID id, Money valor, int parcelas, Money taxaPrevista,
+                              LocalDate primeiraParcela, int diasParaReceber) {
+    }
+
+    /**
+     * Os pagamentos cujas parcelas podem cair na janela pedida.
+     *
+     * <p>Superset de propósito: quem recorta parcela a parcela é o domínio, que conhece o calendário
+     * bancário. O SQL só garante que nada relevante fique de fora — daí olhar {@value #DIAS_DE_FOLGA}
+     * dias para trás da primeira parcela, que cobre doze parcelas de 30 dias com sobra para feriado.
+     */
+    @Transactional(readOnly = true)
+    public List<ComPrevisao> comPrevisaoAte(LocalDate de, LocalDate ate) {
+        return jdbc.sql("""
+                select id, valor, parcelas, taxa_prevista, previsao_recebimento, dias_para_receber
+                  from pagamento
+                 where forma in ('CREDITO', 'DEBITO') and previsao_recebimento is not null
+                   and dias_para_receber is not null
+                   and previsao_recebimento <= :ate
+                   and previsao_recebimento >= :de
+                """)
+                .param("ate", Date.valueOf(ate))
+                .param("de", Date.valueOf(de.minusDays(DIAS_DE_FOLGA)))
+                .query((rs, n) -> new ComPrevisao(rs.getObject("id", UUID.class),
+                        new Money(rs.getBigDecimal("valor")), rs.getInt("parcelas"),
+                        new Money(rs.getBigDecimal("taxa_prevista")),
+                        rs.getDate("previsao_recebimento").toLocalDate(),
+                        rs.getInt("dias_para_receber")))
+                .list();
+    }
+
+    /** Doze parcelas de 30 dias, com folga para o empurrão de feriado. */
+    public static final int DIAS_DE_FOLGA = 400;
+
+    /**
+     * Vendas recentes no cartão que ficaram sem previsão — faixa sem contrato na hora do pagamento.
+     *
+     * <p>Recentes, e não todas: os pagamentos anteriores a esta rotina nunca terão previsão, e contá-los
+     * deixaria um número grande e imóvel na tela, que ninguém olha duas vezes.
+     */
+    @Transactional(readOnly = true)
+    public int semPrevisaoDesde(Instant desde) {
+        return jdbc.sql("""
+                select count(*) from pagamento
+                 where forma in ('CREDITO', 'DEBITO') and previsao_recebimento is null
+                   and criado_em >= :desde
+                """)
+                .param("desde", OffsetDateTime.ofInstant(desde, ZoneOffset.UTC))
+                .query(Integer.class)
                 .single();
     }
 

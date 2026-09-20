@@ -6,6 +6,8 @@ import br.com.salao.shared.tenant.TenantContext;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -81,6 +83,32 @@ public class TransacoesDoAdquirenteJdbc {
                         rs.getBigDecimal("valor_bruto"),
                         SituacaoDaTransacao.valueOf(rs.getString("situacao"))))
                 .single();
+    }
+
+    /** RT-FIN-012 — uma venda cujo líquido o arquivo trouxe, pronta para virar taxa no razão. */
+    public record ParaTaxar(UUID id, BigDecimal valorBruto, BigDecimal valorLiquido,
+                            Instant capturadaEm, SituacaoDaTransacao situacao) {
+    }
+
+    /**
+     * As vendas que esta importação tocou — novas e canceladas.
+     *
+     * <p>Pela última importação, e não por todas: é exatamente o conjunto que mudou, e varrer a tabela
+     * inteira a cada arquivo faria o custo crescer com a história do salão.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public List<ParaTaxar> daImportacao(UUID importacaoId) {
+        return jdbc.sql("""
+                select id, valor_bruto, valor_liquido, capturada_em, situacao
+                  from transacao_do_adquirente
+                 where ultima_importacao_id = :importacao
+                """)
+                .param("importacao", importacaoId)
+                .query((rs, n) -> new ParaTaxar(rs.getObject("id", UUID.class),
+                        rs.getBigDecimal("valor_bruto"), rs.getBigDecimal("valor_liquido"),
+                        rs.getObject("capturada_em", OffsetDateTime.class).toInstant(),
+                        SituacaoDaTransacao.valueOf(rs.getString("situacao"))))
+                .list();
     }
 
     /** Aprovada vira cancelada. Só nessa direção — o {@code where} garante mesmo sob disputa. */

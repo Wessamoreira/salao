@@ -47,7 +47,7 @@ const TOTAIS = (quantidade: number, valor: number) => ({ quantidade, valor });
 const RESUMO = {
   de: '2026-09-01', ate: '2026-09-19', conciliadas: TOTAIS(110, 8420.5), divergentes: TOTAIS(2, 180),
   soNaMaquininha: TOTAIS(3, 240), soNoSistema: TOTAIS(1, 60), semExtrato: TOTAIS(0, 0),
-  resolvidas: TOTAIS(0, 0),
+  resolvidas: TOTAIS(0, 0), taxaAcimaDoContrato: TOTAIS(0, 0),
 };
 const DIVERGENTE = {
   id: 'c1', instante: '2026-09-18T13:05:00Z', vendaId: 'v1', idNaAdquirente: 'ST9',
@@ -66,6 +66,18 @@ const SO_NO_SISTEMA = {
   valorVenda: null, produto: null, pagamentoId: 'p2', valorPagamento: 60, forma: 'CREDITO',
   criterio: null, divergencias: [], possivelRefeita: false,
 };
+const TAXAS = [
+  { faixa: 'DEBITO', rotulo: 'Débito', percentual: 1.99, diasParaReceber: 1 },
+  { faixa: 'CREDITO_A_VISTA', rotulo: 'Crédito à vista', percentual: 3.49, diasParaReceber: 30 },
+  { faixa: 'CREDITO_2_6', rotulo: 'Crédito 2 a 6x', percentual: 4.29, diasParaReceber: 30 },
+  { faixa: 'CREDITO_7_12', rotulo: 'Crédito 7 a 12x', percentual: 5.19, diasParaReceber: 30 },
+];
+const RECEBIVEIS = {
+  de: '2026-09-20', ate: '2026-12-19', bruto: 1430, taxa: 28.46, liquido: 1401.54, semPrevisao: 0,
+  dias: [{ dia: '2026-09-21', parcelas: 7, bruto: 820, taxa: 16.32, liquido: 803.68 },
+    { dia: '2026-10-19', parcelas: 5, bruto: 610, taxa: 12.14, liquido: 597.86 }],
+};
+
 const RESOLVIDA = {
   id: 'r1', resolvidaEm: '2026-09-19T14:02:00Z', quemResolveu: 'Wesley', acao: 'CORRIGIR',
   motivo: 'recepção registrou débito; foi crédito', alvo: 'PAR',
@@ -76,12 +88,18 @@ const RESOLVIDA = {
 function montar({ previa = PREVIA as unknown, historico = [] as unknown[],
   resumo = RESUMO as unknown, divergente = DIVERGENTE as unknown,
   naMaquininha = SO_NA_MAQUININHA as unknown, resolvidas = [] as unknown[],
-  aoResolver = null as unknown } = {}) {
+  aoResolver = null as unknown, taxas = TAXAS as unknown,
+  recebiveis = RECEBIVEIS as unknown } = {}) {
   chamar.mockImplementation(async (caminho: string, init?: RequestInit) => {
     if (caminho === '/v1/me/capabilities') {
       return { estabelecimento: { timezone: 'America/Sao_Paulo' }, permissoes: [], menus: [] };
     }
     if (caminho.startsWith('/v1/conciliacao/resumo')) return resumo;
+    if (caminho === '/v1/adquirente/taxas') {
+      if (init?.method === 'PUT') return taxas;
+      return taxas;
+    }
+    if (caminho.startsWith('/v1/recebiveis')) return recebiveis;
     if (caminho === '/v1/conciliacao/resolucoes' && init?.method === 'POST') {
       if (aoResolver instanceof Error) throw aoResolver;
       return { id: 'r9', acao: 'CORRIGIR', formaDe: null, formaPara: null, lancado: null,
@@ -345,3 +363,59 @@ describe('resolver a divergência', () => {
   });
 });
 
+
+// ------------------------------------------------------------------ RT-FIN-012
+
+describe('taxa e recebíveis', () => {
+  it('o total que importa é o que cai na conta, com bruto e taxa ao lado', async () => {
+    montar();
+
+    expect(await screen.findByText('cai na conta')).toBeInTheDocument();
+    expect(screen.getByText(/1\.401,54/)).toBeInTheDocument();
+    expect(screen.getByText('retido pela Stone')).toBeInTheDocument();
+    expect(screen.getByText('seg, 21/09')).toBeInTheDocument();
+  });
+
+  it('taxa acima do contrato vira aviso na conferência, com a diferença', async () => {
+    montar({ resumo: { ...RESUMO, taxaAcimaDoContrato: TOTAIS(4, 18.4) } });
+
+    expect(await screen.findByText(/reteve mais do que o contratado/))
+      .toHaveTextContent(/4 vendas deste mês — R\$\s?18,40 a mais/);
+  });
+
+  it('venda sem previsão é avisada, e o aviso diz o que fazer', async () => {
+    montar({ recebiveis: { ...RECEBIVEIS, semPrevisao: 3 } });
+
+    expect(await screen.findByText(/ficaram sem previsão/))
+      .toHaveTextContent(/3 vendas recentes/);
+  });
+
+  it('as taxas aparecem com vírgula, e salvar manda as quatro faixas', async () => {
+    montar();
+
+    const debito = await screen.findByLabelText('Taxa de Débito');
+    expect(debito).toHaveValue('1,99');
+
+    await userEvent.clear(debito);
+    await userEvent.type(debito, '1,49');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar taxas' }));
+
+    const enviado = JSON.parse(String((chamar.mock.calls
+      .filter(([caminho, init]) => caminho === '/v1/adquirente/taxas' && init?.method === 'PUT')
+      .map(([, init]) => (init as RequestInit).body).at(-1))));
+    expect(enviado.faixas).toHaveLength(4);
+    expect(enviado.faixas[0]).toEqual({ faixa: 'DEBITO', percentual: 1.49, diasParaReceber: 1 });
+  });
+
+  it('faixa em branco não salva: o contrato é um documento só', async () => {
+    montar({ taxas: [...TAXAS.slice(0, 3),
+      { faixa: 'CREDITO_7_12', rotulo: 'Crédito 7 a 12x', percentual: null, diasParaReceber: null }] });
+
+    expect(await screen.findByRole('button', { name: 'Salvar taxas' })).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText('Taxa de Crédito 7 a 12x'), '5,19');
+    await userEvent.type(screen.getByLabelText('Prazo de Crédito 7 a 12x, em dias'), '30');
+
+    expect(screen.getByRole('button', { name: 'Salvar taxas' })).toBeEnabled();
+  });
+});

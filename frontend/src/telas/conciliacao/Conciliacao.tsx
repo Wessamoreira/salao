@@ -1,7 +1,8 @@
 import { Fragment, useState } from 'react';
 import {
   useConciliarAgora, useImportacoes, useImportar, useItensDaConciliacao, usePrevia, useReabrir,
-  useResolvidas, useResolver, useResumoDaConciliacao,
+  useRecebiveis, useResolvidas, useResolver, useResumoDaConciliacao, useSalvarTaxas,
+  useTaxasDoAdquirente,
   type Acao, type Alvo, type Campo, type Formato, type FormaVerdadeira, type ItemDaConciliacao,
   type LinhaDaPrevia, type Mapeamento, type Previa, type Recorte, type Resolvida, type Resultado,
 } from '../../api/conciliacao';
@@ -108,6 +109,8 @@ export function Conciliacao() {
       <div className="cnc-tela">
         {etapa}
         <ConferenciaDoMes fuso={fuso} />
+        <ARecebe />
+        <TaxasContratadas />
         <Historico fuso={fuso} />
       </div>
     </Pagina>
@@ -424,6 +427,194 @@ function Historico({ fuso }: { fuso: string }) {
  * As contas não são enfeite em cima da tabela: são o seletor. O dono lê o mês inteiro numa linha e
  * escolhe por onde começar — normalmente pelo que difere, que é onde há dinheiro a acertar.
  */
+/**
+ * RT-FIN-012 — quanto cai, e em que dia.
+ *
+ * O total que importa é o líquido: é ele que chega na conta. Bruto e taxa ficam ao lado para a
+ * diferença ter nome — é justamente ela que faz o caixa não bater com o faturamento.
+ */
+function ARecebe() {
+  const consulta = useRecebiveis();
+
+  return (
+    <section className="cnc-bloco" aria-labelledby="cnc-a-receber">
+      <header className="cnc-cabecalho">
+        <div>
+          <h2 id="cnc-a-receber" className="cnc-titulo">A receber</h2>
+          <p className="cnc-contas">Dos próximos 90 dias, pelo que foi contratado em cada venda.</p>
+        </div>
+      </header>
+
+      {consulta.isPending ? <Esqueleto linhas={2} altura={56} />
+        : consulta.isError ? <Falha aoTentar={() => consulta.refetch()}>{mensagem(consulta.error)}</Falha>
+          : (
+            <>
+              <div className="cnc-recebe-totais">
+                <p className="cnc-recebe-total destaque">
+                  <strong className="cnc-numero">{reais(consulta.data.liquido)}</strong>
+                  <span className="cnc-conta-rotulo">cai na conta</span>
+                </p>
+                <p className="cnc-recebe-total">
+                  <span className="cnc-recebe-valor">{reais(consulta.data.bruto)}</span>
+                  <span className="cnc-conta-rotulo">vendido</span>
+                </p>
+                <p className="cnc-recebe-total">
+                  <span className="cnc-recebe-valor">−{reais(consulta.data.taxa)}</span>
+                  <span className="cnc-conta-rotulo">retido pela Stone</span>
+                </p>
+              </div>
+
+              {consulta.data.semPrevisao > 0 && (
+                <p className="cnc-aviso" role="status">
+                  {consulta.data.semPrevisao}{' '}
+                  {consulta.data.semPrevisao === 1 ? 'venda recente no cartão ficou'
+                    : 'vendas recentes no cartão ficaram'} sem previsão: a faixa não estava cadastrada
+                  quando o pagamento foi registrado. Cadastre as taxas abaixo — as próximas vendas
+                  passam a ter previsão.
+                </p>
+              )}
+
+              {consulta.data.dias.length === 0
+                ? <p className="cnc-nada">Nada a receber da maquininha nos próximos 90 dias.</p>
+                : (
+                  <div className="cnc-rolagem">
+                    <table className="cnc-tabela">
+                      <thead>
+                        <tr>
+                          <th>Dia</th>
+                          <th className="num">Parcelas</th>
+                          <th className="num">Bruto</th>
+                          <th className="num">Taxa</th>
+                          <th className="num">Líquido</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {consulta.data.dias.map((dia) => (
+                          <tr key={dia.dia}>
+                            <td>{diaCurto(dia.dia)}</td>
+                            <td className="num">{dia.parcelas}</td>
+                            <td className="num">{reais(dia.bruto)}</td>
+                            <td className="num">−{reais(dia.taxa)}</td>
+                            <td className="num">{reais(dia.liquido)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+            </>
+          )}
+    </section>
+  );
+}
+
+/**
+ * RT-FIN-012 — o que o salão negociou com a adquirente.
+ *
+ * As quatro de uma vez, porque o contrato é uma proposta só: salvar metade deixaria débito novo e
+ * crédito velho sem ninguém perceber.
+ */
+function TaxasContratadas() {
+  const consulta = useTaxasDoAdquirente();
+  const salvar = useSalvarTaxas();
+  const [rascunho, definirRascunho] = useState<Record<string, { percentual: string; dias: string }> | null>(null);
+  const [salvo, definirSalvo] = useState(false);
+
+  const valores = rascunho ?? (consulta.data
+    ? Object.fromEntries(consulta.data.map((t) => [t.faixa, {
+      // Vírgula: é como o dono lê a proposta da Stone, e o que ele digitaria de volta.
+      percentual: t.percentual == null ? '' : String(t.percentual).replace('.', ','),
+      dias: t.diasParaReceber == null ? '' : String(t.diasParaReceber),
+    }]))
+    : null);
+
+  const completo = consulta.data != null && valores != null
+    && consulta.data.every((t) => valores[t.faixa]?.percentual.trim() !== ''
+      && valores[t.faixa]?.dias.trim() !== '');
+
+  return (
+    <section className="cnc-bloco" aria-labelledby="cnc-taxas">
+      <header className="cnc-cabecalho">
+        <div>
+          <h2 id="cnc-taxas" className="cnc-titulo">Taxas contratadas</h2>
+          <p className="cnc-contas">
+            O que você negociou com a Stone. Sem isto, a venda no cartão entra sem previsão.
+          </p>
+        </div>
+        {salvo && <span className="cnc-salvo" role="status">Salvo</span>}
+      </header>
+
+      {consulta.isPending || !consulta.data || !valores ? <Esqueleto linhas={4} altura={44} />
+        : (
+          <form className="cnc-taxas" onSubmit={(e) => {
+            e.preventDefault();
+            if (!completo || salvar.isPending) return;
+            definirSalvo(false);
+            salvar.mutate(
+              consulta.data.map((t) => ({
+                faixa: t.faixa,
+                percentual: Number(valores[t.faixa].percentual.replace(',', '.')),
+                diasParaReceber: Number(valores[t.faixa].dias),
+              })),
+              { onSuccess: () => { definirRascunho(null); definirSalvo(true); } });
+          }}>
+            <ul className="cnc-faixas">
+              {consulta.data.map((taxa) => (
+                <li key={taxa.faixa} className="cnc-faixa">
+                  <span className="cnc-faixa-rotulo">{taxa.rotulo}</span>
+                  <label className="cnc-faixa-campo">
+                    <span>Taxa</span>
+                    <span className="cnc-com-sufixo">
+                      <input
+                        type="text" inputMode="decimal" value={valores[taxa.faixa].percentual}
+                        aria-label={`Taxa de ${taxa.rotulo}`} placeholder="0,00"
+                        onChange={(e) => {
+                          definirSalvo(false);
+                          definirRascunho({ ...valores,
+                            [taxa.faixa]: { ...valores[taxa.faixa], percentual: e.target.value } });
+                        }}
+                      />
+                      <span aria-hidden="true">%</span>
+                    </span>
+                  </label>
+                  <label className="cnc-faixa-campo">
+                    <span>Cai em</span>
+                    <span className="cnc-com-sufixo">
+                      <span aria-hidden="true">D+</span>
+                      <input
+                        type="text" inputMode="numeric" value={valores[taxa.faixa].dias}
+                        aria-label={`Prazo de ${taxa.rotulo}, em dias`} placeholder="30"
+                        onChange={(e) => {
+                          definirSalvo(false);
+                          definirRascunho({ ...valores,
+                            [taxa.faixa]: { ...valores[taxa.faixa], dias: e.target.value } });
+                        }}
+                      />
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+
+            <p className="cnc-ajuda">
+              No parcelado, a primeira parcela cai no prazo e as seguintes de 30 em 30. Quando a data
+              cai em fim de semana ou feriado, a previsão mostra o próximo dia útil.
+            </p>
+
+            {salvar.isError && <p className="erro" role="alert">{mensagem(salvar.error)}</p>}
+
+            <footer className="cnc-rodape">
+              <button className="pagina-acao principal" type="submit"
+                disabled={!completo || salvar.isPending}>
+                {salvar.isPending ? 'Salvando…' : 'Salvar taxas'}
+              </button>
+            </footer>
+          </form>
+        )}
+    </section>
+  );
+}
+
 function ConferenciaDoMes({ fuso }: { fuso: string }) {
   const opcoes = meses(fuso);
   const [mes, definirMes] = useState(opcoes[0].valor);
@@ -474,6 +665,15 @@ function ConferenciaDoMes({ fuso }: { fuso: string }) {
                   </button>
                 ))}
               </div>
+              {resumo.data.taxaAcimaDoContrato.quantidade > 0 && (
+                <p className="cnc-aviso" role="status">
+                  A Stone reteve mais do que o contratado em{' '}
+                  {resumo.data.taxaAcimaDoContrato.quantidade}{' '}
+                  {resumo.data.taxaAcimaDoContrato.quantidade === 1 ? 'venda' : 'vendas'} deste mês —{' '}
+                  {reais(resumo.data.taxaAcimaDoContrato.valor)} a mais. Confira as taxas contratadas
+                  abaixo, ou fale com a Stone.
+                </p>
+              )}
               {resumo.data.semExtrato.quantidade > 0 && (
                 <p className="cnc-aviso" role="status">
                   {resumo.data.semExtrato.quantidade}{' '}
@@ -996,6 +1196,14 @@ function lido(campo: Campo, linha: LinhaDaPrevia): string {
 function reais(valor: number | null): string {
   return valor == null ? '—'
     : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+}
+
+/** RT-FIN-012: o dia da previsão já vem no calendário do salão — texto, sem passar por fuso. */
+function diaCurto(iso: string): string {
+  const [ano, mes, dia] = iso.split('-').map(Number);
+  const semana = new Intl.DateTimeFormat('pt-BR', { timeZone: 'UTC', weekday: 'short' })
+    .format(new Date(Date.UTC(ano, mes - 1, dia)));
+  return `${semana.replace('.', '')}, ${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}`;
 }
 
 /** A hora do arquivo já é a do salão: formata o texto, sem passar por fuso. */

@@ -63,10 +63,12 @@ public class ConsultarConciliacaoUseCase {
      * @param resolvidas RT-FIN-011 — o que saiu da conferência por decisão de alguém. Conta à parte:
      *                   "conciliadas" responde o que bate sozinho, e um par aceito com forma trocada
      *                   não bate sozinho
+     * @param taxaAcimaDoContrato RT-FIN-012 — vendas em que a adquirente reteve mais do que a faixa
+     *                   contratada, e quanto a mais no total (RN-FIN-040)
      */
     public record Resumo(LocalDate de, LocalDate ate, Totais conciliadas, Totais divergentes,
                          Totais soNaMaquininha, Totais soNoSistema, Totais semExtrato,
-                         Totais resolvidas) {
+                         Totais resolvidas, Totais taxaAcimaDoContrato) {
     }
 
     /**
@@ -92,7 +94,8 @@ public class ConsultarConciliacaoUseCase {
         var resumo = conciliacao.resumo(periodo.inicio(), periodo.fim(), periodo.fuso());
         return new Resumo(periodo.de(), periodo.ate(), resumo.conciliadas(), resumo.divergentes(),
                 resumo.soNaMaquininha(), resumo.soNoSistema(), resumo.semExtrato(),
-                resolucoes.contarResolvidas(periodo.inicio(), periodo.fim()));
+                resolucoes.contarResolvidas(periodo.inicio(), periodo.fim()),
+                resumo.taxaAcimaDoContrato());
     }
 
     @PreAuthorize("hasAuthority('" + Permissao.FINANCEIRO_CONCILIAR + "')")

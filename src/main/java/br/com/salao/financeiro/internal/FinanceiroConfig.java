@@ -23,7 +23,12 @@ import br.com.salao.financeiro.internal.application.ListarRegrasDeComissaoUseCas
 import br.com.salao.financeiro.internal.application.ListarValesUseCase;
 import br.com.salao.financeiro.internal.application.Pagamentos;
 import br.com.salao.financeiro.internal.application.PeriodoDeFechamento;
+import br.com.salao.financeiro.internal.application.ConsultarTaxasDoAdquirenteUseCase;
+import br.com.salao.financeiro.internal.application.DefinirTaxasDoAdquirenteUseCase;
 import br.com.salao.financeiro.internal.application.PreverFechamentoUseCase;
+import br.com.salao.financeiro.internal.application.PreverRecebiveisUseCase;
+import br.com.salao.financeiro.internal.application.PrevisaoDeRecebimento;
+import br.com.salao.financeiro.internal.application.TaxaNoRazao;
 import br.com.salao.financeiro.internal.application.PreverImportacaoUseCase;
 import br.com.salao.financeiro.internal.application.Razao;
 import br.com.salao.financeiro.internal.application.RegistrarValeUseCase;
@@ -37,6 +42,7 @@ import br.com.salao.financeiro.internal.infra.MapeamentosDeExtratoJdbc;
 import br.com.salao.financeiro.internal.infra.PagamentosJdbc;
 import br.com.salao.financeiro.internal.infra.RegrasDeComissaoJdbc;
 import br.com.salao.financeiro.internal.infra.ResolucoesJdbc;
+import br.com.salao.financeiro.internal.infra.TaxasDoAdquirenteJdbc;
 import br.com.salao.financeiro.internal.infra.TransacoesDoAdquirenteJdbc;
 import br.com.salao.financeiro.internal.infra.ValesJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
@@ -60,8 +66,48 @@ public class FinanceiroConfig {
     }
 
     @Bean
-    public Pagamentos pagamentos(PagamentosJdbc pagamentos, Relogio relogio) {
-        return new Pagamentos(pagamentos, relogio);
+    public Pagamentos pagamentos(PagamentosJdbc pagamentos, PrevisaoDeRecebimento previsao,
+                                 Relogio relogio) {
+        return new Pagamentos(pagamentos, previsao, relogio);
+    }
+
+    // ------------------------------------------------------------------ RT-FIN-012 — taxa e prazo
+
+    @Bean
+    public TaxasDoAdquirenteJdbc taxasDoAdquirenteJdbc(DataSource dataSource) {
+        return new TaxasDoAdquirenteJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public PrevisaoDeRecebimento previsaoDeRecebimento(TaxasDoAdquirenteJdbc taxas,
+                                                       Competencia competencia) {
+        return new PrevisaoDeRecebimento(taxas, competencia);
+    }
+
+    @Bean
+    public DefinirTaxasDoAdquirenteUseCase definirTaxasDoAdquirenteUseCase(
+            TaxasDoAdquirenteJdbc taxas, AuditoriaApi auditoria, Relogio relogio) {
+        return new DefinirTaxasDoAdquirenteUseCase(taxas, auditoria, relogio);
+    }
+
+    @Bean
+    public ConsultarTaxasDoAdquirenteUseCase consultarTaxasDoAdquirenteUseCase(
+            TaxasDoAdquirenteJdbc taxas) {
+        return new ConsultarTaxasDoAdquirenteUseCase(taxas);
+    }
+
+    @Bean
+    public PreverRecebiveisUseCase preverRecebiveisUseCase(PagamentosJdbc pagamentos,
+                                                           EstabelecimentoApi estabelecimentos,
+                                                           Relogio relogio) {
+        return new PreverRecebiveisUseCase(pagamentos, estabelecimentos, relogio);
+    }
+
+    @Bean
+    public TaxaNoRazao taxaNoRazao(TransacoesDoAdquirenteJdbc transacoes,
+                                   LancamentosJdbc lancamentos, RazaoApi razao,
+                                   EstabelecimentoApi estabelecimentos) {
+        return new TaxaNoRazao(transacoes, lancamentos, razao, estabelecimentos);
     }
 
     @Bean
@@ -230,9 +276,10 @@ public class FinanceiroConfig {
                                                          MapeamentosDeExtratoJdbc mapeamentos,
                                                          EstabelecimentoApi estabelecimentos,
                                                          AuditoriaApi auditoria,
-                                                         Conciliador conciliador, Relogio relogio) {
+                                                         Conciliador conciliador,
+                                                         TaxaNoRazao taxaNoRazao, Relogio relogio) {
         return new ImportarExtratoUseCase(transacoes, importacoes, mapeamentos, estabelecimentos,
-                auditoria, conciliador, relogio);
+                auditoria, conciliador, taxaNoRazao, relogio);
     }
 
     // ------------------------------------------------------------------ RT-FIN-010 — casamento

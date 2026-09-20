@@ -248,6 +248,10 @@ faltava (abaixo).
 | H20 | a aplicação pode reescrever a resolução (sem `revoke`) | `ResolucaoIT.imutavel` |
 | H21 | gravar em cima de outra não vira 409 | `ResolucaoIT.ja_resolvida` |
 
+**H01 e H02 foram refeitas.** No `-Dtest` do Maven, `+` só separa métodos da **mesma** classe; entre
+classes é vírgula. `A#m+B#n` roda um teste só, em silêncio — as duas morriam pelo primeiro teste
+nomeado, e a tabela citava dois. Refeitas com o filtro certo, morrem pelos dois.
+
 **As duas que sobreviveram na primeira rodada, e o que cada uma disse:**
 
 - **H16 era buraco de teste de verdade.** `sem_aviso_quando_nao_ha_cancelada` não tinha venda cancelada
