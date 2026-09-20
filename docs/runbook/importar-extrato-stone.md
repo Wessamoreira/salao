@@ -77,6 +77,33 @@ select c.criterio, c.divergencias <> '[]'::jsonb as diverge, count(*)
 ```
 
 **Casou errado?** Em valores iguais, trocar dois pares não muda dinheiro. Um par realmente errado —
-valores diferentes — só casa por NSU ou autorização; desfazer com motivo é RT-FIN-011. **Nunca** apagar a
-linha no banco.
+valores diferentes — só casa por NSU ou autorização. **Nunca** apagar a linha no banco: quem desfaz é a
+própria tela, em "Resolvidas à mão" → **Reabrir**, com motivo. A reabertura estorna o ajuste no razão e
+devolve a classificação do pagamento.
+
+## Resolver as divergências (RT-FIN-011)
+
+Cada linha da conferência tem uma saída, e toda saída pede motivo escrito:
+
+| Linha | Botão | O que acontece |
+|---|---|---|
+| Par divergente | **Usar a versão da Stone** | forma, bandeira e parcelas do pagamento viram as da Stone; diferença de valor vira `AJUSTE` no razão |
+| Par divergente | **Aceitar como está** | nada muda; a diferença fica registrada como vista |
+| Só na maquininha | **Lançar no caixa** | `AJUSTE` positivo do valor da venda |
+| Só no sistema | **Corrigir a forma** | o pagamento vira dinheiro, Pix ou transferência |
+
+**Venda cancelada e passada de novo.** A tela avisa quando a venda que você vai lançar tem uma cancelada
+de mesmo valor no mesmo dia, já casada com um pagamento — nesse caso o dinheiro **já está no caixa** pela
+comanda, e lançar de novo conta duas vezes. Leia o aviso antes de confirmar.
+
+**Par já resolvido que a Stone cancelou depois.** A importação seguinte devolve o par à conferência
+sozinha, com a divergência nova. Nada do que você tinha feito é desfeito — só a pergunta volta.
+
+```sql
+-- o que foi resolvido à mão no mês, e por quem
+select r.acao, r.motivo, r.resolvida_em, r.efeito
+  from resolucao_de_conciliacao r
+ where r.estabelecimento_id = '<salão>' and r.reaberta_em is null
+ order by r.resolvida_em desc;
+```
 

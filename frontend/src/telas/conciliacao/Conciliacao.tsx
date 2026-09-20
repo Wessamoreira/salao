@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import {
-  useConciliarAgora, useImportacoes, useImportar, useItensDaConciliacao, usePrevia,
-  useResumoDaConciliacao,
-  type Campo, type Formato, type ItemDaConciliacao, type LinhaDaPrevia, type Mapeamento,
-  type Previa, type Recorte, type Resultado,
+  useConciliarAgora, useImportacoes, useImportar, useItensDaConciliacao, usePrevia, useReabrir,
+  useResolvidas, useResolver, useResumoDaConciliacao,
+  type Acao, type Alvo, type Campo, type Formato, type FormaVerdadeira, type ItemDaConciliacao,
+  type LinhaDaPrevia, type Mapeamento, type Previa, type Recorte, type Resolvida, type Resultado,
 } from '../../api/conciliacao';
 import { useCapacidades } from '../../api/capacidades';
 import { ErroDaApi } from '../../api/http';
@@ -427,7 +427,7 @@ function Historico({ fuso }: { fuso: string }) {
 function ConferenciaDoMes({ fuso }: { fuso: string }) {
   const opcoes = meses(fuso);
   const [mes, definirMes] = useState(opcoes[0].valor);
-  const [recorte, definirRecorte] = useState<Recorte>('DIVERGENTES');
+  const [recorte, definirRecorte] = useState<Aba>('DIVERGENTES');
   const periodo = opcoes.find((opcao) => opcao.valor === mes) ?? opcoes[0];
   const resumo = useResumoDaConciliacao(periodo.de, periodo.ate);
   const conciliar = useConciliarAgora();
@@ -482,7 +482,9 @@ function ConferenciaDoMes({ fuso }: { fuso: string }) {
                   Lista de vendas desses dias para conferir.
                 </p>
               )}
-              <ListaDoRecorte recorte={recorte} de={periodo.de} ate={periodo.ate} fuso={fuso} />
+              {recorte === 'RESOLVIDAS'
+                ? <Trilha de={periodo.de} ate={periodo.ate} fuso={fuso} />
+                : <ListaDoRecorte recorte={recorte} de={periodo.de} ate={periodo.ate} fuso={fuso} />}
             </>
           )}
     </section>
@@ -495,6 +497,10 @@ function ListaDoRecorte({ recorte, de, ate, fuso }: {
   const consulta = useItensDaConciliacao(recorte, de, ate);
   const itens = consulta.data?.pages.flatMap((pagina) => pagina.itens) ?? [];
   const sentido = SENTIDO[recorte];
+  // Uma decisão por vez: abrir a segunda fecha a primeira, e o motivo digitado não fica órfão.
+  const [decidindo, definirDecidindo] = useState<DecisaoDaConferencia | null>(null);
+  const resolver = useResolver();
+  const resolvivel = recorte !== 'CONCILIADAS';
 
   return (
     <div className="cnc-recorte">
@@ -506,17 +512,212 @@ function ListaDoRecorte({ recorte, de, ate, fuso }: {
               <div className="cnc-rolagem">
                 <table className="cnc-tabela">
                   <thead>
-                    <tr>{sentido.colunas.map((coluna) => (
-                      <th key={coluna} className={COLUNAS_NUMERICAS.has(coluna) ? 'num' : undefined}>
-                        {coluna}
-                      </th>
-                    ))}</tr>
+                    <tr>
+                      {sentido.colunas.map((coluna) => (
+                        <th key={coluna} className={COLUNAS_NUMERICAS.has(coluna) ? 'num' : undefined}>
+                          {coluna}
+                        </th>
+                      ))}
+                      {resolvivel && <th className="cnc-coluna-acao">Resolver</th>}
+                    </tr>
                   </thead>
                   <tbody>
-                    {itens.map((item) => (
-                      <tr key={item.id} data-recorte={recorte}>
-                        {celulas(recorte, item, fuso)}
-                      </tr>
+                    {itens.map((item) => {
+                      const aberta = decidindo?.linhaId === item.id ? decidindo : null;
+                      return (
+                        <Fragment key={item.id}>
+                          <tr data-recorte={recorte} data-decidindo={aberta ? '' : undefined}>
+                            {celulas(recorte, item, fuso)}
+                            {resolvivel && (
+                              <td className="cnc-coluna-acao">
+                                {decisoes(recorte, item).map((decisao) => (
+                                  <button key={decisao.acao} type="button" className="cnc-botao-acao"
+                                    aria-expanded={aberta?.acao === decisao.acao}
+                                    onClick={() => {
+                                      resolver.reset();
+                                      definirDecidindo(aberta?.acao === decisao.acao ? null : decisao);
+                                    }}>
+                                    {decisao.rotulo}
+                                  </button>
+                                ))}
+                              </td>
+                            )}
+                          </tr>
+                          {aberta && (
+                            <tr className="cnc-linha-decisao">
+                              <td colSpan={sentido.colunas.length + 1}>
+                                <Decidir
+                                  decisao={aberta}
+                                  avisoDeRefeita={aberta.acao === 'LANCAR' && item.possivelRefeita
+                                    ? reais(item.valorVenda) : null}
+                                  enviando={resolver.isPending}
+                                  erro={resolver.isError ? resolver.error : null}
+                                  aoCancelar={() => definirDecidindo(null)}
+                                  aoConfirmar={(motivo, forma) => resolver.mutate(
+                                    { alvo: aberta.alvo, id: aberta.id, acao: aberta.acao, motivo, forma },
+                                    { onSuccess: () => definirDecidindo(null) })}
+                                />
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+      {consulta.hasNextPage && (
+        <div className="cnc-mais">
+          <button className="pagina-acao discreta" type="button"
+            disabled={consulta.isFetchingNextPage} onClick={() => consulta.fetchNextPage()}>
+            {consulta.isFetchingNextPage ? 'Carregando…' : 'Carregar mais'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * RT-FIN-011 — o painel de decisão, aberto sob a linha.
+ *
+ * Sob a linha, e não numa janela: a decisão é sobre aquele valor e aquela hora, que continuam à
+ * vista enquanto a pessoa escreve o motivo. O motivo é obrigatório porque é ele que responde "por
+ * que isto foi aceito?" meses depois — sem ele o botão não confirma.
+ */
+function Decidir({ decisao, avisoDeRefeita, enviando, erro, aoConfirmar, aoCancelar }: {
+  decisao: Decisao;
+  avisoDeRefeita: string | null;
+  enviando: boolean;
+  erro: unknown;
+  aoConfirmar: (motivo: string, forma?: FormaVerdadeira) => void;
+  aoCancelar: () => void;
+}) {
+  const [motivo, definirMotivo] = useState('');
+  const [forma, definirForma] = useState<FormaVerdadeira>('DINHEIRO');
+  const campo = `cnc-motivo-${decisao.linhaId}-${decisao.acao}`;
+  const explicacao = decisao.acao === 'REABRIR'
+    ? EXPLICA.REABRIR : EXPLICA[`${decisao.alvo}:${decisao.acao}`];
+  const pronto = motivo.trim().length >= 3;
+
+  return (
+    <form className="cnc-decisao" onSubmit={(e) => {
+      e.preventDefault();
+      if (pronto && !enviando) aoConfirmar(motivo.trim(), decisao.precisaForma ? forma : undefined);
+    }}>
+      <p className="cnc-decisao-titulo">{decisao.rotulo}</p>
+      <p className="cnc-ajuda">{explicacao}</p>
+
+      {avisoDeRefeita && (
+        <p className="cnc-aviso" role="status">
+          Há uma venda cancelada de {avisoDeRefeita} neste dia, já casada com um pagamento. Se esta é a
+          venda que foi passada de novo, o valor já está no caixa — lançar de novo conta duas vezes.
+        </p>
+      )}
+
+      {decisao.precisaForma && (
+        <label className="cnc-decisao-forma">
+          <span>Foi, na verdade</span>
+          <select value={forma} onChange={(e) => definirForma(e.target.value as FormaVerdadeira)}>
+            {FORMAS_VERDADEIRAS.map(({ valor, rotulo }) => (
+              <option key={valor} value={valor}>{rotulo}</option>
+            ))}
+          </select>
+        </label>
+      )}
+
+      <label className="cnc-decisao-motivo" htmlFor={campo}>Por quê?</label>
+      <textarea id={campo} value={motivo} rows={2} maxLength={500} autoFocus
+        placeholder="Ex.: recepção registrou débito; foi crédito"
+        onChange={(e) => definirMotivo(e.target.value)} />
+
+      {erro != null && <p className="erro" role="alert">{mensagem(erro)}</p>}
+
+      <div className="cnc-decisao-botoes">
+        <button className="pagina-acao principal" type="submit" disabled={!pronto || enviando}>
+          {enviando ? 'Gravando…' : 'Confirmar'}
+        </button>
+        <button className="pagina-acao discreta" type="button" onClick={aoCancelar}>Cancelar</button>
+      </div>
+    </form>
+  );
+}
+
+/** RT-FIN-011 — a trilha: o que saiu da conferência por decisão de alguém, e por quê. */
+function Trilha({ de, ate, fuso }: { de: string; ate: string; fuso: string }) {
+  const consulta = useResolvidas(de, ate);
+  const itens = consulta.data?.pages.flatMap((pagina) => pagina.itens) ?? [];
+  const [reabrindo, definirReabrindo] = useState<string | null>(null);
+  const reabrir = useReabrir();
+
+  return (
+    <div className="cnc-recorte">
+      <p className="cnc-ajuda">
+        O que alguém decidiu, com o motivo escrito. Reabrir devolve a linha à conferência e desfaz o
+        que a resolução fez.
+      </p>
+      {consulta.isPending ? <Esqueleto linhas={4} altura={36} />
+        : consulta.isError ? <Falha aoTentar={() => consulta.refetch()}>{mensagem(consulta.error)}</Falha>
+          : itens.length === 0 ? <p className="cnc-nada">Nada foi resolvido à mão neste mês.</p>
+            : (
+              <div className="cnc-rolagem">
+                <table className="cnc-tabela">
+                  <thead>
+                    <tr>
+                      <th>Decidido</th>
+                      <th>Linha</th>
+                      <th className="num">Valor</th>
+                      <th>O que foi feito</th>
+                      <th>Motivo</th>
+                      <th className="cnc-coluna-acao">Reabrir</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {itens.map((linha) => (
+                      <Fragment key={linha.id}>
+                        <tr data-recorte="RESOLVIDAS">
+                          <td>
+                            {momento(linha.resolvidaEm, fuso, true)}
+                            {linha.quemResolveu && <span className="cnc-quem"> · {linha.quemResolveu}</span>}
+                          </td>
+                          <td>
+                            <span className="cnc-etiqueta">{ALVO[linha.alvo]}</span>{' '}
+                            {linha.idNaAdquirente ?? momento(linha.instante, fuso, true)}
+                          </td>
+                          <td className="num">{reais(linha.valor)}</td>
+                          <td>{efeito(linha)}</td>
+                          <td className="cnc-motivo-lido">{linha.motivo}</td>
+                          <td className="cnc-coluna-acao">
+                            <button type="button" className="cnc-botao-acao"
+                              aria-expanded={reabrindo === linha.id}
+                              onClick={() => {
+                                reabrir.reset();
+                                definirReabrindo(reabrindo === linha.id ? null : linha.id);
+                              }}>
+                              Reabrir
+                            </button>
+                          </td>
+                        </tr>
+                        {reabrindo === linha.id && (
+                          <tr className="cnc-linha-decisao">
+                            <td colSpan={6}>
+                              <Decidir
+                                decisao={{
+                                  linhaId: linha.id, alvo: linha.alvo, id: linha.id,
+                                  acao: 'REABRIR', rotulo: 'Reabrir', precisaForma: false,
+                                }}
+                                avisoDeRefeita={null}
+                                enviando={reabrir.isPending}
+                                erro={reabrir.isError ? reabrir.error : null}
+                                aoCancelar={() => definirReabrindo(null)}
+                                aoConfirmar={(motivo) => reabrir.mutate({ id: linha.id, motivo },
+                                  { onSuccess: () => definirReabrindo(null) })}
+                              />
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -532,6 +733,49 @@ function ListaDoRecorte({ recorte, de, ate, fuso }: {
       )}
     </div>
   );
+}
+
+/** O que a resolução mudou, em uma linha. */
+function efeito(linha: Resolvida): string {
+  if (linha.lancado != null && linha.formaPara) {
+    return `${nomeDaForma(linha.formaDe)} → ${nomeDaForma(linha.formaPara)}`
+      + ` · ${reais(linha.lancado)} no caixa`;
+  }
+  if (linha.lancado != null) return `${reais(linha.lancado)} no caixa`;
+  if (linha.formaPara) return `${nomeDaForma(linha.formaDe)} → ${nomeDaForma(linha.formaPara)}`;
+  return 'Aceita como está';
+}
+
+/** Quais botões cada linha da conferência oferece. */
+function decisoes(recorte: Recorte, item: ItemDaConciliacao): DecisaoDaConferencia[] {
+  switch (recorte) {
+    case 'DIVERGENTES': {
+      // Cancelada não tem versão certa para copiar: a única saída é aceitar, com motivo.
+      const soCancelada = item.divergencias.length === 1
+        && item.divergencias[0] === 'CANCELADA_NA_ADQUIRENTE';
+      const lista: DecisaoDaConferencia[] = soCancelada ? [] : [{
+        linhaId: item.id, alvo: 'PAR', id: item.id, acao: 'CORRIGIR',
+        rotulo: 'Usar a versão da Stone', precisaForma: false,
+      }];
+      lista.push({
+        linhaId: item.id, alvo: 'PAR', id: item.id, acao: 'ACEITAR',
+        rotulo: 'Aceitar como está', precisaForma: false,
+      });
+      return lista;
+    }
+    case 'SO_NA_MAQUININHA':
+      return item.vendaId ? [{
+        linhaId: item.id, alvo: 'VENDA', id: item.vendaId, acao: 'LANCAR',
+        rotulo: 'Lançar no caixa', precisaForma: false,
+      }] : [];
+    case 'SO_NO_SISTEMA':
+      return item.pagamentoId ? [{
+        linhaId: item.id, alvo: 'PAGAMENTO', id: item.pagamentoId, acao: 'CORRIGIR',
+        rotulo: 'Corrigir a forma', precisaForma: true,
+      }] : [];
+    case 'CONCILIADAS':
+      return [];
+  }
 }
 
 function celulas(recorte: Recorte, item: ItemDaConciliacao, fuso: string) {
@@ -628,13 +872,62 @@ function momento(instante: string, fuso: string, comHora: boolean): string {
     : { day: '2-digit', month: '2-digit' });
 }
 
-const RECORTES: { valor: Recorte; rotulo: string;
-  chave: 'divergentes' | 'soNaMaquininha' | 'soNoSistema' | 'conciliadas' }[] = [
+/** As quatro contas da conferência, mais a trilha do que já foi decidido (RT-FIN-011). */
+type Aba = Recorte | 'RESOLVIDAS';
+
+const RECORTES: { valor: Aba; rotulo: string;
+  chave: 'divergentes' | 'soNaMaquininha' | 'soNoSistema' | 'conciliadas' | 'resolvidas' }[] = [
   { valor: 'DIVERGENTES', rotulo: 'divergentes', chave: 'divergentes' },
   { valor: 'SO_NA_MAQUININHA', rotulo: 'só na maquininha', chave: 'soNaMaquininha' },
   { valor: 'SO_NO_SISTEMA', rotulo: 'só no sistema', chave: 'soNoSistema' },
   { valor: 'CONCILIADAS', rotulo: 'conciliadas', chave: 'conciliadas' },
+  { valor: 'RESOLVIDAS', rotulo: 'resolvidas à mão', chave: 'resolvidas' },
 ];
+
+/** Uma decisão em aberto: sobre qual linha, o que faz, e o que o servidor precisa receber. */
+type Decisao = {
+  /** O id da linha da tela — é o que abre e fecha o painel. Nem sempre é o alvo. */
+  linhaId: string;
+  alvo: Alvo;
+  id: string;
+  acao: Acao | 'REABRIR';
+  rotulo: string;
+  precisaForma: boolean;
+};
+
+/** A decisão que a conferência oferece. Nunca REABRIR: essa só existe na trilha. */
+type DecisaoDaConferencia = Decisao & { acao: Acao };
+
+/** O que cada botão vai fazer, dito antes de a pessoa confirmar. */
+const EXPLICA: Record<string, string> = {
+  'PAR:CORRIGIR': 'A forma, a bandeira e as parcelas do pagamento passam a ser as da Stone. Se o '
+    + 'valor difere, a diferença entra como ajuste no caixa — a comanda e a comissão não mudam.',
+  'PAR:ACEITAR': 'O par continua como está. A diferença fica registrada como vista e aceita, e sai '
+    + 'da conferência.',
+  'VENDA:LANCAR': 'Entra um ajuste positivo no caixa, do valor da venda. Nenhuma comanda é criada, '
+    + 'e não há comissão.',
+  'PAGAMENTO:CORRIGIR': 'O pagamento deixa de ser de cartão e sai da conferência. O valor não muda.',
+  REABRIR: 'A linha volta para a conferência. Se houve lançamento no caixa, ele é estornado no '
+    + 'razão; se a forma foi corrigida, ela volta ao que era. Os dois registros ficam na trilha.',
+};
+
+const FORMAS_VERDADEIRAS: { valor: FormaVerdadeira; rotulo: string }[] = [
+  { valor: 'DINHEIRO', rotulo: 'Dinheiro' },
+  { valor: 'PIX', rotulo: 'Pix' },
+  { valor: 'TRANSFERENCIA', rotulo: 'Transferência' },
+];
+
+const ALVO = { PAR: 'Par', VENDA: 'Maquininha', PAGAMENTO: 'Sistema' } as const;
+
+const NOMES_DE_FORMA: Record<string, string> = {
+  CREDITO: 'Crédito', DEBITO: 'Débito', DINHEIRO: 'Dinheiro', PIX: 'Pix',
+  TRANSFERENCIA: 'Transferência', OUTRO: 'Outro',
+};
+
+/** Forma do sistema ou produto da maquininha: os nomes se encontram aqui. */
+function nomeDaForma(valor: string | null): string {
+  return valor == null ? '—' : NOMES_DE_FORMA[valor] ?? valor;
+}
 
 const SENTIDO: Record<Recorte, { explica: string; nada: string; colunas: string[] }> = {
   DIVERGENTES: {

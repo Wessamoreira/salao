@@ -5,6 +5,9 @@
  * uma Lista de vendas fictícia, com uma venda em Pix (ignorada) e uma data impossível (recusada). Trocar
  * a coluna do valor bruto para "VALOR LÍQUIDO" muda o que aparece ao lado — como no servidor.
  *
+ * A conferência traz as cinco contas e as resoluções de RT-FIN-011: uma venda marcada como possível
+ * refeita (o aviso de dobrar o caixa) e a trilha com duas decisões.
+ *
  *   npm run previa:conciliacao   →   http://localhost:5174/preview/conciliacao.html
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -67,18 +70,30 @@ const HISTORICO = [
 ];
 
 const totais = (quantidade: number, valor: number) => ({ quantidade, valor });
+const RESOLVIDAS = [
+  { id: 'r1', resolvidaEm: '2026-09-19T14:02:00Z', quemResolveu: 'Joana', acao: 'CORRIGIR',
+    motivo: 'recepção registrou débito; a Stone mostra crédito no comprovante', alvo: 'PAR',
+    instante: '2026-09-17T13:05:00Z', valor: 180, idNaAdquirente: 'ST8FA1',
+    divergencias: ['FORMA'], formaDe: 'DEBITO', formaPara: 'CREDITO', lancado: null },
+  { id: 'r2', resolvidaEm: '2026-09-19T14:10:00Z', quemResolveu: 'Wesley', acao: 'LANCAR',
+    motivo: 'venda de shampoo no balcão, sem comanda', alvo: 'VENDA',
+    instante: '2026-09-16T11:20:00Z', valor: 80, idNaAdquirente: 'ST8FB7',
+    divergencias: [], formaDe: null, formaPara: null, lancado: 80 },
+];
+
 const RESUMO = { de: '2026-09-01', ate: '2026-09-19', conciliadas: totais(410, 38420.5),
   divergentes: totais(3, 340), soNaMaquininha: totais(2, 215), soNoSistema: totais(1, 90),
-  semExtrato: totais(0, 0) };
+  semExtrato: totais(0, 0), resolvidas: totais(2, 260) };
 
 const item = (id: string, hora: string, valor: number, produto: string, forma: string | null,
   divergencias: string[], registro?: string, valorPagamento?: number) => ({
-  id, instante: `2026-09-18T${hora}:00Z`, vendaId: forma === null && !registro ? null : id,
+  // A venda existe em todo recorte menos "só no sistema", que sobrescreve com null lá embaixo.
+  id, instante: `2026-09-18T${hora}:00Z`, vendaId: id,
   idNaAdquirente: `ST8F${id.toUpperCase()}`, capturadaEm: `2026-09-18T${hora}:00Z`,
   horaInformada: true, valorVenda: valor, produto, bandeira: 'VISA', parcelas: 1,
   pagamentoId: forma ? `p-${id}` : null, registradoEm: registro ? `2026-09-18T${registro}:00Z` : null,
   valorPagamento: valorPagamento ?? (forma ? valor : null), forma, criterio: forma ? 'VALOR_E_HORA' : null,
-  divergencias });
+  divergencias, possivelRefeita: false });
 
 const ITENS: Record<string, unknown[]> = {
   DIVERGENTES: [
@@ -86,7 +101,9 @@ const ITENS: Record<string, unknown[]> = {
     item('a2', '15:40', 180, 'CREDITO', 'CREDITO', ['CANCELADA_NA_ADQUIRENTE'], '15:38'),
     { ...item('a3', '17:10', 80, 'CREDITO', 'CREDITO', ['VALOR'], '11:00', 85), criterio: 'NSU' },
   ],
-  SO_NA_MAQUININHA: [item('b1', '16:20', 120, 'DEBITO', null, []),
+  SO_NA_MAQUININHA: [
+    // A de R$ 180 é a venda refeita depois do cancelamento de a2: a tela precisa avisar.
+    { ...item('b1', '16:20', 180, 'CREDITO', null, []), possivelRefeita: true },
     item('b2', '18:45', 95, 'CREDITO', null, [])],
   SO_NO_SISTEMA: [{ ...item('c1', '12:00', 90, 'CREDITO', 'CREDITO', [], '12:00'), vendaId: null,
     idNaAdquirente: null, capturadaEm: null, valorVenda: null, produto: null }],
@@ -105,6 +122,11 @@ window.fetch = async (entrada: RequestInfo | URL, init?: RequestInit) => {
   } else if (url.includes('/conciliacao/itens')) {
     const recorte = new URL(url, 'http://x').searchParams.get('recorte') ?? 'DIVERGENTES';
     corpo = { itens: ITENS[recorte] ?? [], proximoCursor: null, temMais: false };
+  } else if (url.includes('/conciliacao/resolucoes')) {
+    corpo = init?.method === 'POST'
+      ? { id: 'r9', acao: 'CORRIGIR', formaDe: 'DEBITO', formaPara: 'CREDITO', lancado: null,
+        lancamentoId: null }
+      : { itens: RESOLVIDAS, proximoCursor: null, temMais: false };
   } else if (url.includes('/conciliacao/casamentos')) {
     corpo = { casadas: 1, divergentes: 0, canceladasDepois: 0 };
   } else if (url.endsWith('/previa')) {

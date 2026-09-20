@@ -153,6 +153,8 @@ export interface ResumoDaConciliacao {
   soNoSistema: Totais;
   /** Pagamentos no cartão em dias que nenhuma importação cobre — falta de arquivo, e não problema. */
   semExtrato: Totais;
+  /** RT-FIN-011: o que saiu da conferência por decisão de alguém. */
+  resolvidas: Totais;
 }
 
 /** Nos pares, os dois lados; nas sobras, só o que existe. Instantes em UTC. */
@@ -172,8 +174,16 @@ export interface ItemDaConciliacao {
   valorPagamento: number | null;
   forma: 'CREDITO' | 'DEBITO' | null;
   criterio: 'NSU' | 'AUTORIZACAO' | 'VALOR_E_HORA' | null;
-  divergencias: ('VALOR' | 'FORMA' | 'BANDEIRA' | 'PARCELAS' | 'CANCELADA_NA_ADQUIRENTE')[];
+  divergencias: Divergencia[];
+  /**
+   * RT-FIN-011: há venda cancelada de mesmo valor no dia, já casada com um pagamento. Então este
+   * valor pode já estar no caixa, e lançá-lo de novo contaria duas vezes. Só em "só na maquininha".
+   */
+  possivelRefeita: boolean;
 }
+
+export type Divergencia =
+  'VALOR' | 'FORMA' | 'BANDEIRA' | 'PARCELAS' | 'CANCELADA_NA_ADQUIRENTE';
 
 export interface Rodada {
   casadas: number;
@@ -213,3 +223,87 @@ export function useConciliarAgora() {
   });
 }
 
+
+// ------------------------------------------------------------------ RT-FIN-011 — resolver
+
+/** Sobre qual das três linhas da conferência a decisão é tomada. */
+export type Alvo = 'PAR' | 'VENDA' | 'PAGAMENTO';
+
+/** Usar a versão da Stone, aceitar a diferença como está, ou lançar no caixa. */
+export type Acao = 'CORRIGIR' | 'ACEITAR' | 'LANCAR';
+
+/** O que um pagamento de cartão sem venda na maquininha pode virar. */
+export type FormaVerdadeira = 'DINHEIRO' | 'PIX' | 'TRANSFERENCIA';
+
+export interface PedidoDeResolucao {
+  alvo: Alvo;
+  id: string;
+  acao: Acao;
+  motivo: string;
+  forma?: FormaVerdadeira;
+}
+
+export interface ResultadoDaResolucao {
+  id: string;
+  acao: Acao;
+  formaDe: string | null;
+  formaPara: string | null;
+  lancado: number | null;
+  lancamentoId: string | null;
+}
+
+/** Uma linha da trilha: o que foi decidido, por quem, e o que mudou. */
+export interface Resolvida {
+  id: string;
+  resolvidaEm: string;
+  quemResolveu: string | null;
+  acao: Acao;
+  motivo: string;
+  alvo: Alvo;
+  instante: string;
+  valor: number;
+  idNaAdquirente: string | null;
+  divergencias: Divergencia[];
+  formaDe: string | null;
+  formaPara: string | null;
+  lancado: number | null;
+}
+
+interface PaginaDeResolvidas {
+  itens: Resolvida[];
+  proximoCursor: string | null;
+  temMais: boolean;
+}
+
+export function useResolver() {
+  const fila = useQueryClient();
+  return useMutation({
+    mutationFn: (pedido: PedidoDeResolucao) =>
+      api<ResultadoDaResolucao>('/v1/conciliacao/resolucoes', {
+        method: 'POST', body: JSON.stringify(pedido),
+      }),
+    onSuccess: () => fila.invalidateQueries({ queryKey: ['conciliacao'] }),
+  });
+}
+
+/** Devolve a linha à conferência, desfazendo o que a resolução fez. */
+export function useReabrir() {
+  const fila = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, motivo }: { id: string; motivo: string }) =>
+      api<void>(`/v1/conciliacao/resolucoes/${id}/reabertura`, {
+        method: 'POST', body: JSON.stringify({ motivo }),
+      }),
+    onSuccess: () => fila.invalidateQueries({ queryKey: ['conciliacao'] }),
+  });
+}
+
+export function useResolvidas(de: string, ate: string) {
+  return useInfiniteQuery({
+    queryKey: ['conciliacao', 'resolvidas', de, ate],
+    queryFn: ({ pageParam }) => api<PaginaDeResolvidas>(`/v1/conciliacao/resolucoes?de=${de}&ate=${ate}`
+      + `${pageParam ? `&cursor=${encodeURIComponent(pageParam)}` : ''}`),
+    initialPageParam: null as string | null,
+    getNextPageParam: (ultima) => (ultima.temMais ? ultima.proximoCursor : null),
+  });
+}

@@ -224,7 +224,9 @@
 
 /* ------------------------------------------------------------------ tabelas */
 
-.cnc-rolagem { overflow-x: auto; }
+/* Container de consulta para o painel de decisão (RT-FIN-011) saber a largura VISÍVEL da rolagem —
+   `100%` ali mediria a tabela inteira, que é bem mais larga que a tela. */
+.cnc-rolagem { overflow-x: auto; container-type: inline-size; }
 .cnc-tabela {
   width: 100%;
   border-collapse: collapse;
@@ -365,12 +367,12 @@
 }
 
 /*
- * As quatro contas do mês são o seletor. A barra no topo diz o que cada uma significa; o rótulo diz o
- * mesmo por extenso — cor nunca sozinha.
+ * As contas do mês são o seletor. A barra no topo diz o que cada uma significa; o rótulo diz o mesmo
+ * por extenso — cor nunca sozinha.
  */
 .cnc-contas-do-mes {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--e-3);
 }
 .cnc-conta {
@@ -393,6 +395,8 @@
 .cnc-conta[data-recorte='SO_NA_MAQUININHA'],
 .cnc-conta[data-recorte='SO_NO_SISTEMA'] { border-top-color: var(--status-solicitado); }
 .cnc-conta[data-recorte='CONCILIADAS'] { border-top-color: var(--status-confirmado); }
+/* Resolvida não é problema nem acerto do sistema: é decisão de gente. Traço neutro. */
+.cnc-conta[data-recorte='RESOLVIDAS'] { border-top-color: var(--tinta-tenue); }
 .cnc-conta[aria-pressed='true'] {
   background: var(--papel-fundo);
   border-color: var(--tinta);
@@ -427,7 +431,7 @@
 /* Data e Stone ID não quebram: "18/09," numa linha e "10:05" na outra não se lê de relance. */
 .cnc-tabela tr[data-recorte='DIVERGENTES'] td:nth-child(-n+2),
 .cnc-tabela tr[data-recorte='DIVERGENTES'] td:nth-child(5) { white-space: nowrap; }
-.cnc-tabela tr[data-recorte='DIVERGENTES'] td:last-child { min-width: 132px; }
+.cnc-tabela tr[data-recorte='DIVERGENTES'] td:nth-child(6) { min-width: 132px; }
 .cnc-divergencia { margin: 0 var(--e-1) var(--e-1) 0; white-space: nowrap; }
 .cnc-divergencia {
   background: var(--status-falta-fundo);
@@ -435,8 +439,102 @@
   border-color: var(--status-falta);
 }
 
+/* ------------------------------------------------------------------ RT-FIN-011: resolver */
+
+.cnc-coluna-acao {
+  width: 1%;
+  text-align: right;
+  white-space: nowrap;
+}
+.cnc-botao-acao {
+  margin-left: var(--e-1);
+  padding: var(--e-1) var(--e-3);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-12);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.cnc-botao-acao:hover { background: var(--papel-fundo); border-color: var(--tinta-tenue); }
+.cnc-botao-acao[aria-expanded='true'] {
+  color: var(--papel);
+  background: var(--tinta);
+  border-color: var(--tinta);
+}
+.cnc-botao-acao:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+
+/* A linha decidida fica marcada enquanto o painel está aberto: é sobre ela que a pessoa escreve. */
+.cnc-tabela tr[data-decidindo] td { background: var(--papel-fundo); }
+.cnc-linha-decisao td { padding: 0; background: var(--papel-fundo); white-space: normal; }
+
+.cnc-decisao {
+  display: grid;
+  gap: var(--e-2);
+  padding: var(--e-4);
+  border-left: 3px solid var(--tinta);
+}
+.cnc-decisao-titulo {
+  margin: 0;
+  font-size: var(--t-14);
+  font-weight: var(--p-forte);
+}
+.cnc-decisao .cnc-ajuda { margin: 0; max-width: 78ch; }
+.cnc-decisao .cnc-aviso { margin: 0; max-width: 78ch; }
+.cnc-decisao-forma {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  font-size: var(--t-12);
+}
+.cnc-decisao-forma select {
+  padding: var(--e-1) var(--e-2);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-12);
+}
+.cnc-decisao-motivo {
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+}
+.cnc-decisao textarea {
+  max-width: 78ch;
+  padding: var(--e-2) var(--e-3);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-14);
+  resize: vertical;
+}
+.cnc-decisao textarea:focus-visible,
+.cnc-decisao-forma select:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: 1px;
+}
+.cnc-decisao .erro { margin: 0; }
+.cnc-decisao-botoes { display: flex; flex-wrap: wrap; gap: var(--e-2); }
+
+.cnc-quem { color: var(--tinta-fraca); }
+/* O motivo é frase, não dado: quebra, e não empurra a tabela para fora da borda — numa linha só, a
+   coluna "Reabrir" era cortada na borda. Precisa vencer o `white-space: nowrap` de `.cnc-tabela td`. */
+.cnc-tabela td.cnc-motivo-lido { white-space: normal; min-width: 22ch; max-width: 34ch; }
+
 @media (max-width: 820px) {
   .cnc-contas-do-mes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* A tabela rola na horizontal; o painel de decisão, não. Preso à esquerda e com a largura da tela,
+     ele fica inteiro à vista — a explicação e o botão não somem na borda. */
+  .cnc-decisao {
+    position: sticky;
+    left: 0;
+    width: 100cqi;
+  }
   .cnc-bloco { padding: var(--e-4); }
   .cnc-campo {
     grid-template-columns: minmax(0, 1fr);

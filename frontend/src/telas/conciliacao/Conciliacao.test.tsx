@@ -47,24 +47,55 @@ const TOTAIS = (quantidade: number, valor: number) => ({ quantidade, valor });
 const RESUMO = {
   de: '2026-09-01', ate: '2026-09-19', conciliadas: TOTAIS(110, 8420.5), divergentes: TOTAIS(2, 180),
   soNaMaquininha: TOTAIS(3, 240), soNoSistema: TOTAIS(1, 60), semExtrato: TOTAIS(0, 0),
+  resolvidas: TOTAIS(0, 0),
 };
 const DIVERGENTE = {
   id: 'c1', instante: '2026-09-18T13:05:00Z', vendaId: 'v1', idNaAdquirente: 'ST9',
   capturadaEm: '2026-09-18T13:05:00Z', horaInformada: true, valorVenda: 80, produto: 'CREDITO',
   bandeira: 'VISA', parcelas: 1, pagamentoId: 'p1', registradoEm: '2026-09-18T13:02:00Z',
   valorPagamento: 80, forma: 'DEBITO', criterio: 'VALOR_E_HORA', divergencias: ['FORMA'],
+  possivelRefeita: false,
+};
+const SO_NA_MAQUININHA = {
+  ...DIVERGENTE, id: 'v2', vendaId: 'v2', idNaAdquirente: 'ST7', valorVenda: 100,
+  pagamentoId: null, registradoEm: null, valorPagamento: null, forma: null, criterio: null,
+  divergencias: [], possivelRefeita: false,
+};
+const SO_NO_SISTEMA = {
+  ...DIVERGENTE, id: 'p2', vendaId: null, idNaAdquirente: null, capturadaEm: null,
+  valorVenda: null, produto: null, pagamentoId: 'p2', valorPagamento: 60, forma: 'CREDITO',
+  criterio: null, divergencias: [], possivelRefeita: false,
+};
+const RESOLVIDA = {
+  id: 'r1', resolvidaEm: '2026-09-19T14:02:00Z', quemResolveu: 'Wesley', acao: 'CORRIGIR',
+  motivo: 'recepção registrou débito; foi crédito', alvo: 'PAR',
+  instante: '2026-09-18T13:05:00Z', valor: 80, idNaAdquirente: 'ST9', divergencias: ['FORMA'],
+  formaDe: 'DEBITO', formaPara: 'CREDITO', lancado: null,
 };
 
 function montar({ previa = PREVIA as unknown, historico = [] as unknown[],
-  resumo = RESUMO as unknown } = {}) {
+  resumo = RESUMO as unknown, divergente = DIVERGENTE as unknown,
+  naMaquininha = SO_NA_MAQUININHA as unknown, resolvidas = [] as unknown[],
+  aoResolver = null as unknown } = {}) {
   chamar.mockImplementation(async (caminho: string, init?: RequestInit) => {
     if (caminho === '/v1/me/capabilities') {
       return { estabelecimento: { timezone: 'America/Sao_Paulo' }, permissoes: [], menus: [] };
     }
     if (caminho.startsWith('/v1/conciliacao/resumo')) return resumo;
+    if (caminho === '/v1/conciliacao/resolucoes' && init?.method === 'POST') {
+      if (aoResolver instanceof Error) throw aoResolver;
+      return { id: 'r9', acao: 'CORRIGIR', formaDe: null, formaPara: null, lancado: null,
+        lancamentoId: null };
+    }
+    if (caminho.startsWith('/v1/conciliacao/resolucoes/')) return undefined;
+    if (caminho.startsWith('/v1/conciliacao/resolucoes')) {
+      return { itens: resolvidas, proximoCursor: null, temMais: false };
+    }
     if (caminho.startsWith('/v1/conciliacao/itens')) {
-      return { itens: caminho.includes('recorte=DIVERGENTES') ? [DIVERGENTE] : [],
-        proximoCursor: null, temMais: false };
+      const itens = caminho.includes('recorte=DIVERGENTES') ? [divergente]
+        : caminho.includes('recorte=SO_NA_MAQUININHA') ? [naMaquininha]
+          : caminho.includes('recorte=SO_NO_SISTEMA') ? [SO_NO_SISTEMA] : [];
+      return { itens, proximoCursor: null, temMais: false };
     }
     if (caminho === '/v1/conciliacao/casamentos') return { casadas: 2, divergentes: 0, canceladasDepois: 0 };
     if (caminho.endsWith('/previa')) {
@@ -181,7 +212,7 @@ describe('importar vendas da Stone', () => {
 });
 
 describe('conferência do mês', () => {
-  it('as quatro contas do mês, e os divergentes abertos primeiro', async () => {
+  it('as contas do mês, e os divergentes abertos primeiro', async () => {
     montar();
 
     const divergentes = await screen.findByRole('button', { name: /divergentes/ });
@@ -200,7 +231,7 @@ describe('conferência do mês', () => {
     expect(chamar.mock.calls.some(([caminho]) =>
       String(caminho).includes('recorte=SO_NA_MAQUININHA'))).toBe(true);
     expect(await screen.findByText(/comanda esquecida/)).toBeInTheDocument();
-    expect(await screen.findByText(/Toda venda da maquininha/)).toBeInTheDocument();
+    expect(await screen.findByText('ST7')).toBeInTheDocument();
   });
 
   it('o mês escolhido vai como de/ate do mês inteiro', async () => {
@@ -229,6 +260,88 @@ describe('conferência do mês', () => {
     montar({ resumo: { ...RESUMO, semExtrato: TOTAIS(4, 320) } });
 
     expect(await screen.findByText(/em dias sem extrato importado/)).toHaveTextContent(/4 pagamentos/);
+  });
+});
+
+// ------------------------------------------------------------------ RT-FIN-011
+
+const corpoEnviado = (sufixo: string) => JSON.parse(String((chamar.mock.calls
+  .filter(([caminho, init]) => String(caminho).endsWith(sufixo) && init?.method === 'POST')
+  .map(([, init]) => (init as RequestInit).body).at(-1))));
+
+describe('resolver a divergência', () => {
+  it('sem motivo escrito o botão não confirma; com motivo, vai o que a tela prometeu', async () => {
+    montar();
+    await userEvent.click(await screen.findByRole('button', { name: 'Usar a versão da Stone' }));
+
+    expect(await screen.findByText(/passam a ser as da Stone/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText('Por quê?'), 'foi crédito');
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    expect(corpoEnviado('/v1/conciliacao/resolucoes')).toEqual({
+      alvo: 'PAR', id: 'c1', acao: 'CORRIGIR', motivo: 'foi crédito',
+    });
+  });
+
+  it('par só com cancelamento não oferece corrigir: não há versão certa para copiar', async () => {
+    montar({ divergente: { ...DIVERGENTE, divergencias: ['CANCELADA_NA_ADQUIRENTE'] } });
+
+    expect(await screen.findByRole('button', { name: 'Aceitar como está' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Usar a versão da Stone' })).not.toBeInTheDocument();
+  });
+
+  it('venda que pode ser a refeita avisa que o valor já pode estar no caixa', async () => {
+    montar({ naMaquininha: { ...SO_NA_MAQUININHA, possivelRefeita: true } });
+    await userEvent.click(await screen.findByRole('button', { name: /só na maquininha/ }));
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Lançar no caixa' }));
+
+    expect(await screen.findByText(/lançar de novo conta duas vezes/))
+      .toHaveTextContent(/venda cancelada de R\$\s?100,00 neste dia/);
+  });
+
+  it('pagamento sem venda na maquininha manda a forma verdadeira', async () => {
+    montar();
+    await userEvent.click(await screen.findByRole('button', { name: /só no sistema/ }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Corrigir a forma' }));
+
+    await userEvent.selectOptions(screen.getByLabelText('Foi, na verdade'), 'PIX');
+    await userEvent.type(screen.getByLabelText('Por quê?'), 'foi Pix');
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    expect(corpoEnviado('/v1/conciliacao/resolucoes')).toEqual({
+      alvo: 'PAGAMENTO', id: 'p2', acao: 'CORRIGIR', motivo: 'foi Pix', forma: 'PIX',
+    });
+  });
+
+  it('a recusa do servidor aparece no painel, e a decisão continua aberta', async () => {
+    montar({ aoResolver: new ErroDaApi('esta linha já foi resolvida') });
+    await userEvent.click(await screen.findByRole('button', { name: 'Aceitar como está' }));
+    await userEvent.type(screen.getByLabelText('Por quê?'), 'aceito assim');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('esta linha já foi resolvida');
+    expect(screen.getByLabelText('Por quê?')).toHaveValue('aceito assim');
+  });
+
+  it('a trilha diz quem decidiu, o que mudou e o motivo — e oferece reabrir', async () => {
+    montar({ resumo: { ...RESUMO, resolvidas: TOTAIS(1, 80) }, resolvidas: [RESOLVIDA] });
+
+    await userEvent.click(await screen.findByRole('button', { name: /resolvidas à mão/ }));
+
+    expect(await screen.findByText('recepção registrou débito; foi crédito')).toBeInTheDocument();
+    expect(screen.getByText(/Wesley/)).toBeInTheDocument();
+    expect(screen.getByText('Débito → Crédito')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Reabrir' }));
+    await userEvent.type(screen.getByLabelText('Por quê?'), 'era débito mesmo');
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    expect(corpoEnviado('/v1/conciliacao/resolucoes/r1/reabertura'))
+      .toEqual({ motivo: 'era débito mesmo' });
   });
 });
 

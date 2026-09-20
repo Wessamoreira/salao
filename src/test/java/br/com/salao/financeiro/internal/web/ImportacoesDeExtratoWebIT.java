@@ -109,6 +109,49 @@ class ImportacoesDeExtratoWebIT extends AbstractPostgresIT {
     }
 
     @Test
+    @DisplayName("RT-FIN-011: resolver pede motivo, tira da conferência, e a reabertura devolve")
+    void resolucao() throws Exception {
+        tornar(Perfil.GERENTE);
+        String token = entrarComMfa();
+        enviar(ROTA, token, arquivo(CSV.getBytes(StandardCharsets.UTF_8)), mapeamento(MAPEAMENTO));
+        String vendaId = extrair(get(
+                "/api/v1/conciliacao/itens?recorte=SO_NA_MAQUININHA&de=2026-09-18&ate=2026-09-18",
+                token).body(), "vendaId");
+
+        var semMotivo = postJson("/api/v1/conciliacao/resolucoes",
+                pedido(vendaId, "LANCAR", ""), token);
+        var resolvida = postJson("/api/v1/conciliacao/resolucoes",
+                pedido(vendaId, "LANCAR", "venda de produto, sem comanda"), token);
+        var deNovo = postJson("/api/v1/conciliacao/resolucoes",
+                pedido(vendaId, "LANCAR", "de novo"), token);
+        var trilha = get("/api/v1/conciliacao/resolucoes?de=2026-09-18&ate=2026-09-18", token);
+
+        assertThat(semMotivo.statusCode()).isEqualTo(400);
+        assertThat(resolvida.statusCode()).isEqualTo(200);
+        assertThat(resolvida.body()).contains("\"lancado\":1234.56");
+        assertThat(deNovo.statusCode()).isEqualTo(409);
+        assertThat(deNovo.body()).contains("ER-FIN-JA_RESOLVIDA");
+        assertThat(trilha.body()).contains("\"acao\":\"LANCAR\"")
+                .contains("\"motivo\":\"venda de produto, sem comanda\"");
+        assertThat(get("/api/v1/conciliacao/resumo?de=2026-09-18&ate=2026-09-18", token).body())
+                .contains("\"soNaMaquininha\":{\"quantidade\":0")
+                .contains("\"resolvidas\":{\"quantidade\":1");
+
+        String resolucaoId = extrair(resolvida.body(), "id");
+        var reaberta = postJson("/api/v1/conciliacao/resolucoes/" + resolucaoId + "/reabertura",
+                "{\"motivo\":\"era estorno do dia anterior\"}", token);
+
+        assertThat(reaberta.statusCode()).isEqualTo(200);
+        assertThat(get("/api/v1/conciliacao/resumo?de=2026-09-18&ate=2026-09-18", token).body())
+                .contains("\"soNaMaquininha\":{\"quantidade\":1");
+    }
+
+    private static String pedido(String vendaId, String acao, String motivo) {
+        return "{\"alvo\":\"VENDA\",\"id\":\"" + vendaId + "\",\"acao\":\"" + acao
+                + "\",\"motivo\":\"" + motivo + "\"}";
+    }
+
+    @Test
     @DisplayName("a recepção não importa extrato")
     void recepcao_nao_importa() throws Exception {
         tornar(Perfil.RECEPCAO);

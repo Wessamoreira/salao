@@ -74,7 +74,30 @@ public enum ErrosDoFinanceiro implements CodigoDeErro {
 
     /** RT-FIN-010 — período invertido ou longo demais, ou cursor que não veio da tela. */
     FILTRO_INVALIDO("ER-FIN-FILTRO_INVALIDO", HttpStatus.UNPROCESSABLE_ENTITY,
-            "Filtro da conciliação inválido");
+            "Filtro da conciliação inválido"),
+
+    /** RT-FIN-011 — a linha da conferência, ou a resolução, não existe ou é de outro salão. */
+    RESOLUCAO_NAO_ENCONTRADA("ER-FIN-RESOLUCAO_NAO_ENCONTRADA", HttpStatus.NOT_FOUND,
+            "Linha da conferência não encontrada"),
+
+    /**
+     * RT-FIN-011 — a ação não cabe no alvo: corrigir um par que não tem o que corrigir, lançar uma
+     * venda que já casou, trocar a forma de um pagamento que não é de cartão.
+     *
+     * <p>Código próprio porque nenhum campo do pedido está errado — o que não cabe é a ação, e a
+     * correção é escolher outra. Um {@code DADOS_INVALIDOS} mandaria quem chamou procurar o campo.
+     */
+    RESOLUCAO_NAO_APLICAVEL("ER-FIN-RESOLUCAO_NAO_APLICAVEL", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Esta ação não cabe nesta linha da conferência"),
+
+    /**
+     * RT-FIN-011 — o alvo já tinha resolução valendo.
+     *
+     * <p>{@code 409} pela mesma razão de {@link #PERIODO_JA_FECHADO}: o pedido chegou tarde. São dois
+     * cliques no mesmo botão, ou duas abas abertas na mesma conferência.
+     */
+    JA_RESOLVIDA("ER-FIN-JA_RESOLVIDA", HttpStatus.CONFLICT,
+            "Esta linha já foi resolvida");
 
     private final String codigo;
     private final HttpStatus status;

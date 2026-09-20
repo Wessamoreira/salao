@@ -28,6 +28,7 @@ import br.com.salao.financeiro.internal.application.PreverImportacaoUseCase;
 import br.com.salao.financeiro.internal.application.Razao;
 import br.com.salao.financeiro.internal.application.RegistrarValeUseCase;
 import br.com.salao.financeiro.internal.application.RemoverRegraDeComissaoUseCase;
+import br.com.salao.financeiro.internal.application.ResolverDivergenciaUseCase;
 import br.com.salao.financeiro.internal.infra.ConciliacaoJdbc;
 import br.com.salao.financeiro.internal.infra.FechamentosJdbc;
 import br.com.salao.financeiro.internal.infra.ImportacoesDeExtratoJdbc;
@@ -35,6 +36,7 @@ import br.com.salao.financeiro.internal.infra.LancamentosJdbc;
 import br.com.salao.financeiro.internal.infra.MapeamentosDeExtratoJdbc;
 import br.com.salao.financeiro.internal.infra.PagamentosJdbc;
 import br.com.salao.financeiro.internal.infra.RegrasDeComissaoJdbc;
+import br.com.salao.financeiro.internal.infra.ResolucoesJdbc;
 import br.com.salao.financeiro.internal.infra.TransacoesDoAdquirenteJdbc;
 import br.com.salao.financeiro.internal.infra.ValesJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
@@ -252,8 +254,25 @@ public class FinanceiroConfig {
 
     @Bean
     public ConsultarConciliacaoUseCase consultarConciliacaoUseCase(
-            ConciliacaoJdbc conciliacao, EstabelecimentoApi estabelecimentos, Relogio relogio) {
-        return new ConsultarConciliacaoUseCase(conciliacao, estabelecimentos, relogio);
+            ConciliacaoJdbc conciliacao, ResolucoesJdbc resolucoes, NomesDeUsuariosApi nomes,
+            EstabelecimentoApi estabelecimentos, Relogio relogio) {
+        return new ConsultarConciliacaoUseCase(conciliacao, resolucoes, nomes, estabelecimentos,
+                relogio);
+    }
+
+    // ------------------------------------------------------------------ RT-FIN-011 — resolver
+
+    @Bean
+    public ResolucoesJdbc resolucoesJdbc(DataSource dataSource, ObjectMapper json) {
+        return new ResolucoesJdbc(JdbcClient.create(dataSource), json);
+    }
+
+    @Bean
+    public ResolverDivergenciaUseCase resolverDivergenciaUseCase(
+            ResolucoesJdbc resolucoes, LancamentosJdbc lancamentos, RazaoApi razao,
+            Competencia competencia, Relogio relogio, AuditoriaApi auditoria) {
+        return new ResolverDivergenciaUseCase(resolucoes, lancamentos, razao, competencia, relogio,
+                auditoria);
     }
 
     @Bean

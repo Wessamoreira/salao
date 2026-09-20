@@ -33,6 +33,7 @@ conteúdo de mensagem de cliente.
 | Aviso de IA a quem não é da equipe | RT-CNV-008. `conversacional_aviso_de_ia_total{desfecho=enfileirado\|ja_avisado\|equipe}`. `enfileirado` subindo muito num dia é o número divulgado para clientes — o que o aviso existe para corrigir |
 | Importação do extrato da maquininha | RT-FIN-009. Log `Extrato importado: N linhas — …` e auditoria `IMPORTACAO_DE_EXTRATO_CRIADO`, só com contas. Recusadas subindo de um mês para o outro é o portal mudando o formato — a prévia mostra qual coluna |
 | Conciliação das vendas | RT-FIN-010. `Conciliação: N casadas (N divergentes); N canceladas na adquirente depois de casadas` a cada rodada. "Só na maquininha" subindo é comanda esquecida — ou dinheiro entrando sem comanda |
+| Resolução de divergência | RT-FIN-011. `Conciliação: ACAO de ALVO id — motivo (lançado X no razão)` por decisão, e `warn` na reabertura. Muitos `LANCAR` seguidos é comanda não sendo fechada; muitas reaberturas é a conferência sendo usada no chute. Auditoria em `CONCILIACAO_RESOLVIDA` e `CONCILIACAO_REABERTA` |
 | Taxa de 5xx e de 409 | 409 subindo = corrida real na agenda |
 
 ## Alertas mínimos

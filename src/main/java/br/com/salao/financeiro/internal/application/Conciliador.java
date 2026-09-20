@@ -46,7 +46,7 @@ public class Conciliador {
     @Transactional(propagation = Propagation.MANDATORY)
     public Rodada conciliar(Instant agora) {
         ZoneId fuso = estabelecimentos.fusoDe(TenantContext.obrigatorio());
-        int canceladasDepois = conciliacao.marcarCanceladas();
+        int canceladasDepois = conciliacao.marcarCanceladas(agora);
         var pares = Casador.casar(conciliacao.pagamentosACasar(fuso), conciliacao.vendasACasar(),
                 JANELA, fuso);
         int casadas = 0;

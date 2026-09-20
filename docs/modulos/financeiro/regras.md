@@ -689,3 +689,78 @@ muda a verdade: depois dele, a venda da maquininha não tem mais pagamento no si
 **Rotinas.** RT-FIN-010 · **Teste.** `ConciliacaoIT.rodar_de_novo`, `.pagamento_apagado`, `.imutavel`,
 `.conciliar_agora`
 **Configurável?** Não · **Origem.** 2026-09-19
+
+### RN-FIN-033 — Nada sai da conferência sem resolução, e toda resolução tem motivo escrito
+
+**Enunciado.** Cada linha da conferência — o par divergente, a venda que só a maquininha tem, o pagamento
+que só o sistema tem — só sai dali por uma resolução, com **motivo escrito** (3 a 500 caracteres), quem
+decidiu e quando. As contas do mês passam a contar só o que ainda não foi resolvido; o que foi sai numa
+conta à parte, "resolvidas à mão", que é a trilha.
+
+**Motivo.** Uma conferência sem saída vira lista que só cresce, e no terceiro mês ninguém abre. O motivo é
+o que responde "por que isto foi aceito?" meses depois — sem ele a trilha registra o clique e não a
+decisão. Resolvida não entra em "conciliadas" porque essa conta responde o que bate sozinho, e um par
+aceito com forma trocada não bate sozinho.
+
+**Onde é garantida.** `ResolverDivergenciaUseCase.motivo` · `V60` (`check` do motivo, índice único
+parcial por alvo) · `ConciliacaoJdbc` (os trechos `{parPendente}`, `{vendaPendente}`,
+`{pagamentoPendente}`).
+**Rotinas.** RT-FIN-011 · **Teste.** `ResolucaoIT.motivo_obrigatorio`, `.ja_resolvida`,
+`.corrigir_forma`, `.imutavel`, `ImportacoesDeExtratoWebIT.resolucao`
+**Configurável?** Não · **Origem.** 2026-09-19, decisão do dono
+
+### RN-FIN-034 — Corrigir troca classificação, nunca valor recebido
+
+**Enunciado.** "Usar a versão da Stone" reescreve **forma, bandeira e parcelas** do pagamento, e aplica de
+uma vez tudo o que cabe. O **valor** do pagamento não se reescreve: a diferença entra no razão como um
+`AJUSTE`, positivo ou negativo, com origem `CONCILIACAO` e a competência de **hoje**. Venda cancelada na
+adquirente não tem o que corrigir — a saída é aceitar, com motivo.
+
+**Motivo.** Forma e bandeira são como o salão classificou a venda; mudá-las não move um centavo, e é o que
+faz a taxa (RT-FIN-012) ser calculada sobre o produto certo. Valor é dinheiro recebido: a comanda já foi
+apurada, a comissão saiu em cima dele e o mês pode estar fechado (RT-FIN-006). A competência é hoje pela
+mesma razão de `Competencia` não aceitar data de fora — uma resolução de setembro feita em novembro não
+pode entrar num período já fechado e pago.
+
+**Onde é garantida.** `Correcao.calcular` · `ResolverDivergenciaUseCase.par` ·
+`ResolucoesJdbc.classificarPagamento` (o `update` não toca em `valor`).
+**Rotinas.** RT-FIN-011 · **Teste.** `CorrecaoTest` (8), `ResolucaoIT.corrigir_forma`,
+`.corrigir_valor_lanca_a_diferenca`, `.corrigir_par_sem_o_que_corrigir`
+**Configurável?** Não · **Origem.** 2026-09-19, decisão do dono
+
+### RN-FIN-035 — Venda sem par vira ajuste no caixa; a tela avisa quando pode ser a venda refeita
+
+**Enunciado.** Uma venda que só a maquininha tem vira um `AJUSTE` positivo no razão, do valor bruto. Antes
+de confirmar, a tela avisa quando existe **venda cancelada de mesmo valor no mesmo dia do salão, já casada
+com um pagamento**: o valor pode já estar no caixa pela comanda daquele pagamento.
+
+**Motivo.** O caso comum de cancelamento é passar errado, cancelar e passar de novo. O pagamento casa com
+a primeira, ela é cancelada e o par é aceito; a segunda venda fica como "só na maquininha". Lançá-la
+contaria o mesmo dinheiro duas vezes. O aviso diz o que o dono não tem como lembrar; quem decide é ele,
+que é a única pessoa que sabe se as duas vendas são a mesma. Só canceladas que chegaram a casar entram no
+aviso: cancelada antes da primeira importação nunca casou, e o pagamento foi direto para a venda refeita.
+
+**Onde é garantida.** `ConciliacaoJdbc.POSSIVEL_REFEITA` · `ResolverDivergenciaUseCase.venda` ·
+`Conciliacao.tsx` (`Decidir`, o aviso).
+**Rotinas.** RT-FIN-011 · **Teste.** `ResolucaoIT.aviso_de_venda_refeita`,
+`.sem_aviso_quando_nao_ha_cancelada`, `.lancar_venda_no_caixa`, `Conciliacao.test.tsx`
+**Configurável?** Não · **Origem.** 2026-09-19, decisão do dono
+
+### RN-FIN-036 — A resolução não se reescreve: reabre, com motivo
+
+**Enunciado.** Ação, motivo e quem decidiu nunca mudam — a role da aplicação só tem `update` nas três
+colunas da reabertura (`V60`). Reabrir devolve a linha à conferência e desfaz o que a resolução fez: o
+lançamento é estornado no razão (pela origem, nunca apagado) e a classificação do pagamento volta ao que
+o `efeito` guardou. A importação seguinte **reabre sozinha** (sem quem) o par cuja venda a adquirente
+cancelou depois — e aí nada é desfeito: a correção continuou certa, e só a pergunta volta a ser feita.
+
+**Motivo.** Desfazer dinheiro por clique errado precisa deixar rastro dos dois lados. E uma resolução vale
+para o que se sabia na hora: manter escondido um par que virou "dinheiro que não vem" seria exatamente o
+silêncio que a conferência existe para não ter.
+
+**Onde é garantida.** `V60` (`revoke update, delete` com `grant` só da reabertura) ·
+`ResolverDivergenciaUseCase.reabrir` · `EfeitoDaResolucao` · `ConciliacaoJdbc.marcarCanceladas`.
+**Rotinas.** RT-FIN-011 · **Teste.** `ResolucaoIT.reabrir_desfaz_a_correcao`,
+`.reabrir_estorna_o_lancamento`, `.reabrir_duas_vezes`, `.resolver_de_novo_depois_de_reabrir`,
+`.cancelada_depois_reabre_a_resolucao`, `.imutavel`
+**Configurável?** Não · **Origem.** 2026-09-19, decisão do dono

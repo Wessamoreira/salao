@@ -59,6 +59,7 @@ de origem opaco (RN-FIN-002), e é isso que impede o ciclo com `atendimento`.
 | [RT-FIN-007](RT-FIN-007-estorno-de-lancamento.md) — estorno de lançamento e de fechamento | implementada |
 | [RT-FIN-009](RT-FIN-009-importar-extrato-do-adquirente.md) — importar o relatório de vendas da Stone, com prévia e mapeamento | implementada |
 | [RT-FIN-010](RT-FIN-010-casar-vendas-com-pagamentos.md) — casar as vendas da Stone com os pagamentos do salão | implementada |
+| [RT-FIN-011](RT-FIN-011-resolver-divergencia.md) — resolver a divergência à mão, com motivo e trilha | implementada |
 
 ## Rotas
 
@@ -79,8 +80,11 @@ de origem opaco (RN-FIN-002), e é isso que impede o ciclo com `atendimento`.
 | `POST /api/v1/conciliacao/importacoes` | importa o extrato com o mapeamento confirmado (multipart) | `financeiro:reconcile` |
 | `GET /api/v1/conciliacao/importacoes` | as importações, das mais recentes para trás | `financeiro:reconcile` |
 | `POST /api/v1/conciliacao/casamentos` | "Conciliar agora": casa o que ficou sem par | `financeiro:reconcile` |
-| `GET /api/v1/conciliacao/resumo?de&ate` | as quatro contas do período | `financeiro:reconcile` |
+| `GET /api/v1/conciliacao/resumo?de&ate` | as contas do período, o que falta e o que foi resolvido | `financeiro:reconcile` |
 | `GET /api/v1/conciliacao/itens?recorte&de&ate&cursor` | a lista de um recorte | `financeiro:reconcile` |
+| `POST /api/v1/conciliacao/resolucoes` | decide uma linha da conferência, com motivo | `financeiro:reconcile` |
+| `GET /api/v1/conciliacao/resolucoes?de&ate&cursor` | a trilha do período | `financeiro:reconcile` |
+| `POST /api/v1/conciliacao/resolucoes/{id}/reabertura` | devolve a linha à conferência, desfazendo | `financeiro:reconcile` |
 
 O **pagamento** não tem rota própria: é registrado pela rota da comanda
 (`POST /api/v1/comandas/{id}/pagamentos`), porque é lá que a regra de "quanto falta" existe.

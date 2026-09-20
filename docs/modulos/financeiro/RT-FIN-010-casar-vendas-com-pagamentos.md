@@ -230,12 +230,12 @@ Uma rodada, 17 mutações, cada uma sozinha. **17 mortas**, todas pelo teste esp
 
 ## 16. Pendências
 
-- [ ] **Resolver cada divergência, com motivo e trilha** — RT-FIN-011. Hoje a tela mostra; não desfaz nem
-      confirma par.
+- [x] **Resolver cada divergência, com motivo e trilha** — feito em RT-FIN-011: cada linha tem saída, com
+      motivo escrito, e a resolução se reabre.
 - [ ] **A recepção não informa NSU, bandeira nem parcelas** (a tela de pagamento pede só forma e valor).
       Com eles, o casamento sobe de "valor e hora" para "NSU" — a prova mais forte.
 - [ ] **O mês padrão é o corrente.** Quem importa o mês passado escolhe o mês na conferência.
 - [ ] **A janela é constante** (`Conciliador.JANELA`), decisão do dono. Se variar por salão, vira
       configuração.
 - [ ] **Casamento 1 para 1.** Uma venda dividida em duas no sistema (ou o contrário) fica como sobra dos
-      dois lados — é para a resolução manual (RT-FIN-011).
+      dois lados. RT-FIN-011 resolve cada lado à mão, mas não casa os dois: não há par manual.
