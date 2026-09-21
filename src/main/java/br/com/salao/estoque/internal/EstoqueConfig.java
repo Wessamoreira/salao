@@ -35,7 +35,11 @@ import br.com.salao.estoque.internal.application.DefinirPoliticaDePrecoUseCase;
 import br.com.salao.estoque.internal.application.GerarSugestoesDePrecoUseCase;
 import br.com.salao.estoque.internal.infra.PoliticaDePrecoJdbc;
 import br.com.salao.estoque.internal.infra.SugestoesDePrecoJdbc;
+import br.com.salao.estoque.internal.application.ConsultarDecisoesDePrecoUseCase;
+import br.com.salao.estoque.internal.application.DecidirSugestaoDePrecoUseCase;
+import br.com.salao.estoque.internal.infra.DecisoesDePrecoJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
+import br.com.salao.iam.api.NomesDeUsuariosApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.shared.tempo.Relogio;
 import javax.sql.DataSource;
@@ -231,8 +235,31 @@ public class EstoqueConfig {
     @Bean
     public GerarSugestoesDePrecoUseCase gerarSugestoesDePrecoUseCase(
             SugestoesDePrecoJdbc sugestoes, PoliticaDePrecoJdbc politica,
-            EstabelecimentoApi estabelecimentos, Relogio relogio) {
-        return new GerarSugestoesDePrecoUseCase(sugestoes, politica, estabelecimentos, relogio);
+            DecisoesDePrecoJdbc decisoes, EstabelecimentoApi estabelecimentos, Relogio relogio) {
+        return new GerarSugestoesDePrecoUseCase(sugestoes, politica, decisoes, estabelecimentos,
+                relogio);
+    }
+
+    // ------------------------------------------------------------------ RT-EST-011 — decidir
+
+    @Bean
+    public DecisoesDePrecoJdbc decisoesDePrecoJdbc(DataSource dataSource) {
+        return new DecisoesDePrecoJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public DecidirSugestaoDePrecoUseCase decidirSugestaoDePrecoUseCase(
+            SugestoesDePrecoJdbc sugestoes, DecisoesDePrecoJdbc decisoes,
+            PoliticaDePrecoJdbc politica, DefinirPrecoDeVendaUseCase definirPreco,
+            AuditoriaApi auditoria, Relogio relogio) {
+        return new DecidirSugestaoDePrecoUseCase(sugestoes, decisoes, politica, definirPreco,
+                auditoria, relogio);
+    }
+
+    @Bean
+    public ConsultarDecisoesDePrecoUseCase consultarDecisoesDePrecoUseCase(
+            DecisoesDePrecoJdbc decisoes, NomesDeUsuariosApi nomes) {
+        return new ConsultarDecisoesDePrecoUseCase(decisoes, nomes);
     }
 
     @Bean

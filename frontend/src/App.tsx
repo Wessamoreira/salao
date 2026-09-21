@@ -14,6 +14,7 @@ import { Comandas } from './telas/comandas/Comandas';
 import { Configuracao } from './telas/config/Configuracao';
 import { RevisaoDoAgente } from './telas/agente/RevisaoDoAgente';
 import { Conciliacao } from './telas/conciliacao/Conciliacao';
+import { Precos } from './telas/precos/Precos';
 import { EmBreve } from './telas/EmBreve';
 import { Conectividade } from './pwa/Conectividade';
 
@@ -75,6 +76,7 @@ export function App() {
               <Route path="/financeiro" element={<EmBreve titulo="Financeiro" rotina="RT-FIN-004" />} />
               <Route path="/agente" element={<RevisaoDoAgente />} />
               <Route path="/conciliacao" element={<Conciliacao />} />
+              <Route path="/precos" element={<Precos />} />
               <Route path="/config" element={<Configuracao />} />
             </Route>
 

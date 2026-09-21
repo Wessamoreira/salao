@@ -77,6 +77,17 @@
         "previa:conciliacao"
       ],
       "port": 5174
+    },
+    {
+      "name": "previa-precos",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "previa:precos"
+      ],
+      "port": 5174
     }
   ]
 }

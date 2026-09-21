@@ -132,6 +132,35 @@ public class SugestoesDePrecoJdbc {
     public record Gravar(MotorDePreco.Sugestao sugestao, String explicacao) {
     }
 
+    /**
+     * Uma sugestão aberta, pelo id — o que a aprovação e a recusa precisam ler.
+     *
+     * <p>Vazio quando já foi decidida: a decisão a apaga, e duas abas na mesma sugestão viram um
+     * {@code 404} na segunda, que é a verdade.
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public java.util.Optional<Linha> porId(UUID id) {
+        return jdbc.sql("""
+                select s.id, s.produto_id, p.nome, s.motivo, s.preco_atual, s.custo_medio,
+                       s.preco_sugerido, s.margem_atual, s.margem_sugerida, s.racional,
+                       s.explicacao, s.gerada_em
+                  from sugestao_de_preco s
+                  join produto p on p.id = s.produto_id
+                 where s.id = :id
+                """)
+                .param("id", id)
+                .query(SugestoesDePrecoJdbc::linha)
+                .optional();
+    }
+
+    /** Some da lista de abertas — decidida é decidida. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public boolean remover(UUID id) {
+        return jdbc.sql("delete from sugestao_de_preco where id = :id")
+                .param("id", id)
+                .update() == 1;
+    }
+
     /** Uma sugestão como a tela a lê, já com o nome do produto. */
     public record Linha(UUID id, UUID produtoId, String produto, MotivoDaSugestao motivo,
                         BigDecimal precoAtual, BigDecimal custoMedio, BigDecimal precoSugerido,
@@ -160,14 +189,18 @@ public class SugestoesDePrecoJdbc {
                             else 4 end,
                           s.custo_medio desc, lower(p.nome)
                 """)
-                .query((rs, n) -> new Linha(rs.getObject("id", UUID.class),
-                        rs.getObject("produto_id", UUID.class), rs.getString("nome"),
-                        MotivoDaSugestao.valueOf(rs.getString("motivo")),
-                        rs.getBigDecimal("preco_atual"), rs.getBigDecimal("custo_medio"),
-                        rs.getBigDecimal("preco_sugerido"), rs.getBigDecimal("margem_atual"),
-                        rs.getBigDecimal("margem_sugerida"), rs.getString("racional"),
-                        rs.getString("explicacao"),
-                        rs.getObject("gerada_em", OffsetDateTime.class).toInstant()))
+                .query(SugestoesDePrecoJdbc::linha)
                 .list();
+    }
+
+    private static Linha linha(ResultSet rs, int n) throws SQLException {
+        return new Linha(rs.getObject("id", UUID.class),
+                rs.getObject("produto_id", UUID.class), rs.getString("nome"),
+                MotivoDaSugestao.valueOf(rs.getString("motivo")),
+                rs.getBigDecimal("preco_atual"), rs.getBigDecimal("custo_medio"),
+                rs.getBigDecimal("preco_sugerido"), rs.getBigDecimal("margem_atual"),
+                rs.getBigDecimal("margem_sugerida"), rs.getString("racional"),
+                rs.getString("explicacao"),
+                rs.getObject("gerada_em", OffsetDateTime.class).toInstant());
     }
 }

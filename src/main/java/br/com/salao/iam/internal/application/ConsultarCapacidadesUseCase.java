@@ -93,6 +93,10 @@ public class ConsultarCapacidadesUseCase {
         if (permissoes.contains(Permissao.ESTOQUE_LER)) {
             menus.add(new Capacidades.Menu("estoque", "Estoque", "/estoque", "caixa", "gestao"));
         }
+        // RT-EST-011 — precificar é outro ato que ler estoque: quem entra aqui pode aplicar preço.
+        if (permissoes.contains(Permissao.PRODUTO_PRECO_ESCREVER)) {
+            menus.add(new Capacidades.Menu("precos", "Preços", "/precos", "etiqueta", "gestao"));
+        }
         if (permissoes.contains(Permissao.FINANCEIRO_LER_PROPRIO)
                 || permissoes.contains(Permissao.FINANCEIRO_LER_TODOS)) {
             menus.add(new Capacidades.Menu("financeiro", "Financeiro", "/financeiro", "cifrao", "gestao"));

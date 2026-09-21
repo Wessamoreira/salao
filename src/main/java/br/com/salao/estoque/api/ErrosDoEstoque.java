@@ -12,6 +12,19 @@ public enum ErrosDoEstoque implements CodigoDeErro {
      * <p>{@code 409} e não {@code 422}: nada no pedido está errado — falta uma decisão do dono que
      * ainda não foi tomada, e a correção é tomá-la, não corrigir um campo.
      */
+    /** RT-EST-011 — a sugestão não existe, já foi decidida, ou é de outro salão. */
+    SUGESTAO_NAO_ENCONTRADA("ER-EST-SUGESTAO_NAO_ENCONTRADA", HttpStatus.NOT_FOUND,
+            "Sugestão de preço não encontrada"),
+
+    /**
+     * RT-EST-011 — o preço informado na aprovação fica abaixo do chão de margem.
+     *
+     * <p>Código próprio porque a correção é um número, e a mensagem traz qual: um
+     * {@code DADOS_INVALIDOS} genérico mandaria o dono adivinhar o mínimo.
+     */
+    PRECO_ABAIXO_DO_MINIMO("ER-EST-PRECO_ABAIXO_DO_MINIMO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Preço abaixo da margem mínima"),
+
     SEM_POLITICA_DE_PRECO("ER-EST-SEM_POLITICA", HttpStatus.CONFLICT,
             "Defina a margem mínima antes de pedir sugestões de preço"),
 

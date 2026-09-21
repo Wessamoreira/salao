@@ -51,6 +51,7 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 | [RT-EST-008](RT-EST-008-alertas.md) — alertas de mínimo e de validade | implementada |
 | [RT-EST-009](RT-EST-009-codigo-de-barras.md) — leitor de código de barras (HID) | implementada |
 | [RT-EST-010](RT-EST-010-sugestao-de-preco.md) — sugestão de preço, com chão de margem | implementada |
+| [RT-EST-011](RT-EST-011-aprovar-sugestao-de-preco.md) — aprovação humana, com trilha | implementada |
 
 ## Rotas
 
@@ -68,6 +69,9 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 | `PUT /api/v1/politica-de-preco` | define a margem mínima do salão | `config:manage` |
 | `GET /api/v1/sugestoes-de-preco` | o que a última geração achou | `estoque:read` |
 | `POST /api/v1/sugestoes-de-preco` | roda o motor e substitui as sugestões abertas | `estoque:read` |
+| `POST /api/v1/sugestoes-de-preco/{id}/aprovacao` | aplica o preço; aceita ajuste acima do chão | `produto:price:write` |
+| `POST /api/v1/sugestoes-de-preco/{id}/recusa` | recusa com motivo; cala o produto por 90 dias | `produto:price:write` |
+| `GET /api/v1/decisoes-de-preco?cursor` | a trilha do que foi decidido | `estoque:read` |
 | `POST /api/v1/produtos/{id}/lotes` | a caixa chegou: lote + movimento de entrada | `estoque:write` |
 | `GET /api/v1/produtos/{id}/lotes` | os lotes, **na ordem do FEFO** | `estoque:read` |
 | `GET /api/v1/produtos/saldos` | o inventário; padrão traz também o que zerou | `estoque:read` |

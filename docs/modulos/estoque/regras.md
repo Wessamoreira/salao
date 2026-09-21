@@ -737,3 +737,57 @@ o custo de hoje daria outro número, porque o custo já é outro.
 **Rotinas.** RT-EST-010 · **Teste.** `SugestaoDePrecoIT.custo_medio_chega_ao_motor`, `.imutavel`,
 `.gerar_de_novo_substitui`
 **Configurável?** Não · **Origem.** 2026-09-20, decisão do dono
+
+### RN-EST-034 — Nenhum preço muda sem decisão humana; aprovar aceita ajuste, nunca abaixo do chão
+
+**Enunciado.** A sugestão não aplica nada sozinha. Aprovar traz o preço sugerido preenchido e **aceita
+ajuste**, desde que não fique abaixo de `custo médio × (1 + margem mínima)` — o custo usado é o
+**congelado na sugestão**, que é o que está na tela. Aplicar chama o mesmo caso de uso da tela de
+produto.
+
+**Motivo.** É a frase que fecha a Fase 6. O chão vale também para quem digita porque a tela existe
+justamente para decidir com o número à vista, e aprovar abaixo do custo seria o sistema ajudando a
+vender no prejuízo com a aparência de quem conferiu. Quem quiser mesmo assim tem a tela de produto,
+que sempre aceitou qualquer preço — o caminho de fora existe de propósito: deixa rastro em outro lugar
+e não passa por uma tela que diz "sugerido". E o custo é o da sugestão porque aprovar deve fazer o que
+a tela prometeu; se o custo andou, a rodada seguinte diz.
+
+**Onde é garantida.** `DecidirSugestaoDePrecoUseCase.aprovar`, `.conferirChao` ·
+`MotorDePreco.chaoDeMargem` · `DefinirPrecoDeVendaUseCase` (o único caminho de escrita).
+**Rotinas.** RT-EST-011 · **Teste.** `DecisaoDePrecoIT.aprovar_o_sugerido`, `.aprovar_com_ajuste`,
+`.chao_vale_para_o_humano`, `.exatamente_no_chao`, `.preco_invalido`, `Precos.test.tsx`
+**Configurável?** A margem mínima, por salão · **Origem.** 2026-09-20, decisão do dono
+
+### RN-EST-035 — Recusar pede motivo e cala o produto por 90 dias; sugestão diferente fura o silêncio
+
+**Enunciado.** Recusar exige motivo escrito (3 a 500 caracteres). O produto volta a aparecer quando
+passarem 90 dias, **ou** quando a sugestão for outra — motivo diferente ou preço sugerido diferente.
+Aprovar não cala: o produto segue sendo avaliado com o preço novo.
+
+**Motivo.** Sem o silêncio a mesma linha volta em toda rodada e a tela vira ruído, que é como uma lista
+de alertas morre. Com ele, o custo subir — que muda o preço sugerido — fura o silêncio, porque aí é
+fato novo e não a mesma conversa. O motivo escrito é o que faz a trilha responder "por que este preço
+continuou como estava" meses depois.
+
+**Onde é garantida.** `DecidirSugestaoDePrecoUseCase.recusar` ·
+`GerarSugestoesDePrecoUseCase.calado` · `DecisoesDePrecoJdbc.recusasDesde`.
+**Rotinas.** RT-EST-011 · **Teste.** `DecisaoDePrecoIT.recusar`, `.recusa_sem_motivo`,
+`.recusa_cala`, `.fato_novo_fura_o_silencio`, `.aprovar_nao_cala`
+**Configurável?** Não · **Origem.** 2026-09-20, decisão do dono
+
+### RN-EST-036 — Toda decisão fica registrada com os números congelados da sugestão
+
+**Enunciado.** Aplicar e recusar gravam uma linha com o produto, o motivo da sugestão, o custo médio e
+o preço da época, o preço sugerido, o preço **aplicado** (que pode diferir), o racional da conta, a
+justificativa da recusa, quem decidiu e quando. Append-only: a decisão não se reescreve nem se apaga.
+Decidir a mesma sugestão duas vezes dá 404 na segunda — a decisão a apaga da lista de abertas.
+
+**Motivo.** Recalcular depois daria outro resultado, porque o custo já é outro. A pergunta que a trilha
+responde é "com que informação esta decisão foi tomada", e não "o que seria certo hoje". Mudou de
+ideia? Decide de novo na rodada seguinte, e as duas ficam.
+
+**Onde é garantida.** `V63` (`revoke update, delete`, os dois `check` de coerência) ·
+`DecidirSugestaoDePrecoUseCase.registrar` · `SugestoesDePrecoJdbc.remover`.
+**Rotinas.** RT-EST-011 · **Teste.** `DecisaoDePrecoIT.trilha_congela`, `.imutavel`,
+`.decidir_duas_vezes`, `.isolamento`, `.sem_permissao_de_preco`
+**Configurável?** Não · **Origem.** 2026-09-20, decisão do dono

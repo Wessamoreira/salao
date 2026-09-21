@@ -123,6 +123,16 @@ public final class MotorDePreco {
                 && produto.saldo().compareTo(SALDO_PARA_ENCALHAR) >= 0;
     }
 
+    /**
+     * O chão: o menor preço que respeita a margem, <strong>sem passar pela régua</strong>.
+     *
+     * <p>A régua é para o que o sistema sugere. Quando é gente que digita o preço (RT-EST-011), o
+     * limite é este — exigir a escada de 9,90 de um humano seria a ferramenta mandando no dono.
+     */
+    public static Money chaoDeMargem(Money custo, BigDecimal margem) {
+        return comMargem(custo, margem);
+    }
+
     /** O preço que dá exatamente esta margem sobre o custo. */
     private static Money comMargem(Money custo, BigDecimal margem) {
         return custo.multiplicar(BigDecimal.ONE.add(margem.divide(CEM, 10, RoundingMode.HALF_UP)));
