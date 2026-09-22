@@ -4,13 +4,14 @@ import { api } from './http';
 /**
  * RT-EST-010 e RT-EST-011 — a régua do salão, o que ela acha dos preços, e o que foi decidido.
  *
- * O número vem sempre do servidor: a régua de 9,90, o chão de margem e os quatro motivos são regra
+ * O número vem sempre do servidor: a régua de 9,90, o chão de margem e os motivos são regra
  * de negócio, e a tela só desenha. Nem o preço sugerido nem o mínimo são recalculados aqui.
  */
 
 /** Por que o sistema acha que este preço está errado. */
 export type Motivo =
-  | 'MARGEM_ABAIXO_DO_MINIMO' | 'ENCALHADO' | 'MARGEM_ALTA' | 'PRECO_QUEBRADO';
+  | 'QUEIMA_DE_VENCIMENTO' | 'MARGEM_ABAIXO_DO_MINIMO' | 'ENCALHADO' | 'MARGEM_ALTA'
+  | 'PRECO_QUEBRADO';
 
 export interface Sugestao {
   id: string;

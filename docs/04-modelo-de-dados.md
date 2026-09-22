@@ -414,6 +414,9 @@ alvo tem no máximo uma resolução valendo, e pode ter várias ao longo do temp
 reescreve — `revoke update, delete`, com `grant update` só das três colunas da reabertura. O razão passa a
 aceitar `CONCILIACAO` como origem, e é por ela que a reabertura estorna o ajuste.
 
+RT-EST-012 (`V64`) não cria tabela: a queima de vencimento é o quinto motivo de sugestão, e
+`sugestao_de_preco.motivo` e `decisao_de_preco.motivo` passam a aceitar `QUEIMA_DE_VENCIMENTO`.
+
 RT-EST-011 (`V63`) acrescenta `decisao_de_preco`: o que foi aplicado ou recusado, com os números
 congelados da sugestão e a justificativa da recusa. Append-only (`revoke update, delete`), com dois
 `check` de coerência — aplicada tem preço, recusada tem justificativa. O índice por produto e data é a

@@ -1,6 +1,7 @@
 package br.com.salao.estoque.internal.application;
 
 import br.com.salao.estoque.api.ErrosDoEstoque;
+import br.com.salao.estoque.internal.domain.MotivoDaSugestao;
 import br.com.salao.estoque.internal.domain.MotorDePreco;
 import br.com.salao.estoque.internal.infra.DecisoesDePrecoJdbc;
 import br.com.salao.estoque.internal.infra.PoliticaDePrecoJdbc;
@@ -91,8 +92,12 @@ public class GerarSugestoesDePrecoUseCase {
         }
         sugestoes.substituir(achadas, relogio.agora());
 
-        log.info("Sugestões de preço: {} geradas de {} produtos avaliados ({} caladas por recusa)",
-                achadas.size(), produtos.size(), calou);
+        // RT-EST-012: a queima é a única sugestão abaixo da margem mínima, e por isso conta à parte.
+        long queimas = achadas.stream()
+                .filter(g -> g.sugestao().motivo() == MotivoDaSugestao.QUEIMA_DE_VENCIMENTO)
+                .count();
+        log.info("Sugestões de preço: {} geradas ({} de queima) de {} produtos avaliados "
+                + "({} caladas por recusa)", achadas.size(), queimas, produtos.size(), calou);
         return achadas.size();
     }
 

@@ -119,6 +119,9 @@
   border-top: 3px solid var(--regua-forte);
   border-radius: var(--raio-2);
 }
+/* Vermelho nos dois que são dinheiro em risco: um se perde a cada venda, o outro inteiro numa data. A
+   etiqueta diz qual — cor nunca sozinha. */
+.prc-cartao[data-motivo='QUEIMA_DE_VENCIMENTO'],
 .prc-cartao[data-motivo='MARGEM_ABAIXO_DO_MINIMO'] { border-top-color: var(--status-falta); }
 .prc-cartao[data-motivo='ENCALHADO'] { border-top-color: var(--status-solicitado); }
 .prc-cartao[data-motivo='MARGEM_ALTA'] { border-top-color: var(--status-confirmado); }

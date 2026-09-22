@@ -157,7 +157,7 @@ class SugestaoDePrecoIT extends AbstractPostgresIT {
             assertThat(item.motivo()).isEqualTo("MARGEM_ABAIXO_DO_MINIMO");
             assertThat(item.custoMedio()).isEqualByComparingTo("31.20");
             assertThat(item.precoSugerido()).isEqualByComparingTo("49.90");
-            assertThat(item.racional()).contains("R$ 31,20");
+            assertThat(item.racional()).contains("R$\u00a031,20");
             // A redação da IA é de RT-EST-011.
             assertThat(item.explicacao()).isNull();
         });

@@ -47,7 +47,7 @@ public class SugestoesDePrecoJdbc {
     public List<MotorDePreco.Produto> produtosAAvaliar(ZoneId fuso, LocalDate hoje) {
         return jdbc.sql("""
                 with saldo_por_lote as (
-                  select l.produto_id, l.custo_unitario,
+                  select l.produto_id, l.custo_unitario, l.validade,
                          coalesce((select sum(m.quantidade) from movimento_estoque m
                                     where m.lote_id = l.id), 0) as saldo
                     from lote l
@@ -65,7 +65,11 @@ public class SugestoesDePrecoJdbc {
                             then sum(case when s.saldo > 0 then s.saldo * s.custo_unitario end)
                                / sum(case when s.saldo > 0 then s.saldo end)
                        end as custo_medio,
-                       max(coalesce(u.ultima_venda, u.primeiro)) as referencia
+                       max(coalesce(u.ultima_venda, u.primeiro)) as referencia,
+                       -- RT-EST-012: o lote válido mais próximo que ainda tem unidades. Vencido
+                       -- não se vende e não entra na queima (RN-EST-039).
+                       min(s.validade) filter (where s.saldo > 0 and s.validade >= :hoje)
+                         as vence_em
                   from produto p
                   left join saldo_por_lote s on s.produto_id = p.id
                   left join ultimo_movimento u on u.produto_id = p.id
@@ -73,6 +77,7 @@ public class SugestoesDePrecoJdbc {
                  group by p.id, p.nome, p.preco_venda
                  order by lower(p.nome)
                 """)
+                .param("hoje", java.sql.Date.valueOf(hoje))
                 .query((rs, n) -> produto(rs, fuso, hoje))
                 .list();
     }
@@ -85,11 +90,14 @@ public class SugestoesDePrecoJdbc {
                         referencia.toInstant().atZone(fuso).toLocalDate(), hoje);
         BigDecimal custoMedio = rs.getBigDecimal("custo_medio");
         BigDecimal preco = rs.getBigDecimal("preco_venda");
+        java.sql.Date venceEm = rs.getDate("vence_em");
+        Integer diasParaVencer = venceEm == null ? null
+                : (int) java.time.temporal.ChronoUnit.DAYS.between(hoje, venceEm.toLocalDate());
         return new MotorDePreco.Produto(rs.getObject("produto_id", UUID.class),
                 rs.getString("nome"),
                 custoMedio == null ? null : new Money(custoMedio),
                 preco == null ? null : new Money(preco),
-                rs.getBigDecimal("quantidade"), diasSemVenda);
+                rs.getBigDecimal("quantidade"), diasSemVenda, diasParaVencer);
     }
 
     // ------------------------------------------------------------------ gravar e ler
@@ -171,8 +179,8 @@ public class SugestoesDePrecoJdbc {
     /**
      * As sugestões abertas, do motivo que mais dói para o que menos dói, e por valor.
      *
-     * <p>Margem abaixo do mínimo primeiro: é dinheiro saindo hoje. Preço quebrado por último: é
-     * acabamento.
+     * <p>Queima primeiro: é dinheiro que vira zero numa data marcada (RT-EST-012). Depois a margem
+     * abaixo do mínimo, dinheiro saindo hoje. Preço quebrado por último: é acabamento.
      */
     @Transactional(readOnly = true)
     public List<Linha> abertas() {
@@ -183,6 +191,7 @@ public class SugestoesDePrecoJdbc {
                   from sugestao_de_preco s
                   join produto p on p.id = s.produto_id
                  order by case s.motivo
+                            when 'QUEIMA_DE_VENCIMENTO' then 0
                             when 'MARGEM_ABAIXO_DO_MINIMO' then 1
                             when 'ENCALHADO' then 2
                             when 'MARGEM_ALTA' then 3

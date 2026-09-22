@@ -18,7 +18,7 @@ class MotorDePrecoTest {
                                                 Integer diasSemVenda) {
         return new MotorDePreco.Produto(UUID.randomUUID(), "Máscara 500g",
                 custo == null ? null : Money.de(custo), preco == null ? null : Money.de(preco),
-                new BigDecimal(saldo), diasSemVenda);
+                new BigDecimal(saldo), diasSemVenda, null);
     }
 
     @Test
@@ -30,7 +30,7 @@ class MotorDePrecoTest {
         // 31,20 × 1,30 = 40,56 → 49,90 na régua.
         assertThat(sugestao.precoSugerido()).isEqualTo(Money.de("49.90"));
         assertThat(sugestao.margemAtual()).isEqualByComparingTo("21.7949");
-        assertThat(sugestao.racional()).contains("R$ 31,20").contains("21,8%").contains("30,0%");
+        assertThat(sugestao.racional()).contains("R$\u00a031,20").contains("21,8%").contains("30,0%");
     }
 
     @Test
@@ -136,7 +136,7 @@ class MotorDePrecoTest {
                         for (String margem : new String[] {"0", "15", "30", "120"}) {
                             var entrada = new MotorDePreco.Produto(UUID.randomUUID(), "p",
                                     Money.de(custo), preco == 0 ? null : Money.de(preco),
-                                    new BigDecimal(saldo), dias);
+                                    new BigDecimal(saldo), dias, null);
                             BigDecimal minima = new BigDecimal(margem);
                             var sugestao = MotorDePreco.avaliar(entrada, minima);
                             if (sugestao.isEmpty()) {

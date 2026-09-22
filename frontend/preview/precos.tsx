@@ -1,7 +1,7 @@
 /*
  * Prévia visual dos preços, sem backend.
  *
- * Os componentes e o CSS são os reais; só a rede é falsa. Quatro sugestões, uma de cada motivo —
+ * Os componentes e o CSS são os reais; só a rede é falsa. Cinco sugestões, uma de cada motivo —
  * inclusive um produto sem preço de venda, que é o caso mais gritante de margem abaixo do mínimo —,
  * e a trilha com uma aplicação ajustada e uma recusa.
  *
@@ -14,6 +14,12 @@ import { Precos } from '../src/telas/precos/Precos';
 import '../src/estilo/global.css';
 
 const SUGESTOES = [
+  { id: 's0', produtoId: 'p0', produto: 'Tônico capilar 120ml',
+    motivo: 'QUEIMA_DE_VENCIMENTO', rotulo: 'Queima de vencimento',
+    precoAtual: 139.9, custoMedio: 100, precoSugerido: 109.9,
+    margemAtual: 39.9, margemSugerida: 9.9,
+    racional: 'Lote vence em 5 dias, com 10 em estoque. Na última semana a queima vai até o custo médio de R$ 100,00; R$ 109,90 na régua.',
+    explicacao: null },
   { id: 's1', produtoId: 'p1', produto: 'Máscara de reconstrução 500g',
     motivo: 'MARGEM_ABAIXO_DO_MINIMO', rotulo: 'Margem abaixo do mínimo',
     precoAtual: 38, custoMedio: 31.2, precoSugerido: 49.9,

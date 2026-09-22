@@ -52,6 +52,7 @@ não deve mudar: quem consulta estoque é que vai depender daqui.
 | [RT-EST-009](RT-EST-009-codigo-de-barras.md) — leitor de código de barras (HID) | implementada |
 | [RT-EST-010](RT-EST-010-sugestao-de-preco.md) — sugestão de preço, com chão de margem | implementada |
 | [RT-EST-011](RT-EST-011-aprovar-sugestao-de-preco.md) — aprovação humana, com trilha | implementada |
+| [RT-EST-012](RT-EST-012-queima-de-vencimento.md) — queima de lote perto do vencimento | implementada |
 
 ## Rotas
 

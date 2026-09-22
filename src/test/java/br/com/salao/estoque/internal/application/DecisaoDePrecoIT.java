@@ -333,7 +333,7 @@ class DecisaoDePrecoIT extends AbstractPostgresIT {
             assertThat(d.produto()).isEqualTo("Máscara 500g");
             assertThat(d.custoMedio()).isEqualByComparingTo("31.20");
             assertThat(d.motivo()).isEqualTo("MARGEM_ABAIXO_DO_MINIMO");
-            assertThat(d.racional()).contains("R$ 31,20").contains("30,0%");
+            assertThat(d.racional()).contains("R$\u00a031,20").contains("30,0%");
             assertThat(d.decididaEm()).isNotNull();
         });
     }

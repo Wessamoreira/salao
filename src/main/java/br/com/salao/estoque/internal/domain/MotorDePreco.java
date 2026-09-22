@@ -39,9 +39,12 @@ public final class MotorDePreco {
      * @param precoAtual    nulo é cadastro sem preço de venda, que é um dos motivos de sugerir
      * @param diasSemVenda  desde a última venda; desde o primeiro movimento quando nunca vendeu. Nulo
      *                      quando o produto nunca se moveu
+     * @param diasParaVencer RT-EST-012 — até o vencimento do lote <strong>válido</strong> mais próximo
+     *                      que ainda tem unidades. Nulo quando nenhum lote com saldo tem validade, ou
+     *                      todos já venceram — lote vencido não se vende, e não entra na queima
      */
     public record Produto(UUID id, String nome, Money custoMedio, Money precoAtual,
-                          BigDecimal saldo, Integer diasSemVenda) {
+                          BigDecimal saldo, Integer diasSemVenda, Integer diasParaVencer) {
     }
 
     public record Sugestao(UUID produtoId, MotivoDaSugestao motivo, Money precoAtual,
@@ -53,6 +56,9 @@ public final class MotorDePreco {
     public static final int DIAS_PARA_ENCALHAR = 60;
     public static final BigDecimal SALDO_PARA_ENCALHAR = new BigDecimal("3");
 
+    /** RT-EST-012 — decisão do dono: a janela do alerta de vencimento que o estoque já usa. */
+    public static final int DIAS_DE_QUEIMA = 30;
+
     /** Decisão do dono: "margem muito acima" é o dobro da mínima. */
     public static final BigDecimal FATOR_DA_MARGEM_ALTA = new BigDecimal("2");
 
@@ -63,10 +69,17 @@ public final class MotorDePreco {
         if (produto.custoMedio() == null || produto.custoMedio().valor().signum() <= 0) {
             return Optional.empty();
         }
-        Money chao = ReguaDePreco.arredondar(comMargem(produto.custoMedio(), margemMinima));
         Money precoAtual = produto.precoAtual();
         BigDecimal margemAtual = precoAtual == null ? null
                 : margem(precoAtual, produto.custoMedio());
+
+        // RT-EST-012 — antes de tudo, e sem cair nos motivos seguintes: o seguinte seria "margem
+        // abaixo do mínimo", que manda SUBIR o preço de algo que vence em duas semanas (RN-EST-038).
+        if (emQueima(produto)) {
+            return queimar(produto, margemMinima, precoAtual, margemAtual);
+        }
+
+        Money chao = ReguaDePreco.arredondar(comMargem(produto.custoMedio(), margemMinima));
 
         if (precoAtual == null || margemAtual.compareTo(margemMinima) < 0) {
             return sugerir(produto, MotivoDaSugestao.MARGEM_ABAIXO_DO_MINIMO, chao, margemAtual,
@@ -109,6 +122,56 @@ public final class MotorDePreco {
         return Optional.empty();
     }
 
+    private static boolean emQueima(Produto produto) {
+        return produto.diasParaVencer() != null
+                && produto.diasParaVencer() >= 0
+                && produto.diasParaVencer() <= DIAS_DE_QUEIMA;
+    }
+
+    /**
+     * O preço de queima: o chão desce em degraus até o custo médio (RN-EST-037).
+     *
+     * <p>Só sugere se ficar abaixo do preço de hoje. Se não fica — o produto já é vendido barato —, não
+     * sugere nada: a alternativa seria cair em "margem abaixo do mínimo" e mandar subir.
+     */
+    private static Optional<Sugestao> queimar(Produto produto, BigDecimal margemMinima,
+                                              Money precoAtual, BigDecimal margemAtual) {
+        int dias = produto.diasParaVencer();
+        BigDecimal margemDaQueima = margemMinima.multiply(fatorDaQueima(dias));
+        Money alvo = ReguaDePreco.arredondar(comMargem(produto.custoMedio(), margemDaQueima));
+        if (precoAtual != null && !alvo.menorQue(precoAtual)) {
+            return Optional.empty();
+        }
+        String degrau = dias <= 7
+                ? "Na última semana a queima vai até o custo médio de " + reais(produto.custoMedio())
+                : "A " + dias + " dias do vencimento, a queima admite margem de "
+                        + percentual(margemDaQueima) + " sobre o custo médio de "
+                        + reais(produto.custoMedio());
+        return sugerir(produto, MotivoDaSugestao.QUEIMA_DE_VENCIMENTO, alvo, margemAtual,
+                "Lote vence em " + dias + (dias == 1 ? " dia" : " dias") + ", com "
+                        + produto.saldo().stripTrailingZeros().toPlainString()
+                        + " em estoque. " + degrau + "; " + reais(alvo) + " na régua.");
+    }
+
+    /**
+     * Quanto da margem mínima a queima ainda exige, pela distância até o vencimento.
+     *
+     * <p>Degraus, e não linha contínua: um preço que muda todo dia exigiria uma aprovação por dia. Em
+     * degrau, o dono decide quatro vezes no pior caso.
+     */
+    static BigDecimal fatorDaQueima(int diasParaVencer) {
+        if (diasParaVencer <= 7) {
+            return BigDecimal.ZERO;
+        }
+        if (diasParaVencer <= 14) {
+            return new BigDecimal("0.25");
+        }
+        if (diasParaVencer <= 21) {
+            return new BigDecimal("0.50");
+        }
+        return new BigDecimal("0.75");
+    }
+
     private static Optional<Sugestao> sugerir(Produto produto, MotivoDaSugestao motivo,
                                               Money sugerido, BigDecimal margemAtual,
                                               String racional) {
@@ -146,8 +209,12 @@ public final class MotorDePreco {
                 .setScale(4, RoundingMode.HALF_UP);
     }
 
+    /**
+     * Com espaço inseparável, como o {@code Intl} do front: o racional é lido no celular, e "R$" no fim
+     * de uma linha com o número na seguinte se lê como dois pedaços.
+     */
     private static String reais(Money valor) {
-        return "R$ " + valor.valor().setScale(2, RoundingMode.HALF_UP).toPlainString()
+        return "R$\u00a0" + valor.valor().setScale(2, RoundingMode.HALF_UP).toPlainString()
                 .replace('.', ',');
     }
 

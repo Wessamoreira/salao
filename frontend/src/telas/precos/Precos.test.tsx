@@ -153,3 +153,20 @@ describe('sugestões de preço', () => {
     expect(screen.getByText(/Recusou R\$\s?59,90/)).toBeInTheDocument();
   });
 });
+
+describe('queima de vencimento (RT-EST-012)', () => {
+  it('a queima aparece com a etiqueta e a conta do degrau, como qualquer sugestão', async () => {
+    montar({ painel: { ...PAINEL, itens: [{ ...SUGESTAO, id: 's0',
+      motivo: 'QUEIMA_DE_VENCIMENTO', rotulo: 'Queima de vencimento',
+      precoAtual: 139.9, custoMedio: 100, precoSugerido: 109.9, margemAtual: 39.9,
+      margemSugerida: 9.9,
+      racional: 'Lote vence em 5 dias, com 10 em estoque. Na última semana a queima vai até o custo médio de R$ 100,00; R$ 109,90 na régua.' }] } });
+
+    expect(await screen.findByText('Queima de vencimento')).toBeInTheDocument();
+    expect(screen.getByText(/vence em 5 dias/)).toBeInTheDocument();
+    expect(screen.getByText('9,9% de margem')).toBeInTheDocument();
+    // O cartão diz o motivo para a cor: vermelho, com a etiqueta ao lado.
+    expect(screen.getByText('Queima de vencimento').closest('li'))
+      .toHaveAttribute('data-motivo', 'QUEIMA_DE_VENCIMENTO');
+  });
+});

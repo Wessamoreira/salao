@@ -791,3 +791,59 @@ ideia? Decide de novo na rodada seguinte, e as duas ficam.
 **Rotinas.** RT-EST-011 · **Teste.** `DecisaoDePrecoIT.trilha_congela`, `.imutavel`,
 `.decidir_duas_vezes`, `.isolamento`, `.sem_permissao_de_preco`
 **Configurável?** Não · **Origem.** 2026-09-20, decisão do dono
+
+### RN-EST-037 — Na queima de vencimento o chão desce, em degraus, até o custo médio — e só nela
+
+**Enunciado.** Com o lote a até 30 dias do vencimento, o chão da sugestão desce em quatro degraus pela
+distância até vencer: 3/4 da margem mínima (30 a 22 dias), metade (21 a 15), 1/4 (14 a 8) e **zero —
+o custo médio** (7 ou menos). O preço passa pela régua de 9,90, para cima. A aprovação aceita, para
+este motivo e só para ele, qualquer preço a partir do custo médio. Abaixo do custo, nem a queima.
+
+**Motivo.** Dez unidades com custo de R$ 31,20 são R$ 312 que viram zero no dia do vencimento; vender
+a preço de custo recupera os R$ 312. É a única exceção ao chão de margem no sistema, e fica visível — o
+motivo aparece no cartão, na decisão e na trilha. Custo **médio**, e não o do lote que vence, porque o
+preço é do produto: pelo custo do lote barato, as unidades do lote caro sairiam no prejuízo quando ele
+acabasse. Degraus, e não linha contínua, porque um preço que muda todo dia exigiria uma aprovação por
+dia.
+
+**Onde é garantida.** `MotorDePreco.queimar`, `.fatorDaQueima` · `MotivoDaSugestao.chaoNoCusto` ·
+`DecidirSugestaoDePrecoUseCase.conferirChao` (o chão vem do motivo gravado na sugestão, não de um
+parâmetro que a tela possa mandar).
+**Rotinas.** RT-EST-012 · **Teste.** `QueimaDeVencimentoTest.ultima_semana_no_custo`, `.quatro_degraus`,
+`.bordas_dos_degraus`, `.nunca_abaixo_do_custo`, `.so_a_queima_desce_ao_custo`,
+`QueimaDeVencimentoIT.queima_aprova_abaixo_da_margem`, `.queima_nao_vai_abaixo_do_custo`,
+`.excecao_so_da_queima`
+**Configurável?** A margem mínima de onde os degraus partem · **Origem.** 2026-09-21, decisão do dono
+
+### RN-EST-038 — A queima vem antes dos outros motivos, e produto que vai vencer nunca recebe sugestão de subir
+
+**Enunciado.** A queima é avaliada primeiro e aparece primeiro na lista. Se o preço de queima não fica
+abaixo do de hoje, o motor **não sugere nada** para o produto — em vez de cair nos motivos seguintes.
+
+**Motivo.** O motivo seguinte seria "margem abaixo do mínimo", que manda **subir** o preço — e subir o
+preço de algo que vence em duas semanas é trabalhar contra a queima. Primeiro na lista porque é
+dinheiro que vira zero numa data marcada.
+
+**Onde é garantida.** `MotorDePreco.avaliar` (a queima antes da cascata) ·
+`SugestoesDePrecoJdbc.abertas` (a ordem).
+**Rotinas.** RT-EST-012 · **Teste.** `QueimaDeVencimentoTest.nunca_sobe`, `.vem_primeiro`,
+`.nunca_abaixo_do_custo` (que também confere que ela nunca sobe), `QueimaDeVencimentoIT.nao_sobe_o_que_vence`,
+`.queima_primeiro`
+**Configurável?** Não · **Origem.** 2026-09-21
+
+### RN-EST-039 — A queima olha o lote válido mais próximo com unidades, até 30 dias; vencido fica de fora
+
+**Enunciado.** Entra na queima o lote que ainda tem unidades, tem validade impressa e vence em até 30
+dias — a janela do alerta de vencimento (RT-EST-008). Lote já vencido não entra: cosmético vencido não
+se vende. Lote sem validade também não. Com mais de um lote, manda o que vence primeiro.
+
+**Motivo.** A baixa sai sempre do lote que vence primeiro (FEFO, RT-EST-004), então baixar o preço do
+produto vende primeiro o lote que está vencendo — é o que torna honesto aplicar a queima no preço de
+prateleira, que não sabe de lote. O vencido continua no alerta, que é onde ele pede atenção. Uma janela
+só para "está perto de vencer" em todo o sistema.
+
+**Onde é garantida.** `SugestoesDePrecoJdbc.produtosAAvaliar` (o `vence_em`) ·
+`MotorDePreco.emQueima`.
+**Rotinas.** RT-EST-012 · **Teste.** `QueimaDeVencimentoTest.janela`, `.vencido_fica_de_fora`,
+`QueimaDeVencimentoIT.fora_da_janela`, `.vencido_nao_queima`, `.lote_mais_proximo`, `.sem_validade`
+**Configurável?** Não · **Origem.** 2026-09-21, decisão do dono

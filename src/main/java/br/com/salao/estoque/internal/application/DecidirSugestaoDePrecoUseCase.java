@@ -1,6 +1,7 @@
 package br.com.salao.estoque.internal.application;
 
 import br.com.salao.estoque.api.ErrosDoEstoque;
+import br.com.salao.estoque.internal.domain.MotivoDaSugestao;
 import br.com.salao.estoque.internal.domain.MotorDePreco;
 import br.com.salao.estoque.internal.infra.DecisoesDePrecoJdbc;
 import br.com.salao.estoque.internal.infra.PoliticaDePrecoJdbc;
@@ -77,7 +78,7 @@ public class DecidirSugestaoDePrecoUseCase {
             throw new ErroDeDominio(ErrosDoEstoque.DADOS_INVALIDOS,
                     "o preço precisa ser maior que zero");
         }
-        conferirChao(aplicado, sugestao.custoMedio());
+        conferirChao(aplicado, sugestao.custoMedio(), sugestao.motivo());
 
         definirPreco.executar(sugestao.produtoId(), aplicado);
         registrar(sugestao, "APLICADA", aplicado.valor(), null);
@@ -110,7 +111,20 @@ public class DecidirSugestaoDePrecoUseCase {
                         "sugestão " + sugestaoId + " não encontrada ou já decidida"));
     }
 
-    private void conferirChao(Money aplicado, BigDecimal custoMedio) {
+    /**
+     * RT-EST-012: na queima de vencimento o chão é o próprio custo médio — margem zero, sem
+     * prejuízo. É a única exceção ao chão de margem, e ela vem do motivo gravado na sugestão, não de
+     * um parâmetro que a tela possa mandar (RN-EST-037).
+     */
+    private void conferirChao(Money aplicado, BigDecimal custoMedio, MotivoDaSugestao motivo) {
+        if (motivo.chaoNoCusto()) {
+            if (aplicado.menorQue(new Money(custoMedio))) {
+                throw new ErroDeDominio(ErrosDoEstoque.PRECO_ABAIXO_DO_MINIMO,
+                        "na queima de vencimento o preço pode ir até o custo médio, e não abaixo: "
+                                + reais(custoMedio));
+            }
+            return;
+        }
         BigDecimal margemMinima = politica.margemMinima()
                 .orElseThrow(() -> new ErroDeDominio(ErrosDoEstoque.SEM_POLITICA_DE_PRECO,
                         "defina a margem mínima antes de decidir"));
