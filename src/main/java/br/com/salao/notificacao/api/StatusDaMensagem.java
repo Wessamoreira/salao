@@ -14,5 +14,10 @@ public enum StatusDaMensagem {
     /** O provedor recusou depois de todas as tentativas. */
     FALHOU,
     /** Consentimento negado ou revogado. Não é falha: é a LGPD funcionando. */
-    BLOQUEADA
+    BLOQUEADA,
+    /**
+     * Não havia provedor de envio configurado. Final, e não "espera o provedor chegar": um lembrete de
+     * um horário de três semanas atrás não pode disparar no dia em que alguém ligar o WhatsApp.
+     */
+    SEM_PROVEDOR
 }

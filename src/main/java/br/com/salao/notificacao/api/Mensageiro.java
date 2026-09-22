@@ -14,6 +14,18 @@ package br.com.salao.notificacao.api;
 public interface Mensageiro {
 
     /**
+     * Se este mensageiro entrega de verdade.
+     *
+     * <p>Sem valor padrão, e de propósito: toda implementação precisa responder. Um padrão
+     * {@code true} deixaria o próximo mensageiro de mentira passar por entrega sem ninguém decidir
+     * nada — que é exatamente o defeito que esta pergunta existe para impedir.
+     *
+     * <p>Falso faz o despachante gravar {@code SEM_PROVEDOR} e nem chamar {@link #enviar}. É a mesma
+     * pergunta que o {@code EnviadorDoWhatsApp} da fila da equipe já fazia (RT-CNV-006).
+     */
+    boolean configurado();
+
+    /**
      * @param destino telefone em E.164 ou e-mail, conforme o canal
      * @throws FalhaDeEnvio quando não foi possível entregar agora
      */

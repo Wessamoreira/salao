@@ -6,10 +6,14 @@ import br.com.salao.conversacional.internal.application.FalhaPermanente;
 /**
  * RT-CNV-006 — sem provedor de envio, nada sai: as mensagens esperam na fila.
  *
- * <p>Diferente do {@code MensageiroDeRegistro} da notificação, que registra no log e marca como
- * enviada, este não finge. Uma resposta marcada ENVIADA sem ter saído é a pior mentira desta fila: a
+ * <p>Este não finge. Uma resposta marcada ENVIADA sem ter saído é a pior mentira desta fila: a
  * recepção esperando um "marcado" que o sistema diz ter mandado. Esperando, a fila mostra o que falta
  * — e quando o provedor entrar, entrega o que ficou.
+ *
+ * <p>O {@code MensageiroDeRegistro} da notificação fingia — registrava no log e deixava marcar
+ * ENVIADA — e foi corrigido em 21/09/2026 pela mesma pergunta, {@code configurado()}. Lá, porém, a
+ * mensagem não espera: fica {@code SEM_PROVEDOR}, final, porque um lembrete vencido não pode disparar
+ * quando o provedor chegar. Aqui a espera faz sentido: o "marcado" continua servindo à recepção.
  */
 public class EnviadorNaoConfigurado implements EnviadorDoWhatsApp {
 

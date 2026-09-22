@@ -44,6 +44,13 @@ class NotificacaoIT extends AbstractPostgresIT {
     static class MensageiroDeTeste implements Mensageiro {
         final List<String> enviados = new CopyOnWriteArrayList<>();
         volatile int falharAsProximas;
+        /** Desligado, faz o papel do mensageiro de produção de hoje: nenhum provedor. */
+        volatile boolean configurado = true;
+
+        @Override
+        public boolean configurado() {
+            return configurado;
+        }
 
         @Override
         public void enviar(CanalDeEnvio canal, String destino, String texto) {
@@ -279,6 +286,86 @@ class NotificacaoIT extends AbstractPostgresIT {
             try (var rs = ps.executeQuery()) {
                 rs.next();
                 return rs.getInt(1);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ sem provedor (21/09/2026)
+
+    @Test
+    @DisplayName("sem provedor, a mensagem diz que NÃO saiu — e o envio nem é chamado")
+    void sem_provedor_nao_finge() throws SQLException {
+        teste().enviados.clear();
+        UUID tenant = salao();
+        UUID marilda = cliente(tenant, "11987654321");
+        teste().configurado = false;
+        try {
+            TenantContext.executar(tenant, () -> enfileirar.enfileirar(marilda,
+                    Finalidade.LEMBRETE_DE_AGENDAMENTO, CanalDeEnvio.WHATSAPP,
+                    "lembrete-de-agendamento", parametrosDoLembrete(), UUID.randomUUID()));
+
+            assertThat(despachante.executar()).isZero();
+        } finally {
+            teste().configurado = true;
+        }
+
+        assertThat(statusDe(tenant)).isEqualTo(StatusDaMensagem.SEM_PROVEDOR);
+        assertThat(enviadaEm(tenant)).isNull();
+        assertThat(teste().enviados).isEmpty();
+    }
+
+    @Test
+    @DisplayName("SEM_PROVEDOR é final: ligar o provedor depois não dispara o lembrete vencido")
+    void sem_provedor_e_final() throws SQLException {
+        teste().enviados.clear();
+        UUID tenant = salao();
+        UUID marilda = cliente(tenant, "11987654321");
+        teste().configurado = false;
+        try {
+            TenantContext.executar(tenant, () -> enfileirar.enfileirar(marilda,
+                    Finalidade.LEMBRETE_DE_AGENDAMENTO, CanalDeEnvio.WHATSAPP,
+                    "lembrete-de-agendamento", parametrosDoLembrete(), UUID.randomUUID()));
+            despachante.executar();
+        } finally {
+            teste().configurado = true;
+        }
+
+        // O provedor chega.
+        despachante.executar();
+
+        assertThat(statusDe(tenant)).isEqualTo(StatusDaMensagem.SEM_PROVEDOR);
+        assertThat(teste().enviados).isEmpty();
+    }
+
+    @Test
+    @DisplayName("enviada de verdade leva a data do envio, e o banco não aceita ENVIADA sem ela")
+    void enviada_tem_data() throws SQLException {
+        UUID tenant = salao();
+        UUID marilda = cliente(tenant, "11987654321");
+        TenantContext.executar(tenant, () -> enfileirar.enfileirar(marilda,
+                Finalidade.LEMBRETE_DE_AGENDAMENTO, CanalDeEnvio.WHATSAPP,
+                "lembrete-de-agendamento", parametrosDoLembrete(), UUID.randomUUID()));
+        despachante.executar();
+
+        assertThat(statusDe(tenant)).isEqualTo(StatusDaMensagem.ENVIADA);
+        assertThat(enviadaEm(tenant)).isNotNull();
+
+        try (var st = comoOwner().createStatement()) {
+            Throwable erro = org.assertj.core.api.Assertions.catchThrowable(() -> st.executeUpdate(
+                    "update mensagem set enviada_em = null where status = 'ENVIADA' "
+                            + "and estabelecimento_id = '" + tenant + "'"));
+            assertThat(erro).isNotNull().hasMessageContaining("mensagem_enviada_tem_data");
+        }
+    }
+
+    private java.time.OffsetDateTime enviadaEm(UUID tenant) throws SQLException {
+        try (var ps = comoOwner().prepareStatement(
+                "select enviada_em from mensagem where estabelecimento_id = ? order by criado_em "
+                        + "desc limit 1")) {
+            ps.setObject(1, tenant);
+            try (var rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getObject(1, java.time.OffsetDateTime.class);
             }
         }
     }

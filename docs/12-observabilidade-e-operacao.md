@@ -24,6 +24,7 @@ conteúdo de mensagem de cliente.
 | `cache.gets` / hit rate do Caffeine | Gatilho objetivo para migrar a Redis (< 70%) |
 | `cache.listener.up` | `LISTEN/NOTIFY` caído = preço velho silencioso (R-09) |
 | Tamanho e idade da fila do outbox | Notificação que não sai (R-12) |
+| Mensagens `SEM_PROVEDOR` | Correção de RT-NOT-001 (21/09/2026). `warn` a cada rodada que encontra mensagem sem provedor: `Notificação: N mensagem(ns) NÃO enviada(s) — nenhum provedor de envio configurado`. Enquanto não houver provedor, é o esperado; depois de ligar um, qualquer ocorrência é o provedor desconfigurado |
 | Falha de webhook por origem | WhatsApp perdendo mensagem |
 | Custo de LLM por estabelecimento por dia | Teto da Fase 4 (R-17). Tabela `consumo_de_ia`; métrica `conversacional_agente_total{desfecho}` (`recusada_teto` é o corte) |
 | Saída para a equipe | RT-CNV-006. `conversacional_saida_total{desfecho=enviada\|adiada\|falhou}`, e o tamanho de `mensagem_para_equipe` pendente — sem provedor, ele só cresce, e é o que avisa que ninguém está recebendo resposta |

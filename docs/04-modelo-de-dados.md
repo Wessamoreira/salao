@@ -414,6 +414,10 @@ alvo tem no máximo uma resolução valendo, e pode ter várias ao longo do temp
 reescreve — `revoke update, delete`, com `grant update` só das três colunas da reabertura. O razão passa a
 aceitar `CONCILIACAO` como origem, e é por ela que a reabertura estorna o ajuste.
 
+A correção de RT-NOT-001 (`V65`) acrescenta `SEM_PROVEDOR` aos estados de `mensagem` — final, para
+mensagem que não saiu porque não havia provedor —, reclassifica como tal toda `ENVIADA` anterior
+(o único mensageiro que existia nunca entregou nada) e passa a exigir `enviada_em` em toda `ENVIADA`.
+
 RT-EST-012 (`V64`) não cria tabela: a queima de vencimento é o quinto motivo de sugestão, e
 `sugestao_de_preco.motivo` e `decisao_de_preco.motivo` passam a aceitar `QUEIMA_DE_VENCIMENTO`.
 

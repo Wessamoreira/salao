@@ -8,10 +8,13 @@ import org.slf4j.LoggerFactory;
 /**
  * RT-NOT-001 — o mensageiro que não manda nada, só registra.
  *
- * <p>É a implementação de hoje, e ela é honesta sobre o que é: nenhum provedor está contratado,
- * nenhuma credencial existe, e o módulo inteiro — fila, template, retry, opt-out — funciona e é
- * testável sem isso. Trocar por um provedor real é implementar {@link Mensageiro} e mudar uma linha
- * de configuração.
+ * <p>É a implementação de hoje: nenhum provedor está contratado, nenhuma credencial existe, e o
+ * módulo inteiro — fila, template, retry, opt-out — funciona e é testável sem isso. Trocar por um
+ * provedor real é implementar {@link Mensageiro} e mudar uma linha de configuração.
+ *
+ * <p><strong>Até 21/09/2026 ele mentia</strong>: voltava normalmente de {@link #enviar}, e o
+ * despachante gravava ENVIADA. Toda mensagem do sistema aparecia como enviada sem ter saído. Agora
+ * ele responde {@link #configurado()} falso, e a mensagem fica {@code SEM_PROVEDOR}.
  *
  * <p><strong>Não registra o texto.</strong> O log não tem RLS, é lido por quem opera a máquina e
  * costuma ir para fora do perímetro — e o texto carrega nome e horário da cliente. O que vai para o
@@ -20,6 +23,11 @@ import org.slf4j.LoggerFactory;
 public class MensageiroDeRegistro implements Mensageiro {
 
     private static final Logger log = LoggerFactory.getLogger(MensageiroDeRegistro.class);
+
+    @Override
+    public boolean configurado() {
+        return false;
+    }
 
     @Override
     public void enviar(CanalDeEnvio canal, String destino, String texto) {

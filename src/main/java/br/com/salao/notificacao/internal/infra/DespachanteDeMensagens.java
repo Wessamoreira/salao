@@ -35,6 +35,13 @@ import tools.jackson.databind.ObjectMapper;
  * cliente receberia o lembrete duas vezes — o mesmo problema do agendamento duplicado, resolvido
  * pelo mesmo lugar: o banco.
  *
+ * <h2>Sem provedor, a mensagem diz que não saiu</h2>
+ *
+ * <p>Correção de 21/09/2026. O mensageiro de registro voltava normalmente de {@code enviar}, e isto
+ * aqui tratava a volta como entrega: toda mensagem virava ENVIADA sem ter saído. Agora a pergunta
+ * vem antes — {@link Mensageiro#configurado()} — e a resposta "não" grava {@code SEM_PROVEDOR}, sem
+ * nem chamar o envio. Estado final: um lembrete vencido não dispara no dia em que o provedor chegar.
+ *
  * <h2>Falhar é normal</h2>
  *
  * <p>Provedor fora do ar, limite de taxa, número inválido. Tudo vira "tenta de novo mais tarde",
@@ -100,6 +107,16 @@ public class DespachanteDeMensagens {
                         rs.getInt("tentativas")))
                 .list();
 
+        // A pergunta é feita uma vez por rodada, antes de montar texto ou gastar tentativa.
+        if (!mensageiro.configurado()) {
+            lote.forEach(mensagem -> marcarSemProvedor(mensagem.id()));
+            if (!lote.isEmpty()) {
+                log.warn("Notificação: {} mensagem(ns) NÃO enviada(s) — nenhum provedor de envio "
+                        + "configurado", lote.size());
+            }
+            return 0;
+        }
+
         int enviadas = 0;
         for (NaFila mensagem : lote) {
             if (tentar(mensagem, agora)) {
@@ -119,7 +136,7 @@ public class DespachanteDeMensagens {
                     .preencher(mensagem.parametros());
 
             mensageiro.enviar(mensagem.canal(), mensagem.destino(), texto);
-            marcarEnviada(mensagem.id());
+            marcarEnviada(mensagem.id(), agora);
             return true;
         } catch (RuntimeException e) {
             registrarFalha(mensagem, agora, e);
@@ -152,9 +169,25 @@ public class DespachanteDeMensagens {
         }
     }
 
-    private void marcarEnviada(UUID id) {
+    /**
+     * Com o instante da aplicação, e não {@code now()} do banco: é a mesma lição do
+     * {@code proxima_tentativa_em} (RN-INF-006), que tinha escapado justamente aqui.
+     */
+    private void marcarEnviada(UUID id, Instant agora) {
         manutencao.jdbc().sql("""
-                update mensagem set status = 'ENVIADA', enviada_em = now(), ultimo_erro = null
+                update mensagem set status = 'ENVIADA', enviada_em = ?, ultimo_erro = null
+                 where id = ?
+                """)
+                .param(OffsetDateTime.ofInstant(agora, ZoneOffset.UTC))
+                .param(id)
+                .update();
+    }
+
+    /** Final: não há próxima tentativa, e {@code enviada_em} fica nulo — não houve envio. */
+    private void marcarSemProvedor(UUID id) {
+        manutencao.jdbc().sql("""
+                update mensagem
+                   set status = 'SEM_PROVEDOR', ultimo_erro = 'nenhum provedor de envio configurado'
                  where id = ?
                 """)
                 .param(id)

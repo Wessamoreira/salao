@@ -97,3 +97,22 @@ não existe.
 `LembradorDeAgendamentosIT.recem_marcado_nao_lembra`,
 `LembradorDeAgendamentosIT.cancelado_nao_lembra`
 **Configurável?** Ainda não, e deveria ser por salão · **Origem.** 2026-09-05
+
+### RN-NOT-005 — Mensagem que não saiu não diz que saiu
+
+**Enunciado.** Todo `Mensageiro` responde se entrega de verdade (`configurado()`, sem valor padrão).
+Sem provedor, o despachante grava `SEM_PROVEDOR` — **final** — sem chamar o envio e sem preencher
+`enviada_em`. `ENVIADA` exige a data do envio, que vem do relógio da aplicação.
+
+**Motivo.** Até 21/09/2026 toda mensagem aparecia como enviada sem ter saído, e o salão concluía que a
+cliente tinha ignorado um lembrete que nunca chegou. Final, e não "espera o provedor", porque lembrete
+tem prazo: o de um horário de três semanas atrás não pode disparar no dia em que alguém ligar o
+WhatsApp (decisão do dono). É a diferença deliberada em relação à fila da equipe (RT-CNV-006), onde o
+"marcado" continua servindo depois.
+
+**Onde é garantida.** `Mensageiro.configurado` · `MensageiroDeRegistro` · `DespachanteDeMensagens`
+(`marcarSemProvedor`, `marcarEnviada`) · `V65` (o estado, a reclassificação do passado e o `check`
+`mensagem_enviada_tem_data`).
+**Rotinas.** RT-NOT-001 (correção) · **Teste.** `MensageiroDeRegistroTest.nao_finge_que_entrega`,
+`NotificacaoIT.sem_provedor_nao_finge`, `.sem_provedor_e_final`, `.enviada_tem_data`
+**Configurável?** Não · **Origem.** 2026-09-21, decisão do dono

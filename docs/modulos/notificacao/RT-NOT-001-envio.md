@@ -101,12 +101,52 @@ o padrão para substituição.
 hora, mas eu só descobri depois de escrever a rotina inteira — conferir o último número passou a
 ser o primeiro passo.
 
+## 8b. Correção de 21/09/2026 — o mensageiro mentia
+
+**Toda mensagem do sistema aparecia como enviada sem ter saído.** O `MensageiroDeRegistro` voltava
+normalmente de `enviar`, e o despachante tratava a volta como entrega: `status = 'ENVIADA'`,
+`enviada_em` preenchido. Lembrete de agendamento, comprovante, tudo. O custo era concreto: a cliente
+diz "não recebi o lembrete", o salão vê "enviada" e conclui que ela ignorou.
+
+Estava escrito no próprio contrato da porta — *"uma implementação que engolisse o erro e devolvesse
+sucesso [...] a mensagem seria marcada como entregue sem ter saído"* — e a única implementação de
+produção fazia exatamente isso. O módulo conversacional (RT-CNV-006) resolveu o mesmo problema na fila
+dele meses depois, citando este mensageiro como o exemplo a não seguir, e a correção nunca voltou para
+cá. Achado ao planejar a chamada automática da fila de espera (RT-AGD-010), cuja própria doc dizia que
+registrar "oferta enviada" sem enviar grava uma mentira.
+
+**A correção:**
+
+- `Mensageiro.configurado()`, **sem valor padrão**: toda implementação precisa responder se entrega de
+  verdade. Um padrão `true` deixaria o próximo mensageiro de mentira passar sem ninguém decidir nada.
+- Sem provedor, o despachante grava **`SEM_PROVEDOR`** e nem chama o envio. Estado **final**, e essa é
+  a diferença em relação à fila da equipe: lá a mensagem espera o provedor, porque o "marcado" continua
+  servindo; aqui um lembrete de três semanas atrás não pode disparar no dia em que alguém ligar o
+  WhatsApp. Decisão do dono.
+- `V65` reclassifica o passado: toda linha `ENVIADA` passou pelo único mensageiro que existia, e ele
+  nunca entregou nada. `enviada_em` volta a nulo, e um `check` passa a exigir a data em toda `ENVIADA`.
+- `enviada_em` passa a vir do `Relogio` da aplicação, e não de `now()` do banco — a mesma lição do
+  `proxima_tentativa_em` (seção 4), que tinha escapado justamente no método de marcar envio.
+
+**Mutações da correção** — uma rodada, 5 mutações, cada uma sozinha. **5 mortas**.
+
+| # | Mutação | Morta por |
+|---|---|---|
+| M01 | o mensageiro de registro volta a se dizer configurado | `MensageiroDeRegistroTest.nao_finge_que_entrega` |
+| M02 | o despachante não pergunta se há provedor | `NotificacaoIT.sem_provedor_nao_finge` |
+| M03 | sem provedor, a mensagem fica pendente em vez de final | `.sem_provedor_nao_finge`, `.sem_provedor_e_final` |
+| M04 | `ENVIADA` gravada sem data de envio | `NotificacaoIT.enviada_tem_data` |
+| M05 | o `check` de `V65` some e o banco aceita `ENVIADA` sem data | `NotificacaoIT.enviada_tem_data` |
+
 ## 9. Testes
 
 - [x] `ModeloTest` — 8: preenche · **faltar parâmetro é erro, não buraco** · sobrar também é ·
       parâmetro repetido · **valor com cifrão** · modelo precisa de nome e texto · **a espera dobra
       e para de dobrar** · desiste na quinta
-- [x] `NotificacaoIT` — 10: enfileira e despacha com o texto montado · **o mesmo fato não vira duas
+- [x] `MensageiroDeRegistroTest` — 1: o mensageiro de produção de hoje **não se diz configurado**
+- [x] `NotificacaoIT` — 13 (+3 na correção: **sem provedor a mensagem diz que não saiu, e o envio nem é
+      chamado** · **`SEM_PROVEDOR` é final** · enviada leva data, e o banco recusa `ENVIADA` sem ela):
+      enfileira e despacha com o texto montado · **o mesmo fato não vira duas
       mensagens** · **marketing sem consentimento vira BLOQUEADA** · **o lembrete dispensa
       consentimento** · com consentimento passa · **provedor fora do ar não perde a mensagem** ·
       a falha adia em vez de repetir · modelo desconhecido · **parâmetro faltando é recusado agora,
@@ -114,7 +154,8 @@ ser o primeiro passo.
 
 ## 10. Pendências
 
-- [ ] **Nenhum provedor real.** O port existe e a implementação de hoje só registra. Ligar o
+- [ ] **Nenhum provedor real.** O port existe e a implementação de hoje só registra — e, desde
+      21/09/2026, diz isso: as mensagens ficam `SEM_PROVEDOR`, e não `ENVIADA`. Ligar o
       WhatsApp Business exige conta, credencial e **modelos aprovados previamente pela Meta** — o
       que muda o catálogo de modelos de "código" para "código espelhando o que foi aprovado lá"
 - [ ] **Modelos não são editáveis pelo salão.** É uma boa ideia e traz junto uma pergunta que
