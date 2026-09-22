@@ -33,6 +33,12 @@ COPY --from=extrator --chown=salao:salao /extracao/saida/spring-boot-loader/ ./
 COPY --from=extrator --chown=salao:salao /extracao/saida/snapshot-dependencies/ ./
 COPY --from=extrator --chown=salao:salao /extracao/saida/application/ ./
 
+# Os dois diretórios que recebem volume em produção existem AQUI, com dono certo.
+# Volume nomeado novo herda conteúdo e dono do que a imagem tem no ponto de montagem;
+# se o diretório não existisse, o Docker o criaria como root e a aplicação (uid 100)
+# não escreveria nele — a ficha da cliente falharia no primeiro upload, em produção.
+RUN mkdir -p /dados/arquivos /app/logs && chown -R salao:salao /dados /app/logs
+
 USER salao
 
 EXPOSE 8080 9090
@@ -45,7 +51,13 @@ ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC -XX:+ExitOnOutOf
 
 # Aponta para a porta de GERENCIAMENTO (RT-INF-008), não para a da aplicação.
 # O readiness real inclui os health indicators de outbox e ouvinte de cache.
-HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=3 \
-  CMD wget -q --spider http://localhost:9090/actuator/health/readiness || exit 1
+#
+# 127.0.0.1 e NÃO localhost: o actuator escuta no endereço IPv4 de loopback
+# (management.server.address, RT-INF-008), e dentro do contêiner `localhost`
+# resolve primeiro para ::1 — o wget do BusyBox tentava o IPv6, levava "connection
+# refused" e o contêiner nunca ficava healthy. Com `up -d --wait` no deploy, isso é
+# pipeline vermelho para sempre; num orquestrador, reinício em laço.
+HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=3 \
+  CMD wget -q --spider http://127.0.0.1:9090/actuator/health/readiness || exit 1
 
 ENTRYPOINT ["java", "org.springframework.boot.loader.launch.JarLauncher"]

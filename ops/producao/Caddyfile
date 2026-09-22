@@ -1,0 +1,32 @@
+# RT-INF-009 — a porta da rua.
+#
+# O Caddy tira e renova o certificado sozinho. A aplicação não publica porta:
+# tudo entra por aqui.
+
+{
+	email {$EMAIL_TLS}
+	# O painel de administração do Caddy não tem o que fazer numa VM exposta.
+	admin off
+}
+
+{$DOMINIO} {
+	encode zstd gzip
+
+	# O actuator fica na 9090 e escuta só em 127.0.0.1 dentro do contêiner
+	# (RT-INF-008): não há como alcançá-lo daqui, e é isso que se quer.
+	reverse_proxy app:8080
+
+	# Cabeçalhos que o navegador respeita e não custam nada. HSTS com um ano:
+	# o domínio é só desta aplicação, e ela é HTTPS desde o primeiro dia.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

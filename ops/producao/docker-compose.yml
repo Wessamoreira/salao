@@ -1,0 +1,145 @@
+# RT-INF-009 — produção: o que sobe na VM.
+#
+# Vai para /opt/salao/docker-compose.yml na máquina, junto com .env, Caddyfile e
+# backup.sh (runbook `subir-em-producao.md`). O pipeline faz `docker compose pull`
+# e `up -d --wait` por SSH, nesta pasta.
+#
+# O de desenvolvimento (docker-compose.dev.yml, na raiz) NÃO serve aqui: ele publica
+# portas na máquina inteira, traz MinIO e Mailpit e usa senha conhecida.
+#
+# Decisões do dono, 22/09/2026: banco no mesmo compose com volume; Caddy terminando
+# HTTPS; dump diário guardado sete dias na própria máquina.
+
+name: salao
+
+services:
+  # ---------------------------------------------------------------------------
+  # A aplicação. Nenhuma porta publicada: quem fala com a internet é o Caddy, e
+  # quem alcança a 8080 é só quem está nesta rede.
+  # ---------------------------------------------------------------------------
+  app:
+    image: ${IMAGEM:-ghcr.io/wessamoreira/salao}:${TAG:-main}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-salao}
+      DB_OWNER_USER: ${DB_OWNER_USER:-salao_owner}
+      DB_OWNER_PASSWORD: ${DB_OWNER_PASSWORD:?defina no .env}
+      DB_APP_PASSWORD: ${DB_APP_PASSWORD:?defina no .env}
+      DB_MANUTENCAO_PASSWORD: ${DB_MANUTENCAO_PASSWORD:?defina no .env}
+      JWT_SEGREDO: ${JWT_SEGREDO:?defina no .env}
+      CRIPTO_CHAVE: ${CRIPTO_CHAVE:?defina no .env}
+      CORS_ORIGENS: ${CORS_ORIGENS:-}
+      # Ligado porque NADA alcança a aplicação sem passar pelo Caddy: não há porta
+      # publicada. É a condição que o runbook de provisionamento exige antes de
+      # confiar no X-Forwarded-For (sem ela, o limite de taxa deixa de existir).
+      ATRAS_DE_PROXY: "true"
+      WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
+      WHATSAPP_TOKEN_VERIFICACAO: ${WHATSAPP_TOKEN_VERIFICACAO:-}
+      WHATSAPP_TOKEN_ACESSO: ${WHATSAPP_TOKEN_ACESSO:-}
+      AGENTE_CHAVE_API: ${AGENTE_CHAVE_API:-}
+      # Os arquivos (ficha, foto) iam para /tmp pelo padrão da aplicação, e sumiam
+      # no restart. Aqui eles têm volume.
+      APP_ARQUIVOS_RAIZ: /dados/arquivos
+    volumes:
+      - salao-arquivos:/dados/arquivos
+      # O JSON estruturado (ECS) que uma coleta futura vai ler. O stdout continua
+      # sendo o texto de `docker logs`, com rotação logo abaixo.
+      - salao-logs:/app/logs
+    # Sem isto o log de contêiner enche o disco da VM pequena, e o sintoma aparece
+    # como "o banco parou de gravar".
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+    deploy:
+      resources:
+        limits:
+          memory: ${APP_MEMORIA:-1g}
+
+  # ---------------------------------------------------------------------------
+  # Postgres 18. O volume vai em /var/lib/postgresql, NÃO em .../data — a imagem
+  # recusa subir com dados no caminho antigo (a lição de RT-INF-009).
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-salao}
+      POSTGRES_USER: ${DB_OWNER_USER:-salao_owner}
+      POSTGRES_PASSWORD: ${DB_OWNER_PASSWORD:?defina no .env}
+    volumes:
+      - salao-pg:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_OWNER_USER:-salao_owner} -d ${POSTGRES_DB:-salao}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # ---------------------------------------------------------------------------
+  # HTTPS. O Caddy tira o certificado sozinho e renova sem ninguém lembrar — que
+  # é o modo de falha real de certificado: expira num domingo.
+  # ---------------------------------------------------------------------------
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [app]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMINIO: ${DOMINIO:?defina no .env}
+      EMAIL_TLS: ${EMAIL_TLS:?defina no .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # O certificado vive aqui. Sem o volume, cada restart pede um certificado
+      # novo e o Let's Encrypt barra por limite de emissão.
+      - caddy-dados:/data
+      - caddy-config:/config
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  # ---------------------------------------------------------------------------
+  # Dump diário, sete dias na própria máquina (decisão do dono, 22/09/2026).
+  #
+  # Protege contra erro humano — o `delete` sem `where`, a importação errada —, e
+  # NÃO contra perder a máquina. Quando houver bucket, o mesmo script ganha o envio
+  # para fora, e é ele que o teste de restore (runbook) passa a usar.
+  # ---------------------------------------------------------------------------
+  backup:
+    image: postgres:18
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGUSER: ${DB_OWNER_USER:-salao_owner}
+      PGPASSWORD: ${DB_OWNER_PASSWORD:?defina no .env}
+      PGDATABASE: ${POSTGRES_DB:-salao}
+      RETENCAO_DIAS: ${BACKUP_RETENCAO_DIAS:-7}
+    volumes:
+      - ./backup.sh:/backup.sh:ro
+      - salao-backups:/backups
+    # Volume nomeado nasce como root; o `chown` é a única coisa que precisa de root
+    # aqui, e o gosu entrega o resto para o usuário postgres. Um contêiner com a
+    # senha do dono do banco não tem por que rodar como root a vida inteira.
+    entrypoint: ["/bin/bash", "-c", "chown postgres /backups && exec gosu postgres bash /backup.sh"]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  salao-pg:
+  salao-arquivos:
+  salao-logs:
+  salao-backups:
+  caddy-dados:
+  caddy-config:

@@ -35,7 +35,9 @@ test-results/
 # Segredos — NUNCA versionar (ver docs/05-seguranca-multitenancy-lgpd.md)
 .env
 .env.*
-!.env.example
+# O modelo é versionado de propósito: ele não tem valor nenhum dentro, e é o que
+# diz quais variáveis existem. O `.env` de verdade continua fora.
+!.env.exemplo
 *.pem
 *.key
 *.p12

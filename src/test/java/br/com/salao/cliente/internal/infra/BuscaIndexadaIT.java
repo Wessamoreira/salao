@@ -67,6 +67,27 @@ class BuscaIndexadaIT extends AbstractPostgresIT {
         }
     }
 
+    @Test
+    @DisplayName("a normalização funciona com search_path vazio — é assim que o restore roda")
+    void normalizacao_sobrevive_ao_restore() throws SQLException {
+        // O teste de restore de RT-INF-009 (22/09/2026) mostrou que o dump restaurava SEM a
+        // tabela cliente: `imutavel_unaccent` chamava `unaccent` sem qualificar o schema, e o
+        // pg_restore roda com search_path vazio de propósito. O CREATE TABLE falhava no inlining
+        // da coluna gerada, o pg_restore seguia em frente, e o banco restaurado ficava sem
+        // clientes — sem nada parecer quebrado até alguém abrir a tela.
+        try (Statement st = comoOwner().createStatement()) {
+            st.execute("set search_path = ''");
+            try (var rs = st.executeQuery("select public.imutavel_unaccent('João Conceição')")) {
+                assertThat(rs.next()).isTrue();
+                assertThat(rs.getString(1)).isEqualTo("Joao Conceicao");
+            }
+        } finally {
+            try (Statement st = comoOwner().createStatement()) {
+                st.execute("set search_path = public");
+            }
+        }
+    }
+
     /**
      * Sem {@code ANALYZE} o planejador decide com estatística de tabela recém-criada, que é quase
      * um chute — foi assim que a primeira versão deste teste passou sem provar nada.

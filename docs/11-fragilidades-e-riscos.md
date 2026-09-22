@@ -93,11 +93,24 @@ encerrada vira linha imutável em `acao_ia`, e o painel de revisão separa as bl
 **Por que é real:** capacidade A1 em `sa-saopaulo-1` é notoriamente escassa e a disponibilidade
 varia.
 **Mitigação:** decidir a infra na Fase 0, não na hora do deploy. Plano B: AWS `t4g.small` ou VPS
-ARM equivalente. A imagem já é multi-arch, então o custo de trocar é o DNS.
+ARM equivalente. A imagem já é multi-arch — e em 22/09/2026 isso deixou de ser promessa: as duas
+arquiteturas foram construídas de fato. O custo de trocar é o DNS.
+
+**Onde está em 22/09/2026:** decisão do dono de seguir **sem máquina** por enquanto. O job de deploy
+fica pulado (não vermelho), e o procedimento inteiro está escrito e verificado rodando localmente
+(`docs/runbook/subir-em-producao.md`). O risco não sumiu: ele espera, com a receita pronta.
 
 ---
 
 ## Médios
+
+### R-11b · Backup que não sai da máquina
+**Dano:** perder a VM é perder o salão inteiro — agenda, comandas e fichas.
+**Por que é real:** o dump diário (RT-INF-009, 22/09/2026) fica no mesmo disco, sete dias. Protege
+contra erro humano e contra nada mais.
+**Mitigação:** enviar o dump para um bucket fora da máquina. Está escrito como pendência da rotina,
+e o teste mensal de restore (`docs/runbook/restore.md`) passa a usar essa cópia quando ela existir.
+**Já pago:** o restore foi testado, e revelou um dump que restaurava sem a tabela de clientes.
 
 ### R-12 · `event_publication` crescendo sem limite
 Tabela do outbox do Modulith sem expurgo enche o disco em silêncio. Job de limpeza + alerta de

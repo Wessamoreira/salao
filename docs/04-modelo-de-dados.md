@@ -414,6 +414,13 @@ alvo tem no máximo uma resolução valendo, e pode ter várias ao longo do temp
 reescreve — `revoke update, delete`, com `grant update` só das três colunas da reabertura. O razão passa a
 aceitar `CONCILIACAO` como origem, e é por ela que a reabertura estorna o ajuste.
 
+A correção do teste de restore (`V67`) reescreve `imutavel_unaccent` qualificando o schema:
+`public.unaccent('public.unaccent'::regdictionary, $1)`. Sem isso o `pg_restore` — que roda com
+`search_path` vazio — não conseguia criar `cliente`, porque a coluna gerada `busca` inlineia essa
+função. O dump restaurava sem a tabela de clientes e seguia em frente. Nada de `set search_path` na
+função: função com `SET` não é inlineada, e é o inlining que mantém a coluna gerada e o índice
+trigram baratos.
+
 RT-AGD-010 (`V66`) liga o cancelamento à fila. `vaga_aberta` é o tempo que abriu — profissional,
 janela, origem (`CANCELAMENTO` ou `REAGENDAMENTO`) e o agendamento que o liberou —, gravada na mesma
 transação de quem cancela; `chamada_da_fila` é cada ligação da recepção, com o resultado, o
