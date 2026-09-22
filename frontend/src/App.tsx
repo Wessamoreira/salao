@@ -15,6 +15,7 @@ import { Configuracao } from './telas/config/Configuracao';
 import { RevisaoDoAgente } from './telas/agente/RevisaoDoAgente';
 import { Conciliacao } from './telas/conciliacao/Conciliacao';
 import { Precos } from './telas/precos/Precos';
+import { Fila } from './telas/fila/Fila';
 import { EmBreve } from './telas/EmBreve';
 import { Conectividade } from './pwa/Conectividade';
 
@@ -70,6 +71,7 @@ export function App() {
               {/* As telas de negócio chegam nas rotinas das fases 1 a 3. A casca existe
                   para que cada uma entre sem mexer em rota, sessão ou permissão. */}
               <Route path="/agenda" element={<Agenda />} />
+              <Route path="/fila" element={<Fila />} />
               <Route path="/comandas" element={<Comandas />} />
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/estoque" element={<EmBreve titulo="Estoque" rotina="RT-EST-001" />} />

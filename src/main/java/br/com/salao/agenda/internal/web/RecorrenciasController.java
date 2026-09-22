@@ -1,15 +1,18 @@
 package br.com.salao.agenda.internal.web;
 
+import br.com.salao.agenda.api.EsperaNaFila;
 import br.com.salao.agenda.api.Frequencia;
 import br.com.salao.agenda.api.SerieCriada;
 import br.com.salao.agenda.internal.application.CriarRecorrenciaUseCase;
 import br.com.salao.agenda.internal.application.EncerrarRecorrenciaUseCase;
+import br.com.salao.agenda.internal.application.EnfileirarDiaDaSerieUseCase;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.net.URI;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -33,11 +36,14 @@ public class RecorrenciasController {
 
     private final CriarRecorrenciaUseCase criar;
     private final EncerrarRecorrenciaUseCase encerrar;
+    private final EnfileirarDiaDaSerieUseCase enfileirar;
 
     public RecorrenciasController(CriarRecorrenciaUseCase criar,
-                                  EncerrarRecorrenciaUseCase encerrar) {
+                                  EncerrarRecorrenciaUseCase encerrar,
+                                  EnfileirarDiaDaSerieUseCase enfileirar) {
         this.criar = criar;
         this.encerrar = encerrar;
+        this.enfileirar = enfileirar;
     }
 
     public record CriarSerieRequest(
@@ -67,5 +73,17 @@ public class RecorrenciasController {
     public Map<String, Integer> encerrar(@PathVariable UUID id,
                                          @Valid @RequestBody EncerrarRequest req) {
         return Map.of("canceladas", encerrar.executar(id, req.motivo()));
+    }
+
+    /** RT-AGD-010 — um dia que não coube vai para a fila; um por vez, por decisão do dono. */
+    public record DiaNaFilaRequest(@NotNull LocalDate dia) {
+    }
+
+    @PostMapping("/{id}/fila-de-espera")
+    public ResponseEntity<EsperaNaFila> porDiaNaFila(@PathVariable UUID id,
+                                                     @Valid @RequestBody DiaNaFilaRequest req) {
+        EsperaNaFila espera = enfileirar.executar(id, req.dia());
+        return ResponseEntity.created(URI.create("/api/v1/fila-de-espera/" + espera.id()))
+                .body(espera);
     }
 }

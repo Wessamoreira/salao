@@ -84,6 +84,10 @@ public class ConsultarCapacidadesUseCase {
                 || permissoes.contains(Permissao.AGENDA_LER_TODAS)) {
             menus.add(new Capacidades.Menu("agenda", "Agenda", "/agenda", "calendario", "operacao"));
         }
+        // RT-AGD-010 — quem liga é quem registra: a tela é de quem escreve na agenda de todos.
+        if (permissoes.contains(Permissao.AGENDA_ESCREVER_TODAS)) {
+            menus.add(new Capacidades.Menu("fila", "Fila de espera", "/fila", "ampulheta", "operacao"));
+        }
         if (permissoes.contains(Permissao.COMANDA_ABRIR)) {
             menus.add(new Capacidades.Menu("atendimento", "Atendimento", "/comandas", "tesoura", "operacao"));
         }

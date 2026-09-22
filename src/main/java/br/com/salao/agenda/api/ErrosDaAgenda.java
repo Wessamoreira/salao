@@ -116,7 +116,7 @@ public enum ErrosDaAgenda implements CodigoDeErro {
             "Dados da espera inválidos"),
 
     /**
-     * A mesma cliente já está na fila para o mesmo serviço.
+     * A mesma cliente já está na fila para o mesmo serviço, em dias que se sobrepõem (RN-AGD-028).
      *
      * <p>Duas entradas seriam duas ligações pela mesma vaga — e a segunda é a que faz o salão
      * parecer desorganizado justamente com quem já está esperando.
@@ -125,7 +125,33 @@ public enum ErrosDaAgenda implements CodigoDeErro {
             "Esta cliente já está na fila para este serviço"),
 
     ESPERA_NAO_ENCONTRADA("ER-AGD-ESPERA_NAO_ENCONTRADA", HttpStatus.NOT_FOUND,
-            "Espera não encontrada");
+            "Espera não encontrada"),
+
+    VAGA_NAO_ENCONTRADA("ER-AGD-VAGA_NAO_ENCONTRADA", HttpStatus.NOT_FOUND,
+            "Vaga não encontrada"),
+
+    /** O horário da vaga já acabou: não há mais o que oferecer. */
+    VAGA_ENCERRADA("ER-AGD-VAGA_ENCERRADA", HttpStatus.CONFLICT,
+            "O horário desta vaga já passou"),
+
+    /**
+     * A espera não é candidata desta vaga (RN-AGD-025) — a tela estava velha, ou alguém no balcão
+     * tomou o horário.
+     */
+    ESPERA_NAO_CABE("ER-AGD-ESPERA_NAO_CABE", HttpStatus.CONFLICT,
+            "Esta espera não cabe mais nesta vaga"),
+
+    /** RN-AGD-026 — chamar fora da ordem de chegada sem dizer por quê. */
+    PULO_SEM_MOTIVO("ER-AGD-PULO_SEM_MOTIVO", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Chamar fora da ordem exige motivo"),
+
+    /** RN-AGD-027 — "aceitou" sem um horário que seja desta candidata nesta vaga. */
+    HORARIO_FORA_DA_VAGA("ER-AGD-HORARIO_FORA_DA_VAGA", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Horário fora desta vaga"),
+
+    /** O dia não é de uma ocorrência da série, ou a série já tem agendamento nele. */
+    DIA_FORA_DA_SERIE("ER-AGD-DIA_FORA_DA_SERIE", HttpStatus.UNPROCESSABLE_ENTITY,
+            "Este dia não é um dia da série que ficou de fora");
 
     private final String codigo;
     private final HttpStatus status;

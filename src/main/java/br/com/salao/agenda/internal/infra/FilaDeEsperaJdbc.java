@@ -15,9 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * RT-AGD-010 — persistência da fila de espera.
  *
- * <p>A consulta de candidatos filtra no banco o que dá para filtrar por índice — serviço,
+ * <p>A consulta das esperas de uma vaga filtra no banco o que dá para filtrar por índice —
  * profissional e intervalo de dias — e deixa a faixa de hora para o domínio
- * ({@code EsperaNaFila.serve}). A hora é comparada em relógio de parede no fuso do salão, e um
+ * ({@code CandidatasDaVaga}). A hora é comparada em relógio de parede no fuso do salão, e um
  * {@code where} sobre isso exigiria converter o instante dentro do SQL, com o fuso vindo de outra
  * tabela: mais fácil de errar e impossível de testar sem banco.
  */
@@ -25,7 +25,7 @@ public class FilaDeEsperaJdbc {
 
     private static final String CAMPOS = """
             id, cliente_id, servico_id, profissional_id, aceita_de, aceita_ate,
-            hora_de, hora_ate, observacao, criado_em
+            hora_de, hora_ate, observacao, criado_em, recorrencia_id
             """;
 
     private static final String NA_FILA = " atendida_em is null and desistiu_em is null ";
@@ -41,9 +41,9 @@ public class FilaDeEsperaJdbc {
         return jdbc.sql("""
                 insert into fila_espera (estabelecimento_id, cliente_id, servico_id,
                                          profissional_id, aceita_de, aceita_ate, hora_de,
-                                         hora_ate, observacao, criado_por)
+                                         hora_ate, observacao, criado_por, recorrencia_id)
                 values (:estabelecimento, :cliente, :servico, :profissional, :de, :ate, :horaDe,
-                        :horaAte, :observacao, :criadoPor)
+                        :horaAte, :observacao, :criadoPor, :recorrencia)
                 returning id
                 """)
                 .param("estabelecimento", estabelecimentoId)
@@ -56,6 +56,7 @@ public class FilaDeEsperaJdbc {
                 .param("horaAte", espera.horaAte())
                 .param("observacao", espera.observacao())
                 .param("criadoPor", criadoPor)
+                .param("recorrencia", espera.recorrenciaId())
                 .query(UUID.class)
                 .single();
     }
@@ -78,24 +79,21 @@ public class FilaDeEsperaJdbc {
     }
 
     /**
-     * Os candidatos a uma vaga, já filtrados por serviço, profissional e dia.
+     * Quem está na fila e aceita este dia com esta profissional — o insumo das candidatas de uma
+     * vaga (RN-AGD-025).
      *
-     * <p>A faixa de hora fica para o domínio: ver o javadoc da classe.
-     *
-     * <p>Ordem de chegada. Sem isso, "quem avisamos primeiro" viraria a ordem em que o banco
-     * devolveu — e a cliente que espera há duas semanas ficaria atrás da que entrou ontem.
+     * <p>Sem filtro de serviço: qualquer serviço que caiba serve, e quem decide se cabe é a
+     * disponibilidade. A faixa de hora fica para o domínio: ver o javadoc da classe.
      */
     @Transactional(readOnly = true)
-    public List<EsperaNaFila> candidatosA(UUID servicoId, UUID profissionalId, LocalDate dia) {
+    public List<EsperaNaFila> naFilaParaODia(UUID profissionalId, LocalDate dia) {
         return jdbc.sql("select " + CAMPOS + """
                   from fila_espera
-                 where servico_id = :servico
-                   and (profissional_id is null or profissional_id = :profissional)
+                 where (profissional_id is null or profissional_id = :profissional)
                    and :dia between aceita_de and aceita_ate
                    and""" + NA_FILA + """
-                 order by criado_em
+                 order by criado_em, id
                 """)
-                .param("servico", servicoId)
                 .param("profissional", profissionalId)
                 .param("dia", dia)
                 .query(FilaDeEsperaJdbc::mapear)
@@ -129,6 +127,7 @@ public class FilaDeEsperaJdbc {
                 rs.getObject("hora_de", LocalTime.class),
                 rs.getObject("hora_ate", LocalTime.class),
                 rs.getString("observacao"),
-                rs.getObject("criado_em", OffsetDateTime.class).toInstant());
+                rs.getObject("criado_em", OffsetDateTime.class).toInstant(),
+                rs.getObject("recorrencia_id", UUID.class));
     }
 }

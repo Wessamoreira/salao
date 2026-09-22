@@ -88,6 +88,17 @@
         "previa:precos"
       ],
       "port": 5174
+    },
+    {
+      "name": "previa-fila",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "previa:fila"
+      ],
+      "port": 5174
     }
   ]
 }

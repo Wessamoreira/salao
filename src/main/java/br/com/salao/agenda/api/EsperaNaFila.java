@@ -15,6 +15,8 @@ import java.util.UUID;
  *
  * @param profissionalId quem ela quer, ou {@code null} para "qualquer um" — que é o caso em que a
  *                       fila mais funciona, porque qualquer cancelamento serve
+ * @param recorrenciaId  a série de onde veio, quando é um dia dela que não coube (RT-AGD-009); nulo
+ *                       na entrada comum
  */
 public record EsperaNaFila(
         UUID id,
@@ -26,7 +28,8 @@ public record EsperaNaFila(
         LocalTime horaDe,
         LocalTime horaAte,
         String observacao,
-        Instant criadoEm) {
+        Instant criadoEm,
+        UUID recorrenciaId) {
 
     public EsperaNaFila {
         if (clienteId == null || servicoId == null) {

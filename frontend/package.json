@@ -19,7 +19,8 @@
     "previa:sistema": "vite --port 5174 --open /preview/sistema.html",
     "previa:agente": "vite --port 5174 --open /preview/agente.html",
     "previa:conciliacao": "vite --port 5174 --open /preview/conciliacao.html",
-    "previa:precos": "vite --port 5174 --open /preview/precos.html"
+    "previa:precos": "vite --port 5174 --open /preview/precos.html",
+    "previa:fila": "vite --port 5174 --open /preview/fila.html"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",

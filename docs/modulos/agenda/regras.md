@@ -166,20 +166,28 @@ usuário com `agenda:write:all` registrando atendimento já ocorrido.
 
 ---
 
-### RN-AGD-009 — Cancelamento libera a vaga para a fila de espera
+### RN-AGD-009 — Cancelar e reagendar abrem a vaga; a recepção chama
 
-**Enunciado.** Cancelar publica `AgendamentoCancelado`, que **carrega a janela liberada**
-(profissional, serviço, início e fim). O primeiro da fila compatível é notificado e tem TTL para
-responder antes do próximo.
+**Enunciado.** Cancelar (RT-AGD-005) e reagendar (RT-AGD-003) gravam uma `vaga_aberta` com a
+profissional e a janela liberada, **na mesma transação** da mudança. Tempo liberado que já está
+inteiro dentro de uma vaga aberta da mesma profissional não grava outra. A vaga não é fechada por
+ninguém: deixa de aparecer quando o horário passa ou quando ninguém da fila cabe mais.
 
-*(Revisado em RT-AGD-005: o enunciado dizia `VagaLiberada`, um segundo evento. Seriam dois eventos
-com o mesmo conteúdo no mesmo instante — `AgendamentoCancelado` já carrega tudo de que a fila
-precisa, e buscar o agendamento de volta não serviria, porque ele acabou de deixar de existir para
-a agenda.)*
+A chamada é da **recepção**, que registra o resultado de cada ligação (RN-AGD-026, RN-AGD-027).
 
-**Onde é garantida.** `CancelarAgendamentoUseCase` publica; `ChamarFilaEsperaUseCase` consome.
-**Rotinas.** RT-AGD-005, RT-AGD-010 · **Configurável?** Sim — fila pode ser desligada por
-estabelecimento. · **Origem.** 2026-08-28
+*(Revisado em 22/09/2026, decisão do dono. O enunciado original dizia que o primeiro da fila seria
+notificado com prazo para responder. Não há provedor de WhatsApp ligado, e uma oferta automática
+ficaria `SEM_PROVEDOR` (RN-NOT-005) sem chegar a ninguém. O ouvinte assíncrono de
+`AgendamentoCancelado` também saiu: seria o próprio módulo, noutra thread, gravando uma linha que a
+transação de origem grava sozinha — e o reagendamento não publica a janela antiga inteira.)*
+
+**Onde é garantida.** `CancelarAgendamentoUseCase` e `ReagendarUseCase` chamam
+`VagasAbertasJdbc.abrir`; a leitura filtra `fim > agora`.
+**Rotinas.** RT-AGD-005, RT-AGD-003, RT-AGD-010 · **Teste.** `VagaAbertaIT.cancelar_abre_vaga`,
+`VagaAbertaIT.reagendar_abre_vaga`, `VagaAbertaIT.reagendar_sem_liberar_nao_abre_vaga`,
+`VagaAbertaIT.cancelamento_recusado_nao_abre_vaga`,
+`VagaAbertaIT.vaga_dentro_de_vaga_nao_duplica`, `VagaAbertaIT.vaga_passada_some_e_recusa_chamada`
+**Configurável?** Não · **Origem.** 2026-08-28, revisada em 2026-09-22
 
 ---
 
@@ -535,9 +543,11 @@ em instante: "quinta à tarde" é uma frase sobre o relógio da parede, e compar
 faixa escorregar uma hora na virada do horário de verão. Por isso o banco filtra serviço,
 profissional e dias, e o domínio decide a hora.
 
-**Onde é garantida.** `FilaDeEsperaJdbc.candidatosA` (índice) · `EsperaNaFila.serve` (domínio).
-**Rotinas.** RT-AGD-010 · **Teste.** `FilaDeEsperaIT.janela_vencida_some_sozinha`,
-`EsperaNaFilaTest.hora_de_parede_e_nao_instante`, `EsperaNaFilaTest.faixa_de_hora`
+**Onde é garantida.** `FilaDeEsperaJdbc.naFilaParaODia` (índice) · `EsperaNaFila.serve` e
+`CandidatasDaVaga` (domínio).
+**Rotinas.** RT-AGD-010 · **Teste.** `VagaAbertaIT.janela_de_dias_filtra`,
+`CandidatasDaVagaTest.dia_da_janela`, `EsperaNaFilaTest.hora_de_parede_e_nao_instante`,
+`EsperaNaFilaTest.faixa_de_hora`
 **Configurável?** Por espera, é a própria janela · **Origem.** 2026-09-04
 
 ---
@@ -565,3 +575,87 @@ apareceria numa tela pendurada na parede.
 **Rotinas.** RT-AGD-012 · **Teste.** `PainelDeEventosTest.tenant_separa_as_conexoes`,
 `PainelDeEventosTest.painel_quebrado_sai_da_lista`
 **Configurável?** Não · **Origem.** 2026-09-05
+
+---
+
+### RN-AGD-025 — Quem cabe é quem a disponibilidade aceita, começando dentro da vaga
+
+**Enunciado.** Uma espera é candidata de uma vaga quando existe, para o **serviço dela** e a
+**profissional da vaga**, um horário da disponibilidade de RT-AGD-001 que:
+
+1. **começa dentro da vaga** (`inicio <= horário < fim`);
+2. cai num dia da janela da espera e, havendo faixa, começa dentro dela — em relógio de parede;
+3. é da profissional que a espera pediu, ou de qualquer uma se ela não pediu;
+4. está no futuro.
+
+O serviço da espera **não precisa** ser o que cancelou.
+
+**Motivo.** Decisão do dono (22/09/2026): "qualquer serviço que caiba". Casar só o mesmo serviço
+desperdiçava a vaga longa — a coloração de duas horas cancelada não servia para quem espera um
+corte. E "caber" não é conta de minutos: é a mesma disponibilidade que a recepção vê, com jornada,
+bloqueio, pausa e recurso. "Começa dentro da vaga" separa o tempo que abriu do que já estava livre.
+
+**Onde é garantida.** `CandidatasDaVaga` (domínio) · `ConsultarVagasAbertasUseCase` consulta a
+disponibilidade uma vez por serviço e dia.
+**Rotinas.** RT-AGD-010 · **Teste.** `CandidatasDaVagaTest`, `VagaAbertaIT.cancelar_abre_vaga`,
+`VagaAbertaIT.so_cabe_o_que_a_disponibilidade_aceita`, `VagaAbertaIT.recurso_tomado_nao_cabe`
+**Configurável?** Não · **Origem.** 2026-09-22
+
+---
+
+### RN-AGD-026 — A ordem de chegada vale; pular exige motivo
+
+**Enunciado.** As candidatas de uma vaga vêm na ordem em que entraram na fila. Registrar chamada
+para uma candidata quando há outra **antes dela ainda sem chamada nesta vaga** exige
+`motivoDoPulo` (3 a 300 caracteres), gravado na chamada. "Não atendeu" conta como chamada.
+
+Quem recusa ou não atende **continua na fila**: recusou aquele horário, não a espera.
+
+**Motivo.** Decisão do dono (22/09/2026). Ordem rígida emperraria o balcão — "a primeira só pode de
+manhã" é conhecimento real da recepção. Ordem livre faria a cliente que espera há duas semanas
+perder a vez para a que entrou ontem, sem que ninguém soubesse por quê. O motivo gravado é o meio
+termo: a exceção existe, e fica à vista.
+
+**Onde é garantida.** `RegistrarChamadaDaFilaUseCase` · `chamada_da_fila` só aceita `insert`.
+**Rotinas.** RT-AGD-010 · **Teste.** `VagaAbertaIT.pular_sem_motivo_e_recusado`,
+`VagaAbertaIT.pular_com_motivo_fica_gravado`, `VagaAbertaIT.nao_atendeu_conta_como_chamada`,
+`VagaAbertaIT.recusou_continua_na_fila`, `CandidatasDaVagaTest.segunda_pula_a_primeira`
+**Configurável?** Não · **Origem.** 2026-09-22
+
+---
+
+### RN-AGD-027 — Aceitar é marcar
+
+**Enunciado.** A chamada `ACEITOU` cria o agendamento pelo caso de uso de RT-AGD-002, no horário
+escolhido — que precisa ser um dos horários daquela candidata naquela vaga —, e tira a espera da
+fila como **atendida**, na mesma transação. Se o agendamento é recusado (o horário foi tomado), a
+chamada não é gravada. O banco exige `agendamento_id` em toda `ACEITOU`, e só nela.
+
+**Motivo.** Um "aceitou" sem horário marcado é uma promessa que ninguém cumpre: a cliente chega na
+quinta e não está na agenda. E passar pelo caso de uso comum é o que traz a exclusion constraint
+junto — duas recepcionistas aceitando pessoas diferentes para o mesmo horário não viram duas
+clientes na mesma cadeira.
+
+**Onde é garantida.** `RegistrarChamadaDaFilaUseCase` · `check` de `chamada_da_fila`.
+**Rotinas.** RT-AGD-010, RT-AGD-002 · **Teste.** `VagaAbertaIT.aceitar_marca_e_tira_da_fila`,
+`VagaAbertaIT.horario_tomado_nao_grava_chamada`, `VagaAbertaIT.aceitar_sem_horario_da_vaga`
+**Configurável?** Não · **Origem.** 2026-09-22
+
+---
+
+### RN-AGD-028 — Uma espera por serviço e profissional em dias que se sobrepõem
+
+**Enunciado.** Enquanto na fila, a mesma cliente não tem duas esperas do mesmo serviço, com a mesma
+profissional (ou as duas com "qualquer uma"), **em intervalos de dias que se sobrepõem**. Em dias
+separados pode.
+
+**Motivo.** Duas esperas sobrepostas seriam duas ligações pela mesma vaga. Mas a regra antiga — um
+índice único que proibia a segunda espera em qualquer dia — impedia justamente o caso que RT-AGD-009
+devolve: três quintas de uma série que não couberam são três esperas legítimas, de um dia cada.
+
+**Onde é garantida.** `exclude using gist` em `fila_espera` (V66) — no banco, pela mesma razão da
+agenda: duas recepcionistas ao mesmo tempo.
+**Rotinas.** RT-AGD-010 · **Teste.** `FilaDeEsperaIT.sem_duplicata`,
+`FilaDeEsperaIT.sobreposicao_parcial_e_recusada`, `FilaDeEsperaIT.dias_separados_podem`,
+`VagaAbertaIT.dia_fora_da_serie`
+**Configurável?** Não · **Origem.** 2026-09-22

@@ -81,6 +81,11 @@ existir para a agenda.
 
 Fica registrado aqui para quem implementar RT-AGD-010.
 
+*(22/09/2026 — RT-AGD-010 acabou não consumindo o evento: o cancelamento grava a vaga aberta
+direto, na mesma transação. Seria o próprio módulo, noutra thread, gravando uma linha que a
+transação de origem grava sozinha. O evento continua carregando a janela para quem estiver fora do
+módulo.)*
+
 ## 7. `PATCH /cancelamento`, não `DELETE`
 
 `DELETE` seria a rota "natural" e está errada: cancelar não apaga nada. O agendamento cancelado é
@@ -101,7 +106,8 @@ justamente o registro que sustenta a conversa sobre quem desmarca demais.
       virar código: qual prazo, qual taxa, e quem pode dispensá-la
 - [ ] **Nada avisa a cliente.** O evento sai; `notificacao` não existe para consumi-lo, então ele
       não é durável (mesma situação de RT-AGD-002)
-- [ ] **A fila de espera não é chamada** — RT-AGD-010. O evento já carrega tudo de que ela precisa
+- [x] ~~**A fila de espera não é chamada**~~ — resolvida em RT-AGD-010 (22/09/2026): cancelar grava
+      a vaga aberta na mesma transação, e a Fila de espera mostra quem cabe nela
 - [ ] **Cancelamento em lote não existe** — "a Ana faltou hoje, cancele o dia dela" é uma operação
       real e seriam N transações independentes hoje. Parente de RT-AGD-008
 - [ ] **`agenda:write:own` continua fora**, pela mesma razão das rotinas anteriores

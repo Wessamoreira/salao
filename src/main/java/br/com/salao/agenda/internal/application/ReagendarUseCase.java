@@ -5,7 +5,9 @@ import br.com.salao.agenda.api.AgendamentoResumo;
 import br.com.salao.agenda.api.ErrosDaAgenda;
 import br.com.salao.agenda.api.Janela;
 import br.com.salao.agenda.api.StatusAgendamento;
+import br.com.salao.agenda.internal.domain.OrigemDaVaga;
 import br.com.salao.agenda.internal.infra.AgendaJdbc;
+import br.com.salao.agenda.internal.infra.VagasAbertasJdbc;
 import br.com.salao.catalogo.api.RecursoApi;
 import br.com.salao.catalogo.api.SequenciaDeBlocos;
 import br.com.salao.equipe.api.ProfissionalApi;
@@ -61,16 +63,20 @@ public class ReagendarUseCase {
     private final AuditoriaApi auditoria;
     private final ApplicationEventPublisher eventos;
     private final ReservaDeHorario reserva;
+    private final VagasAbertasJdbc vagas;
+    private final Relogio relogio;
 
     public ReagendarUseCase(ProfissionalApi equipe, RecursoApi recursos,
                             EstabelecimentoApi estabelecimentos, AgendaJdbc agenda,
-                            AuditoriaApi auditoria, ApplicationEventPublisher eventos,
-                            Relogio relogio) {
+                            VagasAbertasJdbc vagas, AuditoriaApi auditoria,
+                            ApplicationEventPublisher eventos, Relogio relogio) {
         this.equipe = equipe;
         this.estabelecimentos = estabelecimentos;
         this.agenda = agenda;
+        this.vagas = vagas;
         this.auditoria = auditoria;
         this.eventos = eventos;
+        this.relogio = relogio;
         this.reserva = new ReservaDeHorario(equipe, recursos, agenda, relogio);
     }
 
@@ -122,6 +128,8 @@ public class ReagendarUseCase {
             throw traduzir(e);
         }
 
+        abrirVaga(tenant, antes, profissionalId, montada.periodo());
+
         auditoria.registrar(RegistroDeAuditoria.alteracao("AGENDAMENTO_REAGENDADO", "agendamento",
                 antes.id(), trilha(antes.profissionalId(), antes.inicio(), antes.fim()),
                 comForcamentos(trilha(profissionalId, montada.periodo().inicio(),
@@ -133,6 +141,26 @@ public class ReagendarUseCase {
                 montada.periodo().inicio());
 
         return agenda.porId(antes.id()).orElseThrow();
+    }
+
+    /**
+     * RN-AGD-009 — reagendar libera o horário antigo tanto quanto cancelar.
+     *
+     * <p>Quando o horário novo, com a mesma profissional, cobre o antigo inteiro, nada foi
+     * liberado e não há vaga. Cobrindo só parte, a vaga é a janela antiga inteira: quem decide o que
+     * ficou livre nela é a disponibilidade, que já enxerga o horário novo.
+     */
+    private void abrirVaga(UUID tenant, AgendamentoResumo antes, UUID profissionalNovo,
+                           Janela novo) {
+        boolean cobreOAntigo = profissionalNovo.equals(antes.profissionalId())
+                && !novo.inicio().isAfter(antes.inicio()) && !novo.fim().isBefore(antes.fim());
+        if (cobreOAntigo) {
+            return;
+        }
+        vagas.abrir(tenant, antes.id(), OrigemDaVaga.REAGENDAMENTO,
+                        antes.profissionalId(), antes.inicio(), antes.fim(), relogio.agora())
+                .ifPresent(vaga -> log.info("Vaga {} aberta pelo reagendamento de {}: {} a {}",
+                        vaga, antes.id(), antes.inicio(), antes.fim()));
     }
 
     /**

@@ -1,0 +1,446 @@
+/*
+ * RT-AGD-010 — a fila de espera.
+ *
+ * A vaga é um cartão com uma lista numerada dentro: o número é a ordem de chegada, e é a única
+ * numeração da tela porque é a única sequência que existe. Sem cor de status — nada aqui é estado
+ * de agendamento. O que pede atenção é o que está no alto: vagas abertas, com quem ligar.
+ */
+
+.fil-tela {
+  display: grid;
+  gap: var(--e-8);
+}
+
+/* `minmax(0, 1fr)`: sem ele a tabela larga faz a coluna crescer além da tela, e a rolagem
+   horizontal, que devia ser só dela, vira da página inteira. */
+.fil-bloco {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--e-5);
+  padding: var(--e-6);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-3);
+}
+
+.fil-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--e-3) var(--e-6);
+}
+
+.fil-titulo {
+  margin: 0;
+  font-size: var(--t-20);
+  font-weight: var(--p-forte);
+  letter-spacing: var(--tr-titulo);
+}
+
+.fil-ajuda {
+  margin: var(--e-1) 0 0;
+  max-width: 78ch;
+  color: var(--tinta-fraca);
+  font-size: var(--t-14);
+}
+
+.fil-nada {
+  margin: 0;
+  padding: var(--e-5) 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-14);
+  text-align: center;
+}
+
+.fil-etiqueta {
+  margin: 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-10);
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+
+.fil-nota { color: var(--tinta-fraca); }
+
+.fil-invisivel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ as vagas */
+
+.fil-vagas {
+  display: grid;
+  gap: var(--e-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fil-vaga {
+  display: grid;
+  gap: var(--e-3);
+  padding: var(--e-4) var(--e-5) var(--e-2);
+  background: var(--papel-fundo);
+  border: 1px solid var(--regua);
+  border-radius: var(--raio-2);
+}
+
+.fil-vaga-cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e-1) var(--e-4);
+}
+
+.fil-vaga-quando {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e-1) var(--e-3);
+  margin: 0;
+  font-size: var(--t-16);
+  font-weight: var(--p-forte);
+}
+
+.fil-vaga-hora {
+  color: var(--tinta-fraca);
+  font-weight: var(--p-medio);
+  font-feature-settings: var(--numerais);
+}
+
+.fil-candidatas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * Três colunas: a posição, quem é, e o que aconteceu na ligação. No celular as ações descem para
+ * baixo do nome — a posição continua na frente, porque ela diz a quem ligar primeiro.
+ */
+.fil-candidata {
+  display: grid;
+  grid-template-columns: 2ch minmax(0, 1fr) auto;
+  gap: var(--e-1) var(--e-4);
+  align-items: start;
+  padding: var(--e-3) 0;
+  border-top: 1px solid var(--regua);
+}
+
+.fil-posicao {
+  padding-top: 2px;
+  color: var(--tinta-fraca);
+  font-size: var(--t-14);
+  font-weight: var(--p-forte);
+  font-feature-settings: var(--numerais);
+  text-align: right;
+}
+
+.fil-candidata-corpo {
+  display: grid;
+  gap: var(--e-1);
+  min-width: 0;
+}
+
+.fil-quem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e-1) var(--e-3);
+  margin: 0;
+}
+
+.fil-nome {
+  font-size: var(--t-16);
+  font-weight: var(--p-forte);
+}
+
+.fil-telefone {
+  color: var(--tinta);
+  font-size: var(--t-14);
+  font-feature-settings: var(--numerais);
+  text-decoration: underline;
+  text-decoration-color: var(--regua-forte);
+  text-underline-offset: 3px;
+}
+.fil-telefone:hover { text-decoration-color: var(--tinta); }
+
+.fil-detalhe {
+  margin: 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  font-feature-settings: var(--numerais);
+}
+
+.fil-chamadas {
+  display: grid;
+  gap: 2px;
+  margin: var(--e-1) 0 0;
+  padding: 0 0 0 var(--e-3);
+  border-left: 2px solid var(--regua-forte);
+  list-style: none;
+  font-size: var(--t-12);
+  font-feature-settings: var(--numerais);
+}
+
+.fil-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--e-2);
+}
+
+.fil-botao {
+  min-height: 32px;
+  padding: var(--e-1) var(--e-3);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+  cursor: pointer;
+}
+.fil-botao:hover:not(:disabled) { border-color: var(--tinta); }
+.fil-botao[aria-expanded='true'] {
+  color: var(--papel);
+  background: var(--tinta);
+  border-color: var(--tinta);
+}
+.fil-botao:disabled { opacity: 0.5; cursor: default; }
+
+.fil-erro {
+  grid-column: 2 / -1;
+  margin: 0;
+}
+
+/* O painel ocupa a linha inteira sob a candidata: o horário e o motivo são dela. */
+.fil-painel {
+  grid-column: 2 / -1;
+  display: grid;
+  gap: var(--e-3);
+  margin-top: var(--e-2);
+  padding: var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+.fil-painel .erro { margin: 0; }
+
+.fil-horarios {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.fil-horarios legend,
+.fil-motivo label {
+  margin-bottom: var(--e-2);
+  padding: 0;
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+}
+.fil-motivo label { display: block; }
+
+.fil-horarios-opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+}
+
+.fil-horario { position: relative; }
+.fil-horario input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.fil-horario span {
+  display: inline-block;
+  min-width: 7ch;
+  padding: var(--e-1) var(--e-3);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-1);
+  font-size: var(--t-14);
+  font-feature-settings: var(--numerais);
+  text-align: center;
+  cursor: pointer;
+}
+.fil-horario span:hover { border-color: var(--tinta); }
+.fil-horario input:checked + span {
+  color: var(--papel);
+  background: var(--tinta);
+  border-color: var(--tinta);
+}
+.fil-horario input:focus-visible + span { outline: 2px solid var(--foco); outline-offset: 2px; }
+
+.fil-motivo textarea {
+  display: block;
+  width: 100%;
+  padding: var(--e-2) var(--e-3);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-14);
+  resize: vertical;
+}
+.fil-motivo .fil-ajuda { font-size: var(--t-12); }
+
+.fil-painel-botoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-3);
+}
+
+/* ------------------------------------------------------------------ quem está esperando */
+
+/* `relative`: o rótulo invisível da coluna de ações é absoluto, e sem um ancestral posicionado ele
+   escapava da rolagem e alargava a página inteira no celular. */
+.fil-rolagem { position: relative; overflow-x: auto; }
+
+.fil-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-14);
+}
+.fil-tabela th {
+  padding: var(--e-2) var(--e-3);
+  color: var(--tinta-fraca);
+  font-size: var(--t-10);
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-align: left;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--regua-forte);
+  white-space: nowrap;
+}
+.fil-tabela td {
+  padding: var(--e-3);
+  vertical-align: top;
+  border-bottom: 1px solid var(--regua);
+}
+.fil-tabela td.fil-numero {
+  font-feature-settings: var(--numerais);
+  white-space: nowrap;
+}
+
+.fil-observacao {
+  display: block;
+  margin-top: 2px;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+}
+
+.fil-tabela td.fil-saida {
+  white-space: nowrap;
+  text-align: right;
+}
+.fil-saida .acao-discreta + .acao-discreta,
+.fil-saida .fil-botao + .acao-discreta { margin-left: var(--e-3); }
+.fil-saida .erro { white-space: normal; text-align: left; }
+
+/* ------------------------------------------------------------------ pôr na fila */
+
+.fil-formulario {
+  display: grid;
+  gap: var(--e-3);
+  padding: var(--e-5);
+  background: var(--papel-fundo);
+  border: 1px solid var(--regua);
+  border-radius: var(--raio-2);
+}
+
+.fil-formulario-grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+  gap: 0 var(--e-4);
+}
+.fil-formulario-grade .campo input,
+.fil-formulario-grade .campo select { font-feature-settings: var(--numerais); }
+
+.fil-campo-cliente,
+.fil-campo-largo { grid-column: 1 / -1; }
+
+.fil-escolhida {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e-1) var(--e-3);
+  min-height: 42px;
+  margin: 0;
+  padding-top: var(--e-2);
+  font-size: var(--t-16);
+  font-weight: var(--p-forte);
+}
+
+.fil-resultados {
+  display: grid;
+  margin: calc(-1 * var(--e-2)) 0 var(--e-4);
+  padding: 0;
+  list-style: none;
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+.fil-resultados li + li { border-top: 1px solid var(--regua); }
+.fil-resultados button {
+  width: 100%;
+  padding: var(--e-2) var(--e-3);
+  color: var(--tinta);
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: var(--t-14);
+  text-align: left;
+  cursor: pointer;
+}
+.fil-resultados button:hover { background: var(--papel-fundo); }
+
+/* As duas horas são uma faixa só: um rótulo, uma ajuda, dois campos. */
+.fil-faixa {
+  grid-column: span 2;
+  min-width: 0;
+  margin: 0 0 var(--e-4);
+  padding: 0;
+  border: 0;
+}
+.fil-faixa legend {
+  margin-bottom: var(--e-2);
+  padding: 0;
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+}
+.fil-faixa legend .fil-nota { font-weight: var(--p-normal); }
+.fil-faixa-campos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 var(--e-4);
+}
+.fil-faixa-campos .campo { margin-bottom: 0; }
+.fil-faixa-campos .campo > span:first-child {
+  color: var(--tinta-fraca);
+  font-weight: var(--p-normal);
+}
+
+@media (max-width: 640px) {
+  .fil-faixa { grid-column: 1 / -1; }
+  .fil-bloco { padding: var(--e-4); }
+  .fil-vaga { padding: var(--e-3) var(--e-4) var(--e-1); }
+  .fil-candidata { grid-template-columns: 2ch minmax(0, 1fr); }
+  /* No celular a coluna do nome é estreita demais para três botões e um painel: os dois ocupam a
+     largura inteira, e a posição continua sozinha na frente do nome. */
+  .fil-acoes,
+  .fil-painel,
+  .fil-erro { grid-column: 1 / -1; }
+  .fil-acoes { justify-content: flex-start; margin-top: var(--e-1); }
+  .fil-botao { min-height: 36px; padding-inline: var(--e-2); }
+}

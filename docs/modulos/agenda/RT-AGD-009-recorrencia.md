@@ -115,8 +115,9 @@ As que já aconteceram ficam onde estão: são o registro do que foi feito.
 - [ ] **Mensal não existe.** "Toda primeira sexta" precisa decidir o que fazer quando o mês tem
       cinco sextas e quando o dia 31 não existe. Ficou de fora inteiro em vez de resolvido pela
       metade
-- [ ] **As recusadas não viram nada.** `naoCouberam` volta na resposta e some: não há lista de
-      pendências para a recepção resolver depois. Deveria virar fila de espera (RT-AGD-010)
+- [x] ~~**As recusadas não viram nada.**~~ Resolvida em parte por RT-AGD-010 (22/09/2026): cada dia
+      que não coube pode ir para a fila, um por vez, por `POST /recorrencias/{id}/fila-de-espera`.
+      Falta o botão — a série ainda não tem tela
 - [ ] **Alterar a série não existe** — mudar o horário de "toda quinta" hoje é encerrar e criar
       outra, o que cancela e recria as ocorrências futuras, com todas as notificações que isso
       implica

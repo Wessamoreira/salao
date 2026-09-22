@@ -4,12 +4,15 @@ import br.com.salao.agenda.api.AgendamentoCancelado;
 import br.com.salao.agenda.api.AgendamentoResumo;
 import br.com.salao.agenda.api.ErrosDaAgenda;
 import br.com.salao.agenda.api.StatusAgendamento;
+import br.com.salao.agenda.internal.domain.OrigemDaVaga;
 import br.com.salao.agenda.internal.infra.AgendaJdbc;
+import br.com.salao.agenda.internal.infra.VagasAbertasJdbc;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.Permissao;
 import br.com.salao.iam.api.RegistroDeAuditoria;
 import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.shared.erro.ErrosDaInfra;
+import br.com.salao.shared.tempo.Relogio;
 import br.com.salao.shared.tenant.TenantContext;
 import java.util.Map;
 import java.util.UUID;
@@ -32,6 +35,9 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>O recurso volta junto, pelo mesmo mecanismo: o lavatório reservado para uma coloração
  * cancelada fica livre no instante do cancelamento, sem código específico.
  *
+ * <p>E a fila de espera fica sabendo, na mesma transação: o tempo liberado vira uma vaga aberta
+ * (RN-AGD-009, RT-AGD-010). Um cancelamento gravado sem a vaga não chega a existir.
+ *
  * <h2>Terminal é terminal</h2>
  *
  * <p>Não existe "descancelar". Desfazer devolveria à agenda um horário que, entre o cancelamento e
@@ -52,14 +58,19 @@ public class CancelarAgendamentoUseCase {
             LoggerFactory.getLogger(CancelarAgendamentoUseCase.class);
 
     private final AgendaJdbc agenda;
+    private final VagasAbertasJdbc vagas;
     private final AuditoriaApi auditoria;
     private final ApplicationEventPublisher eventos;
+    private final Relogio relogio;
 
-    public CancelarAgendamentoUseCase(AgendaJdbc agenda, AuditoriaApi auditoria,
-                                      ApplicationEventPublisher eventos) {
+    public CancelarAgendamentoUseCase(AgendaJdbc agenda, VagasAbertasJdbc vagas,
+                                      AuditoriaApi auditoria, ApplicationEventPublisher eventos,
+                                      Relogio relogio) {
         this.agenda = agenda;
+        this.vagas = vagas;
         this.auditoria = auditoria;
         this.eventos = eventos;
+        this.relogio = relogio;
     }
 
     /**
@@ -99,10 +110,16 @@ public class CancelarAgendamentoUseCase {
                 Map.of("status", StatusAgendamento.CANCELADO.name(),
                         "motivo", limpo, "pelaCliente", pelaCliente)));
 
+        UUID tenant = TenantContext.obrigatorio();
+        vagas.abrir(tenant, agendamentoId, OrigemDaVaga.CANCELAMENTO,
+                        antes.profissionalId(), antes.inicio(), antes.fim(), relogio.agora())
+                .ifPresent(vaga -> log.info("Vaga {} aberta pelo cancelamento de {}: {} a {}",
+                        vaga, agendamentoId, antes.inicio(), antes.fim()));
+
         // A janela liberada viaja no evento: é o que a fila de espera precisa para achar quem
         // cabe ali, e buscar o agendamento de volta não serviria — ele acabou de deixar de existir
         // para a agenda.
-        eventos.publishEvent(new AgendamentoCancelado(TenantContext.obrigatorio(), agendamentoId,
+        eventos.publishEvent(new AgendamentoCancelado(tenant, agendamentoId,
                 antes.clienteId(), antes.profissionalId(), antes.servicoId(),
                 antes.inicio(), antes.fim(), pelaCliente));
         log.info("Agendamento {} cancelado {} ({} às {})", agendamentoId,

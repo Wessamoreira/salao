@@ -19,7 +19,6 @@ import br.com.salao.iam.internal.application.ProvisionarEstabelecimentoUseCase;
 import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.shared.tenant.AbstractPostgresIT;
 import br.com.salao.shared.tenant.TenantContext;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -30,7 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.test.context.support.WithMockUser;
 
-/** RT-AGD-010 — fila de espera. */
+/** RT-AGD-010 — fila de espera: entrar e sair. Quem cabe numa vaga é de {@code VagaAbertaIT}. */
 @WithMockUser(authorities = { Permissao.USUARIO_GERENCIAR, Permissao.CONFIG_GERENCIAR,
         Permissao.CLIENTE_ESCREVER, Permissao.AGENDA_LER_TODAS,
         Permissao.AGENDA_ESCREVER_TODAS })
@@ -72,10 +71,6 @@ class FilaDeEsperaIT extends AbstractPostgresIT {
                                 LocalTime horaDe, LocalTime horaAte) {
         return TenantContext.obter(tenant, () -> fila.entrar(cliente, escova, profissional,
                 de, ate, horaDe, horaAte, null));
-    }
-
-    private Instant em(LocalDate dia, int hora) {
-        return dia.atTime(LocalTime.of(hora, 0)).atZone(SAO_PAULO).toInstant();
     }
 
     private String codigoDe(Throwable e) {
@@ -151,85 +146,58 @@ class FilaDeEsperaIT extends AbstractPostgresIT {
         assertThat(codigoDe(erro)).isEqualTo("ER-AGD-ESPERA_NAO_ENCONTRADA");
     }
 
-    // ------------------------------------------------------------------ quem cabe na vaga
+    // ------------------------------------------------------------------ dias que se sobrepõem
 
     @Test
-    @DisplayName("abriu vaga: os candidatos vêm na ordem de quem chegou primeiro")
-    void candidatos_em_ordem_de_chegada() {
-        // Sem ordem explícita, "quem avisamos primeiro" viraria a ordem em que o banco devolveu —
-        // e a cliente que espera há duas semanas ficaria atrás da que entrou ontem.
+    @DisplayName("dias que se sobrepõem, mesmo em parte, são a mesma espera")
+    void sobreposicao_parcial_e_recusada() {
+        // RN-AGD-028: segunda a quinta e quinta a sábado dividem a quinta — uma vaga na quinta
+        // seria duas ligações para a mesma pessoa.
         cenario();
-        UUID joana = outraCliente("Joana");
-        var primeira = entrar(marilda, null, QUINTA, QUINTA, null, null);
-        var segunda = entrar(joana, null, QUINTA, QUINTA, null, null);
+        entrar(marilda, ana, QUINTA.minusDays(3), QUINTA, null, null);
 
-        var candidatos = TenantContext.obter(tenant,
-                () -> fila.candidatosA(escova, ana, em(QUINTA, 14)));
+        Throwable erro = catchThrowable(() -> entrar(marilda, ana, QUINTA, QUINTA.plusDays(2),
+                null, null));
 
-        assertThat(candidatos).extracting(EsperaNaFila::id)
-                .containsExactly(primeira.id(), segunda.id());
+        assertThat(codigoDe(erro)).isEqualTo("ER-AGD-JA_ESTA_NA_FILA");
     }
 
     @Test
-    @DisplayName("a faixa de hora filtra os candidatos")
-    void faixa_de_hora_filtra() {
+    @DisplayName("em dias separados, a mesma cliente espera duas vezes")
+    void dias_separados_podem() {
+        // O caso que o índice antigo impedia: duas quintas de uma série que não couberam são duas
+        // esperas legítimas, de um dia cada.
         cenario();
-        UUID joana = outraCliente("Joana");
-        var deManha = entrar(marilda, null, QUINTA, QUINTA, LocalTime.of(9, 0),
-                LocalTime.of(12, 0));
-        var aTarde = entrar(joana, null, QUINTA, QUINTA, LocalTime.of(13, 0),
-                LocalTime.of(18, 0));
+        entrar(marilda, ana, QUINTA, QUINTA, null, null);
 
-        assertThat(TenantContext.obter(tenant,
-                () -> fila.candidatosA(escova, ana, em(QUINTA, 14))))
-                .extracting(EsperaNaFila::id).containsExactly(aTarde.id());
-        assertThat(TenantContext.obter(tenant,
-                () -> fila.candidatosA(escova, ana, em(QUINTA, 10))))
-                .extracting(EsperaNaFila::id).containsExactly(deManha.id());
+        assertThatCode(() -> entrar(marilda, ana, QUINTA.plusDays(7), QUINTA.plusDays(7), null,
+                null)).doesNotThrowAnyException();
+        assertThat(TenantContext.obter(tenant, () -> fila.naFila())).hasSize(2);
     }
 
     @Test
-    @DisplayName("quem pediu outra profissional não é candidata")
-    void profissional_filtra() {
+    @DisplayName("\"qualquer uma\" e \"a Ana\" são esperas diferentes")
+    void qualquer_uma_e_ana_sao_diferentes() {
         cenario();
-        UUID julia = TenantContext.obter(tenant, () -> cadastrarProfissional.executar(
-                new DadosDoProfissional("Júlia", null, "52998224725", TipoDeVinculo.EMPREGADO,
-                        null, null, null, null, null, null))).id();
-        UUID joana = outraCliente("Joana");
-        var querAna = entrar(marilda, ana, QUINTA, QUINTA, null, null);
-        entrar(joana, julia, QUINTA, QUINTA, null, null);
+        entrar(marilda, null, QUINTA, QUINTA, null, null);
 
-        assertThat(TenantContext.obter(tenant,
-                () -> fila.candidatosA(escova, ana, em(QUINTA, 14))))
-                .extracting(EsperaNaFila::id).containsExactly(querAna.id());
+        assertThatCode(() -> entrar(marilda, ana, QUINTA, QUINTA, null, null))
+                .doesNotThrowAnyException();
     }
 
     @Test
-    @DisplayName("a fila expira sozinha: janela vencida para de aparecer")
-    void janela_vencida_some_sozinha() {
-        // De propósito: uma fila que dependesse de job de limpeza para dar a resposta certa daria
-        // a resposta errada exatamente quando o job falhasse — e ninguém percebe um job que não
-        // roda até alguém ser chamado para um horário de duas semanas atrás.
+    @DisplayName("a fila traz os nomes que a tela escreve")
+    void na_fila_com_nomes() {
         cenario();
-        var vencida = entrar(marilda, null, QUINTA, QUINTA, null, null);
+        entrar(marilda, ana, QUINTA, QUINTA, null, null);
+        entrar(outraCliente("Joana"), null, QUINTA, QUINTA, null, null);
 
-        assertThat(TenantContext.obter(tenant,
-                () -> fila.candidatosA(escova, ana, em(QUINTA.plusDays(1), 14))))
-                .as("um dia depois da janela").isEmpty();
-        assertThat(TenantContext.obter(tenant, () -> fila.naFila()))
-                .as("mas continua na fila, para quem quiser ver e resolver")
-                .extracting(EsperaNaFila::id).containsExactly(vencida.id());
-    }
+        var fila = TenantContext.obter(tenant, () -> this.fila.naFila());
 
-    @Test
-    @DisplayName("quem já saiu não é candidata")
-    void quem_saiu_nao_e_candidata() {
-        cenario();
-        var espera = entrar(marilda, null, QUINTA, QUINTA, null, null);
-        TenantContext.executar(tenant, () -> fila.registrarDesistencia(espera.id()));
-
-        assertThat(TenantContext.obter(tenant,
-                () -> fila.candidatosA(escova, ana, em(QUINTA, 14)))).isEmpty();
+        assertThat(fila).extracting(EsperaComNomes::cliente).containsExactly("Marilda", "Joana");
+        assertThat(fila).extracting(EsperaComNomes::servico).containsOnly("Escova");
+        assertThat(fila).extracting(EsperaComNomes::profissional)
+                .as("nulo é qualquer uma").containsExactly("Ana", null);
     }
 
     // ------------------------------------------------------------------ recusas e isolamento
@@ -270,7 +238,5 @@ class FilaDeEsperaIT extends AbstractPostgresIT {
                 "outra-" + UUID.randomUUID() + "@salao.test", "senha-bem-comprida-1"));
 
         assertThat(TenantContext.obter(salaoB, () -> fila.naFila())).isEmpty();
-        assertThat(TenantContext.obter(salaoB,
-                () -> fila.candidatosA(escova, ana, em(QUINTA, 14)))).isEmpty();
     }
 }

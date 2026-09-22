@@ -547,6 +547,27 @@ public class AgendaJdbc implements AgendaApi {
                 .list();
     }
 
+    /**
+     * RT-AGD-010 — se a série tem algum agendamento neste dia, em qualquer status.
+     *
+     * <p>Em qualquer status de propósito: o dia que vai para a fila pela série é o que
+     * <em>não coube</em>. Uma ocorrência marcada e depois cancelada coube — o cancelamento já abriu
+     * a vaga dela.
+     */
+    @Transactional(readOnly = true)
+    public boolean serieTemAgendamentoEm(UUID recorrenciaId, Janela dia) {
+        return jdbc.sql("""
+                select exists (select 1 from agendamento
+                                where recorrencia_id = :recorrencia
+                                  and inicio >= :de and inicio < :ate)
+                """)
+                .param("recorrencia", recorrenciaId)
+                .param("de", OffsetDateTime.ofInstant(dia.inicio(), ZoneOffset.UTC))
+                .param("ate", OffsetDateTime.ofInstant(dia.fim(), ZoneOffset.UTC))
+                .query(Boolean.class)
+                .single();
+    }
+
     // ------------------------------------------------------------------ RT-AGD-011
 
     /**

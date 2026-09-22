@@ -1,6 +1,7 @@
 package br.com.salao.agenda.internal.web;
 
 import br.com.salao.agenda.api.EsperaNaFila;
+import br.com.salao.agenda.internal.application.EsperaComNomes;
 import br.com.salao.agenda.internal.application.FilaDeEsperaUseCase;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -11,7 +12,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,16 +21,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
  * RT-AGD-010 — a fila de espera.
  *
- * <p>{@code /candidatos} é a rota que a recepção usa logo depois de cancelar: <em>abriu esta vaga,
- * quem cabe?</em> Não há disparo automático — avisar depende de {@code notificacao}, e registrar
- * "oferta enviada" sem enviar nada seria gravar uma mentira.
+ * <p>Quem cabe numa vaga que abriu é de {@code /api/v1/vagas-abertas}: a pergunta não é mais "quem
+ * espera este serviço", e sim "quem a disponibilidade aceita neste tempo" (RN-AGD-025).
  */
 @RestController
 @RequestMapping("/api/v1/fila-de-espera")
@@ -65,18 +63,42 @@ public class FilaDeEsperaController {
                 .body(criada);
     }
 
-    @GetMapping
-    public List<EsperaNaFila> naFila() {
-        return fila.naFila();
+    /**
+     * Uma espera como a tela a escreve.
+     *
+     * @param profissional nulo quando ela aceita qualquer uma
+     * @param recorrenciaId a série de onde veio, quando é um dia dela que não coube
+     */
+    public record EsperaResposta(
+            UUID id,
+            UUID clienteId,
+            String cliente,
+            UUID servicoId,
+            String servico,
+            UUID profissionalId,
+            String profissional,
+            LocalDate aceitaDe,
+            LocalDate aceitaAte,
+            LocalTime horaDe,
+            LocalTime horaAte,
+            String observacao,
+            Instant naFilaDesde,
+            UUID recorrenciaId) {
+
+        static EsperaResposta de(EsperaComNomes linha) {
+            EsperaNaFila espera = linha.espera();
+            return new EsperaResposta(espera.id(), espera.clienteId(), linha.cliente(),
+                    espera.servicoId(), linha.servico(), espera.profissionalId(),
+                    linha.profissional(), espera.aceitaDe(), espera.aceitaAte(), espera.horaDe(),
+                    espera.horaAte(), espera.observacao(), espera.criadoEm(),
+                    espera.recorrenciaId());
+        }
     }
 
-    /** Abriu esta vaga: quem cabe? Em ordem de quem chegou primeiro. */
-    @GetMapping("/candidatos")
-    public List<EsperaNaFila> candidatos(
-            @RequestParam UUID servico,
-            @RequestParam(required = false) UUID profissional,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant inicio) {
-        return fila.candidatosA(servico, profissional, inicio);
+    /** Quem está esperando, do mais antigo para o mais novo. */
+    @GetMapping
+    public List<EsperaResposta> naFila() {
+        return fila.naFila().stream().map(EsperaResposta::de).toList();
     }
 
     /** Conseguiu horário. Diferente de desistir, e a diferença importa no relatório. */

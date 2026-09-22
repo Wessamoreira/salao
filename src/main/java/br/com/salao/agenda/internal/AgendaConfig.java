@@ -3,10 +3,13 @@ package br.com.salao.agenda.internal;
 import br.com.salao.agenda.api.DisponibilidadeApi;
 import br.com.salao.agenda.internal.application.BloquearGradeUseCase;
 import br.com.salao.agenda.internal.application.AgendaDoDiaUseCase;
+import br.com.salao.agenda.internal.application.CalculoDeCandidatas;
 import br.com.salao.agenda.internal.application.CancelarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConfirmarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarDisponibilidadeUseCase;
+import br.com.salao.agenda.internal.application.ConsultarVagasAbertasUseCase;
+import br.com.salao.agenda.internal.application.EnfileirarDiaDaSerieUseCase;
 import br.com.salao.agenda.internal.application.EmpurrarAgendaUseCase;
 import br.com.salao.agenda.internal.application.CriarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.CriarRecorrenciaUseCase;
@@ -16,17 +19,20 @@ import br.com.salao.agenda.internal.application.FerramentaConsultarDisponibilida
 import br.com.salao.agenda.internal.application.PainelDoBalcaoUseCase;
 import br.com.salao.agenda.internal.application.RegistroDaSerie;
 import br.com.salao.agenda.internal.application.ReagendarUseCase;
+import br.com.salao.agenda.internal.application.RegistrarChamadaDaFilaUseCase;
 import br.com.salao.agenda.internal.application.RegistrarNoShowUseCase;
 import br.com.salao.agenda.internal.application.FilaDeEsperaUseCase;
 import br.com.salao.agenda.internal.infra.AgendaJdbc;
 import br.com.salao.agenda.internal.infra.LembradorDeAgendamentos;
 import br.com.salao.agenda.internal.infra.FilaDeEsperaJdbc;
+import br.com.salao.agenda.internal.infra.VagasAbertasJdbc;
 import br.com.salao.catalogo.api.RecursoApi;
 import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.cliente.api.ClienteApi;
 import br.com.salao.iam.api.AuditoriaApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
+import br.com.salao.iam.api.NomesDeUsuariosApi;
 import br.com.salao.shared.idempotencia.Idempotencia;
 import br.com.salao.notificacao.api.NotificacaoApi;
 import br.com.salao.shared.manutencao.ConexaoDeManutencao;
@@ -82,9 +88,10 @@ public class AgendaConfig {
     @Bean
     public ReagendarUseCase reagendarUseCase(ProfissionalApi equipe, RecursoApi recursos,
                                              EstabelecimentoApi estabelecimentos,
-                                             AgendaJdbc agenda, AuditoriaApi auditoria,
+                                             AgendaJdbc agenda, VagasAbertasJdbc vagas,
+                                             AuditoriaApi auditoria,
                                              ApplicationEventPublisher eventos, Relogio relogio) {
-        return new ReagendarUseCase(equipe, recursos, estabelecimentos, agenda, auditoria,
+        return new ReagendarUseCase(equipe, recursos, estabelecimentos, agenda, vagas, auditoria,
                 eventos, relogio);
     }
 
@@ -100,8 +107,9 @@ public class AgendaConfig {
 
     @Bean
     public CancelarAgendamentoUseCase cancelarAgendamentoUseCase(
-            AgendaJdbc agenda, AuditoriaApi auditoria, ApplicationEventPublisher eventos) {
-        return new CancelarAgendamentoUseCase(agenda, auditoria, eventos);
+            AgendaJdbc agenda, VagasAbertasJdbc vagas, AuditoriaApi auditoria,
+            ApplicationEventPublisher eventos, Relogio relogio) {
+        return new CancelarAgendamentoUseCase(agenda, vagas, auditoria, eventos, relogio);
     }
 
     // ------------------------------------------------------------------ RT-AGD-006
@@ -170,10 +178,45 @@ public class AgendaConfig {
     @Bean
     public FilaDeEsperaUseCase filaDeEsperaUseCase(FilaDeEsperaJdbc fila, ClienteApi clientes,
                                                    ServicoApi catalogo, ProfissionalApi equipe,
-                                                   EstabelecimentoApi estabelecimentos,
                                                    AuditoriaApi auditoria) {
-        return new FilaDeEsperaUseCase(fila, clientes, catalogo, equipe, estabelecimentos,
-                auditoria);
+        return new FilaDeEsperaUseCase(fila, clientes, catalogo, equipe, auditoria);
+    }
+
+    @Bean
+    public VagasAbertasJdbc vagasAbertasJdbc(DataSource dataSource) {
+        return new VagasAbertasJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public CalculoDeCandidatas calculoDeCandidatas(FilaDeEsperaJdbc fila,
+                                                   ConsultarDisponibilidadeUseCase disponibilidade,
+                                                   ProfissionalApi equipe, ServicoApi catalogo) {
+        return new CalculoDeCandidatas(fila, disponibilidade, equipe, catalogo);
+    }
+
+    @Bean
+    public ConsultarVagasAbertasUseCase consultarVagasAbertasUseCase(
+            VagasAbertasJdbc vagas, CalculoDeCandidatas calculo, ClienteApi clientes,
+            ServicoApi catalogo, ProfissionalApi equipe, NomesDeUsuariosApi usuarios,
+            EstabelecimentoApi estabelecimentos, Relogio relogio) {
+        return new ConsultarVagasAbertasUseCase(vagas, calculo, clientes, catalogo, equipe,
+                usuarios, estabelecimentos, relogio);
+    }
+
+    @Bean
+    public RegistrarChamadaDaFilaUseCase registrarChamadaDaFilaUseCase(
+            VagasAbertasJdbc vagas, FilaDeEsperaJdbc fila, CalculoDeCandidatas calculo,
+            CriarAgendamentoUseCase criar, EstabelecimentoApi estabelecimentos,
+            AuditoriaApi auditoria, Relogio relogio) {
+        return new RegistrarChamadaDaFilaUseCase(vagas, fila, calculo, criar, estabelecimentos,
+                auditoria, relogio);
+    }
+
+    @Bean
+    public EnfileirarDiaDaSerieUseCase enfileirarDiaDaSerieUseCase(
+            AgendaJdbc agenda, FilaDeEsperaJdbc fila, EstabelecimentoApi estabelecimentos,
+            AuditoriaApi auditoria, Relogio relogio) {
+        return new EnfileirarDiaDaSerieUseCase(agenda, fila, estabelecimentos, auditoria, relogio);
     }
 
     // ------------------------------------------------------------------ RT-AGD-011

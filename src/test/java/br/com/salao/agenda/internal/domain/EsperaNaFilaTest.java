@@ -26,7 +26,7 @@ class EsperaNaFilaTest {
     private EsperaNaFila espera(UUID servico, UUID profissional, LocalDate de, LocalDate ate,
                                 LocalTime horaDe, LocalTime horaAte) {
         return new EsperaNaFila(UUID.randomUUID(), UUID.randomUUID(), servico, profissional,
-                de, ate, horaDe, horaAte, null, Instant.now());
+                de, ate, horaDe, horaAte, null, Instant.now(), null);
     }
 
     private Instant em(LocalDate dia, int hora) {

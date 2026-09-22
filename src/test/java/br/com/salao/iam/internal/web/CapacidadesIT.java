@@ -80,6 +80,8 @@ class CapacidadesIT extends AbstractPostgresIT {
         assertThat(c.menus()).extracting(m -> m.id())
                 .contains("agenda", "atendimento", "clientes", "estoque")
                 .doesNotContain("financeiro", "configuracao", "agente");
+        assertThat(c.menus()).extracting(m -> m.id())
+                .as("RT-AGD-010: quem liga para a fila é a recepção").contains("fila");
         assertThat(c.limites()).containsEntry("descontoMaximoPercentual", 10);
         assertThat(c.flags()).containsEntry("podeVerValorDeOutros", false);
         assertThat(c.mfaObrigatorio()).isFalse();
@@ -94,6 +96,9 @@ class CapacidadesIT extends AbstractPostgresIT {
                 () -> capacidades.executar(conta.usuarioId(), conta.tenant()));
 
         assertThat(c.menus()).extracting(m -> m.id()).contains("agenda", "financeiro");
+        assertThat(c.menus()).extracting(m -> m.id())
+                .as("RT-AGD-010: a fila traz telefone de quem espera qualquer profissional")
+                .doesNotContain("fila");
         assertThat(c.flags())
                 .containsEntry("podeVerValorDeOutros", false)
                 .containsEntry("podeAgendarParaOutros", false)

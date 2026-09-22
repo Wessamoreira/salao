@@ -67,9 +67,8 @@ nasce com origem `AGENTE`, `CONFIRMADO` (RN-AGD-013).
 | EV-AGD-001 | `AgendamentoCriado` | Após gravar | `notificacao` (confirmação) | Externo (outbox) |
 | EV-AGD-002 | `AgendamentoConfirmado` | Cliente ou profissional confirma | `notificacao` | Externo |
 | EV-AGD-003 | `AgendamentoReagendado` | Mudança de horário | `notificacao` | Externo |
-| EV-AGD-004 | `AgendamentoCancelado` | Cancelamento | `notificacao`, `agenda` (fila de espera) | Externo |
+| EV-AGD-004 | `AgendamentoCancelado` | Cancelamento | `notificacao`, painel do balcão | Externo |
 | EV-AGD-005 | `NoShowRegistrado` | Marcado no-show | `cliente` (histórico) | Interno |
-| EV-AGD-006 | `VagaLiberada` | Cancelamento abre janela | `agenda` (chama a fila) | Interno |
 
 ## Eventos consumidos
 
@@ -88,6 +87,8 @@ nasce com origem `AGENTE`, `CONFIRMADO` (RN-AGD-013).
 | `agendamento_bloco` | Agendamento | sim |
 | `recorrencia` | Agendamento | sim |
 | `fila_espera` | — | sim |
+| `vaga_aberta` | — (só `insert`) | sim |
+| `chamada_da_fila` | — (só `insert`) | sim |
 
 ## Permissões
 
@@ -113,7 +114,7 @@ Escopo `:own` é filtro de query, não de tela. Acesso a id de outro devolve **4
 | [RT-AGD-007](RT-AGD-007-bloqueio-de-grade.md) | Bloqueio de agenda | 1 | **implementada** |
 | [RT-AGD-008](RT-AGD-008-empurrar-agenda.md) | Empurrar agenda em massa | 1 | **implementada** |
 | [RT-AGD-009](RT-AGD-009-recorrencia.md) | Recorrência | 1 | **implementada** |
-| [RT-AGD-010](RT-AGD-010-fila-de-espera.md) | Fila de espera | 1 | **parcial** (falta a chamada automática) |
+| [RT-AGD-010](RT-AGD-010-fila-de-espera.md) | Fila de espera | 1 | implementado (a recepção chama; mensagem automática quando houver provedor) |
 | [RT-AGD-011](RT-AGD-011-grade.md) | Grade de agenda (front) | 1 | **implementada** |
 | [RT-AGD-012](RT-AGD-012-painel.md) | Painel do balcão (SSE) | 1 | **implementada** |
 

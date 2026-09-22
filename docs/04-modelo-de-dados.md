@@ -414,6 +414,16 @@ alvo tem no máximo uma resolução valendo, e pode ter várias ao longo do temp
 reescreve — `revoke update, delete`, com `grant update` só das três colunas da reabertura. O razão passa a
 aceitar `CONCILIACAO` como origem, e é por ela que a reabertura estorna o ajuste.
 
+RT-AGD-010 (`V66`) liga o cancelamento à fila. `vaga_aberta` é o tempo que abriu — profissional,
+janela, origem (`CANCELAMENTO` ou `REAGENDAMENTO`) e o agendamento que o liberou —, gravada na mesma
+transação de quem cancela; `chamada_da_fila` é cada ligação da recepção, com o resultado, o
+agendamento criado quando ela aceitou (obrigatório se e só se `ACEITOU`) e o motivo quando a ordem de
+chegada foi pulada. As duas só aceitam `insert`, e nenhuma tem "fechada": a vaga some quando o
+horário passa ou quando ninguém da fila cabe, calculado na leitura. `fila_espera` troca o índice
+único por uma `exclude using gist` sobre o intervalo de dias — a mesma cliente pode esperar o mesmo
+serviço em dias separados, que é o caso dos dias de uma série que não couberam — e ganha
+`recorrencia_id`.
+
 A correção de RT-NOT-001 (`V65`) acrescenta `SEM_PROVEDOR` aos estados de `mensagem` — final, para
 mensagem que não saiu porque não havia provedor —, reclassifica como tal toda `ENVIADA` anterior
 (o único mensageiro que existia nunca entregou nada) e passa a exigir `enviada_em` em toda `ENVIADA`.
