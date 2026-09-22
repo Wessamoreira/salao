@@ -169,6 +169,7 @@ Em `ops/producao/`, e vai para `/opt/salao` na máquina (runbook `subir-em-produ
 | `docker-compose.yml` | app, postgres, caddy e backup. A aplicação não publica porta |
 | `Caddyfile` | HTTPS automático, cabeçalhos, proxy para a aplicação |
 | `backup.sh` | `pg_dump -Fc` diário, sete dias, com o cliente da **mesma** versão do servidor |
+| healthcheck do `backup` | "há dump de menos de 26 horas?" — backup parado vira `unhealthy`, e trava o próximo deploy |
 | `.env.exemplo` | Todas as variáveis, nenhum valor real |
 
 Detalhes que não são decoração: rotação do log de contêiner (sem ela o disco da VM enche e o
@@ -195,5 +196,7 @@ depois do `chown` do volume.
 - [ ] **O backup não sai da máquina.** Sete dias de dump no mesmo disco protegem contra erro
       humano, não contra perder a VM. O `backup.sh` ganha o envio para um bucket quando houver um, e
       é ele que o teste mensal de restore passa a usar
-- [ ] **Nada avisa se o backup parar.** O contêiner reinicia sozinho e o erro fica no log. Um
-      alerta ("nenhum dump nas últimas 26 horas") é pequeno e ainda não existe
+- [x] ~~**Nada avisa se o backup parar.**~~ Feito em 22/09/2026: o serviço `backup` tem healthcheck
+      — "há dump de menos de 26 horas?". Dump velho deixa o serviço `unhealthy`, e `up -d --wait`
+      recusa o deploy. Verificado com o Docker executando o teste: `unhealthy` com dump de dois
+      dias, `healthy` depois de um novo

@@ -69,7 +69,7 @@ responder.
 ## 5. Conferir, sem confiar
 
 ```bash
-docker compose ps                                   # app e postgres: healthy
+docker compose ps                                   # app, postgres e backup: healthy
 curl -sI https://SEU.DOMINIO/api/v1/me/capabilities # 401 é a resposta certa: chegou na aplicação
 docker compose exec backup ls -l /backups           # o primeiro dump sai no `up`
 docker compose logs app | grep -i "não configurado" # o que está desligado, e é esperado
@@ -101,6 +101,8 @@ continuam no GHCR.
 | `caddy` sem certificado | Porta 80 fechada, ou DNS ainda não propagado. `docker compose logs caddy` |
 | `502` no navegador | A aplicação ainda está subindo — o Flyway roda antes do Tomcat |
 | `backup` reiniciando | Senha do owner errada no `.env` |
+| `backup` `unhealthy` | Nenhum dump nas últimas 26 horas. `docker compose logs backup` diz por quê; `docker compose restart backup` faz um na hora |
+| Deploy recusado com o `backup` `unhealthy` | É de propósito: código novo por cima de backup quebrado é o que não se quer. Resolva o backup e repita |
 
 ## O que fica de fora, e é decisão
 

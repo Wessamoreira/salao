@@ -132,6 +132,20 @@ services:
     # aqui, e o gosu entrega o resto para o usuário postgres. Um contêiner com a
     # senha do dono do banco não tem por que rodar como root a vida inteira.
     entrypoint: ["/bin/bash", "-c", "chown postgres /backups && exec gosu postgres bash /backup.sh"]
+    # "O dump de hoje saiu?" — a única pergunta que importa sobre um backup, e a
+    # única que ninguém lembra de fazer. Sem isto, o serviço reinicia sozinho, o
+    # erro fica no log e a descoberta acontece no dia em que alguém precisa
+    # restaurar. 26 horas dá folga para o ciclo de 24 atrasar sem alarme falso.
+    #
+    # Um dump velho deixa o serviço `unhealthy`, e `up -d --wait` recusa o deploy:
+    # subir código novo por cima de um backup quebrado é exatamente quando não se
+    # quer. Reiniciar o serviço faz um dump na hora e destrava.
+    healthcheck:
+      test: ["CMD-SHELL", "test -n \"$$(find /backups -name 'salao-*.dump' -mmin -1560 -print -quit)\""]
+      interval: 1h
+      timeout: 10s
+      retries: 1
+      start_period: 5m
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }

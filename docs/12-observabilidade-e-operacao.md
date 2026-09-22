@@ -24,6 +24,7 @@ conteúdo de mensagem de cliente.
 | `cache.gets` / hit rate do Caffeine | Gatilho objetivo para migrar a Redis (< 70%) |
 | `cache.listener.up` | `LISTEN/NOTIFY` caído = preço velho silencioso (R-09) |
 | Tamanho e idade da fila do outbox | Notificação que não sai (R-12) |
+| Backup parado | RT-INF-009 (22/09/2026). O serviço `backup` fica `unhealthy` quando não há dump há mais de 26 horas — `docker compose ps` mostra, e o próximo deploy é recusado. É o alarme de backup que existe hoje; quando o dump sair da máquina, o alarme vai junto |
 | Vagas abertas e chamadas da fila | RT-AGD-010 (22/09/2026). `info` ao abrir vaga (`Vaga … aberta pelo cancelamento de …`) e a cada chamada (`Fila: chamada na vaga … para a espera …: RESULTADO`, com `(fora da ordem)` quando houve pulo). Só ids e instantes — nome de cliente não entra em log, e o erro de pulo diz a posição, não o nome |
 | Mensagens `SEM_PROVEDOR` | Correção de RT-NOT-001 (21/09/2026). `warn` a cada rodada que encontra mensagem sem provedor: `Notificação: N mensagem(ns) NÃO enviada(s) — nenhum provedor de envio configurado`. Enquanto não houver provedor, é o esperado; depois de ligar um, qualquer ocorrência é o provedor desconfigurado |
 | Falha de webhook por origem | WhatsApp perdendo mensagem |
