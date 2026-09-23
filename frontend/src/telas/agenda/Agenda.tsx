@@ -7,6 +7,9 @@ import {
   cargaEmMinutos, faixaDoDia, posicao, posicaoDoAgora, rotuloDeCarga, rotuloDeHora,
   PIXELS_POR_MINUTO, type FaixaDoDia,
 } from './grade';
+import { Link } from 'react-router-dom';
+import { useCapacidades } from '../../api/capacidades';
+import { useVagasAbertas } from '../../api/fila';
 import { useConectado } from '../../pwa/conectado';
 import './agenda.css';
 
@@ -64,7 +67,34 @@ function porExtenso(data: string): { dia: string; semana: string } {
   };
 }
 
+/**
+ * RT-AGD-010 — quem cancela na grade fica sabendo que abriu vaga.
+ *
+ * Sem isto, a vaga só existe para quem lembra de abrir a Fila de espera — e o buraco que a
+ * recepção acabou de criar é justamente o momento em que ela poderia preenchê-lo.
+ *
+ * Quem decide se há vaga com alguém que cabe é o servidor; aqui só aparece a contagem. A consulta é
+ * a mesma da tela da fila, então abrir a fila depois disto não custa nova requisição.
+ */
+function AvisoDeVagas() {
+  const vagas = useVagasAbertas();
+  const quantas = vagas.data?.length ?? 0;
+
+  if (quantas === 0) {
+    return null;
+  }
+  return (
+    <p className="agenda-vagas" role="status">
+      {quantas === 1
+        ? 'Abriu uma vaga e há quem esteja esperando por ela.'
+        : `Abriram ${quantas} vagas e há quem esteja esperando por elas.`}
+      <Link to="/fila">Ver a fila de espera</Link>
+    </p>
+  );
+}
+
 export function Agenda() {
+  const { data: capacidades } = useCapacidades();
   const [data, definirData] = useState(hoje());
   const [escolhido, definirEscolhido] = useState<string | null>(null);
   const { data: agenda, dataUpdatedAt, isPending, isPlaceholderData, error, refetch } =
@@ -110,6 +140,10 @@ export function Agenda() {
             aria-label="Próximo dia">→</button>
         </nav>
       </header>
+
+      {/* Só para quem chama a fila (agenda:write:all). Quem não chama não tem o que fazer com o
+          aviso, e o telefone das clientes está do outro lado do link. */}
+      {capacidades?.flags?.podeAgendarParaOutros && <AvisoDeVagas />}
 
       {error && !agenda && (
         <Falha aoTentar={() => refetch()}>

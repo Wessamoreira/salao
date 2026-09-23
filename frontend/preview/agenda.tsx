@@ -11,6 +11,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
 import { Agenda } from '../src/telas/agenda/Agenda';
 import '../src/estilo/global.css';
 
@@ -84,20 +85,35 @@ const RESPOSTA = {
   },
 };
 
-window.fetch = (async () => ({
-  ok: true, status: 200,
-  headers: new Headers({ 'content-type': 'application/json' }),
-  json: async () => RESPOSTA,
-})) as unknown as typeof fetch;
+// Duas vagas abertas, para o aviso de RT-AGD-010 aparecer — é o que a recepção vê depois de
+// cancelar. O conteúdo delas é da tela da fila; aqui só a contagem importa.
+const VAGAS = [{ id: 'v1' }, { id: 'v2' }];
+
+window.fetch = (async (entrada: RequestInfo | URL) => {
+  const url = String(entrada);
+  const corpo = url.includes('/me/capabilities')
+    ? { estabelecimento: { id: 'e1', nome: 'Studio Marilda', timezone: 'America/Sao_Paulo',
+        moeda: 'BRL' }, permissoes: [], grupos: [], menus: [],
+        flags: { podeAgendarParaOutros: true }, limites: {} }
+    : url.includes('/vagas-abertas') ? VAGAS : RESPOSTA;
+  return {
+    ok: true, status: 200,
+    headers: new Headers({ 'content-type': 'application/json' }),
+    json: async () => corpo,
+  };
+}) as unknown as typeof fetch;
 
 const cliente = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
 createRoot(document.getElementById('raiz')!).render(
   <StrictMode>
     <QueryClientProvider client={cliente}>
-      <div style={{ height: '100vh', padding: 'var(--e-4)', background: 'var(--papel-fundo)' }}>
-        <Agenda />
-      </div>
+      {/* O aviso de vaga tem um link: sem roteador, ele nem renderiza. */}
+      <MemoryRouter>
+        <div style={{ height: '100vh', padding: 'var(--e-4)', background: 'var(--papel-fundo)' }}>
+          <Agenda />
+        </div>
+      </MemoryRouter>
     </QueryClientProvider>
   </StrictMode>,
 );

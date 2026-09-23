@@ -261,7 +261,7 @@ série de origem, para a tela não montar a lista com uma consulta por linha.
 - `fila_espera.recorrencia_id` — a série de onde veio, quando veio de uma.
 - `fila_espera`: o índice único vira `exclude using gist` sobre o intervalo de dias (RN-AGD-028).
 
-## 16. A tela
+## 16. As telas
 
 **Fila de espera**, em Operação, para quem tem `agenda:write:all` — quem liga é quem registra.
 
@@ -271,6 +271,11 @@ série de origem, para a tela não montar a lista com uma consulta por linha.
   do motivo.
 - **Na fila**, embaixo: quem espera, o quê, com quem, que dias e que horas, desde quando; "conseguiu
   horário" e "desistiu"; e o formulário para pôr alguém na fila.
+
+**E a agenda avisa.** Cancelar acontece na grade, não aqui: uma linha no alto da agenda diz quantas
+vagas abriram com gente esperando e leva para esta tela. Sem ela, a vaga só existiria para quem
+lembrasse de trocar de tela — e o buraco que a recepção acabou de criar é justamente quando ela
+poderia preenchê-lo.
 
 ## 17. Observabilidade
 
@@ -395,5 +400,8 @@ na tabela como mortas.
 - [ ] **A série não guarda quantas ocorrências pediu.** O dia da série é conferido pelo ritmo (a
       partir do primeiro, de N em N semanas, até 52), e não contra a lista pedida: um dia depois da
       última ocorrência passa. Guardar a quantidade em `recorrencia` fecharia a conta
-- [ ] **A agenda não avisa que abriu vaga.** Quem cancela na grade precisa abrir a Fila de espera
-      para ver quem cabe. Um aviso na própria grade fecharia o ciclo sem trocar de tela
+- [x] ~~**A agenda não avisa que abriu vaga.**~~ Feito em 22/09/2026: a grade mostra uma linha
+      ("abriram N vagas e há quem esteja esperando por elas") com link para a Fila de espera, só
+      para quem marca para os outros — o link leva ao telefone de quem espera. É a mesma consulta
+      da tela da fila, com um minuto de validade, então abrir a fila depois não custa requisição
+      nova

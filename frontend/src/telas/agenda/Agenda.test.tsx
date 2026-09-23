@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Agenda } from './Agenda';
@@ -64,6 +65,27 @@ function montar(resposta: unknown) {
   const cliente = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={cliente}><Agenda /></QueryClientProvider>,
+  );
+}
+
+/**
+ * Uma resposta por rota — a `montar` comum devolve a mesma para tudo, o que basta para a grade e
+ * esconde o aviso de vaga (sem `flags`, ele não aparece).
+ */
+function montarComVagas(vagas: unknown[], flags: Record<string, boolean>) {
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
+    const caminho = String(url);
+    const corpo = caminho.includes('/me/capabilities')
+      ? { estabelecimento: { timezone: SAO_PAULO }, permissoes: [], menus: [], flags }
+      : caminho.includes('/vagas-abertas') ? vagas : agendaDoDia();
+    return { ok: true, status: 200, json: async () => corpo,
+      headers: new Headers({ 'content-type': 'application/json' }) };
+  }));
+  const cliente = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <MemoryRouter>
+      <QueryClientProvider client={cliente}><Agenda /></QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -206,5 +228,32 @@ describe('grade da agenda', () => {
     render(<QueryClientProvider client={cliente}><Agenda /></QueryClientProvider>);
 
     expect(await screen.findByText(/Não foi possível carregar/)).toBeInTheDocument();
+  });
+});
+
+describe('aviso de vaga aberta', () => {
+  it('quem chama a fila vê que abriu vaga, e o caminho para ela', async () => {
+    // RT-AGD-010: a vaga nasce no cancelamento, que acontece nesta tela. Sem o aviso, ela só
+    // existe para quem lembra de abrir a outra.
+    montarComVagas([{ id: 'v1' }, { id: 'v2' }], { podeAgendarParaOutros: true });
+
+    expect(await screen.findByText(/Abriram 2 vagas/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Ver a fila de espera' }))
+      .toHaveAttribute('href', '/fila');
+  });
+
+  it('sem vaga com gente esperando, não há aviso nenhum', async () => {
+    montarComVagas([], { podeAgendarParaOutros: true });
+
+    await screen.findByText('Ana');
+    expect(screen.queryByRole('link', { name: 'Ver a fila de espera' })).not.toBeInTheDocument();
+  });
+
+  it('quem não marca para os outros não recebe o aviso', async () => {
+    // O link leva ao telefone das clientes que esperam: é a mesma permissão da tela da fila.
+    montarComVagas([{ id: 'v1' }], { podeAgendarParaOutros: false });
+
+    await screen.findByText('Ana');
+    expect(screen.queryByText(/Abriu uma vaga/)).not.toBeInTheDocument();
   });
 });

@@ -53,6 +53,29 @@
   white-space: nowrap;
 }
 
+/*
+ * O aviso de vaga aberta (RT-AGD-010). Fica entre o topo e a grade: é a linha que a recepção lê
+ * depois de cancelar, e some sozinha quando não há vaga com gente esperando.
+ */
+.agenda-vagas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e-1) var(--e-3);
+  margin: 0 0 var(--e-3);
+  padding: var(--e-2) var(--e-3);
+  background: var(--status-solicitado-fundo);
+  border-left: 3px solid var(--status-solicitado);
+  border-radius: var(--raio-2);
+  font-size: var(--t-14);
+}
+.agenda-vagas a {
+  color: var(--tinta);
+  font-weight: var(--p-forte);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .agenda-navegacao { display: flex; gap: var(--e-1); }
 
 .agenda-navegacao button {

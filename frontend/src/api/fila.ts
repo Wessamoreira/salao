@@ -102,6 +102,10 @@ export function useVagasAbertas() {
   const consulta = useQuery({
     queryKey: [...chave, 'vagas'],
     queryFn: () => api<Vaga[]>('/v1/vagas-abertas'),
+    // A conta do servidor é cara (disponibilidade real por vaga) e a agenda pede a mesma lista
+    // para o aviso dela. Um minuto de validade evita repetir a conta a cada troca de tela; o que
+    // muda de verdade — alguém cancelou — chega pelo aviso do painel, que invalida na hora.
+    staleTime: 60 * 1000,
   });
 
   useEffect(() => ouvirEventos('/v1/painel/eventos',
