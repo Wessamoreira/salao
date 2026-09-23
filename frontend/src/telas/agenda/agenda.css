@@ -91,6 +91,13 @@
   cursor: pointer;
 }
 .agenda-navegacao button:hover { background: var(--papel-fundo); }
+/* Já é hoje: o botão continua ali (voltar de três dias é um clique só), mas não se
+   oferece como saída para onde a pessoa já está. */
+.agenda-navegacao button[aria-current] {
+  color: var(--tinta-fraca);
+  background: var(--papel-fundo);
+  border-color: var(--regua);
+}
 
 /* ------------------------------------------------------------------ colunas */
 

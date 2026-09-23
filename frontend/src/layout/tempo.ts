@@ -24,6 +24,26 @@ export function somarDias(dia: string, quantos: number): string {
 }
 
 /**
+ * O texto é um dia civil de verdade?
+ *
+ * Existe porque dia passou a ser endereço: `/agenda?dia=…` vem de um link colado, de um
+ * favorito antigo, de alguém editando a barra. `2026-02-31` casa com qualquer regex de
+ * formato e **não existe** — e `Intl` não devolve nada para uma data inválida: ele lança,
+ * e leva a tela junto. Quem lê um dia de fora do sistema confere aqui antes de usar.
+ */
+export function ehDiaCivil(texto: string | null): texto is string {
+  if (!texto || !/^\d{4}-\d{2}-\d{2}$/.test(texto)) return false;
+  const data = new Date(`${texto}T00:00:00Z`);
+  // A ida e volta é o que reprova 31/02: o `Date` normaliza para 03/03 e deixa de casar.
+  return !Number.isNaN(data.getTime()) && data.toISOString().slice(0, 10) === texto;
+}
+
+/** O fuso da máquina — o melhor palpite enquanto o do salão não chegou do servidor. */
+export function fusoDoNavegador(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+/**
  * `Intl.DateTimeFormat` lança `RangeError` para fuso que o navegador não conhece, e derrubaria a
  * tela inteira. Fuso errado é defeito pequeno; tela branca é o maior de todos (ver HoraDoSalao).
  */

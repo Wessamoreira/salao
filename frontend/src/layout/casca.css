@@ -476,6 +476,23 @@
  * o 1 é mais estreito que os outros algarismos — e um número que dança no canto da tela
  * puxa o olho a cada virada.
  */
+/*
+ * O relógio é a porta da agenda de hoje (C4). O realce é o mínimo que uma porta precisa
+ * ter para ser reconhecida como porta: o dia acende no hover, e é só.
+ *
+ * Sublinhado e caixa fariam dele o elemento mais forte do topo — ele é o mais olhado, não
+ * o mais importante.
+ */
+.casca-hoje-link {
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--raio-1);
+}
+.casca-hoje-link .casca-hoje > span {
+  transition: color var(--mov-imediato) var(--mov-curva);
+}
+.casca-hoje-link:hover .casca-hoje > span { color: var(--tinta); }
+
 .casca-hoje {
   display: flex;
   align-items: baseline;

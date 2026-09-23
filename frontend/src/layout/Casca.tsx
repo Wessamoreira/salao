@@ -172,6 +172,7 @@ export function Casca() {
   const secoes = secoesDe(capacidades);
   const menuAtual = capacidades.menus.find((menu) => local.pathname.startsWith(menu.rota));
   const nomeDaSecao = menuAtual?.rotulo ?? 'Início';
+  const rotaDaAgenda = capacidades.menus.find((menu) => menu.rota === '/agenda')?.rota;
   const iniciaisDoSalao = iniciais(capacidades.estabelecimento.nome);
   const inicialDoUsuario = capacidades.nome.trim().charAt(0).toLocaleUpperCase('pt-BR') || 'U';
 
@@ -321,7 +322,10 @@ export function Casca() {
             {/* As ações de cada tela entram aqui por portal (ver `Pagina`): um lugar só,
                 aprendido uma vez, certo em todas as telas. */}
             <div ref={setDestinoDasAcoes} className="casca-acoes" />
-            <HoraDoSalao fuso={capacidades.estabelecimento.timezone} />
+            {/* Sem agenda no menu, o relógio não vira atalho: quem não tem a tela não
+                pode ter a porta dela no topo (inviolável nº 6 — quem decide é o servidor). */}
+            <HoraDoSalao fuso={capacidades.estabelecimento.timezone}
+              rotaDaAgenda={rotaDaAgenda} />
           </div>
         </header>
 

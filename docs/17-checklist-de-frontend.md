@@ -52,7 +52,11 @@ todo o resto quando está errado.
       existe caminho de volta.
 - [x] **C3 · Sem área de ações da página.** Cada tela inventa o próprio cabeçalho, e por isso
       nenhuma parece do mesmo produto.
-- [ ] **C4 · A data ocupa o lugar mais nobre e não é clicável.**
+- [x] **C4 · A data ocupa o lugar mais nobre e não é clicável.**
+      *(23/09/2026: o relógio virou a porta da agenda de hoje — é o que se faz depois de
+      olhar a hora num balcão. Sem `?dia=`, porque hoje é o padrão da tela e um dia
+      calculado no clique apontaria para ontem numa tela deixada aberta a noite inteira.
+      Quem não tem agenda no menu continua vendo um relógio, e não um atalho.)*
 - [ ] **C5 · O aviso de conexão vive fora da casca** e aparece como faixa solta.
 
 ## D — Login
@@ -293,6 +297,28 @@ caixa dentro de caixa.
 `/estoque` e `/financeiro` estão no menu e mostram "Em breve", com o backend pronto há semanas. É a
 maior falha de acabamento do produto hoje, e são duas telas grandes: entram **depois** destas
 faixas, para nascerem sobre o sistema visual novo em vez de serem reescritas.
+
+## Quarta passada — 23/09/2026: o que sobrou do checklist
+
+### Faixa 1 — o dia é do salão, e está no endereço
+
+A agenda calculava "hoje" com `Intl.DateTimeFormat('en-CA')` **sem fuso**: o dia da máquina.
+Num salão em Manaus, entre 23h e meia-noite de lá, a recepção abria a agenda de amanhã — e a
+tela não dava nenhuma pista do engano. É o inviolável nº 3 e a ADR-0009 valendo em todo lugar
+menos onde se olha o dia inteiro.
+
+No mesmo lugar, o dia morava num `useState`: recarregar voltava para hoje, o endereço não podia
+ser mandado para ninguém, e o "voltar" do navegador não desfazia a seta.
+
+O que entrou (R-UX-21): o dia vem do fuso do estabelecimento; o dia está na URL (`?dia=`, com
+`replace` para a seta não entupir o histórico); hoje é o endereço sem parâmetro; e um dia
+impossível colado ali (`2026-02-31`) cai em hoje em vez de derrubar a tela — `Intl` lança para
+data inválida, e era uma tela branca a um link torto de distância.
+
+E o relógio do topo deixou de ser enfeite: ele leva à agenda de hoje (C4).
+
+Sete mutações, sete mortas — incluindo a que devolve o dia da máquina e a que deixa o dia
+inválido passar.
 
 ## A lição que custou uma tela branca
 

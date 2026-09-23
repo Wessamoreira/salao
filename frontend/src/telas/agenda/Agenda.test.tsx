@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { deveSerAcessivel } from '../../teste/acessibilidade';
+import { chaveDasCapacidades } from '../../api/capacidades';
 import { Agenda } from './Agenda';
 
 /** 2026-09-17 às 10h24 em São Paulo — o instante do canvas de design. */
@@ -65,8 +66,40 @@ function montar(resposta: unknown) {
   }));
   const cliente = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <QueryClientProvider client={cliente}><Agenda /></QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={cliente}><Agenda /></QueryClientProvider>
+    </MemoryRouter>,
   );
+}
+
+/** O endereço de verdade, para provar que o dia está nele e não num estado escondido. */
+function Endereco() {
+  const local = useLocation();
+  return <output aria-label="endereço">{local.pathname + local.search}</output>;
+}
+
+/**
+ * A agenda como ela abre DENTRO da casca: as capacidades já estão no cache, porque a casca
+ * não desenha tela nenhuma antes de o contrato chegar. É o que faz o primeiro pedido já sair
+ * com o dia certo, em vez de sair com o dia da máquina e se corrigir depois.
+ */
+function montarNoSalao({ fuso, endereco = '/agenda' }: { fuso: string; endereco?: string }) {
+  const pedidos: string[] = [];
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
+    pedidos.push(String(url));
+    return { ok: true, status: 200, json: async () => agendaDoDia(),
+      headers: new Headers({ 'content-type': 'application/json' }) };
+  }));
+  const cliente = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  cliente.setQueryData(chaveDasCapacidades, {
+    estabelecimento: { timezone: fuso }, permissoes: [], menus: [], flags: {},
+  });
+  const tela = render(
+    <MemoryRouter initialEntries={[endereco]}>
+      <QueryClientProvider client={cliente}><Agenda /><Endereco /></QueryClientProvider>
+    </MemoryRouter>,
+  );
+  return { ...tela, diasPedidos: () => pedidos.filter((url) => url.includes('/agendamentos/dia')) };
 }
 
 /**
@@ -226,9 +259,60 @@ describe('grade da agenda', () => {
   it('erro na carga não deixa a tela em branco', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('rede')));
     const cliente = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={cliente}><Agenda /></QueryClientProvider>);
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={cliente}><Agenda /></QueryClientProvider>
+      </MemoryRouter>,
+    );
 
     expect(await screen.findByText(/Não foi possível carregar/)).toBeInTheDocument();
+  });
+});
+
+describe('o dia da agenda', () => {
+  it('abre o dia do SALÃO, não o da máquina', async () => {
+    // 00h30 de São Paulo, onde roda o teste, ainda é 23h30 do dia anterior em Manaus. A
+    // recepção de Manaus abria a agenda de amanhã e não tinha como perceber: a tela mostrava
+    // o dia da máquina (inviolável nº 3, ADR-0009).
+    vi.setSystemTime(new Date('2026-09-18T03:30:00Z'));
+    const { diasPedidos } = montarNoSalao({ fuso: 'America/Manaus' });
+
+    await screen.findByText('Ana');
+
+    expect(diasPedidos()).toEqual(['/api/v1/agendamentos/dia?data=2026-09-17']);
+  });
+
+  it('a seta escreve o dia no endereço — recarregar volta no mesmo dia', async () => {
+    montarNoSalao({ fuso: SAO_PAULO });
+    await screen.findByText('Ana');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Próximo dia' }));
+
+    expect(screen.getByRole('status', { name: 'endereço' })).toHaveTextContent('/agenda?dia=2026-09-18');
+  });
+
+  it('hoje é o endereço sem parâmetro, e o botão diz que já se está nele', async () => {
+    montarNoSalao({ fuso: SAO_PAULO, endereco: '/agenda?dia=2026-09-20' });
+    await screen.findByText('Ana');
+    const hoje = screen.getByRole('button', { name: 'hoje' });
+    expect(hoje).not.toHaveAttribute('aria-current');
+
+    await userEvent.click(hoje);
+
+    expect(screen.getByRole('status', { name: 'endereço' })).toHaveTextContent('/agenda');
+    expect(screen.getByRole('status', { name: 'endereço' })).not.toHaveTextContent('dia=');
+    expect(hoje).toHaveAttribute('aria-current', 'date');
+  });
+
+  it('um dia impossível no endereço não derruba a agenda', async () => {
+    // `2026-02-31` passa em qualquer regex de formato e não existe. `Intl` LANÇA para data
+    // inválida — a tela inteira sumiria por causa de um link colado torto.
+    const { diasPedidos } = montarNoSalao({ fuso: SAO_PAULO, endereco: '/agenda?dia=2026-02-31' });
+
+    await screen.findByText('Ana');
+
+    expect(diasPedidos()).toEqual(['/api/v1/agendamentos/dia?data=2026-09-17']);
+    expect(screen.getByText('17 de setembro')).toBeInTheDocument();
   });
 });
 

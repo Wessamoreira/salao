@@ -170,6 +170,36 @@ describe('casca', () => {
   });
 });
 
+describe('o relógio do salão', () => {
+  it('é a porta da agenda de hoje — e diz isso a quem não vê a tela', async () => {
+    // Ele ocupa o canto mais nobre do topo e não levava a lugar nenhum (C4). O que se faz
+    // depois de olhar a hora, num balcão, é abrir o dia.
+    montar();
+
+    const relogio = await screen.findByRole('link', { name: /^Agenda de hoje/ });
+
+    // Sem `?dia=`: hoje é o padrão da tela. Um dia calculado aqui apontaria para ontem
+    // numa tela do balcão deixada aberta a noite inteira.
+    expect(relogio).toHaveAttribute('href', '/agenda');
+  });
+
+  it('sem agenda no menu, o relógio continua relógio', async () => {
+    // Quem não tem a tela não pode ter a porta dela no topo: quem decide é o servidor
+    // (inviolável nº 6), e esconder o menu deixando o atalho seria a mesma porta com
+    // outro nome.
+    vi.mocked(api).mockResolvedValueOnce({
+      ...capacidadesDeRecepcao,
+      menus: capacidadesDeRecepcao.menus.filter((menu) => menu.rota !== '/agenda'),
+    } as never);
+
+    montar();
+    await screen.findByText('Studio Marilda');
+
+    expect(screen.queryByRole('link', { name: /Agenda de hoje/ })).not.toBeInTheDocument();
+    expect(screen.getByTitle('Horário do salão · America/Sao Paulo')).toBeInTheDocument();
+  });
+});
+
 describe('o pedaço da tela chega antes do clique', () => {
   it('encostar o ponteiro no menu já começa a baixar a tela', async () => {
     // Dividir o pacote por rota sem isto troca um problema por outro: a primeira tela fica
@@ -198,7 +228,7 @@ describe('o pedaço da tela chega antes do clique', () => {
 describe('acessibilidade', () => {
   it('não tem violação estrutural: a casca com o menu', async () => {
     const { container } = montar();
-    await screen.findByRole('link', { name: /Agenda/ });
+    await screen.findByRole('link', { name: 'Agenda' });
 
     await deveSerAcessivel(container);
   });

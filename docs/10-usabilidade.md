@@ -179,6 +179,25 @@ O front mapeia `codigo` para texto. O texto diz o que aconteceu **e o que fazer*
 | "Violação de constraint" | "Este horário acabou de ser preenchido por outra pessoa. Escolha outro." |
 | "Acesso negado" | "Só o gerente pode dar desconto acima de 10%. Chame o gerente ou reduza o desconto." |
 
+## R-UX-21 — O dia é o do salão, e o recorte é endereço
+`RT-AGD-011`, `ADR-0009`
+
+Três frases, e as três nasceram do mesmo defeito, encontrado em 23/09/2026 na agenda:
+
+1. **"Hoje" nunca vem do relógio da máquina.** Vem do dia civil no fuso do estabelecimento.
+   À 00h30 de São Paulo, um salão em Manaus ainda está no dia anterior — a agenda abria em
+   amanhã, e nada na tela permitia perceber. É o inviolável nº 3 dito do lado do front.
+2. **O recorte que define o que a tela mostra vive no endereço, não em estado.** Dia é para
+   onde se vai: recarregar tem de voltar no mesmo dia, o endereço tem de poder ser mandado
+   para alguém, e o "voltar" do navegador tem de desfazer a seta. Navegação entre dias usa
+   `replace` — andar seis dias não pode custar seis toques no voltar.
+3. **Recorte lido do endereço é entrada não confiável.** `2026-02-31` passa em qualquer regex
+   de formato, não existe no calendário, e `Intl` **lança** para data inválida: a tela inteira
+   sumiria por causa de um link colado torto. Valida-se antes de virar data.
+
+Aplicada na agenda, que é a tela que abre o dia. Conciliação e revisão do agente recortam por
+período e ainda guardam o recorte em estado: entram na regra quando forem tocadas.
+
 ---
 
 ## Acessibilidade — piso obrigatório

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { formatar } from './tempo';
 
 /**
  * A data e a hora **do salão**, não as da máquina.
@@ -13,13 +15,26 @@ import { useEffect, useState } from 'react';
  *
  * E é o dado que mais se olha num balcão: tudo aqui é horário.
  *
+ * <h2>E por que ele agora leva a algum lugar</h2>
+ *
+ * Ocupar o lugar mais nobre sem fazer nada é enfeite — e era a crítica C4 do checklist do
+ * front. O que a recepção faz depois de olhar a hora é abrir o dia: o relógio é o caminho
+ * mais curto de qualquer tela para a **agenda de hoje**.
+ *
+ * O destino é `/agenda` sem dia: hoje é o padrão da tela, e um `?dia=` calculado aqui
+ * apontaria para ontem numa tela deixada aberta a noite inteira — que é exatamente o que
+ * acontece com o computador do balcão.
+ *
+ * Quem não tem agenda no menu (o servidor é quem diz) continua vendo o relógio parado,
+ * sem link: esconder o menu e deixar o atalho seria a mesma porta com outro nome.
+ *
  * <h2>Atualiza no minuto, não no segundo</h2>
  *
  * Relógio com segundos pede atenção que a recepção não tem para dar, e um `setInterval`
  * de 1s acorda o React sessenta vezes por minuto para mudar dois dígitos. O primeiro
  * tique é alinhado à virada do minuto para o relógio não ficar meio minuto atrasado.
  */
-export function HoraDoSalao({ fuso }: { fuso: string }) {
+export function HoraDoSalao({ fuso, rotaDaAgenda }: { fuso: string; rotaDaAgenda?: string }) {
   const [agora, definirAgora] = useState(() => new Date());
 
   useEffect(() => {
@@ -35,29 +50,27 @@ export function HoraDoSalao({ fuso }: { fuso: string }) {
   const semana = formatar(agora, fuso, { weekday: 'short' }).replaceAll('.', '');
   const dia = formatar(agora, fuso, { day: '2-digit', month: 'short' }).replaceAll('.', '');
   const hora = formatar(agora, fuso, { hour: '2-digit', minute: '2-digit', hour12: false });
+  const titulo = `Horário do salão · ${fuso.replace('_', ' ')}`;
 
-  return (
-    <time className="casca-hoje" dateTime={agora.toISOString()}
-      title={`Horário do salão · ${fuso.replace('_', ' ')}`}>
+  const marcaDeTempo = (
+    <time className="casca-hoje" dateTime={agora.toISOString()}>
       <span>{semana.charAt(0).toLocaleUpperCase('pt-BR') + semana.slice(1)}</span>
       <span className="casca-hoje-dia">{dia}</span>
       <strong>{hora}</strong>
     </time>
   );
-}
 
-/**
- * `Intl.DateTimeFormat` **lança** `RangeError` para um fuso que ele não reconhece — não
- * devolve nada, não avisa: derruba o render, e com ele a aplicação inteira.
- *
- * O fuso vem do banco como texto livre (`America/Sao_Paulo`). Basta um cadastro com
- * grafia errada, ou um IANA que aquele navegador ainda não conhece, para a casca sumir.
- * Um relógio no fuso errado é um defeito pequeno; a tela branca é o maior de todos.
- */
-function formatar(quando: Date, fuso: string, opcoes: Intl.DateTimeFormatOptions): string {
-  try {
-    return new Intl.DateTimeFormat('pt-BR', { ...opcoes, timeZone: fuso }).format(quando);
-  } catch {
-    return new Intl.DateTimeFormat('pt-BR', opcoes).format(quando);
-  }
+  if (!rotaDaAgenda) return <span title={titulo}>{marcaDeTempo}</span>;
+
+  /*
+   * O nome acessível diz o destino antes do dado: sem ele, o leitor de tela anuncia
+   * "link, Qui 23 set 14:32" — informação certa, destino nenhum. A hora continua no
+   * nome porque ela É o conteúdo, e some para quem não vê se ficar só no visual.
+   */
+  return (
+    <Link className="casca-hoje-link" to={rotaDaAgenda} title={`Agenda de hoje · ${titulo}`}
+      aria-label={`Agenda de hoje · ${dia}, ${hora}`}>
+      {marcaDeTempo}
+    </Link>
+  );
 }

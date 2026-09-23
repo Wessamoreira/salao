@@ -7,10 +7,11 @@ import {
   cargaEmMinutos, faixaDoDia, posicao, posicaoDoAgora, rotuloDeCarga, rotuloDeHora,
   PIXELS_POR_MINUTO, type FaixaDoDia,
 } from './grade';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useCapacidades } from '../../api/capacidades';
 import { useVagasAbertas } from '../../api/fila';
 import { useConectado } from '../../pwa/conectado';
+import { diaCivil, ehDiaCivil, fusoDoNavegador, somarDias } from '../../layout/tempo';
 import './agenda.css';
 
 /** A jornada mais cheia do salão é a régua da barra de carga — não um número inventado. */
@@ -45,16 +46,6 @@ const CLASSE_POR_STATUS: Record<string, string> = {
   NO_SHOW: 'falta',
   CANCELADO: 'cancelado',
 };
-
-function hoje(): string {
-  return new Intl.DateTimeFormat('en-CA').format(new Date());
-}
-
-function somarDias(data: string, dias: number): string {
-  const [ano, mes, dia] = data.split('-').map(Number);
-  const d = new Date(Date.UTC(ano, mes - 1, dia + dias));
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(d);
-}
 
 function porExtenso(data: string): { dia: string; semana: string } {
   const [ano, mes, dia] = data.split('-').map(Number);
@@ -95,8 +86,41 @@ function AvisoDeVagas() {
 
 export function Agenda() {
   const { data: capacidades } = useCapacidades();
-  const [data, definirData] = useState(hoje());
+  const [parametros, definirParametros] = useSearchParams();
   const [escolhido, definirEscolhido] = useState<string | null>(null);
+
+  /*
+   * O dia é o dia do SALÃO, e ele está no endereço.
+   *
+   * Duas correções no mesmo lugar, porque são a mesma frase dita de dois jeitos.
+   *
+   * O dia vinha de `Intl.DateTimeFormat('en-CA')` sem fuso — o dia da MÁQUINA. Às 00h30
+   * de São Paulo, um salão em Manaus ainda está no dia anterior, e a recepção abria a
+   * agenda de amanhã sem ter como perceber. É o inviolável nº 3 e a ADR-0009: conversão
+   * só na borda, com o fuso do estabelecimento.
+   *
+   * E o dia morava num `useState`: recarregar a página voltava para hoje, o endereço não
+   * podia ser mandado para ninguém, e o botão "voltar" do navegador não desfazia a seta.
+   * Dia é para onde se vai — então é endereço.
+   */
+  const fuso = capacidades?.estabelecimento?.timezone ?? fusoDoNavegador();
+  const hoje = diaCivil(new Date(), fuso);
+  const pedido = parametros.get('dia');
+  // Endereço colado errado não derruba a tela: `?dia=31-02` cairia no `Intl` como data
+  // inválida, que LANÇA, e a agenda inteira sumiria por causa da barra de endereço.
+  const data = ehDiaCivil(pedido) ? pedido : hoje;
+
+  /*
+   * `replace` de propósito: andar seis dias com a seta não pode custar seis toques no
+   * "voltar" para sair da agenda. O endereço continua certo para recarregar e para
+   * mandar para alguém — que é o que se ganha aqui —, e hoje é o endereço sem parâmetro.
+   */
+  const irParaODia = (novo: string) => {
+    const proximos = new URLSearchParams(parametros);
+    if (novo === hoje) proximos.delete('dia');
+    else proximos.set('dia', novo);
+    definirParametros(proximos, { replace: true });
+  };
   const { data: agenda, dataUpdatedAt, isPending, isPlaceholderData, error, refetch } =
     useAgendaDoDia(data);
   const conectado = useConectado();
@@ -133,10 +157,13 @@ export function Agenda() {
           </span>
         )}
         <nav className="agenda-navegacao" aria-label="Navegar entre os dias">
-          <button type="button" onClick={() => definirData(somarDias(data, -1))}
+          <button type="button" onClick={() => irParaODia(somarDias(data, -1))}
             aria-label="Dia anterior">←</button>
-          <button type="button" onClick={() => definirData(hoje())}>hoje</button>
-          <button type="button" onClick={() => definirData(somarDias(data, 1))}
+          {/* `aria-current="date"` diz o que a cor já diz para quem vê: é este o dia de
+              hoje, e o botão não vai levar a lugar nenhum. */}
+          <button type="button" onClick={() => irParaODia(hoje)}
+            aria-current={data === hoje ? 'date' : undefined}>hoje</button>
+          <button type="button" onClick={() => irParaODia(somarDias(data, 1))}
             aria-label="Próximo dia">→</button>
         </nav>
       </header>
