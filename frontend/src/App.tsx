@@ -14,7 +14,6 @@ import { EmBreve } from './telas/EmBreve';
 import {
   Agenda, Clientes, Comandas, Conciliacao, Configuracao, Fila, Painel, Precos, RevisaoDoAgente,
 } from './rotas';
-import { Conectividade } from './pwa/Conectividade';
 
 const cliente = new QueryClient({
   defaultOptions: {
@@ -55,7 +54,6 @@ export function App() {
     // e por dentro ela morreria junto com o que deveria proteger.
     <Barreira>
       <QueryClientProvider client={cliente}>
-        <Conectividade />
         <BrowserRouter>
           <Routes>
             <Route path="/entrar" element={<Login />} />

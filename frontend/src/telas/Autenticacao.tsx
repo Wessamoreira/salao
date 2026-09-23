@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Conectividade } from '../pwa/Conectividade';
 import './autenticacao.css';
 
 /**
@@ -45,6 +46,10 @@ export function Autenticacao({ salao = 'Salão', titulo, apoio, children }: {
           {children}
         </section>
       </div>
+
+      {/* Sem casca, não há barra onde o estado do sistema possa morar: aqui ele flutua. E
+          ele importa MAIS aqui — entrar é a única coisa que não dá para fazer offline. */}
+      <Conectividade />
     </main>
   );
 }

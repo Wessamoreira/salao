@@ -57,7 +57,12 @@ todo o resto quando está errado.
       olhar a hora num balcão. Sem `?dia=`, porque hoje é o padrão da tela e um dia
       calculado no clique apontaria para ontem numa tela deixada aberta a noite inteira.
       Quem não tem agenda no menu continua vendo um relógio, e não um atalho.)*
-- [ ] **C5 · O aviso de conexão vive fora da casca** e aparece como faixa solta.
+- [x] **C5 · O aviso de conexão vive fora da casca** e aparece como faixa solta.
+      *(23/09/2026: virou uma pastilha na barra de topo, ao lado do relógio — estado do
+      sistema pertence à moldura do sistema. Na porta do sistema, que não tem barra, ele
+      continua flutuando. E passou a distinguir internet caída de servidor mudo, a avisar
+      quando a conexão volta, e a oferecer "tentar de novo" no único caso em que
+      ninguém avisa sozinho.)*
 
 ## D — Login
 
@@ -319,6 +324,25 @@ E o relógio do topo deixou de ser enfeite: ele leva à agenda de hoje (C4).
 
 Sete mutações, sete mortas — incluindo a que devolve o dia da máquina e a que deixa o dia
 inválido passar.
+
+### Faixa 2 — o estado da conexão é do sistema, não da tela
+
+O aviso de conexão era um retângulo fixo no canto inferior direito, por fora da casca, cobrindo
+o conteúdo: a forma exata do aviso de cookie. Foi para a barra de topo, ao lado do relógio.
+
+Olhando para ele de perto, apareceram três defeitos que não eram de lugar:
+
+1. **Uma frase para duas quedas.** "Sem conexão" dito para quem está com o WhatsApp aberto
+   ensina a recepção a não acreditar no aviso. Agora são dois diagnósticos — e, com os dois
+   sinais acesos ao mesmo tempo (que é o caso comum: a rede cai e a requisição em voo falha),
+   manda o que está perto da pessoa e ela pode resolver.
+2. **A volta não era avisada.** Quem viu o aviso não sabia quando podia salvar de novo; o jeito
+   de descobrir era tentar e ver se dava errado. E a rede voltando deixava gravado "servidor
+   fora do ar" — o eco da queda anterior — até alguém pedir algo ao servidor.
+3. **Servidor mudo não tinha saída.** Internet voltando, o navegador avisa sozinho; servidor
+   voltando, ninguém avisa. Só ali existe "tentar de novo", e ele refaz as consultas da tela.
+
+Dez testes novos, sete mutações, sete mortas.
 
 ## A lição que custou uma tela branca
 

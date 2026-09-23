@@ -1,37 +1,86 @@
+/*
+ * O estado do sistema em dois lugares: dentro da barra de topo (dentro do sistema) e
+ * flutuando (na porta dele, onde ainda não há barra).
+ *
+ * Os dois usam a superfície escura — a mesma do painel de parede. Não é cor de status: cor
+ * de status codifica estado do NEGÓCIO neste produto, e conexão não é negócio. O escuro
+ * aqui quer dizer "quem está falando é o sistema".
+ */
+
 .conectividade {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  color: var(--espelho-texto);
+  background: var(--espelho);
+  font-size: var(--t-11);
+}
+
+.conectividade-titulo { font-weight: var(--p-pesado); }
+.conectividade-consequencia { color: var(--espelho-texto-fraco); }
+
+.conectividade-ponto {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  background: var(--espelho-texto);
+  border-radius: 50%;
+}
+
+/* ------------------------------------------------------------------- na barra */
+
+.conectividade.barra {
+  height: 26px;
+  padding: 0 var(--e-2) 0 var(--e-3);
+  border-radius: var(--raio-1);
+  white-space: nowrap;
+}
+
+.conectividade.barra button {
+  margin-left: var(--e-1);
+  padding: 2px var(--e-2);
+  color: var(--espelho-texto);
+  background: transparent;
+  border: 1px solid var(--espelho-regua);
+  border-radius: var(--raio-1);
+  font: inherit;
+  font-weight: var(--p-forte);
+  cursor: pointer;
+  transition: background var(--mov-imediato) var(--mov-curva);
+}
+.conectividade.barra button:hover { background: var(--espelho-regua); }
+
+/* A consequência é a primeira coisa a sair quando falta largura: o título sozinho já
+   impede alguém de tentar salvar. */
+@media (max-width: 1180px) {
+  .conectividade.barra .conectividade-consequencia { display: none; }
+}
+
+/* --------------------------------------------------------------- flutuando */
+
+.conectividade.flutuante {
   position: fixed;
   z-index: 90;
   right: var(--e-4);
   bottom: var(--e-4);
   max-width: min(380px, calc(100vw - var(--e-6)));
-  display: grid;
-  grid-template-columns: auto auto 1fr;
-  align-items: center;
-  gap: var(--e-2);
+  flex-wrap: wrap;
   padding: var(--e-3) var(--e-4);
-  color: var(--espelho-texto);
-  background: var(--espelho);
   border: 1px solid var(--espelho-regua);
   border-radius: var(--raio-2);
   box-shadow: var(--sombra-flutuante);
   font-size: var(--t-12);
 }
 
-.conectividade strong { font-weight: var(--p-pesado); }
-.conectividade > span:last-child { color: var(--espelho-texto-fraco); }
-.conectividade-ponto {
-  width: 8px;
-  height: 8px;
-  background: var(--status-solicitado);
-  border-radius: 50%;
-}
-
 @media (max-width: 560px) {
-  .conectividade {
+  .conectividade.flutuante {
     right: var(--e-3);
     bottom: var(--e-3);
     left: var(--e-3);
-    grid-template-columns: auto 1fr;
   }
-  .conectividade > span:last-child { grid-column: 2; }
 }
+
+/* --------------------------------------------------------------------- voltou */
+
+/* Notícia boa não ganha sinal de alerta: o "voltou" é o mesmo aviso SEM o ponto, e sai da
+   tela em cinco segundos. Nada aqui — a ausência é a diferença. */

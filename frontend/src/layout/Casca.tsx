@@ -12,6 +12,7 @@ import { Icone } from './Icone';
 import { Barreira } from './Barreira';
 import { DestinoDasAcoes } from './destinoDasAcoes';
 import { Paleta } from './Paleta';
+import { Conectividade } from '../pwa/Conectividade';
 import './casca.css';
 
 const CHAVE_RECOLHIDA = 'salao:lateral-recolhida';
@@ -319,6 +320,10 @@ export function Casca() {
           </button>
 
           <div className="casca-topo-final">
+            {/* Estado do sistema fica na moldura do sistema, antes das ações da tela: ele
+                muda o que as ações conseguem fazer. */}
+            <Conectividade variante="barra"
+              aoTentar={() => void clienteDeConsultas.invalidateQueries()} />
             {/* As ações de cada tela entram aqui por portal (ver `Pagina`): um lugar só,
                 aprendido uma vez, certo em todas as telas. */}
             <div ref={setDestinoDasAcoes} className="casca-acoes" />

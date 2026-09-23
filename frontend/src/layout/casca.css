@@ -390,7 +390,10 @@
   height: var(--topo);
   flex-shrink: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 380px) minmax(0, 1fr);
+  /* A terceira coluna tem o tamanho do que carrega: relógio e estado do sistema não
+     encolhem nem quebram linha. Quem cede largura é a trilha e a busca — e a trilha
+     já sabe truncar. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 380px) auto;
   align-items: center;
   gap: var(--e-4);
   padding: 0 var(--e-4);
@@ -495,6 +498,7 @@
 
 .casca-hoje {
   display: flex;
+  white-space: nowrap;
   align-items: baseline;
   gap: var(--e-2);
   padding-left: var(--e-3);

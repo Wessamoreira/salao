@@ -134,6 +134,29 @@ Cache somente leitura da agenda do dia. Quando cair a conexão, banner claro:
 de uma agenda com exclusion constraint gera conflito que o usuário não sabe resolver. Mentir
 sobre estado é pior que não funcionar.
 
+**Revisão de 23/09/2026 — honesto também sobre de quem é a culpa.** Três acertos, e os três
+nascem da mesma frase acima:
+
+- **Duas quedas, dois diagnósticos.** "Sem internet" e "Sistema fora do ar" são problemas
+  diferentes: um a pessoa resolve (roteador, 4G), o outro só resta esperar. Dizer "sem conexão"
+  para quem está com o WhatsApp aberto é a forma mais rápida de ensinar a recepção a ignorar o
+  aviso — e um aviso ignorado é pior do que nenhum. A consequência, essa, é a mesma nos dois:
+  consulta sim, escrita não.
+- **Com os dois sinais acesos, manda o que está perto da pessoa.** A rede caindo derruba a
+  requisição em voo, e a falha marca o servidor como fora do ar: quem está errado é o Wi-Fi.
+  Pela mesma razão, a rede voltando zera o que se sabia do servidor — senão o diagnóstico velho
+  fica na tela como se fosse novo.
+- **A volta é avisada.** Quem viu "sem internet" precisa saber quando pode salvar de novo; sem
+  o aviso, o jeito de descobrir era tentar e ver se dava errado. Cinco segundos e some: "está
+  tudo bem" não merece espaço permanente.
+- **Servidor fora do ar ganha "tentar de novo".** Internet voltando, o navegador avisa sozinho;
+  servidor voltando, ninguém avisa — o estado só muda quando alguma requisição der certo, e sem
+  o botão a saída era recarregar a página.
+
+E o aviso mora na barra de topo, dentro da moldura do sistema (C5 do checklist do front): no
+canto flutuante ele tinha a forma exata do aviso de cookie, que é o que todo mundo aprendeu a
+ignorar. Na porta do sistema, onde não há barra, ele continua flutuando.
+
 ## R-UX-15 — Telefone é a maior fonte de erro de cadastro
 `RT-CLI-001`, `RT-CLI-003`
 
