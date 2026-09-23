@@ -138,3 +138,54 @@
   border-left: 3px solid var(--status-confirmado);
   border-radius: var(--raio-2);
 }
+
+/* ------------------------------------------------------------------ seção de tela
+ *
+ * A seção é ESTRUTURA, não caixa: título, régua fina e ar. O papel branco fica para o que
+ * é objeto — cartão de sugestão, vaga, linha de extrato. Antes de 22/09/2026 cada tela
+ * tinha a própria caixa branca de 24px e canto arredondado, copiada três vezes e contra a
+ * lista final de `16-design-system.md`.
+ *
+ * A régua encosta no título e não atravessa a tela inteira sozinha: ela pertence ao
+ * cabeçalho, como num jornal.
+ */
+.secao-tela {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--e-4);
+}
+
+.secao-tela-topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--e-2) var(--e-6);
+  padding-bottom: var(--e-2);
+  border-bottom: 1px solid var(--regua-forte);
+}
+
+.secao-tela-nome { min-width: 0; }
+
+.secao-tela-titulo {
+  margin: 0;
+  font-size: var(--t-20);
+  font-weight: var(--p-forte);
+  letter-spacing: var(--tr-titulo);
+}
+
+.secao-tela-ajuda {
+  margin: var(--e-1) 0 0;
+  max-width: 78ch;
+  color: var(--tinta-fraca);
+  font-size: var(--t-14);
+}
+
+.secao-tela-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+}
+
+/* Entre seções, ar — e não mais uma borda. Duas molduras seguidas viram grade de caixas. */
+.secao-tela + .secao-tela { margin-top: var(--e-10); }

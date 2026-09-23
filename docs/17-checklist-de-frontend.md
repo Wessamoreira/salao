@@ -183,7 +183,7 @@ verde carregava a impressão de que estava tudo verificado.
 | 1 | ~~A CI ignora o front~~ **feito** | job `front`: `npm ci`, lint, tipos, testes e **build**, com o pacote publicado como artefato. O `imagem` passou a depender dele |
 | 2 | ~~Toda ação espera a ida e a volta~~ **feito nas duas telas quentes** | comanda e preços usavam a resposta só para invalidar tudo: dois a três pedidos por clique |
 | 3 | ~~Um pacote só, sem divisão por rota~~ **feito** | era 411 KB (121 KB comprimido) num arquivo; ficou 295 KB (93 KB) de entrada, com cada tela num pedaço de 1 a 33 KB |
-| 4 | Cada tela inventou o próprio cartão | `cnc-bloco`, `prc-bloco`, `fil-bloco`, `agt-bloco…`; 3.512 linhas de CSS em 10 arquivos |
+| 4 | ~~Cada tela inventou o próprio cartão~~ **feito** | três definições idênticas viraram uma primitiva; seção deixou de ser caixa |
 | 5 | O erro não mora no campo que errou (D7) | bloco de erro acima do formulário |
 | 6 | Acessibilidade nunca foi medida (F3) | nenhuma ferramenta nas dependências |
 
@@ -224,6 +224,22 @@ O intervalo entre decidir e clicar existe de graça; é ele que paga o download.
 E a espera, quando acontece, é **dentro da casca**: menu, trilha e relógio continuam na tela, com
 o esqueleto no lugar do conteúdo. Por fora, trocar de tela apagaria a casca por um instante — o
 corte seco que a transição de vista (E1) veio tirar.
+
+### Faixa 4 — seção não é caixa
+
+Conciliação, preços e fila tinham a **mesma caixa branca copiada três vezes**: `.cnc-bloco`,
+`.prc-bloco`, `.fil-bloco`, idênticas até no `padding`. E as três eram caixa de canto arredondado
+com 24px de padding — exatamente o que a lista final de `16-design-system.md` proíbe
+("espaçamento uniforme de 24px · canto muito arredondado"). Não era falta de direção: era a
+direção não sendo seguida.
+
+Agora existe `layout/Secao.tsx`, uma só, e ela é **estrutura**: título, régua fina e ar. O papel
+branco ficou reservado ao que é **objeto** — o cartão da sugestão, a vaga com quem ligar, o número
+do mês na conciliação. A tela passou a ter dois níveis de leitura em vez de um, e some a pilha de
+caixas iguais que é o retrato do gerado.
+
+O ganho foi além do visual: no celular, sem o padding da caixa, os três botões de cada candidata
+cabem numa linha só.
 
 **Por que o build entra no CI e não só os testes:** os testes montam componentes, não o pacote —
 um import quebrado passa por lint, tipos e testes e só aparece no `vite build`. Foi exatamente o

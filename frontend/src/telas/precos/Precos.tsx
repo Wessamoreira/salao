@@ -7,6 +7,7 @@ import {
 import { useCapacidades } from '../../api/capacidades';
 import { ErroDaApi } from '../../api/http';
 import { Esqueleto, Falha, Pagina } from '../../layout/Pagina';
+import { Secao } from '../../layout/Secao';
 import { formatar } from '../../layout/tempo';
 import './precos.css';
 
@@ -52,16 +53,13 @@ function Regua() {
   const valido = valor.trim() !== '' && Number.isFinite(numero) && numero >= 0 && numero <= 1000;
 
   return (
-    <section className="prc-bloco" aria-labelledby="prc-regua">
-      <header className="prc-cabecalho">
-        <div>
-          <h2 id="prc-regua" className="prc-titulo">Margem mínima</h2>
-          <p className="prc-ajuda">
-            Nenhuma sugestão fica abaixo do custo médio mais esta margem — e aprovar também não deixa.
-          </p>
-        </div>
-        {salvo && <span className="prc-salvo" role="status">Salvo</span>}
-      </header>
+    <Secao
+      id="prc-regua"
+      titulo="Margem mínima"
+      ajuda={'Nenhuma sugestão fica abaixo do custo médio mais esta margem — e aprovar também '
+        + 'não deixa.'}
+      acoes={salvo && <span className="prc-salvo" role="status">Salvo</span>}
+    >
 
       {painel.isPending ? <Esqueleto linhas={1} altura={44} />
         : (
@@ -87,7 +85,7 @@ function Regua() {
             {salvar.isError && <p className="erro" role="alert">{mensagem(salvar.error)}</p>}
           </form>
         )}
-    </section>
+    </Secao>
   );
 }
 
@@ -100,22 +98,20 @@ function Sugestoes() {
   const semRegua = painel.data != null && painel.data.margemMinima == null;
 
   return (
-    <section className="prc-bloco" aria-labelledby="prc-sugestoes">
-      <header className="prc-cabecalho">
-        <div>
-          <h2 id="prc-sugestoes" className="prc-titulo">Sugestões</h2>
-          <p className="prc-ajuda">
-            {painel.data?.geradaEm
-              ? `Da última vez que você pediu. Nada muda de preço sem o seu clique.`
-              : 'Nada muda de preço sem o seu clique.'}
-          </p>
-        </div>
+    <Secao
+      id="prc-sugestoes"
+      titulo="Sugestões"
+      ajuda={painel.data?.geradaEm
+        ? 'Da última vez que você pediu. Nada muda de preço sem o seu clique.'
+        : 'Nada muda de preço sem o seu clique.'}
+      acoes={(
         <button className="pagina-acao discreta" type="button"
           disabled={gerar.isPending || semRegua}
           onClick={() => { gerar.reset(); gerar.mutate(); }}>
           {gerar.isPending ? 'Procurando…' : 'Procurar preços errados'}
         </button>
-      </header>
+      )}
+    >
 
       {semRegua && (
         <p className="prc-aviso" role="status">
@@ -150,7 +146,7 @@ function Sugestoes() {
                 ))}
               </ul>
             )}
-    </section>
+    </Secao>
   );
 }
 
@@ -266,11 +262,11 @@ function Trilha({ fuso }: { fuso: string }) {
   const itens = consulta.data?.pages.flatMap((pagina) => pagina.itens) ?? [];
 
   return (
-    <section className="prc-bloco" aria-labelledby="prc-trilha">
-      <h2 id="prc-trilha" className="prc-titulo">Decisões</h2>
-      <p className="prc-ajuda">
-        O que foi aplicado e o que foi recusado, com os números da época.
-      </p>
+    <Secao
+      id="prc-trilha"
+      titulo="Decisões"
+      ajuda="O que foi aplicado e o que foi recusado, com os números da época."
+    >
 
       {consulta.isPending ? <Esqueleto linhas={3} altura={36} />
         : consulta.isError ? <Falha aoTentar={() => consulta.refetch()}>{mensagem(consulta.error)}</Falha>
@@ -310,7 +306,7 @@ function Trilha({ fuso }: { fuso: string }) {
           </button>
         </div>
       )}
-    </section>
+    </Secao>
   );
 }
 

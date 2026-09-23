@@ -14,6 +14,8 @@
   margin: 0 auto;
 }
 
+/* Sobra para dois usos que NÃO são seção: o aviso de arquivo ilegível e o esqueleto da
+   leitura. Seção de tela agora é a primitiva compartilhada. */
 .cnc-bloco {
   display: grid;
   gap: var(--e-5);
@@ -26,13 +28,6 @@
 /* Botão no bloco tem o tamanho do texto: a grade esticaria até a borda. */
 .cnc-bloco > .pagina-acao { justify-self: start; }
 
-.cnc-titulo {
-  margin: 0;
-  font-size: var(--t-20);
-  font-weight: var(--p-forte);
-  letter-spacing: var(--tr-titulo);
-  overflow-wrap: anywhere;
-}
 .cnc-ajuda {
   max-width: 72ch;
   margin: 0;
@@ -96,15 +91,6 @@
   font-size: var(--t-12);
 }
 
-/* ------------------------------------------------------------------ conferir */
-
-.cnc-cabecalho {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--e-3) var(--e-6);
-}
 .cnc-contas {
   margin: var(--e-1) 0 0;
   color: var(--tinta-fraca);
@@ -623,7 +609,9 @@
     left: 0;
     width: 100cqi;
   }
-  .cnc-bloco { padding: var(--e-4); }
+  /* Sobra para dois usos que NÃO são seção: o aviso de arquivo ilegível e o esqueleto da
+   leitura. Seção de tela agora é a primitiva compartilhada. */
+.cnc-bloco { padding: var(--e-4); }
   .cnc-campo {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--e-1);

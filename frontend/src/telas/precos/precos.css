@@ -6,40 +6,14 @@
  * decisão sem empurrar a linha de baixo para fora da tela.
  */
 
-.prc-tela {
-  display: grid;
-  gap: var(--e-8);
-}
+.prc-tela { display: grid; }
 
-.prc-bloco {
-  display: grid;
-  gap: var(--e-5);
-  padding: var(--e-6);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-3);
-}
-
-.prc-cabecalho {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--e-3) var(--e-6);
-}
-
-.prc-titulo {
-  margin: 0;
-  font-size: var(--t-20);
-  font-weight: var(--p-forte);
-  letter-spacing: var(--tr-titulo);
-}
-
+/* A ajuda dos painéis de decisão. A da seção vem da primitiva compartilhada. */
 .prc-ajuda {
   margin: var(--e-1) 0 0;
   max-width: 78ch;
   color: var(--tinta-fraca);
-  font-size: var(--t-14);
+  font-size: var(--t-12);
 }
 
 .prc-salvo {
@@ -114,7 +88,8 @@
   display: grid;
   gap: var(--e-2);
   padding: var(--e-4) var(--e-5) var(--e-5);
-  background: var(--papel-fundo);
+  /* O cartão é OBJETO: papel branco sobre o fundo da página. */
+  background: var(--papel);
   border: 1px solid var(--regua);
   border-top: 3px solid var(--regua-forte);
   border-radius: var(--raio-2);

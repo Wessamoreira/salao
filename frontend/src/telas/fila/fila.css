@@ -6,43 +6,14 @@
  * de agendamento. O que pede atenção é o que está no alto: vagas abertas, com quem ligar.
  */
 
-.fil-tela {
-  display: grid;
-  gap: var(--e-8);
-}
+.fil-tela { display: grid; }
 
-/* `minmax(0, 1fr)`: sem ele a tabela larga faz a coluna crescer além da tela, e a rolagem
-   horizontal, que devia ser só dela, vira da página inteira. */
-.fil-bloco {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--e-5);
-  padding: var(--e-6);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-3);
-}
-
-.fil-cabecalho {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--e-3) var(--e-6);
-}
-
-.fil-titulo {
-  margin: 0;
-  font-size: var(--t-20);
-  font-weight: var(--p-forte);
-  letter-spacing: var(--tr-titulo);
-}
-
+/* A ajuda de dentro do painel de chamada e do formulário. A da seção vem da primitiva. */
 .fil-ajuda {
   margin: var(--e-1) 0 0;
   max-width: 78ch;
   color: var(--tinta-fraca);
-  font-size: var(--t-14);
+  font-size: var(--t-12);
 }
 
 .fil-nada {
@@ -83,11 +54,13 @@
   list-style: none;
 }
 
+/* A vaga é OBJETO: papel branco sobre o fundo da página. A seção é estrutura e não tem
+   superfície própria — é essa diferença que dá dois níveis de leitura à tela. */
 .fil-vaga {
   display: grid;
   gap: var(--e-3);
   padding: var(--e-4) var(--e-5) var(--e-2);
-  background: var(--papel-fundo);
+  background: var(--papel);
   border: 1px solid var(--regua);
   border-radius: var(--raio-2);
 }
@@ -433,7 +406,6 @@
 
 @media (max-width: 640px) {
   .fil-faixa { grid-column: 1 / -1; }
-  .fil-bloco { padding: var(--e-4); }
   .fil-vaga { padding: var(--e-3) var(--e-4) var(--e-1); }
   .fil-candidata { grid-template-columns: 2ch minmax(0, 1fr); }
   /* No celular a coluna do nome é estreita demais para três botões e um painel: os dois ocupam a

@@ -8,6 +8,7 @@ import { formatarTelefone, useBusca, comoChamar, type Cliente } from '../../api/
 import { useProfissionais, useServicos } from '../../api/comandas';
 import { ErroDaApi } from '../../api/http';
 import { Esqueleto, Falha, Pagina } from '../../layout/Pagina';
+import { Secao } from '../../layout/Secao';
 import { formatar } from '../../layout/tempo';
 import './fila.css';
 
@@ -45,14 +46,12 @@ function VagasAbertas({ fuso }: { fuso: string }) {
   const vagas = useVagasAbertas();
 
   return (
-    <section className="fil-bloco" aria-labelledby="fil-vagas">
-      <header>
-        <h2 id="fil-vagas" className="fil-titulo">Vagas abertas</h2>
-        <p className="fil-ajuda">
-          Horários que abriram por cancelamento ou remarcação, com quem da fila cabe neles. Ligue na
-          ordem: quem recusa ou não atende continua na fila.
-        </p>
-      </header>
+    <Secao
+      id="fil-vagas"
+      titulo="Vagas abertas"
+      ajuda={'Horários que abriram por cancelamento ou remarcação, com quem da fila cabe neles. '
+        + 'Ligue na ordem: quem recusa ou não atende continua na fila.'}
+    >
 
       {vagas.isPending ? <Esqueleto linhas={2} altura={140} />
         : vagas.isError ? <Falha aoTentar={() => vagas.refetch()}>{mensagem(vagas.error)}</Falha>
@@ -68,7 +67,7 @@ function VagasAbertas({ fuso }: { fuso: string }) {
                 {vagas.data.map((vaga) => <CartaoDaVaga key={vaga.id} vaga={vaga} fuso={fuso} />)}
               </ul>
             )}
-    </section>
+    </Secao>
   );
 }
 
@@ -268,23 +267,19 @@ function NaFila({ fuso }: { fuso: string }) {
   const total = esperas.data?.length ?? 0;
 
   return (
-    <section className="fil-bloco" aria-labelledby="fil-esperas">
-      <header className="fil-cabecalho">
-        <div>
-          <h2 id="fil-esperas" className="fil-titulo">Na fila</h2>
-          <p className="fil-ajuda">
-            {esperas.data
-              ? total === 0 ? 'Ninguém esperando.'
-                : total === 1 ? '1 pessoa esperando.' : `${total} pessoas esperando.`
-              : 'Quem espera uma vaga, do mais antigo para o mais novo.'}
-          </p>
-        </div>
-        {!pondo && (
-          <button className="pagina-acao discreta" type="button" onClick={() => definirPondo(true)}>
-            Pôr na fila
-          </button>
-        )}
-      </header>
+    <Secao
+      id="fil-esperas"
+      titulo="Na fila"
+      ajuda={esperas.data
+        ? total === 0 ? 'Ninguém esperando.'
+          : total === 1 ? '1 pessoa esperando.' : `${total} pessoas esperando.`
+        : 'Quem espera uma vaga, do mais antigo para o mais novo.'}
+      acoes={!pondo && (
+        <button className="pagina-acao discreta" type="button" onClick={() => definirPondo(true)}>
+          Pôr na fila
+        </button>
+      )}
+    >
 
       {pondo && <FormularioDeEspera aoFechar={() => definirPondo(false)} />}
 
@@ -312,7 +307,7 @@ function NaFila({ fuso }: { fuso: string }) {
               </table>
             </div>
           )}
-    </section>
+    </Secao>
   );
 }
 

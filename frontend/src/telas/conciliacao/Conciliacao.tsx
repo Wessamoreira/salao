@@ -9,6 +9,7 @@ import {
 import { useCapacidades } from '../../api/capacidades';
 import { ErroDaApi } from '../../api/http';
 import { Esqueleto, Falha, Pagina } from '../../layout/Pagina';
+import { Secao } from '../../layout/Secao';
 import { diaCivil, formatar } from '../../layout/tempo';
 import './conciliacao.css';
 
@@ -120,12 +121,14 @@ export function Conciliacao() {
 function EscolherArquivo({ aoEscolher }: { aoEscolher: (arquivo: File) => void }) {
   const [arrastando, definirArrastando] = useState(false);
   return (
-    <section className="cnc-bloco" aria-labelledby="cnc-entrada">
-      <h2 id="cnc-entrada" className="cnc-titulo">Importar vendas da Stone</h2>
-      <p className="cnc-ajuda">
+    <Secao
+      id="cnc-entrada"
+      titulo="Importar vendas da Stone"
+      ajuda={<>
         No portal da Stone, abra <strong>Vendas → Lista de vendas</strong>, escolha o período e
         exporte em <strong>CSV</strong>. Nada é gravado antes de você conferir.
-      </p>
+      </>}
+    >
       <label
         className={`cnc-zona${arrastando ? ' arrastando' : ''}`}
         onDragOver={(e) => { e.preventDefault(); definirArrastando(true); }}
@@ -150,7 +153,7 @@ function EscolherArquivo({ aoEscolher }: { aoEscolher: (arquivo: File) => void }
         <span className="cnc-zona-acao">Escolher arquivo CSV</span>
         <span className="cnc-zona-dica">ou arraste para cá</span>
       </label>
-    </section>
+    </Secao>
   );
 }
 
@@ -172,20 +175,19 @@ function Conferencia({ arquivo, fuso, previa, mapeamento, relendo, importando, e
   const faltaAlgo = previa.faltando.length > 0;
 
   return (
-    <section className="cnc-bloco" aria-labelledby="cnc-conferencia">
-      <header className="cnc-cabecalho">
-        <div>
-          <h2 id="cnc-conferencia" className="cnc-titulo">{arquivo.name}</h2>
-          <p className="cnc-contas">
-            {faltaAlgo ? `${previa.linhas} linhas — escolha as colunas obrigatórias para ler as vendas`
-              : `${previa.linhas} linhas · ${previa.lidas} vendas lidas · ${previa.ignoradas} ignoradas`
-                + ` · ${previa.recusadas} recusadas`}
-          </p>
-        </div>
+    <Secao
+      id="cnc-conferencia"
+      titulo={arquivo.name}
+      ajuda={faltaAlgo
+        ? `${previa.linhas} linhas — escolha as colunas obrigatórias para ler as vendas`
+        : `${previa.linhas} linhas · ${previa.lidas} vendas lidas · ${previa.ignoradas} ignoradas`
+          + ` · ${previa.recusadas} recusadas`}
+      acoes={(
         <button className="pagina-acao discreta" type="button" onClick={aoTrocar}>
           Escolher outro arquivo
         </button>
-      </header>
+      )}
+    >
 
       {previa.jaImportadoEm && (
         <p className="cnc-aviso" role="status">
@@ -258,7 +260,7 @@ function Conferencia({ arquivo, fuso, previa, mapeamento, relendo, importando, e
             : `Importar ${previa.lidas} ${previa.lidas === 1 ? 'venda' : 'vendas'}`}
         </button>
       </footer>
-    </section>
+    </Secao>
   );
 }
 
@@ -313,8 +315,7 @@ function ResultadoDaImportacao({ resultado, aoRecomecar }: {
   aoRecomecar: () => void;
 }) {
   return (
-    <section className="cnc-bloco" aria-labelledby="cnc-resultado">
-      <h2 id="cnc-resultado" className="cnc-titulo">Importado</h2>
+    <Secao id="cnc-resultado" titulo="Importado">
       <p className="cnc-totais">
         <Total numero={resultado.novas} rotulo={resultado.novas === 1 ? 'nova' : 'novas'} />
         <Total numero={resultado.canceladas}
@@ -353,7 +354,7 @@ function ResultadoDaImportacao({ resultado, aoRecomecar }: {
       <button className="pagina-acao discreta" type="button" onClick={aoRecomecar}>
         Importar outro arquivo
       </button>
-    </section>
+    </Secao>
   );
 }
 
@@ -437,13 +438,11 @@ function ARecebe() {
   const consulta = useRecebiveis();
 
   return (
-    <section className="cnc-bloco" aria-labelledby="cnc-a-receber">
-      <header className="cnc-cabecalho">
-        <div>
-          <h2 id="cnc-a-receber" className="cnc-titulo">A receber</h2>
-          <p className="cnc-contas">Dos próximos 90 dias, pelo que foi contratado em cada venda.</p>
-        </div>
-      </header>
+    <Secao
+      id="cnc-a-receber"
+      titulo="A receber"
+      ajuda="Dos próximos 90 dias, pelo que foi contratado em cada venda."
+    >
 
       {consulta.isPending ? <Esqueleto linhas={2} altura={56} />
         : consulta.isError ? <Falha aoTentar={() => consulta.refetch()}>{mensagem(consulta.error)}</Falha>
@@ -504,7 +503,7 @@ function ARecebe() {
                 )}
             </>
           )}
-    </section>
+    </Secao>
   );
 }
 
@@ -533,16 +532,12 @@ function TaxasContratadas() {
       && valores[t.faixa]?.dias.trim() !== '');
 
   return (
-    <section className="cnc-bloco" aria-labelledby="cnc-taxas">
-      <header className="cnc-cabecalho">
-        <div>
-          <h2 id="cnc-taxas" className="cnc-titulo">Taxas contratadas</h2>
-          <p className="cnc-contas">
-            O que você negociou com a Stone. Sem isto, a venda no cartão entra sem previsão.
-          </p>
-        </div>
-        {salvo && <span className="cnc-salvo" role="status">Salvo</span>}
-      </header>
+    <Secao
+      id="cnc-taxas"
+      titulo="Taxas contratadas"
+      ajuda="O que você negociou com a Stone. Sem isto, a venda no cartão entra sem previsão."
+      acoes={salvo && <span className="cnc-salvo" role="status">Salvo</span>}
+    >
 
       {consulta.isPending || !consulta.data || !valores ? <Esqueleto linhas={4} altura={44} />
         : (
@@ -611,7 +606,7 @@ function TaxasContratadas() {
             </footer>
           </form>
         )}
-    </section>
+    </Secao>
   );
 }
 
@@ -624,9 +619,10 @@ function ConferenciaDoMes({ fuso }: { fuso: string }) {
   const conciliar = useConciliarAgora();
 
   return (
-    <section className="cnc-bloco" aria-labelledby="cnc-conferencia-mes">
-      <header className="cnc-cabecalho">
-        <h2 id="cnc-conferencia-mes" className="cnc-titulo">Conferência</h2>
+    <Secao
+      id="cnc-conferencia-mes"
+      titulo="Conferência"
+      acoes={(
         <div className="cnc-controles">
           <label className="cnc-mes">
             <span>Mês</span>
@@ -641,7 +637,8 @@ function ConferenciaDoMes({ fuso }: { fuso: string }) {
             {conciliar.isPending ? 'Conciliando…' : 'Conciliar agora'}
           </button>
         </div>
-      </header>
+      )}
+    >
 
       {conciliar.isSuccess && (
         <p className="cnc-ajuda" role="status">
@@ -687,7 +684,7 @@ function ConferenciaDoMes({ fuso }: { fuso: string }) {
                 : <ListaDoRecorte recorte={recorte} de={periodo.de} ate={periodo.ate} fuso={fuso} />}
             </>
           )}
-    </section>
+    </Secao>
   );
 }
 
