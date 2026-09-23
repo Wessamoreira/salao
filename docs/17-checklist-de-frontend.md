@@ -84,7 +84,10 @@ todo o resto quando está errado.
 - [ ] **F1 · Densidade única.** Uma agenda de doze profissionais e uma ficha de cliente pedem
       réguas diferentes.
 - [ ] **F2 · Sem modo escuro.** O painel de parede (`/painel`) fica aceso a noite inteira.
-- [ ] **F3 · Auditoria de acessibilidade** continua pendente desde `RT-INF-010`.
+- [x] **F3 · Auditoria de acessibilidade** — feita em 22/09/2026, e **contínua**: o axe-core roda
+      dentro da suíte, em nove telas, e falha nomeando a regra, o elemento e o link. Contraste fica
+      de fora ali (o jsdom não calcula cor computada, e uma regra que passa sempre é pior que
+      nenhuma) — ele continua medido à mão na tabela de `16-design-system.md`.
 
 ---
 
@@ -189,7 +192,7 @@ verde carregava a impressão de que estava tudo verificado.
 | 3 | ~~Um pacote só, sem divisão por rota~~ **feito** | era 411 KB (121 KB comprimido) num arquivo; ficou 295 KB (93 KB) de entrada, com cada tela num pedaço de 1 a 33 KB |
 | 4 | ~~Cada tela inventou o próprio cartão~~ **feito** | três definições idênticas viraram uma primitiva; seção deixou de ser caixa |
 | 5 | ~~O erro não mora no campo que errou (D7)~~ **feito na entrada** | e o login não tinha teste nenhum — a porta do sistema |
-| 6 | Acessibilidade nunca foi medida (F3) | nenhuma ferramenta nas dependências |
+| 6 | ~~Acessibilidade nunca foi medida (F3)~~ **feito** | axe-core em 9 telas, dentro da suíte que a CI roda |
 
 ### Faixa 2, e o que ela achou
 
@@ -257,6 +260,25 @@ digitado, e apontar um campo ali mandaria corrigir o que está certo.
 **O buraco maior:** a tela de entrada não tinha teste nenhum — a porta do sistema, o único lugar
 por onde todo mundo passa todo dia. Agora tem cinco, e os três que importam foram conferidos por
 mutação.
+
+### Faixa 6 — medida, não opinada
+
+`axe-core` (o mesmo motor da extensão da Deque) roda dentro da suíte, em nove telas, e falha
+listando regra, elemento e link. Não é auditoria de uma vez: é verificação a cada commit, porque a
+CI roda a suíte.
+
+Ele pega o estrutural — rótulo desassociado, botão sem nome, `aria` inválido, cabeçalho fora de
+ordem. **Não** pega julgamento: se o rótulo faz sentido, se a ordem de tabulação é a da tarefa, se
+a mensagem diz o que fazer. Isso continua sendo revisão humana, e o auxiliar diz isso no próprio
+javadoc para ninguém confundir cobertura com qualidade.
+
+**Nenhuma tela tinha violação estrutural** — o que é resultado do cuidado das rotinas anteriores,
+não sorte. Para provar que a verificação funciona, desassociei o rótulo do campo de serviço na
+comanda: reprovou com "select-name (critical)".
+
+**E apareceu uma instabilidade real:** o axe é pesado, e dois testes sem relação com ele passaram a
+estourar o prazo de 1s do `findBy` em execuções alternadas. O prazo subiu para 3s no preparo da
+suíte — teste instável custa mais caro que teste lento, porque ensina a ignorar vermelho.
 
 **Por que o build entra no CI e não só os testes:** os testes montam componentes, não o pacote —
 um import quebrado passa por lint, tipos e testes e só aparece no `vite build`. Foi exatamente o

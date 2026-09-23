@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { deveSerAcessivel } from '../../teste/acessibilidade';
 import { Agenda } from './Agenda';
 
 /** 2026-09-17 às 10h24 em São Paulo — o instante do canvas de design. */
@@ -255,5 +256,17 @@ describe('aviso de vaga aberta', () => {
 
     await screen.findByText('Ana');
     expect(screen.queryByText(/Abriu uma vaga/)).not.toBeInTheDocument();
+  });
+});
+
+describe('acessibilidade', () => {
+  it('não tem violação estrutural: a grade do dia', async () => {
+    const { container } = montar(agendaDoDia({
+      agendamentos: [coloracao('a1', 'ana', 13)],
+      nomesDeClientes: { marilda: 'Marilda S.' },
+    }));
+    await screen.findByText('Ana');
+
+    await deveSerAcessivel(container);
   });
 });

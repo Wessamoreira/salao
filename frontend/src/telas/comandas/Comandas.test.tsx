@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { deveSerAcessivel } from '../../teste/acessibilidade';
 import { Comandas } from './Comandas';
 
 const chamar = vi.fn();
@@ -338,4 +339,14 @@ describe('o que chega, e o que ainda não chegou', () => {
       liberarConta();
       await waitFor(() => expect(contaDe()).toHaveAttribute('aria-busy', 'false'));
     });
+});
+
+describe('acessibilidade', () => {
+  it('não tem violação estrutural: a comanda aberta, com itens e pagamento', async () => {
+    servidor();
+    const { container } = montar();
+    await screen.findByText('Shampoo');
+
+    await deveSerAcessivel(container);
+  });
 });

@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { deveSerAcessivel } from '../../teste/acessibilidade';
 import { Clientes } from './Clientes';
 
 const chamar = vi.fn();
@@ -152,5 +153,14 @@ describe('tela de clientes', () => {
 
     expect(campo).toHaveValue('');
     expect(await screen.findByText(/Procure quem está ligando/)).toBeInTheDocument();
+  });
+});
+
+describe('acessibilidade', () => {
+  it('não tem violação estrutural: a busca de clientes', async () => {
+    const { container } = montar();
+    await screen.findByText(/Procure quem está ligando/);
+
+    await deveSerAcessivel(container);
   });
 });

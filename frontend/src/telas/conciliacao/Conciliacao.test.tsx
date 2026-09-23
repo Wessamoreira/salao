@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErroDaApi } from '../../api/http';
+import { deveSerAcessivel } from '../../teste/acessibilidade';
 import { Conciliacao } from './Conciliacao';
 
 const chamar = vi.fn();
@@ -428,5 +429,14 @@ describe('taxa e recebíveis', () => {
     await userEvent.type(screen.getByLabelText('Prazo de Crédito 7 a 12x, em dias'), '30');
 
     expect(screen.getByRole('button', { name: 'Salvar taxas' })).toBeEnabled();
+  });
+});
+
+describe('acessibilidade', () => {
+  it('não tem violação estrutural: a conferência do extrato', async () => {
+    const { container } = montar();
+    await screen.findByText('Importar vendas da Stone');
+
+    await deveSerAcessivel(container);
   });
 });

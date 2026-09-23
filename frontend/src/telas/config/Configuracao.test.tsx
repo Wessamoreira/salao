@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { deveSerAcessivel } from '../../teste/acessibilidade';
 import { Configuracao } from './Configuracao';
 
 const chamar = vi.fn();
@@ -124,5 +125,14 @@ describe('configuração do salão', () => {
     expect(chamar).toHaveBeenCalledWith('/v1/configuracao', expect.objectContaining({
       body: expect.stringContaining('"contatoParaClientes":null'),
     }));
+  });
+});
+
+describe('acessibilidade', () => {
+  it('não tem violação estrutural: a configuração do salão', async () => {
+    const { container } = montar();
+    await screen.findByText(/o cadastro recusa esses números/);
+
+    await deveSerAcessivel(container);
   });
 });

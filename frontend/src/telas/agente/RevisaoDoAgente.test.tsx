@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { deveSerAcessivel } from '../../teste/acessibilidade';
 import { RevisaoDoAgente } from './RevisaoDoAgente';
 
 const chamar = vi.fn();
@@ -168,5 +169,14 @@ describe('revisão do agente', () => {
 
     expect(screen.getByText(/Ficou o registro do que o agente fez/)).toBeInTheDocument();
     expect(screen.queryByText('Pediu')).not.toBeInTheDocument();
+  });
+});
+
+describe('acessibilidade', () => {
+  it('não tem violação estrutural: a revisão do agente', async () => {
+    const { container } = montar();
+    await screen.findByText(/conversas/);
+
+    await deveSerAcessivel(container);
   });
 });

@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErroDaApi } from '../../api/http';
+import { deveSerAcessivel } from '../../teste/acessibilidade';
 import { Precos } from './Precos';
 
 const chamar = vi.fn();
@@ -179,5 +180,14 @@ describe('queima de vencimento (RT-EST-012)', () => {
     // O cartão diz o motivo para a cor: vermelho, com a etiqueta ao lado.
     expect(screen.getByText('Queima de vencimento').closest('li'))
       .toHaveAttribute('data-motivo', 'QUEIMA_DE_VENCIMENTO');
+  });
+});
+
+describe('acessibilidade', () => {
+  it('não tem violação estrutural: as sugestões de preço', async () => {
+    const { container } = montar();
+    await screen.findByText('Máscara 500g');
+
+    await deveSerAcessivel(container);
   });
 });

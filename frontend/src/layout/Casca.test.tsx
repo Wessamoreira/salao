@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { deveSerAcessivel } from '../teste/acessibilidade';
 import { Casca } from './Casca';
 import type { Capacidades } from '../api/capacidades';
 import { api } from '../api/http';
@@ -191,5 +192,14 @@ describe('o pedaço da tela chega antes do clique', () => {
     fireEvent.focus(clientes);
 
     expect(precarregar).toHaveBeenCalledWith('/clientes');
+  });
+});
+
+describe('acessibilidade', () => {
+  it('não tem violação estrutural: a casca com o menu', async () => {
+    const { container } = montar();
+    await screen.findByRole('link', { name: /Agenda/ });
+
+    await deveSerAcessivel(container);
   });
 });

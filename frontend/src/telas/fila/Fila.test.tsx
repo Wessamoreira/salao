@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErroDaApi } from '../../api/http';
+import { deveSerAcessivel } from '../../teste/acessibilidade';
 import { Fila } from './Fila';
 
 const chamar = vi.fn();
@@ -203,5 +204,14 @@ describe('na fila', () => {
       aceitaDe: '2026-09-24', aceitaAte: '2026-09-24',
       horaDe: '13:00', horaAte: '18:00', observacao: null,
     });
+  });
+});
+
+describe('acessibilidade', () => {
+  it('não tem violação estrutural com vagas e fila na tela', async () => {
+    const { container } = montar();
+    await screen.findByText('Marilda');
+
+    await deveSerAcessivel(container);
   });
 });

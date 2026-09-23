@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ErroDaApi } from '../api/http';
+import { deveSerAcessivel } from '../teste/acessibilidade';
 import { Login } from './Login';
 
 const chamar = vi.fn();
@@ -84,5 +85,17 @@ describe('entrar', () => {
 
     await waitFor(() => expect(navegar)
       .toHaveBeenCalledWith('/entrar/verificacao', { state: { desafio: 'dsf' } }));
+  });
+});
+
+describe('acessibilidade', () => {
+  it('não tem violação estrutural: a tela de entrar', async () => {
+    chamar.mockRejectedValue(new ErroDaApi(401, 'ER-IAM-CREDENCIAIS_INVALIDAS', 'não'));
+    const { container } = render(<Login />);
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar' }));
+    await screen.findByRole('alert');
+
+    // Com o erro na tela: é o estado que ninguém testa, e o que mais depende de `aria`.
+    await deveSerAcessivel(container);
   });
 });
