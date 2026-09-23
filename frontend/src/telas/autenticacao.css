@@ -149,6 +149,18 @@
  * O foco desenha a CAIXA inteira, não só a borda do input: o botão "Mostrar" mora
  * dentro dela, e um anel que cortasse o botão ao meio seria pior do que nenhum.
  */
+/*
+ * O campo que o servidor recusou.
+ *
+ * Borda, e não texto colorido: nenhum status passa em contraste de corpo de texto sobre
+ * papel (16-design-system.md). E a marca convive com o anel de foco — quem chega no campo
+ * pelo teclado vê os dois, porque dizem coisas diferentes: "é aqui que você está" e "foi
+ * isto que não passou".
+ */
+.auth-campo-caixa:has(input[aria-invalid='true']) {
+  border-color: var(--status-falta);
+}
+
 .auth-campo-caixa:focus-within {
   border-color: var(--foco);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--foco) 14%, transparent);

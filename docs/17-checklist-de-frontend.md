@@ -66,7 +66,11 @@ todo o resto quando está errado.
 - [x] **D5 · Gerenciador de senha não preenche.** Os campos não têm `name`, `id` nem
       `autocomplete`. Não é estética: é a recepção digitando a senha inteira toda manhã.
 - [x] **D6 · Sem "mostrar senha"** — e o teclado do celular erra maiúscula.
-- [ ] **D7 · O erro é um bloco acima do formulário**, não um estado do campo que errou.
+- [x] **D7 · O erro é um bloco acima do formulário**, não um estado do campo que errou.
+      *(22/09/2026: o aviso continua num lugar só — repetir a mesma recusa em cada campo a faria
+      ser lida três vezes —, mas agora os campos recusados são marcados (`aria-invalid`) e apontam
+      para ele (`aria-describedby`), e o foco volta para a **senha**, com o conteúdo selecionado.
+      Só a recusa de credencial marca campo: "tentativas demais" não é culpa do que foi digitado.)*
 
 ## E — Fluidez
 
@@ -184,7 +188,7 @@ verde carregava a impressão de que estava tudo verificado.
 | 2 | ~~Toda ação espera a ida e a volta~~ **feito nas duas telas quentes** | comanda e preços usavam a resposta só para invalidar tudo: dois a três pedidos por clique |
 | 3 | ~~Um pacote só, sem divisão por rota~~ **feito** | era 411 KB (121 KB comprimido) num arquivo; ficou 295 KB (93 KB) de entrada, com cada tela num pedaço de 1 a 33 KB |
 | 4 | ~~Cada tela inventou o próprio cartão~~ **feito** | três definições idênticas viraram uma primitiva; seção deixou de ser caixa |
-| 5 | O erro não mora no campo que errou (D7) | bloco de erro acima do formulário |
+| 5 | ~~O erro não mora no campo que errou (D7)~~ **feito na entrada** | e o login não tinha teste nenhum — a porta do sistema |
 | 6 | Acessibilidade nunca foi medida (F3) | nenhuma ferramenta nas dependências |
 
 ### Faixa 2, e o que ela achou
@@ -240,6 +244,19 @@ caixas iguais que é o retrato do gerado.
 
 O ganho foi além do visual: no celular, sem o padding da caixa, os três botões de cada candidata
 cabem numa linha só.
+
+### Faixa 5 — o erro, e um buraco maior que ele
+
+O aviso de login continua num lugar só, de propósito: repetir a mesma recusa em cada campo a faria
+ser anunciada três vezes por um leitor de tela. O que mudou é a **ligação** — os campos recusados
+são marcados e apontam para o aviso, e o foco volta para a **senha**, com o conteúdo selecionado,
+porque é quase sempre ela que está errada: o e-mail a recepção digita certo, ou o gerenciador
+preenche. E só a recusa de credencial marca campo: "tentativas demais" não é culpa do que foi
+digitado, e apontar um campo ali mandaria corrigir o que está certo.
+
+**O buraco maior:** a tela de entrada não tinha teste nenhum — a porta do sistema, o único lugar
+por onde todo mundo passa todo dia. Agora tem cinco, e os três que importam foram conferidos por
+mutação.
 
 **Por que o build entra no CI e não só os testes:** os testes montam componentes, não o pacote —
 um import quebrado passa por lint, tipos e testes e só aparece no `vite build`. Foi exatamente o

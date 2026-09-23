@@ -27,11 +27,22 @@ const MENSAGENS: Record<string, string> = {
   'ER-INF-TEMPO_ESGOTADO': 'O servidor demorou para responder. Tente de novo em instantes.',
 };
 
+/**
+ * Os dois erros em que o problema está no que foi digitado — e só eles marcam os campos.
+ *
+ * "Tentativas demais" e "sem conexão" não são culpa do e-mail nem da senha: marcar o campo
+ * ali mandaria corrigir o que está certo.
+ */
+const DE_CREDENCIAL = new Set(['ER-IAM-CREDENCIAIS_INVALIDAS', 'ER-INF-DADOS_INVALIDOS']);
+
+/** Um id fixo: o parágrafo do erro é um só, e os dois campos apontam para ele. */
+const ID_DO_ERRO = 'login-erro';
+
 export function Login() {
   const navegar = useNavigate();
   const [email, definirEmail] = useState('');
   const [senha, definirSenha] = useState('');
-  const [erro, definirErro] = useState<string | null>(null);
+  const [erro, definirErro] = useState<{ texto: string; deCredencial: boolean } | null>(null);
   const [enviando, definirEnviando] = useState(false);
   const formulario = useRef<HTMLFormElement>(null);
 
@@ -52,14 +63,29 @@ export function Login() {
       definirTokenAtual(resposta.tokenDeAcesso ?? null);
       navegar('/');
     } catch (e) {
-      definirErro(
-        e instanceof ErroDaApi
-          ? (MENSAGENS[e.codigo ?? ''] ?? 'Não foi possível entrar agora. Tente de novo.')
-          : 'Não foi possível entrar agora. Tente de novo.',
-      );
-      // O foco volta para o primeiro campo: quem errou a senha vai digitar de novo, e
-      // ler o aviso sem poder agir é meio caminho.
-      formulario.current?.querySelector<HTMLInputElement>('input')?.focus();
+      const codigo = e instanceof ErroDaApi ? (e.codigo ?? '') : '';
+      definirErro({
+        texto: MENSAGENS[codigo] ?? 'Não foi possível entrar agora. Tente de novo.',
+        deCredencial: DE_CREDENCIAL.has(codigo),
+      });
+      /*
+       * O foco vai para a SENHA, não para o e-mail.
+       *
+       * O servidor não diz qual dos dois está errado, de propósito — e quase sempre é a
+       * senha: o e-mail a recepção digita certo, ou o gerenciador preenche. Mandar o foco
+       * para o começo obrigaria a pular um campo que já estava bom, toda vez.
+       *
+       * Ler o aviso sem poder agir é meio caminho: o campo já vem selecionado, então a
+       * próxima tecla substitui o que estava lá.
+       */
+      if (DE_CREDENCIAL.has(codigo)) {
+        const campoDaSenha = formulario.current
+          ?.querySelector<HTMLInputElement>('input[name="senha"]');
+        campoDaSenha?.focus();
+        campoDaSenha?.select();
+      } else {
+        formulario.current?.querySelector<HTMLInputElement>('input')?.focus();
+      }
     } finally {
       definirEnviando(false);
     }
@@ -68,7 +94,7 @@ export function Login() {
   return (
     <Autenticacao titulo="Entrar" apoio="Use a conta do salão.">
       <form ref={formulario} className="auth-formulario" onSubmit={entrar} noValidate>
-        {erro && <p className="auth-erro" role="alert">{erro}</p>}
+        {erro && <p id={ID_DO_ERRO} className="auth-erro" role="alert">{erro.texto}</p>}
 
         <Campo
           rotulo="E-mail"
@@ -80,6 +106,8 @@ export function Login() {
           spellCheck={false}
           required
           autoFocus
+          invalido={erro?.deCredencial}
+          idDoErro={ID_DO_ERRO}
           value={email}
           onChange={(e) => definirEmail(e.target.value)}
         />
@@ -89,6 +117,8 @@ export function Login() {
           name="senha"
           autoComplete="current-password"
           required
+          invalido={erro?.deCredencial}
+          idDoErro={ID_DO_ERRO}
           value={senha}
           onChange={(e) => definirSenha(e.target.value)}
         />

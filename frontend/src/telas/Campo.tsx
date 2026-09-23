@@ -15,12 +15,23 @@ import { useId, useState, type InputHTMLAttributes } from 'react';
  * hierarquia invertida, com a etiqueta gritando mais que o dado. Aqui o rótulo é
  * pequeno, escuro e discreto, e quem manda é o que está sendo digitado.
  */
-export function Campo({ rotulo, dica, ...resto }: {
+export function Campo({ rotulo, dica, invalido, idDoErro, ...resto }: {
   rotulo: string;
   dica?: string;
+  /**
+   * O campo faz parte do que o servidor recusou.
+   *
+   * Marcar é diferente de explicar: o texto do erro continua num lugar só (`idDoErro`), e é
+   * ele que o leitor de tela anuncia quando o foco chega aqui. Repetir a mensagem em cada
+   * campo faria a mesma recusa ser lida três vezes.
+   */
+  invalido?: boolean;
+  /** O parágrafo que explica a recusa, para o campo apontar. */
+  idDoErro?: string;
 } & InputHTMLAttributes<HTMLInputElement>) {
   const id = useId();
   const idDaDica = dica ? `${id}-dica` : undefined;
+  const descricao = [idDaDica, invalido ? idDoErro : undefined].filter(Boolean).join(' ') || undefined;
   const ehSenha = resto.type === 'password';
   const [revelada, definirRevelada] = useState(false);
   const [capsLigado, definirCapsLigado] = useState(false);
@@ -33,7 +44,8 @@ export function Campo({ rotulo, dica, ...resto }: {
           {...resto}
           id={id}
           type={ehSenha && revelada ? 'text' : resto.type}
-          aria-describedby={idDaDica}
+          aria-invalid={invalido || undefined}
+          aria-describedby={descricao}
           onKeyUp={(evento) => {
             // Só faz sentido na senha: é o único campo onde o erro fica invisível, e o
             // balcão é máquina compartilhada, onde a tecla fica ligada de ontem.
