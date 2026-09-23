@@ -118,20 +118,53 @@ const cliente = new QueryClient({
   defaultOptions: { queries: { retry: false, staleTime: 30_000 } },
 });
 
+/**
+ * O lugar de uma tela que existe, mas não é o assunto desta prévia.
+ *
+ * Antes estas duas rotas usavam o "Em breve" do produto, e ele diz outra coisa: que a tela
+ * ainda não foi escrita. Quem abriu esta página concluiu que metade do sistema tinha sumido —
+ * e concluiu direito, porque era isso que estava escrito.
+ *
+ * Prévia parcial que finge ser o sistema mente sobre o sistema.
+ *
+ * É função, e não componente, de propósito: num arquivo de entrada de prévia, um componente
+ * solto quebra o recarregamento a quente do Vite — e aqui não há estado nem hook para
+ * justificar um.
+ */
+function temPreviaPropria(tela: string, previa: string) {
+  return (
+    <div style={{ margin: 'var(--e-5)', maxWidth: '52ch' }}>
+      <h2 style={{ margin: 0, fontSize: 'var(--t-18)' }}>{tela} não é o assunto desta prévia</h2>
+      <p style={{ color: 'var(--tinta-fraca)', lineHeight: 1.6 }}>
+        Esta página existe para olhar a <strong>casca</strong> — menu, topo, busca e estado do
+        sistema. A tela de {tela.toLowerCase()} está pronta e tem prévia própria:
+        {' '}<code>npm run previa:{previa}</code>.
+      </p>
+    </div>
+  );
+}
+
 createRoot(document.getElementById('raiz')!).render(
   <StrictMode>
     <QueryClientProvider client={cliente}>
       <MemoryRouter initialEntries={['/clientes']}>
         <Routes>
+          {/*
+            ATENÇÃO: esta prévia é da CASCA, não do sistema.
+            Agenda e Atendimento entram aqui como "Em breve" de propósito — elas têm prévia
+            própria (`previa-agenda`, `previa-comandas`), e carregá-las aqui faria esta página
+            demorar para mostrar o que ela existe para mostrar: menu, topo e busca.
+            No aplicativo de verdade (`src/App.tsx`) as duas são telas completas; só `/estoque`
+            e `/financeiro` mostram "Em breve".
+          */}
           <Route element={<Casca />}>
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/config" element={<Configuracao />} />
             <Route path="/estoque" element={<EmBreve titulo="Estoque" rotina="RT-EST-001" />} />
             <Route path="/financeiro"
               element={<EmBreve titulo="Financeiro" rotina="RT-FIN-004" />} />
-            <Route path="/agenda" element={<EmBreve titulo="Agenda" rotina="RT-AGD-011" />} />
-            <Route path="/comandas"
-              element={<EmBreve titulo="Atendimento" rotina="RT-ATD-008" />} />
+            <Route path="/agenda" element={temPreviaPropria('Agenda', 'agenda')} />
+            <Route path="/comandas" element={temPreviaPropria('Atendimento', 'comandas')} />
             <Route path="*" element={<Navigate to="/clientes" replace />} />
           </Route>
         </Routes>

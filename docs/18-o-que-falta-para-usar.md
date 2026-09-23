@@ -1,0 +1,141 @@
+# O que falta para o sistema ser usado de verdade
+
+**Levantamento de 23/09/2026.** Não é plano novo: é a leitura honesta do que existe hoje contra o
+que um salão precisa para abrir a porta de manhã e trabalhar o dia inteiro sem sair da tela.
+
+---
+
+## O engano que motivou esta página
+
+A prévia da casca (`frontend/preview/sistema.tsx`, servida em `/preview/sistema.html`) desenha
+**Agenda** e **Atendimento** como "Em breve". Aquilo não é o produto: é o andaime da prévia, que
+existe para olhar a **casca** — menu, topo, busca — sem carregar as telas que têm prévia própria
+(`previa-agenda`, `previa-comandas`).
+
+No aplicativo de verdade (`frontend/src/App.tsx`), só **duas** rotas mostram "Em breve":
+`/estoque` e `/financeiro`.
+
+Lição que fica: **prévia que finge ser o sistema mente sobre o sistema.** Uma prévia parcial
+precisa dizer que é parcial — do contrário, o dono abre a porta 5174 e conclui que o produto
+regrediu.
+
+---
+
+## O que já está de pé
+
+Oito telas, em uso contra o backend real:
+
+| Tela | Rota | Cobre |
+|---|---|---|
+| Agenda | `/agenda` | grade do dia, tarjas, pausa, linha do agora, carga, régua de densidade |
+| Fila de espera | `/fila` | vagas abertas, ordem de chamada, motivo do pulo, pôr na fila |
+| Atendimento | `/comandas` | comanda, itens, desconto, pagamento, fechamento |
+| Clientes | `/clientes` | busca por nome/telefone, ficha, consentimentos, duplicados |
+| Revisão do agente | `/agente` | trilha das ações da IA, recusas, gravações |
+| Conciliação | `/conciliacao` | extrato do adquirente, divergências, resolução à mão |
+| Preços | `/precos` | sugestões, aprovação e recusa com motivo |
+| Configuração | `/config` | identidade, atendimento, comissão e fechamento |
+| Painel de parede | `/painel` | fila do dia para a tela pendurada |
+
+Mais a porta do sistema (entrar, segundo fator) e a casca (menu, `⌘K`, estado da conexão).
+
+---
+
+## O buraco, medido
+
+O backend tem **145 endpoints** em 34 controladores. Deles:
+
+- **38 não têm tela nenhuma.**
+- **25 têm só a leitura de lista** que alguma tela usa para preencher um seletor — criar, editar
+  e desativar não existem em lugar nenhum.
+
+**63 de 145 (43%) do que o servidor sabe fazer não tem por onde ser feito.**
+
+Não é código faltando no servidor: é tela faltando. Cada linha abaixo tem endpoint testado,
+regra registrada e migration aplicada.
+
+---
+
+## Por ordem de bloqueio
+
+### 1. Cadastros — sem eles o sistema não sai do zero
+
+| Falta | Endpoints prontos | Sem isso |
+|---|---|---|
+| Profissional, jornada semanal, bloqueio de jornada, habilidades | `/v1/profissionais` (8), `/v1/bloqueios-de-jornada` (4) | **A agenda abre vazia.** A própria tela diz: "a agenda aparece quando houver profissional cadastrado com jornada" |
+| Serviço com blocos, preço com vigência, duração por profissional | `/v1/servicos` (7) | Não há o que marcar nem o que lançar na comanda |
+| Recurso (lavatório, cadeira, secador) | `/v1/recursos` (4) | Serviço que exige recurso não pode ser cadastrado |
+| Usuário e login | `/v1/usuarios` (6) | **Ninguém além do primeiro dono consegue entrar.** Criar acesso para a recepção exige chamada HTTP na mão |
+
+Este bloco é o que separa "o sistema roda" de "o salão consegue começar". Hoje, abrir um salão
+novo exige Postman.
+
+### 2. Financeiro — o dinheiro entra e não fecha
+
+| Falta | Endpoints prontos |
+|---|---|
+| Extrato do profissional | `/v1/extratos` (1) |
+| Vale | `/v1/vales` (3) |
+| Fechamento e repasse | `/v1/fechamentos` (4) |
+| Lançamento avulso e estorno | `/v1/lancamentos` (1) |
+| Regra de comissão por serviço/profissional | `/v1/regras-de-comissao` (4) |
+
+O pagamento da cliente já é registrado na comanda. O que não existe é o outro lado: quanto cada
+profissional tem a receber, o que foi adiantado, e o fechamento do mês.
+
+### 3. Estoque — o produto sai e ninguém dá baixa pela tela
+
+`/v1/produtos` tem 13 endpoints; a única coisa que o front faz é listar o que é vendável para a
+comanda. Cadastro, entrada de lote, saldo, custo médio, inventário, queima de vencimento e código
+de barras não têm tela.
+
+### 4. Agenda — três operações que a grade promete e não entrega
+
+- **Bloqueio de grade** (`/v1/bloqueios-de-agenda`, 3): "vou sair uma hora" não tem como ser
+  registrado. R-UX-10 pede arraste na grade.
+- **Recorrência** (`/v1/recorrencias`, 3): a série existe no servidor e só é alcançada pela fila.
+- **Remarcar arrastando**: a grade é leitura; reagendar exige outra via.
+
+### 5. Canal — nada sai do sistema
+
+Não há provedor de WhatsApp configurado. Consequência, hoje, em cadeia:
+
+- lembrete de agendamento e comprovante ficam na fila, marcados `SEM_PROVEDOR` (RT-NOT-001);
+- o agente conversacional não recebe nem responde mensagem (RT-CNV-001);
+- a chamada da fila de espera é feita pelo telefone, na mão, pela recepção.
+
+Falta **decisão sua** (pergunta 14 de `13-perguntas-em-aberto.md`): qual provedor de WhatsApp,
+qual provedor de LLM e a que preço, e qual provedor de transcrição de áudio. Sem isso, a Fase 4
+inteira fica sendo um motor sem combustível.
+
+### 6. Permissão por profissional
+
+`agenda:read:own` e `agenda:write:own` não filtram nada: quem entra com essas permissões enxerga
+e mexe na agenda de todo mundo. Enquanto for assim, **não dá para dar login a cada profissional**
+— só à recepção e ao dono. É a pendência mais repetida da fase 1 (aparece em cinco rotinas).
+
+### 7. Infra — o que falta para rodar fora da sua máquina
+
+`RT-INF-009` está `implementado-parcial`, com 5 pendências: máquina de homologação, backup fora
+da máquina, e o restante do caminho de deploy.
+
+---
+
+## Ordem sugerida
+
+1. **Cadastros** (equipe → catálogo → recursos → usuários). É o único bloco que impede o resto de
+   ser usado, e é pré-requisito do próprio teste de aceitação: sem profissional e serviço, não há
+   agenda nem comanda para exercitar.
+2. **Financeiro** (extrato → vale → fechamento). É o que o dono olha toda semana.
+3. **Estoque** (produto → entrada → saldo).
+4. **Agenda: bloqueio e recorrência.**
+5. **Canal de WhatsApp**, quando as três decisões da pergunta 14 estiverem tomadas.
+6. **Permissão `own`**, antes de existir login de profissional.
+
+---
+
+## O que este levantamento não diz
+
+Que o que está pronto está errado. As oito telas de pé têm teste, rodada de mutação e auditoria
+de acessibilidade a cada commit. O problema não é qualidade do que existe — é **cobertura**: o
+servidor sabe fazer quase tudo, e quase metade disso ainda não tem por onde ser feito.
