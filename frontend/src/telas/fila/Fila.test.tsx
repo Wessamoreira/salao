@@ -9,7 +9,17 @@ const chamar = vi.fn();
 vi.mock('../../api/http', () => ({
   api: (caminho: string, init?: RequestInit) => chamar(caminho, init),
   ouvirEventos: () => () => {},
-  ErroDaApi: class extends Error {},
+  // O dublê precisa ter a MESMA assinatura do real: a tela lê `message` para mostrar a
+  // recusa do servidor, e um Error(status) faria o teste passar mostrando o número.
+  ErroDaApi: class extends Error {
+    status: number;
+    codigo: string | null;
+    constructor(status: number, codigo: string | null, mensagem: string) {
+      super(mensagem);
+      this.status = status;
+      this.codigo = codigo;
+    }
+  },
 }));
 
 const candidata = (sobre: Record<string, unknown>) => ({
@@ -136,7 +146,8 @@ describe('vagas abertas', () => {
     });
 
   it('a recusa do servidor aparece na linha de quem foi chamada', async () => {
-    montar({ aoChamar: new ErroDaApi('Esta espera não cabe mais nesta vaga') });
+    montar({ aoChamar: new ErroDaApi(409, 'ER-AGD-ESPERA_NAO_CABE',
+      'Esta espera não cabe mais nesta vaga') });
     const joana = await linhaDe('Joana');
 
     await userEvent.click(within(joana).getByRole('button', { name: 'Recusou' }));

@@ -8,7 +8,17 @@ import { Precos } from './Precos';
 const chamar = vi.fn();
 vi.mock('../../api/http', () => ({
   api: (caminho: string, init?: RequestInit) => chamar(caminho, init),
-  ErroDaApi: class extends Error {},
+  // O dublê precisa ter a MESMA assinatura do real: a tela lê `message` para mostrar a
+  // recusa do servidor, e um Error(status) faria o teste passar mostrando o número.
+  ErroDaApi: class extends Error {
+    status: number;
+    codigo: string | null;
+    constructor(status: number, codigo: string | null, mensagem: string) {
+      super(mensagem);
+      this.status = status;
+      this.codigo = codigo;
+    }
+  },
 }));
 
 const SUGESTAO = {
@@ -114,7 +124,8 @@ describe('sugestões de preço', () => {
   });
 
   it('a recusa do servidor aparece no cartão, e o painel continua aberto', async () => {
-    montar({ aoDecidir: new ErroDaApi('o preço não pode ficar abaixo de R$ 40,56') });
+    montar({ aoDecidir: new ErroDaApi(422, 'ER-EST-PRECO_ABAIXO_DO_CHAO',
+    'o preço não pode ficar abaixo de R$ 40,56') });
     await userEvent.click(await screen.findByRole('button', { name: 'Aprovar' }));
 
     await userEvent.click(screen.getByRole('button', { name: 'Aplicar' }));

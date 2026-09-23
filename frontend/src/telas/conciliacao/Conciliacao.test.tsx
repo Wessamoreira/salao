@@ -8,7 +8,17 @@ import { Conciliacao } from './Conciliacao';
 const chamar = vi.fn();
 vi.mock('../../api/http', () => ({
   api: (caminho: string, init?: RequestInit) => chamar(caminho, init),
-  ErroDaApi: class extends Error {},
+  // O dublê precisa ter a MESMA assinatura do real: a tela lê `message` para mostrar a
+  // recusa do servidor, e um Error(status) faria o teste passar mostrando o número.
+  ErroDaApi: class extends Error {
+    status: number;
+    codigo: string | null;
+    constructor(status: number, codigo: string | null, mensagem: string) {
+      super(mensagem);
+      this.status = status;
+      this.codigo = codigo;
+    }
+  },
 }));
 
 const CAMPOS = [
@@ -211,7 +221,8 @@ describe('importar vendas da Stone', () => {
   });
 
   it('planilha recusada: diz o que fazer e oferece escolher outro arquivo', async () => {
-    montar({ previa: new ErroDaApi('é uma planilha do Excel (.xlsx) — exporte em CSV') });
+    montar({ previa: new ErroDaApi(422, 'ER-FIN-ARQUIVO_INVALIDO',
+      'é uma planilha do Excel (.xlsx) — exporte em CSV') });
     await userEvent.upload(screen.getByLabelText(/Escolher arquivo CSV/), arquivo());
 
     expect(await screen.findByText(/exporte em CSV/)).toBeInTheDocument();
@@ -335,7 +346,7 @@ describe('resolver a divergência', () => {
   });
 
   it('a recusa do servidor aparece no painel, e a decisão continua aberta', async () => {
-    montar({ aoResolver: new ErroDaApi('esta linha já foi resolvida') });
+    montar({ aoResolver: new ErroDaApi(409, 'ER-FIN-JA_RESOLVIDA', 'esta linha já foi resolvida') });
     await userEvent.click(await screen.findByRole('button', { name: 'Aceitar como está' }));
     await userEvent.type(screen.getByLabelText('Por quê?'), 'aceito assim');
 
