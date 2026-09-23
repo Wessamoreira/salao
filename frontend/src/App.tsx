@@ -1,22 +1,19 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErroDaApi, restaurarSessao } from './api/http';
 import { Barreira } from './layout/Barreira';
+import { Esqueleto } from './layout/Pagina';
 import { Casca } from './layout/Casca';
 import { Protegida } from './layout/Protegida';
 import { Login } from './telas/Login';
 import { SegundoFator } from './telas/SegundoFator';
-import { Agenda } from './telas/agenda/Agenda';
-import { Painel } from './telas/agenda/Painel';
-import { Clientes } from './telas/clientes/Clientes';
-import { Comandas } from './telas/comandas/Comandas';
-import { Configuracao } from './telas/config/Configuracao';
-import { RevisaoDoAgente } from './telas/agente/RevisaoDoAgente';
-import { Conciliacao } from './telas/conciliacao/Conciliacao';
-import { Precos } from './telas/precos/Precos';
-import { Fila } from './telas/fila/Fila';
 import { EmBreve } from './telas/EmBreve';
+// Entrar e o segundo fator ficam no pacote de entrada: são a primeira tela de quem chega,
+// e um pedaço à parte para elas seria uma espera antes do login. O resto vem por rota.
+import {
+  Agenda, Clientes, Comandas, Conciliacao, Configuracao, Fila, Painel, Precos, RevisaoDoAgente,
+} from './rotas';
 import { Conectividade } from './pwa/Conectividade';
 
 const cliente = new QueryClient({
@@ -86,7 +83,12 @@ export function App() {
                 O painel fica FORA da casca: ele roda numa tela pendurada na parede, sem
                 menu, sem navegação e sem nada em que alguém possa clicar por engano.
               */}
-            <Route path="/painel" element={<Protegida><Painel /></Protegida>} />
+            <Route path="/painel" element={
+              <Protegida>
+                {/* Fora da casca, então a espera do pedaço é aqui mesmo. */}
+                <Suspense fallback={<Esqueleto linhas={6} altura={56} />}><Painel /></Suspense>
+              </Protegida>
+            } />
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

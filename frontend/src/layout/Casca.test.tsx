@@ -11,6 +11,9 @@ vi.mock('../api/http', () => ({
   ErroDaApi: class extends Error {},
 }));
 
+const precarregar = vi.fn();
+vi.mock('../rotas', () => ({ precarregar: (rota: string) => precarregar(rota) }));
+
 const capacidadesDeRecepcao: Capacidades = {
   usuarioId: 'u1', nome: 'Joana', email: 'joana@salao.test', perfil: 'RECEPCAO',
   estabelecimento: { id: 'e1', nome: 'Studio Marilda', timezone: 'America/Sao_Paulo', moeda: 'BRL' },
@@ -163,5 +166,30 @@ describe('casca', () => {
     await waitFor(() => expect(vi.mocked(api)).toHaveBeenCalledWith(
       '/v1/auth/logout', { method: 'POST' },
     ));
+  });
+});
+
+describe('o pedaço da tela chega antes do clique', () => {
+  it('encostar o ponteiro no menu já começa a baixar a tela', async () => {
+    // Dividir o pacote por rota sem isto troca um problema por outro: a primeira tela fica
+    // leve e cada troca de menu passa a ter uma espera. O intervalo entre decidir e clicar
+    // existe de graça — é ele que paga o download.
+    precarregar.mockClear();
+    montar();
+    const clientes = await screen.findByRole('link', { name: /Clientes/ });
+
+    fireEvent.mouseEnter(clientes);
+
+    expect(precarregar).toHaveBeenCalledWith('/clientes');
+  });
+
+  it('pelo teclado, o foco faz o mesmo papel', async () => {
+    precarregar.mockClear();
+    montar();
+    const clientes = await screen.findByRole('link', { name: /Clientes/ });
+
+    fireEvent.focus(clientes);
+
+    expect(precarregar).toHaveBeenCalledWith('/clientes');
   });
 });

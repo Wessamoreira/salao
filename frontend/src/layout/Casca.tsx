@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useCapacidades, type Capacidades } from '../api/capacidades';
 import { api } from '../api/http';
 import { useConectado } from '../pwa/conectado';
+import { precarregar } from '../rotas';
 import { definirTokenAtual } from '../sessao/sessao';
 import { HoraDoSalao } from './HoraDoSalao';
+import { Esqueleto } from './Pagina';
 import { Icone } from './Icone';
 import { Barreira } from './Barreira';
 import { DestinoDasAcoes } from './destinoDasAcoes';
@@ -220,6 +222,13 @@ export function Casca() {
                         to={menu.rota}
                         viewTransition
                         onClick={() => fecharMenu()}
+                        /*
+                         * O pedaço da tela começa a chegar quando o ponteiro encosta, não
+                         * quando o clique acontece: é o intervalo que existe de graça entre
+                         * decidir e clicar. No teclado, o foco faz o mesmo papel.
+                         */
+                        onMouseEnter={() => precarregar(menu.rota)}
+                        onFocus={() => precarregar(menu.rota)}
                         title={recolhida ? menu.rotulo : undefined}
                         className={({ isActive }) => `casca-link${isActive ? ' ativo' : ''}`}
                       >
@@ -324,7 +333,14 @@ export function Casca() {
               inclusive depois de voltar com o problema já resolvido.
             */}
             <Barreira key={local.pathname} variante="pagina">
-              <Outlet />
+              {/*
+                A espera do pedaço da tela acontece AQUI DENTRO: o menu, a trilha e o
+                relógio continuam na tela. Fosse por fora, trocar de tela apagaria a casca
+                inteira por um instante — o corte seco que a transição de vista veio tirar.
+              */}
+              <Suspense fallback={<Esqueleto linhas={5} altura={56} />}>
+                <Outlet />
+              </Suspense>
             </Barreira>
           </DestinoDasAcoes>
         </main>

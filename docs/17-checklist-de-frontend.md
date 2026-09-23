@@ -182,7 +182,7 @@ verde carregava a impressão de que estava tudo verificado.
 |---|---|---|
 | 1 | ~~A CI ignora o front~~ **feito** | job `front`: `npm ci`, lint, tipos, testes e **build**, com o pacote publicado como artefato. O `imagem` passou a depender dele |
 | 2 | ~~Toda ação espera a ida e a volta~~ **feito nas duas telas quentes** | comanda e preços usavam a resposta só para invalidar tudo: dois a três pedidos por clique |
-| 3 | Um pacote só, sem divisão por rota | 410 KB (121 KB comprimido) num arquivo |
+| 3 | ~~Um pacote só, sem divisão por rota~~ **feito** | era 411 KB (121 KB comprimido) num arquivo; ficou 295 KB (93 KB) de entrada, com cada tela num pedaço de 1 a 33 KB |
 | 4 | Cada tela inventou o próprio cartão | `cnc-bloco`, `prc-bloco`, `fil-bloco`, `agt-bloco…`; 3.512 linhas de CSS em 10 arquivos |
 | 5 | O erro não mora no campo que errou (D7) | bloco de erro acima do formulário |
 | 6 | Acessibilidade nunca foi medida (F3) | nenhuma ferramenta nas dependências |
@@ -209,6 +209,21 @@ acaso, casando com o "R$ 0,00" do desconto em vez do "falta receber".
 **Falta nesta faixa:** fila de espera, conciliação e clientes continuam invalidando e relendo. Na
 fila, o ganho real exige o servidor devolver a vaga recalculada no registro da chamada — ele já a
 calcula para decidir se a espera cabe.
+
+### Faixa 3 — e a armadilha dela
+
+Abrir a agenda no celular da recepção baixava conciliação, preços, o agente e a revisão de IA
+junto: 121 KB comprimidos para usar uma tela. Agora são 93 KB de entrada, e cada tela é um pedaço
+próprio — a conciliação sozinha valia 9 KB que todo mundo carregava.
+
+**Dividir sem precarregar troca um problema por outro:** a primeira tela fica leve e cada troca de
+menu ganha uma espera. Por isso o mesmo `import()` serve às duas coisas, e a casca começa a baixar
+o pedaço **quando o ponteiro encosta** no item do menu — ou quando o foco chega nele, pelo teclado.
+O intervalo entre decidir e clicar existe de graça; é ele que paga o download.
+
+E a espera, quando acontece, é **dentro da casca**: menu, trilha e relógio continuam na tela, com
+o esqueleto no lugar do conteúdo. Por fora, trocar de tela apagaria a casca por um instante — o
+corte seco que a transição de vista (E1) veio tirar.
 
 **Por que o build entra no CI e não só os testes:** os testes montam componentes, não o pacote —
 um import quebrado passa por lint, tipos e testes e só aparece no `vite build`. Foi exatamente o
