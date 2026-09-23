@@ -358,7 +358,9 @@ export function Casca() {
       {/* Montada só quando aberta: é o que faz o termo digitado voltar ao zero sem
           nenhum efeito limpando estado. */}
       {paletaAberta && (
-        <Paleta menus={capacidades.menus} aoFechar={() => setPaletaAberta(false)} />
+        <Paleta menus={capacidades.menus} aoFechar={() => setPaletaAberta(false)}
+          /* Procurar cliente exige ter a tela de clientes: quem decide é o servidor. */
+          podeBuscarClientes={capacidades.menus.some((menu) => menu.rota === '/clientes')} />
       )}
     </div>
   );

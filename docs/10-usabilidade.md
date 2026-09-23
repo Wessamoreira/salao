@@ -52,6 +52,13 @@ O caso mais comum do balcão é o telefone tocando. Buscar por nome falha (8 Mar
 grafia). Buscar pelos 4 últimos dígitos resolve na primeira tentativa. Índice trigram + `unaccent`
 para o nome; coluna normalizada E.164 e busca por sufixo para o telefone.
 
+**23/09/2026 — e de qualquer tela.** A mesma busca passou a atender pelo `⌘K` da casca: quem
+está na comanda não precisa mais ir ao menu, abrir clientes e digitar. Quem decide como o termo
+foi lido continua sendo o servidor (RN-CLI-009) — a casca só repete a palavra dele ("pelo
+telefone"), porque uma segunda cópia da regra diria um dia uma coisa enquanto a consulta fazia
+outra. E quem não tem a tela de clientes no menu não procura cliente: seria a mesma porta com
+outro nome.
+
 ## R-UX-04 — Cadastrar cliente sem sair da tela
 `RT-CLI-001`
 
@@ -232,8 +239,15 @@ Três frases, e as três nasceram do mesmo defeito, encontrado em 23/09/2026 na 
    de formato, não existe no calendário, e `Intl` **lança** para data inválida: a tela inteira
    sumiria por causa de um link colado torto. Valida-se antes de virar data.
 
-Aplicada na agenda, que é a tela que abre o dia. Conciliação e revisão do agente recortam por
-período e ainda guardam o recorte em estado: entram na regra quando forem tocadas.
+Aplicada na agenda, que é a tela que abre o dia, e na ficha de cliente — que precisou virar
+endereço para a busca da casca poder abrir uma (`/clientes?cliente=…`). Conciliação e revisão do
+agente recortam por período e ainda guardam o recorte em estado: entram na regra quando forem
+tocadas.
+
+Um detalhe que a ficha ensinou: **abrir uma coisa entra no histórico; percorrer a mesma tela,
+não.** As setas do dia usam `replace` (andar seis dias não pode custar seis toques no voltar); a
+ficha usa navegação normal, porque o gesto de voltar tem de fechar a pessoa que se abriu, e não
+largar a busca inteira.
 
 ---
 

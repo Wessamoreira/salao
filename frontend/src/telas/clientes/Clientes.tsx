@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { Cliente } from '../../api/clientes';
-import { useBusca } from '../../api/clientes';
+import { useBusca, useCliente } from '../../api/clientes';
 import { Pagina } from '../../layout/Pagina';
+import { useTermoComPausa } from '../../layout/pausa';
 import { CadastroRapido } from './CadastroRapido';
 import { Ficha } from './Ficha';
 import { Isolado } from './Isolado';
@@ -22,17 +24,48 @@ import './clientes.css';
  */
 export function Clientes() {
   const [termo, setTermo] = useState('');
-  const [selecionado, setSelecionado] = useState<Cliente | null>(null);
+  const [parametros, definirParametros] = useSearchParams();
   const campo = useRef<HTMLInputElement>(null);
 
   const termoBuscado = useTermoComPausa(termo);
   const { data: resultado, isFetching } = useBusca(termoBuscado);
 
+  /*
+   * A ficha aberta é endereço, e não estado.
+   *
+   * Porque ela passou a ter uma porta de fora: a busca da casca (⌘K) acha a cliente de
+   * qualquer tela e abre a ficha dela aqui. Com a escolha guardada num `useState`, chegar
+   * de lá não abriria nada — a tela já está montada, e um estado inicial só corre uma vez.
+   *
+   * O TERMO continua sendo estado: digitar não é ir a lugar nenhum, e escrever cada letra
+   * no endereço faria o "voltar" do navegador percorrer a palavra de trás para frente.
+   */
+  const selecionadoId = parametros.get('cliente');
+  const naLista = resultado?.itens.find((cliente) => cliente.id === selecionadoId);
+  // Já veio na busca? A ficha abre na hora e se corrige sozinha; vindo da paleta, chega do
+  // servidor — é o mesmo caminho que a tela já usava para não guardar uma segunda cópia.
+  const { data: selecionado } = useCliente(selecionadoId, naLista);
+
+  /*
+   * Abrir uma ficha ENTRA no histórico — ao contrário das setas da agenda, que usam
+   * `replace`. Andar de dia é percorrer a mesma tela; abrir uma pessoa é ir a outro lugar,
+   * e o "voltar" do navegador (ou o gesto, no tablet do balcão) tem de fechar a ficha em
+   * vez de largar a busca inteira.
+   */
+  const abrirFicha = (cliente: Cliente | null) => {
+    const proximos = new URLSearchParams(parametros);
+    if (cliente) proximos.set('cliente', cliente.id);
+    else proximos.delete('cliente');
+    definirParametros(proximos);
+  };
+
   // O foco começa no campo: quem abre esta tela vai digitar, sempre.
   useEffect(() => { campo.current?.focus(); }, []);
 
   const naoAchou = termo.trim().length > 0 && resultado?.itens.length === 0 && !resultado.aviso;
-  const esperando = termo.trim().length === 0;
+  // Chegando pela paleta, a tela não está esperando: a ficha já está aberta, e a coluna
+  // única deixaria a busca em cima da pessoa que se acabou de abrir.
+  const esperando = termo.trim().length === 0 && !selecionado;
 
   return (
     <Pagina>
@@ -49,7 +82,7 @@ export function Clientes() {
           onKeyDown={(e) => {
             // Esc limpa e devolve a tela ao estado de espera, sem tirar a mão do
             // teclado (R-UX-02).
-            if (e.key === 'Escape') { setTermo(''); setSelecionado(null); }
+            if (e.key === 'Escape') { setTermo(''); abrirFicha(null); }
           }}
         />
         <Leitura resultado={resultado} temTermo={termo.trim().length > 0} />
@@ -61,7 +94,7 @@ export function Clientes() {
           termo={termo}
           carregando={isFetching}
           selecionadoId={selecionado?.id ?? null}
-          aoSelecionar={setSelecionado}
+          aoSelecionar={abrirFicha}
         />
       </div>
 
@@ -76,7 +109,7 @@ export function Clientes() {
           </div>
         ) : selecionado ? (
           <Isolado key={selecionado.id}>
-            <Ficha cliente={selecionado} aoSair={() => setSelecionado(null)} />
+            <Ficha cliente={selecionado} aoSair={() => abrirFicha(null)} />
           </Isolado>
         ) : null}
       </div>
@@ -128,19 +161,3 @@ function contar(quantos: number): string {
   return quantos === 1 ? '1 ficha' : `${quantos} fichas`;
 }
 
-/**
- * Segura o termo por um instante antes de buscar.
- *
- * Sem isso, "Maria" dispara cinco consultas e a quinta pode chegar antes da
- * terceira — a lista pisca e às vezes assenta no resultado errado. 220ms é curto
- * o bastante para não ser sentido por quem digita e longo o bastante para o
- * teclado inteiro caber dentro.
- */
-function useTermoComPausa(termo: string): string {
-  const [estavel, setEstavel] = useState(termo);
-  useEffect(() => {
-    const t = setTimeout(() => setEstavel(termo), 220);
-    return () => clearTimeout(t);
-  }, [termo]);
-  return estavel;
-}

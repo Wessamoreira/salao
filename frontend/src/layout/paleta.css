@@ -65,8 +65,22 @@
   overflow-y: auto;
   margin: 0;
   padding: var(--e-2);
-  list-style: none;
 }
+
+/*
+ * O título do grupo só aparece quando há dois — seções e clientes. Com uma lista só, ele
+ * nomearia o óbvio e roubaria a primeira linha de quem está procurando.
+ */
+.paleta-grupo {
+  margin: var(--e-2) 0 var(--e-1);
+  padding: 0 var(--e-3);
+  color: var(--tinta-fraca);
+  font-size: 10px;
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+.paleta-lista > div:first-child > .paleta-grupo { margin-top: 0; }
 
 .paleta-item {
   width: 100%;

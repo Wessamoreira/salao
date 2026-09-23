@@ -35,7 +35,11 @@ todo o resto quando está errado.
 
 - [x] **B1 · Um único nível de hierarquia.** "Operação" + lista plana. A referência tem três:
       contexto (onde estou), seções (o que existe), fixados (o que eu uso).
-- [ ] **B2 · Não há busca.** No GitLab a busca é o controle mais usado do produto inteiro.
+- [x] **B2 · Não há busca.** No GitLab a busca é o controle mais usado do produto inteiro.
+      *(23/09/2026: o `⌘K` passou a achar **cliente**, e não só seção — pelo nome, pelo apelido
+      ou pelos últimos dígitos, com a mesma consulta da tela de clientes. Comanda continua fora,
+      porque o servidor não tem busca de comanda: caixa que promete e não acha é pior do que
+      caixa que diz o que faz.)*
 - [ ] **B3 · Não há contadores.** Comandas abertas, fila de espera e alerta de estoque são números
       que o sistema **já tem** e não mostra onde a decisão acontece.
 - [x] **B4 · Não recolhe.** 232px fixos são 18% de uma tela de 13" gastos permanentemente com seis
@@ -366,6 +370,31 @@ nome ao lado da hora, e a medida é a altura dela própria: um encaixe de 15 min
 qualquer régua.
 
 Oito mutações, oito mortas.
+
+### Faixa 4 — a busca acha gente
+
+O `⌘K` ia só a seções do sistema. O comentário no topo do arquivo explicava por quê — *"procurar
+cliente exige um endpoint de busca que não existe"* — e terminava com uma promessa: *"quando a
+busca de dado existir, ela entra AQUI, como uma segunda seção"*.
+
+O endpoint existia desde a RT-CLI-006. É o mesmo que entende "os quatro últimos dígitos"
+(RN-CLI-009), e é o caso mais comum do balcão: o telefone toca. O caminho era ir ao menu, abrir
+clientes, digitar. Agora são duas teclas e o nome.
+
+Três decisões dentro disso:
+
+1. **Uma lista para o teclado, duas na tela.** A seta atravessa as seções e entra nos clientes
+   sem tropeço porque o índice percorre uma lista só — um índice por grupo seria reinventar o
+   que todo mundo já tem no dedo.
+2. **A ficha virou endereço** (`/clientes?cliente=…`), porque senão não havia como abri-la de
+   fora: a tela já está montada quando a paleta manda, e estado inicial corre uma vez só. De
+   quebra, o voltar do navegador passou a fechar a ficha em vez de largar a busca.
+3. **Quem não tem a tela não procura.** Devolver fichas para quem não pode abri-las seria a
+   mesma porta com outro nome (inviolável nº 6).
+
+Sete mutações, sete mortas — e duas delas mostraram testes fracos meus antes de morrerem: um que
+passava só porque a consulta ainda não tinha tido tempo de sair, e um grupo vazio que virava
+título sozinho e ninguém olhava.
 
 ## A lição que custou uma tela branca
 

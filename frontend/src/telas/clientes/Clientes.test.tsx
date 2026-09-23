@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { deveSerAcessivel } from '../../teste/acessibilidade';
@@ -40,9 +41,27 @@ function servidor(respostas: Record<string, unknown>) {
   });
 }
 
-function montar() {
+/** O endereço de verdade, para provar que a ficha aberta está nele. */
+function Endereco() {
+  const local = useLocation();
+  return <output aria-label="endereço">{local.pathname + local.search}</output>;
+}
+
+/** O gesto de voltar do tablet do balcão, que no navegador é o mesmo botão. */
+function Voltar() {
+  const navegar = useNavigate();
+  return <button type="button" onClick={() => navegar(-1)}>voltar no histórico</button>;
+}
+
+function montar(endereco = '/clientes') {
   const fila = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={fila}><Clientes /></QueryClientProvider>);
+  return render(
+    <MemoryRouter initialEntries={[endereco]}>
+      <QueryClientProvider client={fila}>
+        <Clientes /><Endereco /><Voltar />
+      </QueryClientProvider>
+    </MemoryRouter>,
+  );
 }
 
 beforeEach(() => { chamar.mockReset(); });
@@ -153,6 +172,67 @@ describe('tela de clientes', () => {
 
     expect(campo).toHaveValue('');
     expect(await screen.findByText(/Procure quem está ligando/)).toBeInTheDocument();
+  });
+});
+
+describe('a ficha aberta é endereço', () => {
+  it('chegando com a ficha no endereço, ela abre — é a porta que a busca da casca usa', async () => {
+    // A ⌘K acha a cliente de qualquer tela e manda para cá. Com a escolha num `useState`,
+    // chegar de lá não abriria nada: a tela já está montada, e estado inicial corre uma vez.
+    servidor({
+      '/v1/clientes/c1/consentimentos': [],
+      '/v1/clientes/c1/possiveis-duplicados': [],
+      '/v1/clientes/c1': MARIA,
+    });
+    montar('/clientes?cliente=c1');
+
+    expect(await screen.findByRole('heading', { name: /Maria Silva/ })).toBeInTheDocument();
+  });
+
+  it('escolher na lista escreve a ficha no endereço, e Esc a tira de lá', async () => {
+    servidor({
+      '/v1/clientes/c1/consentimentos': [],
+      '/v1/clientes/c1/possiveis-duplicados': [],
+      '/v1/clientes?q=': { interpretacao: 'NOME', aviso: null, itens: [MARIA, JULIA] },
+      '/v1/clientes/c1': MARIA,
+    });
+    montar();
+
+    const campo = screen.getByLabelText('Buscar cliente');
+    await userEvent.type(campo, 'silva');
+    await userEvent.click(await screen.findByRole('button', { name: /Maria Silva/ }));
+
+    expect(await screen.findByRole('heading', { name: /Maria Silva/ })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'endereço' }))
+      .toHaveTextContent('/clientes?cliente=c1');
+
+    // Esc é o atalho do CAMPO (R-UX-02): ele limpa a busca e fecha a ficha junto.
+    await userEvent.click(campo);
+    await userEvent.keyboard('{Escape}');
+
+    expect(screen.queryByRole('heading', { name: /Maria Silva/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'endereço' })).not.toHaveTextContent('cliente=');
+  });
+
+  it('voltar fecha a ficha em vez de largar a busca', async () => {
+    // Abrir uma pessoa é ir a outro lugar — diferente das setas da agenda, que percorrem a
+    // mesma tela. No tablet do balcão, o gesto de voltar tem de desfazer a última coisa que
+    // se fez, e a última coisa foi abrir a ficha.
+    servidor({
+      '/v1/clientes/c1/consentimentos': [],
+      '/v1/clientes/c1/possiveis-duplicados': [],
+      '/v1/clientes?q=': { interpretacao: 'NOME', aviso: null, itens: [MARIA, JULIA] },
+      '/v1/clientes/c1': MARIA,
+    });
+    montar();
+    await userEvent.type(screen.getByLabelText('Buscar cliente'), 'silva');
+    await userEvent.click(await screen.findByRole('button', { name: /Maria Silva/ }));
+    await screen.findByRole('heading', { name: /Maria Silva/ });
+
+    await userEvent.click(screen.getByRole('button', { name: 'voltar no histórico' }));
+
+    expect(screen.queryByRole('heading', { name: /Maria Silva/ })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Buscar cliente')).toHaveValue('silva');
   });
 });
 
