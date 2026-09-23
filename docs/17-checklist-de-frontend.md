@@ -181,11 +181,34 @@ verde carregava a impressão de que estava tudo verificado.
 | # | Defeito | Evidência medida |
 |---|---|---|
 | 1 | ~~A CI ignora o front~~ **feito** | job `front`: `npm ci`, lint, tipos, testes e **build**, com o pacote publicado como artefato. O `imagem` passou a depender dele |
-| 2 | Toda ação espera a ida e a volta | `onMutate` aparece 0 vez no projeto |
+| 2 | ~~Toda ação espera a ida e a volta~~ **feito nas duas telas quentes** | comanda e preços usavam a resposta só para invalidar tudo: dois a três pedidos por clique |
 | 3 | Um pacote só, sem divisão por rota | 410 KB (121 KB comprimido) num arquivo |
 | 4 | Cada tela inventou o próprio cartão | `cnc-bloco`, `prc-bloco`, `fil-bloco`, `agt-bloco…`; 3.512 linhas de CSS em 10 arquivos |
 | 5 | O erro não mora no campo que errou (D7) | bloco de erro acima do formulário |
 | 6 | Acessibilidade nunca foi medida (F3) | nenhuma ferramenta nas dependências |
+
+### Faixa 2, e o que ela achou
+
+**A resposta da ação era jogada fora.** Todo endpoint da comanda devolve *a comanda* ou *a conta*
+inteira — e o front descartava isso para invalidar as três consultas da tela. Cada clique custava a
+ida da ação e a volta da releitura, com a cliente na frente. Agora a metade que chegou é gravada
+direto e só a outra é pedida; enquanto ela não chega, fica **esmaecida e sem clique**, o mesmo
+idioma que a agenda já usava para o dia anterior. Número velho calado é que não pode (RN-ATD-008).
+
+Em preços, aprovar e recusar devolvem o painel já sem o cartão decidido: ele some no clique.
+
+**E um defeito de dinheiro apareceu no caminho.** No formulário de pagamento, o campo de valor se
+limpa no envio, mas o envio cai no `restante` quando o campo está vazio — e o restante só é relido
+depois. **Dois cliques em "Registrar" cobravam a mesma quantia duas vezes.** Agora todo controle que
+repetiria a ação fica desarmado enquanto ela está no ar. Nos lançamentos o formulário já se limpava
+sozinho (a trava lá é cinto e suspensório); no pagamento, não havia nada.
+
+Os dois têm teste, e os dois testes foram conferidos por mutação — inclusive um que passava por
+acaso, casando com o "R$ 0,00" do desconto em vez do "falta receber".
+
+**Falta nesta faixa:** fila de espera, conciliação e clientes continuam invalidando e relendo. Na
+fila, o ganho real exige o servidor devolver a vaga recalculada no registro da chamada — ele já a
+calcula para decidir se a espera cabe.
 
 **Por que o build entra no CI e não só os testes:** os testes montam componentes, não o pacote —
 um import quebrado passa por lint, tipos e testes e só aparece no `vite build`. Foi exatamente o

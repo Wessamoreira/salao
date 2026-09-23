@@ -9,11 +9,13 @@ import { reais } from '../../api/comandas';
  * Abrir um diálogo para descontar tiraria a recepção do contexto no meio de uma conta
  * que a cliente está esperando.
  */
-export function Itens({ itens, aoRemover, aoDescontar, bloqueado }: {
+export function Itens({ itens, aoRemover, aoDescontar, bloqueado, ocupado }: {
   itens: ItemDaComanda[];
   aoRemover: (itemId: string) => void;
   aoDescontar: (itemId: string, percentual: number) => void;
   bloqueado: boolean;
+  /** Uma ação já está no ar: repetir o clique repetiria a ação. */
+  ocupado: boolean;
 }) {
   if (itens.length === 0) {
     return (
@@ -44,6 +46,7 @@ export function Itens({ itens, aoRemover, aoDescontar, bloqueado }: {
               key={item.id}
               item={item}
               bloqueado={bloqueado}
+              ocupado={ocupado}
               aoRemover={aoRemover}
               aoDescontar={aoDescontar}
             />
@@ -54,11 +57,12 @@ export function Itens({ itens, aoRemover, aoDescontar, bloqueado }: {
   );
 }
 
-function Linha({ item, aoRemover, aoDescontar, bloqueado }: {
+function Linha({ item, aoRemover, aoDescontar, bloqueado, ocupado }: {
   item: ItemDaComanda;
   aoRemover: (itemId: string) => void;
   aoDescontar: (itemId: string, percentual: number) => void;
   bloqueado: boolean;
+  ocupado: boolean;
 }) {
   const [percentual, setPercentual] = useState('');
 
@@ -97,7 +101,9 @@ function Linha({ item, aoRemover, aoDescontar, bloqueado }: {
               value={percentual}
               onChange={(e) => setPercentual(e.target.value)}
             />
-            <button type="submit" className="cmd-oculto">Aplicar desconto</button>
+            <button type="submit" className="cmd-oculto" disabled={ocupado}>
+              Aplicar desconto
+            </button>
           </form>
         )}
       </td>
@@ -108,6 +114,7 @@ function Linha({ item, aoRemover, aoDescontar, bloqueado }: {
             type="button"
             className="cmd-remover"
             onClick={() => aoRemover(item.id)}
+            disabled={ocupado}
             aria-label={`Remover ${item.descricao}`}
           >
             remover

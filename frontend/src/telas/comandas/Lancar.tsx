@@ -12,9 +12,11 @@ import { LeitorDeCodigo } from '../estoque/LeitorDeCodigo';
  * conforme a escolha — e é a mesma razão pela qual as rotas do servidor são duas
  * (RT-ATD-003).
  */
-export function Lancar({ aoLancarServico, aoLancarProduto }: {
+export function Lancar({ aoLancarServico, aoLancarProduto, ocupado }: {
   aoLancarServico: (servicoId: string, profissionalId: string) => void;
   aoLancarProduto: (produtoId: string, quantidade: number) => void;
+  /** Uma ação já está no ar: o segundo clique lançaria o mesmo item duas vezes. */
+  ocupado: boolean;
 }) {
   const { data: servicos } = useServicos();
   const { data: profissionais } = useProfissionais();
@@ -58,7 +60,8 @@ export function Lancar({ aoLancarServico, aoLancarProduto }: {
           ))}
         </select>
 
-        <button type="submit" className="cmd-botao" disabled={!servico || !profissional}>
+        <button type="submit" className="cmd-botao"
+          disabled={!servico || !profissional || ocupado}>
           Lançar serviço
         </button>
       </form>
@@ -117,7 +120,7 @@ export function Lancar({ aoLancarServico, aoLancarProduto }: {
         <input id="cmd-quantidade" className="cmd-campo" type="text" inputMode="decimal"
           value={quantidade} onChange={(e) => setQuantidade(e.target.value)} />
 
-        <button type="submit" className="cmd-botao" disabled={!produto}>
+        <button type="submit" className="cmd-botao" disabled={!produto || ocupado}>
           Lançar produto
         </button>
       </form>

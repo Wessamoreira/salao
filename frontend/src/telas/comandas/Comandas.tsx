@@ -41,8 +41,8 @@ export function Comandas() {
    * antes de se corrigir, e piscaria a cada chegada da lista.
    */
   const selecionadaId = escolhida ?? abertas?.[0]?.comanda.id ?? null;
-  const { data: detalhada } = useComanda(selecionadaId);
-  const { data: conta } = useConta(selecionadaId);
+  const { data: detalhada, isFetching: relendoComanda } = useComanda(selecionadaId);
+  const { data: conta, isFetching: relendoConta } = useConta(selecionadaId);
 
   const lancarServico = useLancarServico(selecionadaId);
   const lancarProduto = useLancarProduto(selecionadaId);
@@ -97,8 +97,16 @@ export function Comandas() {
             <p className="cmd-erro" role="alert">{erro}</p>
           )}
 
+          {/*
+            Enquanto uma ação está no ar, os controles que a repetiriam ficam desarmados.
+            O caso que doía era o pagamento: o campo de valor se limpa no envio, mas o envio
+            cai no `restante` quando ele está vazio — e o restante só é relido depois. Dois
+            cliques cobravam a mesma quantia duas vezes. Nos lançamentos o formulário já se
+            limpava sozinho; aqui a trava passou a ser explícita, e vale para os dois.
+          */}
           {!bloqueado && (
             <Lancar
+              ocupado={lancarServico.isPending || lancarProduto.isPending}
               aoLancarServico={(servicoId, profissionalId) =>
                 executar(lancarServico.mutateAsync({ servicoId, profissionalId }))}
               aoLancarProduto={(produtoId, quantidade) =>
@@ -106,9 +114,17 @@ export function Comandas() {
             />
           )}
 
+          {/*
+            A metade que o servidor acabou de devolver aparece na hora; a outra é relida e
+            fica esmaecida enquanto não chega — mesmo idioma da agenda, que mantém o dia
+            anterior na tela em vez de trocá-lo por um vazio. Número velho sem aviso é que
+            não pode (RN-ATD-008).
+          */}
+          <div className="cmd-metade" aria-busy={relendoComanda}>
           <Itens
             itens={detalhada.itens}
             bloqueado={bloqueado}
+            ocupado={removerItem.isPending || aplicarDesconto.isPending}
             aoRemover={(itemId) => executar(removerItem.mutateAsync(itemId))}
             aoDescontar={(itemId, percentual) =>
               executar(aplicarDesconto.mutateAsync({ itemId, percentual }))}
@@ -119,10 +135,13 @@ export function Comandas() {
             <Total rotulo="Desconto" valor={reais(detalhada.comanda.valorDesconto)} />
             <Total rotulo="Total" valor={reais(detalhada.comanda.valorLiquido)} forte />
           </div>
+          </div>
 
+          <div className="cmd-metade" aria-busy={relendoConta}>
           <Pagamentos
             conta={conta}
             bloqueado={bloqueado}
+            ocupado={registrarPagamento.isPending || removerPagamento.isPending}
             aoRegistrar={(forma, valor) =>
               executar(registrarPagamento.mutateAsync({ forma, valor }))}
             aoRemover={(pagamentoId) => executar(removerPagamento.mutateAsync(pagamentoId))}
@@ -148,6 +167,7 @@ export function Comandas() {
               </button>
             )}
           </footer>
+          </div>
         </section>
       )}
     </div>

@@ -563,3 +563,17 @@
   }
   .cmd-botao-primario { width: 100%; min-height: 44px; }
 }
+
+/*
+ * A metade que ainda está sendo relida.
+ *
+ * Cada ação devolve os itens OU a conta; a outra metade chega um instante depois. Ela
+ * continua na tela, legível, mas esmaecida e sem clique — quem lê sabe que aquele número
+ * é o de um segundo atrás. Esconder seria pior (a tela salta); mostrar sem avisar, também
+ * (o total mente por um instante).
+ */
+.cmd-metade[aria-busy='true'] {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity var(--t-rapido, 120ms) ease-out;
+}

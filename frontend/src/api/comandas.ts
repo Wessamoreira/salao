@@ -151,55 +151,70 @@ export function useConta(id: string | null) {
 }
 
 /**
- * Invalida comanda, conta e barra de uma vez.
+ * O que o servidor devolveu entra na tela; o resto é pedido de novo.
  *
- * Toda ação desta tela mexe nas três: lançar item muda o total (comanda), muda o que
- * falta (conta) e muda o valor parcial na barra. Invalidar só uma deixaria a tela
- * mostrando dois números que não conversam.
+ * Toda ação desta tela mexe em três coisas: os itens (comanda), o que falta (conta) e o
+ * valor parcial na barra. Cada endpoint devolve **uma** delas inteira — e até 22/09/2026
+ * essa resposta era jogada fora para invalidar as três. O balcão pagava duas idas ao
+ * servidor por clique: a da ação e a da releitura, com a cliente na frente.
+ *
+ * Agora a metade que chegou é gravada direto, e só a outra é pedida. Ela continua podendo
+ * estar um instante atrás — e por isso a tela a marca como `aria-busy` e a esmaece,
+ * mesmo idioma da agenda. Número velho sem aviso é que não pode.
  */
-function useRecarregar(comandaId: string | null) {
+function useAplicar(comandaId: string | null) {
   const fila = useQueryClient();
-  return () => {
-    fila.invalidateQueries({ queryKey: ['comandas', comandaId] });
-    fila.invalidateQueries({ queryKey: ['comandas', 'abertas'] });
+  return {
+    comanda: (comanda: ComandaDetalhada) => {
+      fila.setQueryData(['comandas', comandaId], comanda);
+      // `exact` não: a conta é filha desta chave, e é ela que precisa ser relida.
+      fila.invalidateQueries({ queryKey: ['comandas', comandaId, 'conta'] });
+      fila.invalidateQueries({ queryKey: ['comandas', 'abertas'] });
+    },
+    conta: (conta: ContaDaComanda) => {
+      fila.setQueryData(['comandas', comandaId, 'conta'], conta);
+      // `exact` sim: sem ele, a invalidação da comanda derrubaria a conta recém-gravada.
+      fila.invalidateQueries({ queryKey: ['comandas', comandaId], exact: true });
+      fila.invalidateQueries({ queryKey: ['comandas', 'abertas'] });
+    },
   };
 }
 
 export function useLancarServico(comandaId: string | null) {
-  const recarregar = useRecarregar(comandaId);
+  const aplicar = useAplicar(comandaId);
   return useMutation({
     mutationFn: (dados: { servicoId: string; profissionalId: string; quantidade?: number }) =>
       api<ComandaDetalhada>(`/v1/comandas/${comandaId}/itens`, {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
-    onSuccess: recarregar,
+    onSuccess: aplicar.comanda,
   });
 }
 
 export function useLancarProduto(comandaId: string | null) {
-  const recarregar = useRecarregar(comandaId);
+  const aplicar = useAplicar(comandaId);
   return useMutation({
     mutationFn: (dados: { produtoId: string; quantidade?: number }) =>
       api<ComandaDetalhada>(`/v1/comandas/${comandaId}/produtos`, {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
-    onSuccess: recarregar,
+    onSuccess: aplicar.comanda,
   });
 }
 
 export function useRemoverItem(comandaId: string | null) {
-  const recarregar = useRecarregar(comandaId);
+  const aplicar = useAplicar(comandaId);
   return useMutation({
     mutationFn: (itemId: string) =>
       api<ComandaDetalhada>(`/v1/comandas/${comandaId}/itens/${itemId}`, { method: 'DELETE' }),
-    onSuccess: recarregar,
+    onSuccess: aplicar.comanda,
   });
 }
 
 export function useAplicarDesconto(comandaId: string | null) {
-  const recarregar = useRecarregar(comandaId);
+  const aplicar = useAplicar(comandaId);
   return useMutation({
     mutationFn: ({ itemId, percentual, valor }:
       { itemId: string; percentual?: number; valor?: number }) =>
@@ -207,38 +222,38 @@ export function useAplicarDesconto(comandaId: string | null) {
         method: 'PUT',
         body: JSON.stringify(percentual !== undefined ? { percentual } : { valor }),
       }),
-    onSuccess: recarregar,
+    onSuccess: aplicar.comanda,
   });
 }
 
 export function useRegistrarPagamento(comandaId: string | null) {
-  const recarregar = useRecarregar(comandaId);
+  const aplicar = useAplicar(comandaId);
   return useMutation({
     mutationFn: (dados: { forma: FormaDePagamento; valor: number; parcelas?: number }) =>
       api<ContaDaComanda>(`/v1/comandas/${comandaId}/pagamentos`, {
         method: 'POST',
         body: JSON.stringify(dados),
       }),
-    onSuccess: recarregar,
+    onSuccess: aplicar.conta,
   });
 }
 
 export function useRemoverPagamento(comandaId: string | null) {
-  const recarregar = useRecarregar(comandaId);
+  const aplicar = useAplicar(comandaId);
   return useMutation({
     mutationFn: (pagamentoId: string) =>
       api<ContaDaComanda>(`/v1/comandas/${comandaId}/pagamentos/${pagamentoId}`,
         { method: 'DELETE' }),
-    onSuccess: recarregar,
+    onSuccess: aplicar.conta,
   });
 }
 
 export function useFechar(comandaId: string | null) {
-  const recarregar = useRecarregar(comandaId);
+  const aplicar = useAplicar(comandaId);
   return useMutation({
     mutationFn: () =>
       api<ComandaDetalhada>(`/v1/comandas/${comandaId}/fechamento`, { method: 'POST' }),
-    onSuccess: recarregar,
+    onSuccess: aplicar.comanda,
   });
 }
 

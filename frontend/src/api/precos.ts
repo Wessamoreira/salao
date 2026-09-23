@@ -94,26 +94,41 @@ export function useGerarSugestoes() {
   });
 }
 
-export function useAprovar() {
+/**
+ * Aprovar e recusar devolvem o painel inteiro, já sem a sugestão decidida.
+ *
+ * Gravar essa resposta, em vez de invalidar e reler, economiza uma ida ao servidor por
+ * decisão — e o cartão decidido some no clique, em vez de ficar na tela esperando a
+ * releitura. A trilha, essa sim, é pedida de novo: ela ganhou uma linha.
+ */
+function useAplicarPainel() {
   const fila = useQueryClient();
+  return (painel: Painel) => {
+    fila.setQueryData([...chave, 'painel'], painel);
+    fila.invalidateQueries({ queryKey: [...chave, 'decisoes'] });
+  };
+}
+
+export function useAprovar() {
+  const aplicar = useAplicarPainel();
   return useMutation({
     /** `preco` ausente aplica o sugerido. */
     mutationFn: ({ id, preco }: { id: string; preco?: number }) =>
       api<Painel>(`${SUGESTOES}/${id}/aprovacao`, {
         method: 'POST', body: JSON.stringify(preco == null ? {} : { preco }),
       }),
-    onSuccess: () => fila.invalidateQueries({ queryKey: chave }),
+    onSuccess: aplicar,
   });
 }
 
 export function useRecusar() {
-  const fila = useQueryClient();
+  const aplicar = useAplicarPainel();
   return useMutation({
     mutationFn: ({ id, motivo }: { id: string; motivo: string }) =>
       api<Painel>(`${SUGESTOES}/${id}/recusa`, {
         method: 'POST', body: JSON.stringify({ motivo }),
       }),
-    onSuccess: () => fila.invalidateQueries({ queryKey: chave }),
+    onSuccess: aplicar,
   });
 }
 

@@ -239,3 +239,103 @@ describe('tela de fechamento', () => {
     }
   });
 });
+
+describe('o que chega, e o que ainda não chegou', () => {
+  it('o item lançado aparece com a resposta da ação, sem reler a comanda', async () => {
+    // Até 22/09/2026 cada clique custava duas idas ao servidor: a da ação e a da releitura.
+    // Com a cliente na frente, é isso que se sente como travado.
+    servidor({
+      '/v1/comandas/k1/itens': {
+        comanda: { ...COMANDA, valorBruto: dinheiro(150), valorLiquido: dinheiro(150) },
+        // Nome diferente do serviço do cardápio: "Escova" apareceria também no select, e
+        // a busca por texto casaria com os dois.
+        itens: [ITEM, { ...ITEM, id: 'i2', tipo: 'SERVICO', descricao: 'Escova modelada',
+          quantidade: 1, precoUnitario: dinheiro(60), valorTotal: dinheiro(60) }],
+      },
+    });
+    montar();
+    await screen.findByText('Shampoo');
+    // O cardápio chega depois da comanda; sem esperar por ele o select ainda está vazio.
+    await screen.findByRole('option', { name: 'Escova' });
+    const leiturasAntes = chamar.mock.calls.filter(([c]) => c === '/v1/comandas/k1').length;
+
+    await userEvent.selectOptions(screen.getByLabelText('Serviço'), 's1');
+    await userEvent.selectOptions(screen.getByLabelText('Quem executou'), 'pr1');
+    await userEvent.click(screen.getByRole('button', { name: 'Lançar serviço' }));
+
+    expect(await screen.findByText('Escova modelada')).toBeInTheDocument();
+    // Bruto e total mostram o mesmo valor (sem desconto): dois elementos, um número.
+    expect(screen.getAllByText('R$ 150,00').length).toBeGreaterThan(0);
+    expect(chamar.mock.calls.filter(([c]) => c === '/v1/comandas/k1').length)
+      .toBe(leiturasAntes);
+  });
+
+  it('dois cliques em Registrar cobram uma vez só', async () => {
+    // O campo de valor se limpa no envio, mas o envio cai no `restante` quando ele está
+    // vazio — e o restante ainda é o antigo, porque a conta só é relida depois. Sem
+    // desarmar o botão, o segundo clique registrava o MESMO pagamento de novo: dinheiro
+    // cobrado em dobro, com a cliente na frente.
+    let liberar = () => {};
+    servidor();
+    const respostaDoServidor = chamar.getMockImplementation()!;
+    chamar.mockImplementation(async (caminho: string, init?: RequestInit) => {
+      if (caminho === '/v1/comandas/k1/pagamentos') {
+        await new Promise<void>((resolve) => { liberar = resolve; });
+        return { comanda: COMANDA, pagamentos: [], totalPago: dinheiro(90),
+          restante: dinheiro(0) };
+      }
+      return respostaDoServidor(caminho, init);
+    });
+    montar();
+    await screen.findByText('Falta receber');
+
+    const botao = screen.getByRole('button', { name: 'Registrar' });
+    await userEvent.click(botao);
+    await waitFor(() => expect(botao).toBeDisabled());
+    await userEvent.click(botao);
+
+    expect(chamar.mock.calls.filter(([c]) => c === '/v1/comandas/k1/pagamentos'))
+      .toHaveLength(1);
+    liberar();
+    // O "falta receber" vem da resposta do próprio pagamento — sem reler a conta. Note que
+    // o servidor falso continua devolvendo 90 na leitura: se a tela relesse, voltaria a 90.
+    await waitFor(() => expect(document.querySelector('.cmd-restante-valor'))
+      .toHaveTextContent('R$ 0,00'));
+    expect(chamar.mock.calls.filter(([c]) => c === '/v1/comandas/k1/pagamentos'))
+      .toHaveLength(1);
+  });
+
+  it('a metade que ainda não chegou fica marcada, em vez de mostrar número velho calado',
+    async () => {
+      // A conta é relida depois do lançamento. Enquanto não chega, ela continua legível —
+      // esmaecida e sem clique, como o dia anterior na agenda. Aqui ela fica presa no ar de
+      // propósito, para o teste ver o estado que o balcão vê.
+      let liberarConta = () => {};
+      let segurar = false;
+      servidor({ '/v1/comandas/k1/itens': { comanda: COMANDA, itens: [ITEM] } });
+      const respostaDoServidor = chamar.getMockImplementation()!;
+      chamar.mockImplementation(async (caminho: string, init?: RequestInit) => {
+        if (caminho === '/v1/comandas/k1/conta' && segurar) {
+          await new Promise<void>((resolve) => { liberarConta = resolve; });
+        }
+        return respostaDoServidor(caminho, init);
+      });
+      montar();
+      await screen.findByText('Shampoo');
+      await screen.findByRole('option', { name: 'Escova' });
+      const contaDe = () => document.querySelectorAll('.cmd-metade')[1];
+      expect(contaDe()).toHaveAttribute('aria-busy', 'false');
+
+      segurar = true;
+      await userEvent.selectOptions(screen.getByLabelText('Serviço'), 's1');
+      await userEvent.selectOptions(screen.getByLabelText('Quem executou'), 'pr1');
+      await userEvent.click(screen.getByRole('button', { name: 'Lançar serviço' }));
+
+      await waitFor(() => expect(contaDe()).toHaveAttribute('aria-busy', 'true'));
+      expect(screen.getByText('Falta receber')).toBeInTheDocument();
+
+      segurar = false;
+      liberarConta();
+      await waitFor(() => expect(contaDe()).toHaveAttribute('aria-busy', 'false'));
+    });
+});

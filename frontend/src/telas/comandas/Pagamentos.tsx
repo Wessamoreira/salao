@@ -12,11 +12,13 @@ import { FORMAS, reais } from '../../api/comandas';
  * O valor do campo já vem preenchido com **o que falta** — que é o que a recepção vai
  * digitar em nove de cada dez vezes.
  */
-export function Pagamentos({ conta, aoRegistrar, aoRemover, bloqueado }: {
+export function Pagamentos({ conta, aoRegistrar, aoRemover, bloqueado, ocupado }: {
   conta: ContaDaComanda;
   aoRegistrar: (forma: FormaDePagamento, valor: number) => void;
   aoRemover: (pagamentoId: string) => void;
   bloqueado: boolean;
+  /** Uma ação já está no ar: repetir o clique repetiria a ação. */
+  ocupado: boolean;
 }) {
   const [forma, setForma] = useState<FormaDePagamento>('DINHEIRO');
   const [valor, setValor] = useState('');
@@ -36,6 +38,7 @@ export function Pagamentos({ conta, aoRegistrar, aoRemover, bloqueado }: {
             <span className="cmd-pago-valor">{reais(p.valor)}</span>
             {!bloqueado && (
               <button type="button" className="cmd-remover" onClick={() => aoRemover(p.id)}
+                disabled={ocupado}
                 aria-label={`Remover pagamento de ${reais(p.valor)}`}>
                 remover
               </button>
@@ -80,7 +83,7 @@ export function Pagamentos({ conta, aoRegistrar, aoRemover, bloqueado }: {
             onChange={(e) => setValor(e.target.value)}
           />
 
-          <button type="submit" className="cmd-botao" disabled={quitada}>
+          <button type="submit" className="cmd-botao" disabled={quitada || ocupado}>
             Registrar
           </button>
         </form>
