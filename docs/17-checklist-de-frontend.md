@@ -160,6 +160,47 @@ meio segundo de atraso de propósito: prévia que responde no mesmo quadro nunca
 espera, e o estado de espera é metade do que faz um sistema parecer fluido. As prévias anteriores
 julgavam uma tela por vez — e é assim que cinco telas acabam com cinco cabeçalhos.
 
+## Terceira passada — 22/09/2026: fluidez, e o que estava quebrado sem ninguém ver
+
+O pedido do dono: *"deixa mais profissional, fluido, sem travar, melhor usabilidade, sem parecer
+que uma IA fez"*. A auditoria achou primeiro uma coisa que não é de acabamento nenhum.
+
+### O item zero — feito antes do plano
+
+**`npm run typecheck` não verificava nada.** Era `tsc --noEmit` sobre o `tsconfig` de solução, que
+tem `files: []` e só referências: nenhum arquivo era lido. Um erro de tipo plantado em `src`
+passava — e passou, no teste que fiz para provar. Quem lê os arquivos é `tsc -b`, e ele acusava
+quatro erros em três telas: o dublê de `ErroDaApi` nos testes sem a assinatura do real. Ou seja,
+**`npm run build` estava quebrado**, e nenhuma verificação dizia isso.
+
+Durou porque **a CI não toca no front**: não há `npm` em lugar nenhum do `ci.yml`. A suíte Java
+verde carregava a impressão de que estava tudo verificado.
+
+### As seis faixas, na ordem
+
+| # | Defeito | Evidência medida |
+|---|---|---|
+| 1 | ~~A CI ignora o front~~ **feito** | job `front`: `npm ci`, lint, tipos, testes e **build**, com o pacote publicado como artefato. O `imagem` passou a depender dele |
+| 2 | Toda ação espera a ida e a volta | `onMutate` aparece 0 vez no projeto |
+| 3 | Um pacote só, sem divisão por rota | 410 KB (121 KB comprimido) num arquivo |
+| 4 | Cada tela inventou o próprio cartão | `cnc-bloco`, `prc-bloco`, `fil-bloco`, `agt-bloco…`; 3.512 linhas de CSS em 10 arquivos |
+| 5 | O erro não mora no campo que errou (D7) | bloco de erro acima do formulário |
+| 6 | Acessibilidade nunca foi medida (F3) | nenhuma ferramenta nas dependências |
+
+**Por que o build entra no CI e não só os testes:** os testes montam componentes, não o pacote —
+um import quebrado passa por lint, tipos e testes e só aparece no `vite build`. Foi exatamente o
+caso do item zero.
+
+**1 a 3 respondem a "fluido, sem travar". 4 responde a "sem parecer que foi IA"** — pilha de caixas
+brancas iguais é o retrato do gerado, e a régua deste produto pede papel, densidade e traço, não
+caixa dentro de caixa.
+
+### O que fica para depois, por decisão do dono (22/09/2026)
+
+`/estoque` e `/financeiro` estão no menu e mostram "Em breve", com o backend pronto há semanas. É a
+maior falha de acabamento do produto hoje, e são duas telas grandes: entram **depois** destas
+faixas, para nascerem sobre o sistema visual novo em vez de serem reescritas.
+
 ## A lição que custou uma tela branca
 
 Ao introduzir `grupos` no contrato, a casca passou a fazer `capacidades.grupos.map(...)`. O

@@ -61,6 +61,54 @@ jobs:
           path: target/*.jar
           retention-days: 1
 
+  front:
+    name: Front — tipos, lint, testes e build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # `ci` e não `install`: respeita o lock e falha se ele estiver desatualizado,
+      # em vez de resolver versões novas em silêncio dentro do CI.
+      - name: Instalar
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      # `tsc -b`, o que de fato lê os arquivos. Até 22/09/2026 este script era
+      # `tsc --noEmit` sobre um tsconfig sem arquivos: dizia "ok" sobre nada, e o
+      # build estava quebrado havia semanas sem ninguém ver.
+      - name: Tipos
+        working-directory: frontend
+        run: npm run typecheck
+
+      - name: Testes
+        working-directory: frontend
+        run: npm test
+
+      # O build é o único passo que prova que a tela chega ao navegador. Sem ele, um
+      # import quebrado passa por lint, tipos e testes — os testes montam componentes,
+      # não o pacote.
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+      - name: Publicar o pacote
+        uses: actions/upload-artifact@v4
+        with:
+          name: front
+          path: frontend/dist
+          retention-days: 7
+
   seguranca:
     name: Vulnerabilidades
     runs-on: ubuntu-latest
@@ -84,7 +132,7 @@ jobs:
   imagem:
     name: Imagem multi-arch
     runs-on: ubuntu-latest
-    needs: [verificar, seguranca]
+    needs: [verificar, front, seguranca]
     if: github.ref == 'refs/heads/main'
     timeout-minutes: 30
     permissions:
