@@ -76,6 +76,54 @@
   text-underline-offset: 3px;
 }
 
+/*
+ * A régua da grade: trilho afundado, e a escolhida em relevo de papel.
+ *
+ * O controle é o mesmo desenho do segmentado de qualquer back-office — e é assim de
+ * propósito: quem chega já sabe usar. A escolha se distingue por contraste (papel e tinta
+ * cheia contra fundo afundado e tinta fraca), nunca por cor: cor aqui codifica estado do
+ * negócio, e densidade de grade não é negócio.
+ */
+.agenda-densidade {
+  display: flex;
+  align-items: center;
+  gap: var(--e-1);
+  height: 32px;
+  padding: 3px;
+  background: var(--papel-fundo);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+
+.agenda-densidade > span {
+  padding: 0 var(--e-1) 0 var(--e-2);
+  color: var(--tinta-fraca);
+  font-size: var(--t-11);
+}
+
+.agenda-densidade button {
+  min-width: 28px;
+  height: 100%;
+  padding: 0 var(--e-2);
+  color: var(--tinta-fraca);
+  background: transparent;
+  border: 0;
+  border-radius: var(--raio-1);
+  font: inherit;
+  font-size: var(--t-12);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: color var(--mov-imediato) var(--mov-curva),
+    background var(--mov-imediato) var(--mov-curva);
+}
+.agenda-densidade button:hover { color: var(--tinta); }
+.agenda-densidade button[aria-pressed='true'] {
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua);
+  font-weight: var(--p-forte);
+}
+
 .agenda-navegacao { display: flex; gap: var(--e-1); }
 
 .agenda-navegacao button {
@@ -286,6 +334,23 @@
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--tinta-fraca);
+}
+
+/*
+ * Tarja baixa mostra o nome AO LADO da hora, não embaixo.
+ *
+ * Numa grade compacta um atendimento de meia hora mede 21px: cabe uma linha, e a segunda
+ * linha — que é justamente o nome da cliente — some por baixo da borda. Grade em que não se
+ * lê quem é não serve para nada, e era o preço escondido de apertar a régua.
+ *
+ * A medida é a altura da própria tarja, e não a densidade escolhida: um encaixe de 15
+ * minutos é baixo em qualquer régua. O corte é a altura de duas linhas de texto (27px de
+ * caixa de conteúdo, que é o que a consulta mede): cabendo as duas, o nome fica embaixo e
+ * ganha a largura inteira da tarja — que é onde ele trunca menos.
+ */
+.agenda-bloco { container-type: size; }
+@container (max-height: 27px) {
+  .agenda-bloco .cliente { display: inline; margin-left: 5px; }
 }
 
 /*

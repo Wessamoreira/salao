@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  cargaEmMinutos, faixaDoDia, horaLocal, posicao, posicaoDoAgora, rotuloDeCarga, rotuloDeHora,
-  PIXELS_POR_MINUTO,
+  cargaEmMinutos, faixaDoDia, horaLocal, linhasDaGrade, pixelsPorMinuto, posicao, posicaoDoAgora,
+  rotuloDeCarga, rotuloDeHora, ALTURA_DA_LINHA, DENSIDADES,
 } from './grade';
+
+/** A régua de sempre: 30 minutos por linha, 1.4px por minuto. */
+const PADRAO = pixelsPorMinuto('padrao');
 
 const SAO_PAULO = 'America/Sao_Paulo';
 
@@ -67,10 +70,10 @@ describe('posição na pista', () => {
   it('o topo é a distância do início da faixa', () => {
     const faixa = { primeiraHora: 8, ultimaHora: 20 };
 
-    const { topo, altura } = posicao(as(9), as(9, 45), faixa, SAO_PAULO);
+    const { topo, altura } = posicao(as(9), as(9, 45), faixa, SAO_PAULO, PADRAO);
 
-    expect(topo).toBe(60 * PIXELS_POR_MINUTO);
-    expect(altura).toBe(45 * PIXELS_POR_MINUTO);
+    expect(topo).toBe(60 * PADRAO);
+    expect(altura).toBe(45 * PADRAO);
   });
 
   it('um bloco muito curto ainda é clicável', () => {
@@ -78,7 +81,7 @@ describe('posição na pista', () => {
     // recepção clicaria no vizinho.
     const faixa = { primeiraHora: 8, ultimaHora: 20 };
 
-    expect(posicao(as(9), as(9, 5), faixa, SAO_PAULO).altura).toBe(12);
+    expect(posicao(as(9), as(9, 5), faixa, SAO_PAULO, PADRAO).altura).toBe(12);
   });
 });
 
@@ -89,8 +92,8 @@ describe('linha do agora', () => {
     // O achado mais sério da crítica de design: sem ela, um calendário é uma tabela.
     const agora = new Date(as(10, 24));
 
-    expect(posicaoDoAgora(agora, '2026-09-17', faixa, SAO_PAULO))
-      .toBeCloseTo(144 * PIXELS_POR_MINUTO, 5);
+    expect(posicaoDoAgora(agora, '2026-09-17', faixa, SAO_PAULO, PADRAO))
+      .toBeCloseTo(144 * PADRAO, 5);
   });
 
   it('não aparece na agenda de outro dia', () => {
@@ -98,13 +101,13 @@ describe('linha do agora', () => {
     // "agora" é 8h de um dia que não é hoje.
     const agora = new Date(as(10, 24));
 
-    expect(posicaoDoAgora(agora, '2026-09-18', faixa, SAO_PAULO)).toBeNull();
+    expect(posicaoDoAgora(agora, '2026-09-18', faixa, SAO_PAULO, PADRAO)).toBeNull();
   });
 
   it('não aparece quando o instante está fora da faixa mostrada', () => {
     const agora = new Date(as(6));
 
-    expect(posicaoDoAgora(agora, '2026-09-17', faixa, SAO_PAULO)).toBeNull();
+    expect(posicaoDoAgora(agora, '2026-09-17', faixa, SAO_PAULO, PADRAO)).toBeNull();
   });
 });
 
@@ -122,5 +125,48 @@ describe('carga do dia', () => {
   it('formata com dois dígitos nos minutos', () => {
     expect(rotuloDeCarga(305)).toBe('5h05');
     expect(rotuloDeCarga(120)).toBe('2h00');
+  });
+});
+
+describe('densidade da grade', () => {
+  const faixa = { primeiraHora: 8, ultimaHora: 20 };
+
+  it('a linha tem sempre a mesma altura; o que muda é quanto tempo ela vale', () => {
+    // É a decisão que faz o controle ser régua e não zoom: o nome e a hora continuam
+    // cabendo na tarja em qualquer densidade, porque a linha não encolhe.
+    for (const densidade of ['ampla', 'padrao', 'compacta'] as const) {
+      expect(pixelsPorMinuto(densidade) * DENSIDADES[densidade]).toBe(ALTURA_DA_LINHA);
+    }
+  });
+
+  it('a compacta cabe o dia em um quarto da altura da ampla', () => {
+    const doDia = (densidade: 'ampla' | 'compacta') =>
+      (faixa.ultimaHora - faixa.primeiraHora) * 60 * pixelsPorMinuto(densidade);
+
+    expect(doDia('ampla')).toBe(doDia('compacta') * 4);
+  });
+
+  it('a padrão continua sendo a régua que a grade sempre teve', () => {
+    // 1.4px por minuto, 84px por hora. Mudar a densidade padrão seria mudar a agenda de
+    // todo mundo sem ninguém pedir.
+    expect(pixelsPorMinuto('padrao')).toBe(1.4);
+  });
+
+  it('as linhas seguem o passo, e a hora cheia continua mais forte', () => {
+    const linhas = linhasDaGrade(faixa, 'padrao');
+
+    expect(linhas.slice(0, 3)).toEqual([
+      { minuto: 0, topo: 0, cheia: true },
+      { minuto: 30, topo: 42, cheia: false },
+      { minuto: 60, topo: 84, cheia: true },
+    ]);
+    // A última linha fecha a faixa: sem ela a grade termina sem régua embaixo.
+    expect(linhas.at(-1)?.minuto).toBe(720);
+    expect(linhas.at(-1)?.topo).toBeCloseTo(1008, 6);
+  });
+
+  it('na compacta toda linha é hora cheia — menos traço, mesmo desenho', () => {
+    expect(linhasDaGrade(faixa, 'compacta').every((l) => l.cheia)).toBe(true);
+    expect(linhasDaGrade(faixa, 'ampla').filter((l) => l.cheia)).toHaveLength(13);
   });
 });

@@ -4,8 +4,8 @@ import {
   useAgendaDoDia, type Agendamento, type AgendaDoDia, type BlocoDoAgendamento,
 } from '../../api/agenda';
 import {
-  cargaEmMinutos, faixaDoDia, posicao, posicaoDoAgora, rotuloDeCarga, rotuloDeHora,
-  PIXELS_POR_MINUTO, type FaixaDoDia,
+  cargaEmMinutos, faixaDoDia, linhasDaGrade, pixelsPorMinuto, posicao, posicaoDoAgora,
+  rotuloDeCarga, rotuloDeHora, DENSIDADES, type Densidade, type FaixaDoDia,
 } from './grade';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCapacidades } from '../../api/capacidades';
@@ -58,6 +58,51 @@ function porExtenso(data: string): { dia: string; semana: string } {
   };
 }
 
+const CHAVE_DA_DENSIDADE = 'salao:agenda-densidade';
+
+/**
+ * A densidade escolhida da última vez.
+ *
+ * Preferência de quem olha a tela, não permissão — a mesma natureza da lateral recolhida, e
+ * por isso o mesmo lugar. Um salão não troca de tamanho toda semana: escolher a régua uma vez
+ * por máquina é o que faz o controle valer a pena.
+ */
+function densidadeGuardada(): Densidade {
+  try {
+    const guardada = localStorage.getItem(CHAVE_DA_DENSIDADE);
+    return guardada && guardada in DENSIDADES ? (guardada as Densidade) : 'padrao';
+  } catch {
+    // Navegador com armazenamento bloqueado ainda precisa desenhar a agenda.
+    return 'padrao';
+  }
+}
+
+/**
+ * A régua da grade, em minutos por linha (R-UX-11).
+ *
+ * Mostra o número, e não "ampla/compacta": intervalo em minutos é o vocabulário do balcão —
+ * "encaixe de 15 minutos" é como a recepção fala — e nomes de tamanho não dizem quanto vale
+ * uma linha. O rótulo por extenso fica no título, para quem passa o mouse.
+ */
+function Densidades({ atual, aoEscolher }: {
+  atual: Densidade;
+  aoEscolher: (densidade: Densidade) => void;
+}) {
+  return (
+    <div className="agenda-densidade" role="group" aria-label="Minutos por linha da grade">
+      <span aria-hidden="true">min</span>
+      {(Object.keys(DENSIDADES) as Densidade[]).map((nome) => (
+        <button key={nome} type="button" aria-pressed={nome === atual}
+          aria-label={`${DENSIDADES[nome]} minutos por linha`}
+          title={`${DENSIDADES[nome]} minutos por linha`}
+          onClick={() => aoEscolher(nome)}>
+          {DENSIDADES[nome]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /**
  * RT-AGD-010 — quem cancela na grade fica sabendo que abriu vaga.
  *
@@ -88,6 +133,7 @@ export function Agenda() {
   const { data: capacidades } = useCapacidades();
   const [parametros, definirParametros] = useSearchParams();
   const [escolhido, definirEscolhido] = useState<string | null>(null);
+  const [densidade, definirDensidade] = useState<Densidade>(densidadeGuardada);
 
   /*
    * O dia é o dia do SALÃO, e ele está no endereço.
@@ -130,6 +176,18 @@ export function Agenda() {
   const agora = new Date();
   const extenso = porExtenso(data);
 
+  const px = pixelsPorMinuto(densidade);
+
+  const escolherDensidade = (nova: Densidade) => {
+    definirDensidade(nova);
+    try {
+      localStorage.setItem(CHAVE_DA_DENSIDADE, nova);
+    } catch {
+      // Navegador com armazenamento bloqueado: a escolha vale para esta sessão e pronto.
+      // Perder a preferência é um aborrecimento; derrubar a agenda por causa dela, não.
+    }
+  };
+
   const faixa = useMemo<FaixaDoDia>(() => {
     if (!agenda) return { primeiraHora: 8, ultimaHora: 20 };
     const periodos = [
@@ -139,7 +197,7 @@ export function Agenda() {
     return faixaDoDia(periodos, agenda.fuso);
   }, [agenda]);
 
-  const alturaDaPista = (faixa.ultimaHora - faixa.primeiraHora) * 60 * PIXELS_POR_MINUTO;
+  const alturaDaPista = (faixa.ultimaHora - faixa.primeiraHora) * 60 * px;
 
   return (
     <section className="agenda" aria-label="Agenda do dia">
@@ -156,6 +214,8 @@ export function Agenda() {
             }).format(new Date(dataUpdatedAt))}
           </span>
         )}
+        <Densidades atual={densidade} aoEscolher={escolherDensidade} />
+
         <nav className="agenda-navegacao" aria-label="Navegar entre os dias">
           <button type="button" onClick={() => irParaODia(somarDias(data, -1))}
             aria-label="Dia anterior">←</button>
@@ -190,8 +250,8 @@ export function Agenda() {
       {agenda && agenda.profissionais.length > 0 && (
         <div className={`agenda-corpo${isPlaceholderData ? ' trocando' : ''}`}
           aria-busy={isPlaceholderData || undefined}>
-          <Horas faixa={faixa} altura={alturaDaPista}
-            agora={posicaoDoAgora(agora, agenda.data, faixa, agenda.fuso)}
+          <Horas faixa={faixa} altura={alturaDaPista} px={px}
+            agora={posicaoDoAgora(agora, agenda.data, faixa, agenda.fuso, px)}
             rotuloDoAgora={rotuloDeHora(agora.toISOString(), agenda.fuso)} />
           <div className="agenda-colunas">
             {agenda.profissionais.map((profissional) => (
@@ -200,6 +260,8 @@ export function Agenda() {
                 agenda={agenda}
                 faixa={faixa}
                 altura={alturaDaPista}
+                px={px}
+                densidade={densidade}
                 agora={agora}
                 profissional={profissional}
                 maiorCarga={maiorCarga(agenda)}
@@ -222,8 +284,8 @@ export function Agenda() {
   );
 }
 
-function Horas({ faixa, altura, agora, rotuloDoAgora }: {
-  faixa: FaixaDoDia; altura: number; agora: number | null; rotuloDoAgora: string;
+function Horas({ faixa, altura, px, agora, rotuloDoAgora }: {
+  faixa: FaixaDoDia; altura: number; px: number; agora: number | null; rotuloDoAgora: string;
 }) {
   const horas = [];
   for (let h = faixa.primeiraHora; h <= faixa.ultimaHora; h++) horas.push(h);
@@ -233,7 +295,7 @@ function Horas({ faixa, altura, agora, rotuloDoAgora }: {
       <div style={{ position: 'relative', height: altura }}>
         {horas.map((h) => (
           <span key={h} className="agenda-hora"
-            style={{ top: (h - faixa.primeiraHora) * 60 * PIXELS_POR_MINUTO }}>
+            style={{ top: (h - faixa.primeiraHora) * 60 * px }}>
             {String(h).padStart(2, '0')}:00
           </span>
         ))}
@@ -249,25 +311,21 @@ interface ColunaProps {
   agenda: AgendaDoDia;
   faixa: FaixaDoDia;
   altura: number;
+  px: number;
+  densidade: Densidade;
   agora: Date;
   profissional: { id: string; nome: string; apelido: string | null };
   maiorCarga: number;
   aoEscolher: (id: string) => void;
 }
 
-function Coluna({ agenda, faixa, altura, agora, profissional, maiorCarga,
+function Coluna({ agenda, faixa, altura, px, densidade, agora, profissional, maiorCarga,
                   aoEscolher }: ColunaProps) {
   const meus = agenda.agendamentos.filter((a) => a.profissionalId === profissional.id);
   const carga = cargaEmMinutos(meus.filter(ocupaAGrade));
   const jornada = agenda.jornadas[profissional.id] ?? [];
-  const topoDoAgora = posicaoDoAgora(agora, agenda.data, faixa, agenda.fuso);
+  const topoDoAgora = posicaoDoAgora(agora, agenda.data, faixa, agenda.fuso, px);
   const exibido = profissional.apelido ?? profissional.nome;
-
-  const linhas = [];
-  for (let h = faixa.primeiraHora; h <= faixa.ultimaHora; h++) {
-    linhas.push({ hora: h, cheia: true });
-    if (h < faixa.ultimaHora) linhas.push({ hora: h + 0.5, cheia: false });
-  }
 
   return (
     <div className="agenda-coluna">
@@ -285,18 +343,19 @@ function Coluna({ agenda, faixa, altura, agora, profissional, maiorCarga,
 
       <div className="agenda-pista" style={{ height: altura }}>
         {/* Fora da jornada primeiro: é fundo, e tudo o mais desenha por cima. */}
-        <ForaDaJornada jornada={jornada} faixa={faixa} altura={altura} fuso={agenda.fuso} />
+        <ForaDaJornada jornada={jornada} faixa={faixa} altura={altura} fuso={agenda.fuso}
+          px={px} />
 
-        {linhas.map((l) => (
-          <div key={l.hora} className={`agenda-linha${l.cheia ? ' cheia' : ''}`}
-            style={{ top: (l.hora - faixa.primeiraHora) * 60 * PIXELS_POR_MINUTO } } />
+        {linhasDaGrade(faixa, densidade).map((l) => (
+          <div key={l.minuto} className={`agenda-linha${l.cheia ? ' cheia' : ''}`}
+            style={{ top: l.topo }} />
         ))}
 
         {agenda.bloqueios
           .filter((b) => b.profissionalId === profissional.id)
           .map((b) => {
             const { topo, altura: h } = posicao(b.janela.inicio, b.janela.fim, faixa,
-              agenda.fuso);
+              agenda.fuso, px);
             return (
               <div key={b.id} className="agenda-bloco bloqueio"
                 style={{ top: topo, height: h }}
@@ -308,7 +367,7 @@ function Coluna({ agenda, faixa, altura, agora, profissional, maiorCarga,
 
         {meus.flatMap((a) => a.blocos.map((bloco, i) => (
           <Tarja key={`${a.id}-${i}`} agendamento={a} bloco={bloco} faixa={faixa}
-            fuso={agenda.fuso} nome={agenda.nomesDeClientes[a.clienteId]}
+            fuso={agenda.fuso} px={px} nome={agenda.nomesDeClientes[a.clienteId]}
             aoEscolher={aoEscolher} />
         )))}
 
@@ -327,9 +386,9 @@ function Coluna({ agenda, faixa, altura, agora, profissional, maiorCarga,
  * Coluna vazia e clara parece disponível — e a recepção ofereceria um horário em que a
  * profissional não trabalha, descobrindo o erro só quando o cadastro recusasse.
  */
-function ForaDaJornada({ jornada, faixa, altura, fuso }: {
+function ForaDaJornada({ jornada, faixa, altura, fuso, px }: {
   jornada: Array<{ inicio: string; fim: string }>;
-  faixa: FaixaDoDia; altura: number; fuso: string;
+  faixa: FaixaDoDia; altura: number; fuso: string; px: number;
 }) {
   if (jornada.length === 0) {
     return <div className="agenda-fora-da-jornada" style={{ top: 0, height: altura }} />;
@@ -337,7 +396,7 @@ function ForaDaJornada({ jornada, faixa, altura, fuso }: {
   const trechos: Array<{ topo: number; altura: number }> = [];
   let cursor = 0;
   for (const intervalo of jornada) {
-    const { topo, altura: h } = posicao(intervalo.inicio, intervalo.fim, faixa, fuso);
+    const { topo, altura: h } = posicao(intervalo.inicio, intervalo.fim, faixa, fuso, px);
     if (topo > cursor) trechos.push({ topo: cursor, altura: topo - cursor });
     cursor = topo + h;
   }
@@ -360,11 +419,12 @@ function ForaDaJornada({ jornada, faixa, altura, fuso }: {
  * hachura sem texto — a cliente está no salão e a profissional está livre —, e é isso
  * que permite ver o buraco de 40 minutos onde cabe um encaixe.
  */
-function Tarja({ agendamento, bloco, faixa, fuso, nome, aoEscolher }: {
+function Tarja({ agendamento, bloco, faixa, fuso, px, nome, aoEscolher }: {
   agendamento: Agendamento; bloco: BlocoDoAgendamento;
-  faixa: FaixaDoDia; fuso: string; nome?: string; aoEscolher: (id: string) => void;
+  faixa: FaixaDoDia; fuso: string; px: number; nome?: string;
+  aoEscolher: (id: string) => void;
 }) {
-  const { topo, altura } = posicao(bloco.janela.inicio, bloco.janela.fim, faixa, fuso);
+  const { topo, altura } = posicao(bloco.janela.inicio, bloco.janela.fim, faixa, fuso, px);
   const pausa = bloco.profissionalId === null;
   const classe = pausa ? 'pausa' : (CLASSE_POR_STATUS[agendamento.status] ?? 'confirmado');
   const hora = rotuloDeHora(bloco.janela.inicio, fuso);

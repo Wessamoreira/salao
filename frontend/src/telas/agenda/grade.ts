@@ -6,8 +6,48 @@
  * teste; dentro do componente seria verificável só olhando.
  */
 
-/** Quanto vale um minuto em pixels. 1.4 dá 84px por hora: cabe o dia numa tela sem rolar. */
-export const PIXELS_POR_MINUTO = 1.4;
+/**
+ * A densidade da grade — quantos minutos vale uma linha (R-UX-11, F1 do checklist do front).
+ *
+ * Um salão de três profissionais e um de quinze não cabem na mesma régua: no primeiro sobra
+ * tela e o dia fica curto demais para clicar com precisão; no segundo, a mesma régua obriga a
+ * rolar o dia inteiro para ver a tarde. Régua única não é neutra — ela é a régua de um
+ * tamanho de salão só.
+ *
+ * O que muda é o TEMPO de uma linha, não a altura dela: a linha continua com 42px em toda
+ * densidade, porque é a altura em que um nome e uma hora cabem sem apertar. Padrão é o que a
+ * grade sempre teve (30 minutos, 84px por hora).
+ */
+export const DENSIDADES = { ampla: 15, padrao: 30, compacta: 60 } as const;
+
+export type Densidade = keyof typeof DENSIDADES;
+
+/** A altura de uma linha da grade, em pixels. Constante em toda densidade — ver acima. */
+export const ALTURA_DA_LINHA = 42;
+
+/** Quanto vale um minuto em pixels, na densidade escolhida. */
+export function pixelsPorMinuto(densidade: Densidade): number {
+  return ALTURA_DA_LINHA / DENSIDADES[densidade];
+}
+
+/**
+ * As linhas da grade, em pixels a partir do topo.
+ *
+ * A linha da hora cheia é mais forte que as outras: sem essa distinção, a grade densa vira
+ * papel pautado e ninguém acha as 14h sem contar linha por linha. Na densidade de 60 minutos
+ * toda linha é hora cheia, e o resultado é o mesmo desenho com menos traço.
+ */
+export function linhasDaGrade(faixa: FaixaDoDia, densidade: Densidade)
+  : Array<{ minuto: number; topo: number; cheia: boolean }> {
+  const passo = DENSIDADES[densidade];
+  const px = pixelsPorMinuto(densidade);
+  const total = (faixa.ultimaHora - faixa.primeiraHora) * 60;
+  const linhas = [];
+  for (let minuto = 0; minuto <= total; minuto += passo) {
+    linhas.push({ minuto, topo: minuto * px, cheia: minuto % 60 === 0 });
+  }
+  return linhas;
+}
 
 export interface FaixaDoDia {
   /** Primeira hora cheia mostrada. */
@@ -58,12 +98,15 @@ export function rotuloDeHora(instante: string, fuso: string): string {
 }
 
 /** Onde um período cai na pista, em pixels a partir do topo. */
-export function posicao(inicio: string, fim: string, faixa: FaixaDoDia, fuso: string) {
+export function posicao(inicio: string, fim: string, faixa: FaixaDoDia, fuso: string,
+                        px: number) {
   const de = horaLocal(inicio, fuso);
   const ate = horaLocal(fim, fuso);
   return {
-    topo: (de - faixa.primeiraHora) * 60 * PIXELS_POR_MINUTO,
-    altura: Math.max((ate - de) * 60 * PIXELS_POR_MINUTO, 12),
+    topo: (de - faixa.primeiraHora) * 60 * px,
+    // Piso de 12px: na grade compacta um encaixe de 15 minutos mede 10px, e um bloco mais
+    // fino que o dedo que precisa acertá-lo não é informação, é ruído.
+    altura: Math.max((ate - de) * 60 * px, 12),
   };
 }
 
@@ -75,13 +118,13 @@ export function posicao(inicio: string, fim: string, faixa: FaixaDoDia, fuso: st
  * amanhã.
  */
 export function posicaoDoAgora(agora: Date, dia: string, faixa: FaixaDoDia,
-                               fuso: string): number | null {
+                               fuso: string, px: number): number | null {
   const diaDoAgora = new Intl.DateTimeFormat('en-CA', { timeZone: fuso }).format(agora);
   if (diaDoAgora !== dia) return null;
 
   const hora = horaLocal(agora.toISOString(), fuso);
   if (hora < faixa.primeiraHora || hora > faixa.ultimaHora) return null;
-  return (hora - faixa.primeiraHora) * 60 * PIXELS_POR_MINUTO;
+  return (hora - faixa.primeiraHora) * 60 * px;
 }
 
 /**

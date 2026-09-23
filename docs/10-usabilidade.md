@@ -112,6 +112,20 @@ Salão com 3 profissionais e salão com 15 precisam de grades diferentes. Zoom d
 por linha, persistido por usuário. Colunas por profissional com scroll horizontal só quando
 inevitável.
 
+**Feito em 23/09/2026.** Duas decisões que a implementação obrigou a tomar:
+
+- **O que muda é o tempo da linha, não a altura dela.** A linha tem 42px em toda régua, porque é
+  a altura em que a hora e o nome cabem sem apertar. Assim "mais compacto" quer dizer *mais
+  tempo na tela*, e não *letra menor* — e a padrão continua sendo exatamente a grade que existia
+  antes (30 minutos, 84px por hora).
+- **Tarja baixa mostra o nome ao lado da hora.** Num dia compacto o atendimento de meia hora mede
+  21px: cabe uma linha de texto, e a segunda — o nome da cliente — sumia por baixo da borda.
+  Grade em que não se lê quem é não serve para nada, e era o preço escondido de apertar a régua.
+  A medida é a altura da própria tarja: um encaixe de 15 minutos é baixo em qualquer régua.
+
+O controle mostra **15 · 30 · 60**, e não "ampla/compacta": intervalo em minutos é o vocabulário
+do balcão, e nome de tamanho não diz quanto vale uma linha.
+
 ## R-UX-12 — Status por cor **e** forma
 `RT-AGD-011`
 

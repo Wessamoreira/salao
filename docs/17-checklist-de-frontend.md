@@ -90,8 +90,13 @@ todo o resto quando está errado.
 
 ## F — Rigor
 
-- [ ] **F1 · Densidade única.** Uma agenda de doze profissionais e uma ficha de cliente pedem
+- [x] **F1 · Densidade única.** Uma agenda de doze profissionais e uma ficha de cliente pedem
       réguas diferentes.
+      *(23/09/2026: a grade da agenda ganhou régua de 15, 30 ou 60 minutos por linha, guardada
+      por máquina (R-UX-11) — e a linha continua com 42px em todas, então o que muda é quanto
+      tempo cabe na tela, não o tamanho da letra. Fica aberto o outro lado do item: densidade é
+      da GRADE, e listas e fichas seguem numa régua só. Isso é decisão do sistema de design, não
+      da agenda.)*
 - [ ] **F2 · Sem modo escuro.** O painel de parede (`/painel`) fica aceso a noite inteira.
 - [x] **F3 · Auditoria de acessibilidade** — feita em 22/09/2026, e **contínua**: o axe-core roda
       dentro da suíte, em nove telas, e falha nomeando a regra, o elemento e o link. Contraste fica
@@ -343,6 +348,24 @@ Olhando para ele de perto, apareceram três defeitos que não eram de lugar:
    voltando, ninguém avisa. Só ali existe "tentar de novo", e ele refaz as consultas da tela.
 
 Dez testes novos, sete mutações, sete mortas.
+
+### Faixa 3 — a régua da grade
+
+A agenda tinha uma densidade só: 30 minutos por linha, 84px por hora. Funciona para o salão de
+três profissionais que serviu de canvas — e é a régua errada para os outros dois casos. Com doze
+colunas, ver a tarde exige rolar o dia inteiro; com três, sobra tela.
+
+Agora são três réguas — 15, 30 e 60 minutos por linha —, guardadas por máquina. O que muda é o
+**tempo** de uma linha, não a altura dela: 42px em todas, que é onde a hora e o nome cabem sem
+apertar. Mudar a altura seria letra menor disfarçada de zoom.
+
+Apertar a régua tinha um preço escondido que só apareceu na tela: na grade compacta a tarja de
+meia hora mede 21px, cabe uma linha de texto, e a segunda — o **nome da cliente** — sumia por
+baixo da borda. Grade em que não se lê quem é não serve para nada. A tarja baixa passou a pôr o
+nome ao lado da hora, e a medida é a altura dela própria: um encaixe de 15 minutos é baixo em
+qualquer régua.
+
+Oito mutações, oito mortas.
 
 ## A lição que custou uma tela branca
 

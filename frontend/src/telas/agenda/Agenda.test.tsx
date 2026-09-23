@@ -126,6 +126,9 @@ function montarComVagas(vagas: unknown[], flags: Record<string, boolean>) {
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(AGORA);
+  // A régua da grade é preferência guardada: sem limpar, o teste anterior escolhe pelo
+  // seguinte.
+  localStorage.removeItem('salao:agenda-densidade');
 });
 afterEach(() => {
   vi.useRealTimers();
@@ -352,5 +355,58 @@ describe('acessibilidade', () => {
     await screen.findByText('Ana');
 
     await deveSerAcessivel(container);
+  });
+});
+
+describe('a régua da grade', () => {
+  /** A altura da pista é a grade inteira: é ela que diz se o dia cabe na tela. */
+  const alturaDaPista = () =>
+    Number((document.querySelector('.agenda-pista') as HTMLElement).style.height.replace('px', ''));
+
+  it('abre na régua de sempre — mudar o padrão mudaria a agenda de todo mundo', async () => {
+    montarNoSalao({ fuso: SAO_PAULO });
+    await screen.findByText('Ana');
+
+    expect(screen.getByRole('button', { name: '30 minutos por linha' }))
+      .toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('a compacta cabe o dia em metade da altura', async () => {
+    // Um salão de doze profissionais rola o dia inteiro para ver a tarde; um de três tem
+    // tela sobrando. Régua única é a régua de um tamanho de salão só (R-UX-11).
+    montarNoSalao({ fuso: SAO_PAULO });
+    await screen.findByText('Ana');
+    const antes = alturaDaPista();
+
+    await userEvent.click(screen.getByRole('button', { name: '60 minutos por linha' }));
+
+    expect(alturaDaPista()).toBeCloseTo(antes / 2, 5);
+  });
+
+  it('a escolha fica guardada: a agenda reabre na régua de quem usa aquela máquina', async () => {
+    const tela = montarNoSalao({ fuso: SAO_PAULO });
+    await screen.findByText('Ana');
+
+    await userEvent.click(screen.getByRole('button', { name: '15 minutos por linha' }));
+    const ampla = alturaDaPista();
+    tela.unmount();
+    montarNoSalao({ fuso: SAO_PAULO });
+    await screen.findByText('Ana');
+
+    expect(screen.getByRole('button', { name: '15 minutos por linha' }))
+      .toHaveAttribute('aria-pressed', 'true');
+    expect(alturaDaPista()).toBe(ampla);
+  });
+
+  it('uma régua que não existe mais no código não derruba a agenda', async () => {
+    // O valor vem do armazenamento do navegador, que sobrevive a deploy: um nome que a
+    // versão de hoje não conhece cai no padrão em vez de virar `NaN` de altura.
+    localStorage.setItem('salao:agenda-densidade', 'gigante');
+
+    montarNoSalao({ fuso: SAO_PAULO });
+    await screen.findByText('Ana');
+
+    expect(screen.getByRole('button', { name: '30 minutos por linha' }))
+      .toHaveAttribute('aria-pressed', 'true');
   });
 });
