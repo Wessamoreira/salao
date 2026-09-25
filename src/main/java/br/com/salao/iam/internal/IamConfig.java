@@ -87,8 +87,9 @@ public class IamConfig {
     public EmissorDeTokenJwt emissorDeTokenJwt(
             JwtEncoder codificador, Relogio relogio,
             @Value("${app.jwt.validade-do-acesso:PT15M}") Duration validade,
+            @Value("${app.auth.mfa.validade-do-desafio:PT15M}") Duration validadeDoDesafio,
             @Value("${app.jwt.emissor:salao}") String emissor) {
-        return new EmissorDeTokenJwt(codificador, relogio, validade, emissor);
+        return new EmissorDeTokenJwt(codificador, relogio, validade, validadeDoDesafio, emissor);
     }
 
     @Bean

@@ -55,26 +55,31 @@ public class EmissorDeTokenJwt {
     private final Duration validade;
     private final String emissor;
 
-    private static final Duration VALIDADE_DO_DESAFIO = Duration.ofMinutes(5);
+    private final Duration validadeDoDesafio;
 
     public EmissorDeTokenJwt(JwtEncoder codificador, Relogio relogio, Duration validade,
-                             String emissor) {
+                             Duration validadeDoDesafio, String emissor) {
         this.codificador = codificador;
         this.relogio = relogio;
         this.validade = validade;
+        this.validadeDoDesafio = validadeDoDesafio;
         this.emissor = emissor;
     }
 
     /**
      * Desafio de segundo fator: atesta que a senha foi conferida, e nada além disso.
      *
-     * <p>Vida curta porque é uma credencial parcial em trânsito. Cinco minutos cobrem procurar o
-     * celular e abrir o autenticador; mais que isso só amplia a janela em que a senha, já
-     * conferida, vale alguma coisa sozinha.
+     * <p>Vida curta porque é uma credencial parcial em trânsito: é a janela em que a senha, já
+     * conferida, vale alguma coisa sozinha. O prazo é configurável
+     * ({@code app.auth.mfa.validade-do-desafio}) porque o que ele precisa cobrir muda com quem
+     * usa: procurar o celular, abrir o autenticador e digitar seis dígitos leva menos de um
+     * minuto para quem faz todo dia, e bem mais para quem está configurando o aplicativo pela
+     * primeira vez — que é justamente quando a pessoa menos entende por que foi mandada de volta
+     * para a tela de senha.
      */
     public TokenDeAcesso emitirDesafioDeSegundoFator(UUID usuarioId, UUID estabelecimentoId) {
         Instant agora = relogio.agora();
-        Instant expiraEm = agora.plus(VALIDADE_DO_DESAFIO);
+        Instant expiraEm = agora.plus(validadeDoDesafio);
 
         var claims = JwtClaimsSet.builder()
                 .issuer(emissor)

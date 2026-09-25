@@ -195,6 +195,11 @@ app.cripto:
   chave: ${CRIPTO_CHAVE}
 
 app.auth:
+  mfa:
+    # Quanto tempo vale o desafio entre "senha conferida" e os seis dígitos. É uma credencial
+    # parcial em trânsito, então é curto — mas não tanto que expire enquanto alguém configura o
+    # autenticador pela primeira vez e é mandado de volta para a tela de senha sem entender por quê.
+    validade-do-desafio: ${MFA_VALIDADE_DESAFIO:PT15M}
   refresh:
     validade: ${REFRESH_VALIDADE:P30D}
     # Reenvio do cliente por rede instável chega com o mesmo refresh. Dentro desta

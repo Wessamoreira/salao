@@ -10,6 +10,12 @@ spring.flyway.placeholders:
 app.manutencao.password: ${DB_MANUTENCAO_PASSWORD:salao_manutencao_dev}
 
 app.auth.cookie-seguro: false
+# Prazos de DESENVOLVIMENTO, e o motivo de estarem só aqui: em produção o token de acesso curto é
+# o que limita o estrago de um token vazado, e 15 minutos não incomodam ninguém porque a renovação
+# é automática e invisível. Na máquina de quem desenvolve, o que incomoda é o contrário — parar
+# para entrar de novo no meio de uma depuração, ou perder a sessão porque o backend reiniciou.
+app.jwt.validade-do-acesso: ${JWT_VALIDADE:PT12H}
+app.auth.refresh.validade: ${REFRESH_VALIDADE:P365D}
 app.cors.origens: http://localhost:5173
 app.cripto.chave: ${CRIPTO_CHAVE:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
 
