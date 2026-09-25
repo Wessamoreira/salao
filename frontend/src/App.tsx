@@ -8,7 +8,7 @@ import { Casca } from './layout/Casca';
 import { Protegida } from './layout/Protegida';
 import { Login } from './telas/Login';
 import { SegundoFator } from './telas/SegundoFator';
-import { EmBreve } from './telas/EmBreve';
+import { SemTela } from './telas/SemTela';
 // Entrar e o segundo fator ficam no pacote de entrada: são a primeira tela de quem chega,
 // e um pedaço à parte para elas seria uma espera antes do login. O resto vem por rota.
 import {
@@ -72,8 +72,8 @@ export function App() {
               <Route path="/clientes" element={<Clientes />} />
               {/* RT-CAT-005 — o cardápio: sem ele não há o que marcar nem o que lançar. */}
               <Route path="/catalogo" element={<Catalogo />} />
-              <Route path="/estoque" element={<EmBreve titulo="Estoque" rotina="RT-EST-001" />} />
-              <Route path="/financeiro" element={<EmBreve titulo="Financeiro" rotina="RT-FIN-004" />} />
+              <Route path="/estoque" element={<SemTela area="estoque" />} />
+              <Route path="/financeiro" element={<SemTela area="financeiro" />} />
               <Route path="/agente" element={<RevisaoDoAgente />} />
               <Route path="/conciliacao" element={<Conciliacao />} />
               <Route path="/precos" element={<Precos />} />

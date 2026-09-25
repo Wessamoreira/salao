@@ -5,7 +5,9 @@ que um salão precisa para abrir a porta de manhã e trabalhar o dia inteiro sem
 
 ---
 
-## O engano que motivou esta página
+## Dois enganos, e o segundo era meu
+
+### O da prévia
 
 A prévia da casca (`frontend/preview/sistema.tsx`, servida em `/preview/sistema.html`) desenha
 **Agenda** e **Atendimento** como "Em breve". Aquilo não é o produto: é o andaime da prévia, que
@@ -18,6 +20,20 @@ No aplicativo de verdade (`frontend/src/App.tsx`), só **duas** rotas mostram "E
 Lição que fica: **prévia que finge ser o sistema mente sobre o sistema.** Uma prévia parcial
 precisa dizer que é parcial — do contrário, o dono abre a porta 5174 e conclui que o produto
 regrediu.
+
+### O do "Em breve"
+
+As telas de Estoque e Financeiro diziam: *"Esta área chega com a rotina RT-EST-001"* e *"com a
+rotina RT-FIN-004"*. As duas rotinas estavam **implementadas havia semanas** — RT-EST-001 é o
+cadastro de produto, RT-FIN-004 é o extrato do profissional, e as duas passaram por teste de
+integração. Quem lia aquilo concluía, corretamente pelo texto e erradamente pelo fato, que o
+estoque e o financeiro inteiros estavam por fazer.
+
+Nomear a rotina errada é pior do que não nomear nenhuma: manda procurar no lugar errado.
+
+Corrigido em 24/09/2026. As duas telas agora dizem o que o servidor já faz, **o que dá para
+fazer hoje por outro caminho** — produto se vende na comanda e a baixa FEFO acontece sozinha; o
+dinheiro entra e se concilia — e qual rotina traz a tela: RT-EST-013 e RT-FIN-013, na fase 7.
 
 ---
 

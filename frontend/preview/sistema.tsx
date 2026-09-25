@@ -17,7 +17,7 @@ import { MemoryRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Casca } from '../src/layout/Casca';
 import { Clientes } from '../src/telas/clientes/Clientes';
 import { Configuracao } from '../src/telas/config/Configuracao';
-import { EmBreve } from '../src/telas/EmBreve';
+import { SemTela } from '../src/telas/SemTela';
 import '../src/estilo/global.css';
 
 const CAPACIDADES = {
@@ -160,9 +160,8 @@ createRoot(document.getElementById('raiz')!).render(
           <Route element={<Casca />}>
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/config" element={<Configuracao />} />
-            <Route path="/estoque" element={<EmBreve titulo="Estoque" rotina="RT-EST-001" />} />
-            <Route path="/financeiro"
-              element={<EmBreve titulo="Financeiro" rotina="RT-FIN-004" />} />
+            <Route path="/estoque" element={<SemTela area="estoque" />} />
+            <Route path="/financeiro" element={<SemTela area="financeiro" />} />
             <Route path="/agenda" element={temPreviaPropria('Agenda', 'agenda')} />
             <Route path="/comandas" element={temPreviaPropria('Atendimento', 'comandas')} />
             <Route path="*" element={<Navigate to="/clientes" replace />} />

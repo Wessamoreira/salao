@@ -1,0 +1,72 @@
+/*
+ * A área que existe no servidor e ainda não tem tela.
+ *
+ * Duas colunas de leitura, não dois cartões: o assunto é texto, e emoldurar cada metade num
+ * papel branco faria parecer painel de dados — que é exatamente o que esta tela não tem.
+ */
+
+.sem-tela {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: var(--e-6) var(--e-5) var(--e-8);
+}
+
+.sem-tela-colunas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--e-6);
+  margin-top: var(--e-7);
+  padding-top: var(--e-6);
+  border-top: 1px solid var(--regua);
+}
+
+.sem-tela-colunas h3 {
+  margin: 0 0 var(--e-3);
+  font-size: var(--t-11);
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+}
+
+.sem-tela-caminhos,
+.sem-tela-falta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-13);
+}
+
+/* O caminho é um link de verdade: quem chegou aqui queria fazer alguma coisa. */
+.sem-tela-caminhos a {
+  display: block;
+  color: var(--tinta);
+  font-weight: var(--p-forte);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--regua-forte);
+}
+.sem-tela-caminhos a:hover { text-decoration-color: var(--tinta); }
+.sem-tela-caminhos span {
+  display: block;
+  margin-top: 2px;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+}
+
+/* O que falta é lista de espera, não de ações: traço no lugar do marcador. */
+.sem-tela-falta li {
+  padding-left: var(--e-4);
+  color: var(--tinta-fraca);
+  text-indent: calc(-1 * var(--e-4));
+}
+.sem-tela-falta li::before { content: '—'; padding-right: var(--e-2); color: var(--regua-forte); }
+
+.sem-tela-rotina {
+  margin: var(--e-4) 0 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+}
