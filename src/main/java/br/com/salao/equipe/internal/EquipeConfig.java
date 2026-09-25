@@ -3,6 +3,7 @@ package br.com.salao.equipe.internal;
 import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.equipe.api.ProfissionalApi;
 import br.com.salao.equipe.internal.application.CadastrarProfissionalUseCase;
+import br.com.salao.equipe.internal.application.EditarProfissionalUseCase;
 import br.com.salao.equipe.internal.application.DefinirAtivacaoDoProfissionalUseCase;
 import br.com.salao.equipe.internal.application.DefinirHabilidadesUseCase;
 import br.com.salao.equipe.internal.application.DefinirJornadaUseCase;
@@ -37,6 +38,14 @@ public class EquipeConfig {
     @Primary
     public ProfissionalApi profissionalApi(ProfissionaisJdbc jdbc) {
         return jdbc;
+    }
+
+    /** RT-EQP-005 — corrigir a ficha de quem já está na equipe, sem cadastrar outra. */
+    @Bean
+    public EditarProfissionalUseCase editarProfissionalUseCase(
+            ProfissionaisJdbc profissionais, EstabelecimentoApi estabelecimentos,
+            AuditoriaApi auditoria) {
+        return new EditarProfissionalUseCase(profissionais, estabelecimentos, auditoria);
     }
 
     @Bean

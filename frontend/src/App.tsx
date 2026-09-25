@@ -12,8 +12,8 @@ import { SemTela } from './telas/SemTela';
 // Entrar e o segundo fator ficam no pacote de entrada: são a primeira tela de quem chega,
 // e um pedaço à parte para elas seria uma espera antes do login. O resto vem por rota.
 import {
-  Agenda, Catalogo, Clientes, Comandas, Conciliacao, Configuracao, Fila, Painel, Precos,
-  RevisaoDoAgente,
+  Agenda, Catalogo, Clientes, Comandas, Conciliacao, Configuracao, Equipe, Fila, Painel,
+  Precos, RevisaoDoAgente,
 } from './rotas';
 
 const cliente = new QueryClient({
@@ -72,6 +72,8 @@ export function App() {
               <Route path="/clientes" element={<Clientes />} />
               {/* RT-CAT-005 — o cardápio: sem ele não há o que marcar nem o que lançar. */}
               <Route path="/catalogo" element={<Catalogo />} />
+              {/* RT-EQP-005 — sem profissional com jornada, a agenda abre vazia. */}
+              <Route path="/equipe" element={<Equipe />} />
               <Route path="/estoque" element={<SemTela area="estoque" />} />
               <Route path="/financeiro" element={<SemTela area="financeiro" />} />
               <Route path="/agente" element={<RevisaoDoAgente />} />

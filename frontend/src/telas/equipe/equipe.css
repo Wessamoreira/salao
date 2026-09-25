@@ -1,0 +1,277 @@
+/*
+ * RT-EQP-005 — a equipe.
+ *
+ * A seção é estrutura; o papel branco fica para a pessoa e para a ausência, que são os objetos
+ * desta tela. Mesma divisão do catálogo e da fila.
+ */
+
+.eqp-tela {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-6);
+  padding: var(--e-5);
+}
+
+.eqp-lista,
+.eqp-bloqueios {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ------------------------------------------------------------------ a pessoa */
+
+.eqp-pessoa {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--e-4);
+  padding: var(--e-3) var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+.eqp-pessoa.inativa { background: var(--papel-fundo); }
+.eqp-pessoa.inativa .eqp-quem h3 { color: var(--tinta-fraca); }
+
+/* A inicial é a mesma marca da coluna da agenda: quem cadastra aqui reconhece lá. */
+.eqp-inicial {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: var(--tinta);
+  background: var(--papel-afundado);
+  border-radius: 50%;
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+}
+
+.eqp-quem { min-width: 0; }
+.eqp-quem h3 { margin: 0; font-size: var(--t-14); font-weight: var(--p-forte); }
+.eqp-formal { margin: 1px 0 0; color: var(--tinta-fraca); font-size: var(--t-11); }
+.eqp-contrato { margin: 2px 0 0; color: var(--tinta-fraca); font-size: var(--t-12); }
+
+/* Contrato pendente é obrigação legal do salão (RN-EQP-003): âmbar, que é o único lugar desta
+   tela onde a cor carrega informação. */
+.eqp-alerta {
+  padding: 0 var(--e-1);
+  color: var(--tinta);
+  background: var(--status-solicitado-fundo);
+  border-left: 2px solid var(--status-solicitado);
+}
+
+.eqp-jornada-resumo {
+  margin: 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.eqp-acoes { display: flex; gap: var(--e-2); }
+
+/* ------------------------------------------------------------------ o editor */
+
+.eqp-editor {
+  display: flex;
+  flex-direction: column;
+  background: var(--papel);
+  border: 1px solid var(--tinta-tenue);
+  border-radius: var(--raio-2);
+}
+.eqp-editor > * { padding: var(--e-4); }
+.eqp-editor > * + * { border-top: 1px solid var(--regua); }
+
+.eqp-editor h3,
+.eqp-jornada h3,
+.eqp-habilidades h3 {
+  margin: 0 0 var(--e-3);
+  font-size: var(--t-12);
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+
+.eqp-ajuda {
+  margin: var(--e-3) 0 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  line-height: 1.5;
+}
+
+.eqp-campos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-3) var(--e-4);
+}
+
+.eqp-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--t-12);
+}
+.eqp-campo > span { color: var(--tinta-fraca); }
+.eqp-campo-largo { flex: 1 1 240px; min-width: 0; }
+.eqp-campo input,
+.eqp-campo select {
+  min-height: 32px;
+  padding: 0 var(--e-2);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-14);
+}
+.eqp-campo input[type='number'] { width: 76px; font-variant-numeric: tabular-nums; }
+
+.eqp-com-sufixo { display: flex; align-items: center; gap: var(--e-2); }
+.eqp-com-sufixo input { width: 88px; }
+.eqp-com-sufixo > span { color: var(--tinta-fraca); }
+
+.eqp-jornada-acoes { display: flex; gap: var(--e-2); margin-top: var(--e-4); }
+
+/* ------------------------------------------------------------------ a semana */
+
+.eqp-dias {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.eqp-dias > li {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--e-3);
+  padding: var(--e-2) 0;
+  border-bottom: 1px solid var(--regua);
+}
+.eqp-dias > li:last-child { border-bottom: 0; }
+/* Folga é ausência, e a linha inteira se apaga — o dia sem intervalo é o dia sem trabalho. */
+.eqp-dias > li.folga { color: var(--tinta-fraca); }
+
+.eqp-dia-nome {
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+  text-transform: uppercase;
+  letter-spacing: var(--tr-micro);
+}
+.eqp-folga { font-size: var(--t-12); color: var(--tinta-fraca); }
+
+.eqp-dia-faixas { display: flex; flex-wrap: wrap; gap: var(--e-2) var(--e-3); }
+.eqp-faixa {
+  display: flex;
+  align-items: center;
+  gap: var(--e-1);
+  font-variant-numeric: tabular-nums;
+}
+.eqp-faixa input {
+  min-height: 28px;
+  padding: 0 var(--e-1);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-1);
+  font: inherit;
+  font-size: var(--t-12);
+}
+.eqp-tirar {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  color: var(--tinta-fraca);
+  background: transparent;
+  border: 0;
+  border-radius: var(--raio-1);
+  font-size: var(--t-14);
+  cursor: pointer;
+}
+.eqp-tirar:hover { color: var(--tinta); background: var(--papel-fundo); }
+
+.eqp-dia-acoes { display: flex; gap: var(--e-1); }
+.eqp-dia-acoes .pagina-acao { min-height: 26px; padding: 0 var(--e-2); font-size: var(--t-11); }
+
+/* ------------------------------------------------------------------ habilidades */
+
+.eqp-regime { display: flex; flex-wrap: wrap; gap: var(--e-4); font-size: var(--t-13); }
+.eqp-regime label { display: inline-flex; align-items: center; gap: var(--e-2); }
+
+.eqp-servicos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  margin: var(--e-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.eqp-servicos > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-3);
+}
+.eqp-servico { display: inline-flex; align-items: baseline; gap: var(--e-2); font-size: var(--t-13); }
+.eqp-servico small { color: var(--tinta-fraca); font-size: var(--t-11); }
+.eqp-duracao {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-2);
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+}
+.eqp-duracao input {
+  width: 68px;
+  min-height: 28px;
+  padding: 0 var(--e-1);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-1);
+  font: inherit;
+  font-size: var(--t-12);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ ausências */
+
+.eqp-bloqueio-forma {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e-3);
+  margin-bottom: var(--e-4);
+  padding: var(--e-3) var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--tinta-tenue);
+  border-radius: var(--raio-2);
+}
+
+.eqp-bloqueios > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--e-3);
+  padding: var(--e-2) var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font-size: var(--t-13);
+}
+.eqp-bloqueios strong { min-width: 84px; }
+.eqp-bloqueio-quem { flex: 1 1 140px; }
+.eqp-bloqueio-quando { color: var(--tinta-fraca); font-variant-numeric: tabular-nums; }
+.eqp-bloqueio-obs { color: var(--tinta-fraca); font-size: var(--t-12); }
+
+.eqp-nada { margin: 0; color: var(--tinta-fraca); font-size: var(--t-12); }
+
+@media (max-width: 860px) {
+  .eqp-pessoa { grid-template-columns: auto minmax(0, 1fr); }
+  .eqp-jornada-resumo,
+  .eqp-acoes { grid-column: 2; }
+}

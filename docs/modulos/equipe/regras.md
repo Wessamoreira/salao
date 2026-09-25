@@ -314,3 +314,27 @@ novo, e o que não se normaliza fica sem aceite possível.
 **Rotinas.** RT-EQP-001, RT-CNV-006 · **Teste.** `CadastroDeProfissionalIT.telefone_normalizado`,
 `.telefone_invalido`
 **Configurável?** O DDD e o país padrão, no salão · **Origem.** 2026-09-14
+
+---
+
+### RN-EQP-017 — Identidade não se edita: documento e vínculo são fixos
+
+**Enunciado.** A ficha do profissional é editável em nome, apelido, telefone, e-mail, comissão e
+datas de contrato. **Documento e vínculo não.** Quem muda de vínculo entra como ficha nova, com a
+antiga desativada (RN-EQP-005). A edição exige a `versao` lida pela tela.
+
+**Motivo.** O vínculo determina o tipo de documento (RN-EQP-002): trocar um obriga a trocar o
+outro, e trocar o documento é trocar de pessoa jurídica. Permitir a edição faria uma empresa
+herdar o histórico de comissão de outra sem que nada na trilha dissesse o que aconteceu — e um
+extrato de mês fechado passaria a apontar para quem não executou aquele atendimento.
+
+A `versao` está aqui pela mesma razão de RT-CLI-007 e RT-CAT-005: a tela lê a ficha inteira, duas
+pessoas podem tê-la lido, e gravar por cima apagaria a correção da primeira em silêncio — numa
+ficha que carrega o percentual de comissão, que é quanto a pessoa recebe.
+
+**Onde é garantida.** `EditarProfissionalUseCase` · `ProfissionaisJdbc.atualizar` (o `set` não
+tem documento nem vínculo; o `where` tem `versao = :versao`).
+**Rotinas.** RT-EQP-005 · **Teste.** `EditarProfissionalIT.identidade_nao_muda`,
+`EditarProfissionalIT.conflito_de_versao`, `EditarProfissionalIT.edita_a_ficha`
+**Erro.** `ER-EQP-CONFLITO_DE_VERSAO` (409) · **Configurável?** Não
+**Origem.** 2026-09-24

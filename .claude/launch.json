@@ -110,6 +110,17 @@
         "previa:catalogo"
       ],
       "port": 5174
+    },
+    {
+      "name": "previa-equipe",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "previa:equipe"
+      ],
+      "port": 5174
     }
   ]
 }

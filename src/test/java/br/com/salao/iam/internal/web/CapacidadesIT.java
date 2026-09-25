@@ -67,6 +67,8 @@ class CapacidadesIT extends AbstractPostgresIT {
         assertThat(c.menus()).extracting(m -> m.id()).as("RT-CNV-007").contains("agente");
         assertThat(c.menus()).extracting(m -> m.id())
                 .as("RT-CAT-005: o cardápio é do dono").contains("catalogo");
+        assertThat(c.menus()).extracting(m -> m.id())
+                .as("RT-EQP-005: a equipe é de quem gerencia usuário").contains("equipe");
     }
 
     @Test
@@ -84,7 +86,7 @@ class CapacidadesIT extends AbstractPostgresIT {
                 .doesNotContain("financeiro", "configuracao", "agente")
                 // RT-CAT-005: mudar a duração de um serviço muda a agenda de todo mundo —
                 // não é operação de balcão (RN-CAT-004).
-                .doesNotContain("catalogo");
+                .doesNotContain("catalogo", "equipe");
         assertThat(c.menus()).extracting(m -> m.id())
                 .as("RT-AGD-010: quem liga para a fila é a recepção").contains("fila");
         assertThat(c.limites()).containsEntry("descontoMaximoPercentual", 10);

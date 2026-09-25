@@ -72,7 +72,17 @@ public enum ErrosDaEquipe implements CodigoDeErro {
 
     /** Duração para um serviço que o profissional não executa — uma contradição. */
     DURACAO_SEM_HABILIDADE("ER-EQP-DURACAO_SEM_HABILIDADE", HttpStatus.UNPROCESSABLE_ENTITY,
-            "Duração informada para serviço que o profissional não executa");
+            "Duração informada para serviço que o profissional não executa"),
+
+    /**
+     * RT-EQP-005 — alguém salvou a ficha entre a leitura da tela e este clique.
+     *
+     * <p>A tela lê o profissional inteiro para editar, e duas pessoas podem tê-lo lido. Gravar
+     * por cima faria a correção da primeira sumir sem aviso — numa ficha que carrega a comissão,
+     * que é quanto a pessoa recebe.
+     */
+    CONFLITO_DE_VERSAO("ER-EQP-CONFLITO_DE_VERSAO", HttpStatus.CONFLICT,
+            "Esta ficha foi alterada por outra pessoa");
 
     private final String codigo;
     private final HttpStatus status;

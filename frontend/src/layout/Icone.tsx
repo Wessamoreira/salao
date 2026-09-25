@@ -9,7 +9,7 @@ export type NomeDeIcone =
   | 'calendario' | 'tesoura' | 'pessoas' | 'caixa' | 'cifrao' | 'engrenagem'
   | 'menu' | 'fechar' | 'sair' | 'busca' | 'recolher' | 'expandir'
   | 'chevron' | 'escudo' | 'seta' | 'balao' | 'setas' | 'etiqueta' | 'ampulheta'
-  | 'cardapio';
+  | 'cardapio' | 'cracha';
 
 export function Icone({ nome, tamanho = 18 }: { nome: string; tamanho?: number }) {
   const comum = {
@@ -29,6 +29,10 @@ export function Icone({ nome, tamanho = 18 }: { nome: string; tamanho?: number }
       return <svg {...comum}><circle cx="9" cy="8" r="3" />
         <path d="M3.5 20v-1.5A4.5 4.5 0 0 1 8 14h2a4.5 4.5 0 0 1 4.5 4.5V20" />
         <path d="M15.5 5.3a3 3 0 0 1 0 5.4M17 14a4.5 4.5 0 0 1 3.5 4.4V20" /></svg>;
+    case 'cracha':
+      return <svg {...comum}><rect x="3.5" y="5" width="17" height="15" rx="2" />
+        <path d="M9 5V3.5h6V5" /><circle cx="12" cy="11" r="2.2" />
+        <path d="M8.5 17.2a3.6 3.6 0 0 1 7 0" /></svg>;
     case 'cardapio':
       return <svg {...comum}><rect x="4" y="3" width="16" height="18" rx="2" />
         <path d="M8 8h8M8 12h8M8 16h5" /></svg>;

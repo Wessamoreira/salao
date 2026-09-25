@@ -122,6 +122,38 @@ public class ProfissionaisJdbc implements ProfissionalApi {
                 .optional();
     }
 
+    /**
+     * RT-EQP-005 — troca o que é editável, se a versão ainda for a que a tela leu.
+     *
+     * <p>Documento e vínculo ficam de fora do {@code set} de propósito (RN-EQP-017): os dois são
+     * identidade, e trocá-los seria outra pessoa jurídica herdando o extrato de comissão da
+     * primeira. O {@code where versao = :versao} é o bloqueio otimista — zero linhas quer dizer
+     * que outra pessoa gravou no meio.
+     */
+    public int atualizar(UUID id, String nome, String apelido, String telefone, String email,
+                         BigDecimal comissaoPercentual, LocalDate contratoInicio,
+                         LocalDate contratoFim, LocalDate contratoAssinadoEm, int versao) {
+        return jdbc.sql("""
+                update profissional
+                   set nome = :nome, apelido = :apelido, telefone = :telefone, email = :email,
+                       comissao_percentual = :comissao, contrato_inicio = :contratoInicio,
+                       contrato_fim = :contratoFim, contrato_assinado_em = :contratoAssinadoEm,
+                       versao = versao + 1
+                 where id = :id and versao = :versao
+                """)
+                .param("id", id)
+                .param("nome", nome)
+                .param("apelido", apelido)
+                .param("telefone", telefone)
+                .param("email", email)
+                .param("comissao", comissaoPercentual)
+                .param("contratoInicio", contratoInicio)
+                .param("contratoFim", contratoFim)
+                .param("contratoAssinadoEm", contratoAssinadoEm)
+                .param("versao", versao)
+                .update();
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<ProfissionalResumo> ativos() {

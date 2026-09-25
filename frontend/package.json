@@ -21,7 +21,8 @@
     "previa:conciliacao": "vite --port 5174 --open /preview/conciliacao.html",
     "previa:precos": "vite --port 5174 --open /preview/precos.html",
     "previa:fila": "vite --port 5174 --open /preview/fila.html",
-    "previa:catalogo": "vite --port 5174 --open /preview/catalogo.html"
+    "previa:catalogo": "vite --port 5174 --open /preview/catalogo.html",
+    "previa:equipe": "vite --port 5174 --open /preview/equipe.html"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.3.0",

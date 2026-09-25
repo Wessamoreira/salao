@@ -51,35 +51,31 @@ public class CadastrarProfissionalUseCase {
 
     private final ProfissionaisJdbc profissionais;
     private final AuditoriaApi auditoria;
-    private final EstabelecimentoApi estabelecimentos;
+    private final CamposDaFicha campos;
 
     public CadastrarProfissionalUseCase(ProfissionaisJdbc profissionais, AuditoriaApi auditoria,
                                         EstabelecimentoApi estabelecimentos) {
         this.profissionais = profissionais;
         this.auditoria = auditoria;
-        this.estabelecimentos = estabelecimentos;
+        this.campos = new CamposDaFicha(estabelecimentos);
     }
 
     @PreAuthorize("hasAuthority('" + Permissao.USUARIO_GERENCIAR + "')")
     @Transactional
     public ProfissionalResumo executar(DadosDoProfissional dados) {
-        String nome = texto(dados.nome());
-        if (nome == null) {
-            throw new ErroDeDominio(ErrosDaEquipe.DADOS_INVALIDOS, "o nome é obrigatório",
-                    Map.of(), List.of(new CampoInvalido("nome", "OBRIGATORIO", "Informe o nome")));
-        }
+        String nome = campos.nomeObrigatorio(dados.nome());
         if (dados.vinculo() == null) {
             throw new ErroDeDominio(ErrosDaEquipe.DADOS_INVALIDOS, "o vínculo é obrigatório");
         }
 
         Documento documento = documentoDe(dados.documento());
         exigirDocumentoCompativel(documento, dados.vinculo());
-        BigDecimal comissao = comissaoValida(dados.comissaoPercentual());
+        BigDecimal comissao = campos.comissao(dados.comissaoPercentual());
 
         try {
             UUID id = profissionais.inserir(TenantContext.obrigatorio(), nome,
-                    texto(dados.apelido()), documento, dados.vinculo(), telefoneDe(dados.telefone()),
-                    texto(dados.email()), comissao, dados.contratoInicio(), dados.contratoFim(),
+                    campos.texto(dados.apelido()), documento, dados.vinculo(),
+                    campos.telefone(dados.telefone()), campos.texto(dados.email()), comissao, dados.contratoInicio(), dados.contratoFim(),
                     dados.contratoAssinadoEm(), UsuarioAtual.idOuNulo());
 
             // Sem documento nem contato na trilha: é dado pessoal, e a auditoria é append-only
@@ -101,25 +97,13 @@ public class CadastrarProfissionalUseCase {
         }
     }
 
-    /**
-     * RN-EQP-016 — o telefone em E.164, só dígitos, como a V17 sempre disse e o cadastro não fazia.
-     *
-     * <p>Até RT-CNV-006 ele era guardado como digitado, e nada o lia. Agora é o destino do pedido de
-     * aceite da profissional pelo WhatsApp: um "(11) 98765-4321" ali é mensagem que não sai, ou que sai
-     * para o número errado. Mesma normalização do cliente e do usuário ({@code shared.telefone}).
-     */
-    private String telefoneDe(String informado) {
-        String telefone = texto(informado);
-        if (telefone == null) {
+
+    private String texto(String bruto) {
+        if (bruto == null) {
             return null;
         }
-        var configuracao = estabelecimentos.configuracao(TenantContext.obrigatorio()).orElseThrow();
-        try {
-            return Telefone.de(telefone, configuracao.paisPadrao(), configuracao.dddPadrao()).e164();
-        } catch (TelefoneInvalidoException e) {
-            throw new ErroDeDominio(ErrosDaEquipe.DADOS_INVALIDOS, "telefone inválido", Map.of(),
-                    List.of(new CampoInvalido("telefone", "INVALIDO", "Telefone inválido")));
-        }
+        String limpo = bruto.strip().replaceAll("\\s{2,}", " ");
+        return limpo.isEmpty() ? null : limpo;
     }
 
     private Documento documentoDe(String informado) {
@@ -131,6 +115,7 @@ public class CadastrarProfissionalUseCase {
         }
     }
 
+    /** RN-EQP-002 — o vínculo determina o tipo de documento, e é aqui que os dois se conferem. */
     private void exigirDocumentoCompativel(Documento documento, TipoDeVinculo vinculo) {
         if (vinculo.exigePessoaJuridica() != documento.ehPessoaJuridica()) {
             String esperado = vinculo.exigePessoaJuridica() ? "CNPJ" : "CPF";
@@ -139,36 +124,5 @@ public class CadastrarProfissionalUseCase {
                     List.of(new CampoInvalido("documento", "INCOMPATIVEL",
                             "Para " + vinculo.name().toLowerCase() + ", informe " + esperado)));
         }
-    }
-
-    /**
-     * Nulo continua nulo (RT-FIN-002).
-     *
-     * <p>Antes ele virava zero, e isso fazia a cascata de comissão nascer decorativa: com todo
-     * profissional tendo percentual, o nível "padrão do salão" nunca alcançaria ninguém.
-     *
-     * <p>Zero é uma comissão — a de quem trabalha por salário fixo. "Ninguém configurou" é outra
-     * coisa, e agora é nulo.
-     */
-    private BigDecimal comissaoValida(BigDecimal informada) {
-        BigDecimal comissao = informada;
-        if (comissao == null) {
-            return null;
-        }
-        if (comissao.signum() < 0 || comissao.compareTo(new BigDecimal("100")) > 0) {
-            throw new ErroDeDominio(ErrosDaEquipe.DADOS_INVALIDOS,
-                    "a comissão precisa estar entre 0 e 100", Map.of(),
-                    List.of(new CampoInvalido("comissaoPercentual", "FORA_DA_FAIXA",
-                            "Informe um percentual entre 0 e 100")));
-        }
-        return comissao;
-    }
-
-    private String texto(String bruto) {
-        if (bruto == null) {
-            return null;
-        }
-        String limpo = bruto.strip().replaceAll("\\s{2,}", " ");
-        return limpo.isEmpty() ? null : limpo;
     }
 }

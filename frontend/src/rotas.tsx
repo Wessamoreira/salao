@@ -22,6 +22,7 @@ const carregar = {
   comandas: () => import('./telas/comandas/Comandas'),
   clientes: () => import('./telas/clientes/Clientes'),
   catalogo: () => import('./telas/catalogo/Catalogo'),
+  equipe: () => import('./telas/equipe/Equipe'),
   agente: () => import('./telas/agente/RevisaoDoAgente'),
   conciliacao: () => import('./telas/conciliacao/Conciliacao'),
   precos: () => import('./telas/precos/Precos'),
@@ -34,6 +35,7 @@ export const Fila = lazy(() => carregar.fila().then((m) => ({ default: m.Fila })
 export const Comandas = lazy(() => carregar.comandas().then((m) => ({ default: m.Comandas })));
 export const Clientes = lazy(() => carregar.clientes().then((m) => ({ default: m.Clientes })));
 export const Catalogo = lazy(() => carregar.catalogo().then((m) => ({ default: m.Catalogo })));
+export const Equipe = lazy(() => carregar.equipe().then((m) => ({ default: m.Equipe })));
 export const Conciliacao = lazy(() =>
   carregar.conciliacao().then((m) => ({ default: m.Conciliacao })));
 export const Precos = lazy(() => carregar.precos().then((m) => ({ default: m.Precos })));
@@ -50,6 +52,7 @@ const POR_ROTA: Record<string, () => Promise<unknown>> = {
   '/comandas': carregar.comandas,
   '/clientes': carregar.clientes,
   '/catalogo': carregar.catalogo,
+  '/equipe': carregar.equipe,
   '/agente': carregar.agente,
   '/conciliacao': carregar.conciliacao,
   '/precos': carregar.precos,

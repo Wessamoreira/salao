@@ -9,6 +9,7 @@ import br.com.salao.equipe.api.TipoDeVinculo;
 import br.com.salao.equipe.internal.application.CadastrarProfissionalUseCase;
 import br.com.salao.equipe.internal.application.DadosDoProfissional;
 import br.com.salao.equipe.internal.application.DefinirAtivacaoDoProfissionalUseCase;
+import br.com.salao.equipe.internal.application.EditarProfissionalUseCase;
 import br.com.salao.equipe.internal.application.DefinirHabilidadesUseCase;
 import br.com.salao.equipe.internal.application.DefinirJornadaUseCase;
 import br.com.salao.equipe.internal.application.PeriodoBruto;
@@ -52,15 +53,18 @@ public class ProfissionaisController {
     private final DefinirAtivacaoDoProfissionalUseCase definirAtivacao;
     private final DefinirJornadaUseCase definirJornada;
     private final DefinirHabilidadesUseCase definirHabilidades;
+    private final EditarProfissionalUseCase editar;
     private final ProfissionalApi equipe;
 
     public ProfissionaisController(CadastrarProfissionalUseCase cadastrar,
+                                   EditarProfissionalUseCase editar,
                                    ListarProfissionaisUseCase listar,
                                    DefinirAtivacaoDoProfissionalUseCase definirAtivacao,
                                    DefinirJornadaUseCase definirJornada,
                                    DefinirHabilidadesUseCase definirHabilidades,
                                    ProfissionalApi equipe) {
         this.cadastrar = cadastrar;
+        this.editar = editar;
         this.listar = listar;
         this.definirAtivacao = definirAtivacao;
         this.definirJornada = definirJornada;
@@ -88,6 +92,24 @@ public class ProfissionaisController {
     public record AtivacaoRequest(@NotNull Boolean ativo) {
     }
 
+    /**
+     * RT-EQP-005 — o que a tela pode mudar, e a versão que ela leu.
+     *
+     * <p>Sem {@code documento} e sem {@code vinculo}: os dois são identidade jurídica da relação
+     * (RN-EQP-017), e trocá-los faria uma empresa herdar o extrato de comissão de outra.
+     */
+    public record EditarProfissionalRequest(
+            @NotBlank @Size(max = 200) String nome,
+            @Size(max = 60) String apelido,
+            @Size(max = 30) String telefone,
+            @Email @Size(max = 320) String email,
+            BigDecimal comissaoPercentual,
+            LocalDate contratoInicio,
+            LocalDate contratoFim,
+            LocalDate contratoAssinadoEm,
+            @NotNull Integer versao) {
+    }
+
     @GetMapping
     public List<ProfissionalResumo> listar() {
         return listar.executar();
@@ -110,6 +132,14 @@ public class ProfissionaisController {
      * <p>O mesmo esquema do {@code java.time.DayOfWeek} e do {@code isodow} do Postgres: escolher
      * outro obrigaria a converter em toda fronteira, e é aí que erro de um dia aparece.
      */
+    @PutMapping("/{id}")
+    public ProfissionalResumo editar(@PathVariable UUID id,
+                                     @Valid @RequestBody EditarProfissionalRequest req) {
+        return editar.executar(id, new EditarProfissionalUseCase.DadosEditaveis(
+                req.nome(), req.apelido(), req.telefone(), req.email(), req.comissaoPercentual(),
+                req.contratoInicio(), req.contratoFim(), req.contratoAssinadoEm()), req.versao());
+    }
+
     public record IntervaloRequest(@NotNull LocalTime inicio, @NotNull LocalTime fim) {
     }
 
