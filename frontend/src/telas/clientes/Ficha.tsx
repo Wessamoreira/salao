@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { pode, useCapacidades } from '../../api/capacidades';
 import type { Cliente } from '../../api/clientes';
 import { comoChamar, useAnonimizar, useCliente, useDuplicados, useMesclar } from '../../api/clientes';
+import { Icone } from '../../layout/Icone';
 import { AvisoDeDuplicado } from './AvisoDeDuplicado';
 import { EditarFicha } from './EditarFicha';
 import { Consentimentos } from './Consentimentos';
@@ -36,8 +37,20 @@ export function Ficha({ cliente, aoSair }: { cliente: Cliente; aoSair: () => voi
 
   return (
     <div className="cli-ficha">
-      <h2 className="cli-ficha-nome">{chamado}</h2>
-      {chamado !== atual.nome && <p className="cli-ficha-formal">{atual.nome}</p>}
+      {/*
+        Fechar existe porque abrir passou a ser ir a algum lugar: a ficha é endereço, e sair
+        dela é voltar — pelo botão, pelo Esc no campo de busca ou pelo gesto de voltar do
+        tablet. Sem o botão, o único caminho visível era clicar em outra pessoa.
+      */}
+      <header className="cli-ficha-topo">
+        <div>
+          <h2 className="cli-ficha-nome">{chamado}</h2>
+          {chamado !== atual.nome && <p className="cli-ficha-formal">{atual.nome}</p>}
+        </div>
+        <button type="button" className="cli-fechar" onClick={aoSair} aria-label="Fechar a ficha">
+          <Icone nome="fechar" tamanho={16} />
+        </button>
+      </header>
 
       <dl className="cli-dados">
         <dt>Telefone</dt>

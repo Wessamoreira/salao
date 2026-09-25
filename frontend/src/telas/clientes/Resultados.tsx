@@ -35,9 +35,11 @@ export function Resultados({ resultado, termo, carregando, selecionadoId,
       >
         {/* O texto do que falta vem do servidor: "informe ao menos 2 letras" é regra
             de domínio, e reescrevê-la aqui criaria uma segunda versão dela. */}
+        {/* Sem "ao lado": o cadastro rápido aparece embaixo enquanto a tela procura e ao
+            lado quando há ficha aberta, e um texto que aponta direção erra metade das vezes. */}
         {resultado.aviso
           ? 'Complete o termo para a busca valer.'
-          : 'Confira a grafia — ou cadastre agora, ao lado: é só nome e telefone.'}
+          : 'Confira a grafia — ou cadastre agora: é só nome e telefone.'}
       </Vazio>
     );
   }
@@ -97,10 +99,19 @@ function ComoBuscar() {
   return (
     <div className="cli-dica">
       <p className="cli-dica-titulo">Procure quem está ligando.</p>
-      <p>
-        Digite o nome, o apelido, ou os últimos dígitos do telefone. Com o telefone na
-        mão, os quatro últimos costumam bastar.
-      </p>
+      {/* Uma frase só, e ela diz o que os exemplos não dizem: que quatro dígitos bastam. */}
+      <p>Com o telefone na mão, os quatro últimos dígitos costumam bastar.</p>
+      {/*
+        A forma do que se digita, e não mais uma frase sobre ela.
+        Os quatro dígitos são o atalho que resolve na primeira tentativa (R-UX-03) e o que
+        ninguém descobre sozinho: a recepção digita nome, acha oito Marias e desiste do campo.
+        Três exemplos ocupam uma linha e ensinam o que dois parágrafos não ensinam.
+      */}
+      <ul className="cli-exemplos" aria-label="Exemplos do que digitar">
+        <li><span>Marilda</span> nome</li>
+        <li><span>Ju</span> apelido</li>
+        <li><span>4321</span> fim do telefone</li>
+      </ul>
     </div>
   );
 }

@@ -627,6 +627,14 @@
     position: sticky;
     top: 0;
     padding: 0 var(--e-3);
+    /*
+     * QUATRO colunas aqui, e não três: abaixo deste ponto aparece o botão de abrir o menu,
+     * que é um item a mais na barra. Com três colunas declaradas, o quarto filho — o relógio
+     * e as ações da tela — caía numa segunda linha do grid, com a régua dele pendurada no
+     * meio do nada e a barra com o dobro da altura combinada. No tablet do balcão, que é onde
+     * esta faixa existe para funcionar.
+     */
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
   }
   .casca-trilha > span { display: none; }
   .casca-trilha > h1 { font-size: var(--t-14); }

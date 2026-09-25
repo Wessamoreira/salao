@@ -396,6 +396,38 @@ Sete mutações, sete mortas — e duas delas mostraram testes fracos meus antes
 passava só porque a consulta ainda não tinha tido tempo de sair, e um grupo vazio que virava
 título sozinho e ninguém olhava.
 
+### Faixa 5 — a tela de clientes, e uma barra que quebrava no tablet
+
+A tela de clientes usava um quarto da tela. Num monitor de 1440px, um campo de 520px encolhido
+no canto superior esquerdo, duas linhas de texto embaixo dele, e **setecentos pixels de nada**
+onde a ficha ainda não estava. A coluna da ficha era reservada desde o primeiro instante — antes
+de existir ficha.
+
+O conserto não foi encher o vazio: foi **compor**. A tela tem duas formas, e troca de uma para a
+outra num clique:
+
+- **procurando** — só existe a busca, então ela é a página: uma coluna de 640px centrada, com o
+  campo, a leitura do termo e os resultados na mesma largura. A margem virou composição em vez
+  de sobra;
+- **lendo** — abrir alguém muda o assunto: a ficha ocupa o espaço e a busca encolhe para a
+  coluna da esquerda, continuando à mão, porque outra cliente pode ligar no meio.
+
+Três acabamentos junto:
+
+1. **A lupa dentro do campo**, como na busca da casca: diz "digite para procurar" sem gastar uma
+   palavra, e o foco passou a ficar na moldura inteira em vez de num anel por dentro dela.
+2. **Os três jeitos de procurar viraram forma, não frase.** `Marilda` nome · `Ju` apelido ·
+   `4321` fim do telefone. Os quatro dígitos são o atalho que resolve na primeira tentativa
+   (R-UX-03) e o que ninguém descobre sozinho — e a frase que os descrevia foi encurtada, porque
+   exemplo e explicação não podem fazer o mesmo trabalho.
+3. **A ficha ganhou saída.** Ela virou endereço na faixa anterior, e sair dela era só clicar em
+   outra pessoa ou apertar Esc no campo. Agora há um × no canto, além dos dois.
+
+E um defeito real, achado ao conferir a faixa em 700px: abaixo de 820px aparece o botão de abrir
+o menu, que é um **quarto** item na barra de topo — e a barra tinha três colunas declaradas. O
+relógio caía numa segunda linha do grid, com a régua dele pendurada no meio do nada e a barra com
+o dobro da altura. No tablet do balcão, que é exatamente onde essa faixa existe para funcionar.
+
 ## A lição que custou uma tela branca
 
 Ao introduzir `grupos` no contrato, a casca passou a fazer `capacidades.grupos.map(...)`. O

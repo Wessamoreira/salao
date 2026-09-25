@@ -10,7 +10,6 @@
 
 .cli-tela {
   display: grid;
-  grid-template-columns: minmax(280px, 360px) 1fr;
   grid-template-rows: auto 1fr;
   gap: 0 var(--e-8);
   height: 100%;
@@ -19,13 +18,23 @@
 }
 
 /*
- * Enquanto ninguém buscou nada, a tela não se divide.
+ * PROCURANDO: a busca é a página, numa coluna centrada.
  *
- * Duas colunas antes de existir conteúdo para a segunda espremem o convite num
- * terço e deixam o resto vazio — e este é o primeiro estado que a recepção vê
- * toda vez que abre a tela. Ele tem um trabalho só: fazer ela digitar.
+ * Reservar a coluna da ficha antes de existir ficha deixava setecentos pixels de nada ao lado
+ * de um campo encolhido no canto — a forma exata de uma tela inacabada. Centrada, a mesma
+ * largura serve ao campo, à leitura do termo e aos resultados, e a margem vira composição em
+ * vez de sobra.
+ *
+ * 640px não é gosto: é onde um nome de cliente e um telefone cabem numa linha confortável, e
+ * é a mesma medida de leitura que a ficha usa do outro lado (620px + a barra de seleção).
  */
-.cli-tela.esperando { grid-template-columns: 1fr; }
+.cli-tela.procurando {
+  grid-template-columns: minmax(0, 640px);
+  justify-content: center;
+}
+
+/* LENDO: o assunto virou a ficha, e a busca fica à mão na coluna estreita. */
+.cli-tela.lendo { grid-template-columns: minmax(280px, 360px) 1fr; }
 
 /*
  * A dica fica ALINHADA COM O CAMPO, na largura dele. Ela explica o campo; centralizada
@@ -52,6 +61,17 @@
   grid-column: 1 / -1;
   padding-bottom: var(--e-6);
 }
+/*
+ * Procurando, o bloco começa abaixo da borda, não colado nela.
+ *
+ * Não é centralização vertical: o bloco cresce quando os resultados chegam, e centrar faria
+ * o campo subir e descer a cada letra digitada. É um respiro fixo, proporcional à altura da
+ * janela, que põe a busca na linha em que o olho já está.
+ */
+.cli-tela.procurando .cli-cabecalho { padding-top: clamp(var(--e-2), 7vh, var(--e-10)); }
+/* Lendo, o campo volta ao tamanho da coluna da esquerda: ele continua à mão, sem competir
+   com a ficha, que é o que a pessoa está lendo. */
+.cli-tela.lendo .cli-busca-caixa { max-width: 360px; }
 
 /* ---------------------------------------------------------------------------
  * A busca é a tela, não um acessório de canto.
@@ -60,22 +80,65 @@
  * no alto à direita seria o layout de um CRUD — e diria que o assunto da tela é
  * a lista, quando não existe nem endpoint para listar todo mundo.
  * ------------------------------------------------------------------------- */
-.cli-busca {
-  display: block;
-  width: 100%;
-  max-width: 520px;
+.cli-busca-caixa {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
   padding: var(--e-3) var(--e-4);
-  font-family: inherit;
-  font-size: var(--t-20);
-  color: var(--tinta);
+  color: var(--tinta-fraca);
   background: var(--papel);
   border: 1px solid var(--regua-forte);
   border-radius: var(--raio-2);
+  transition: border-color var(--mov-imediato) var(--mov-curva);
 }
+/* O foco fica na CAIXA: com o anel no input de dentro, o contorno apareceria por dentro da
+   moldura, meio pixel fora de lugar, que é o tipo de detalhe que faz uma tela parecer torta. */
+.cli-busca-caixa:focus-within { border-color: var(--foco); }
+.cli-busca-caixa > svg { flex: 0 0 20px; }
+
+.cli-busca {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  font-family: inherit;
+  font-size: var(--t-20);
+  color: var(--tinta);
+  background: transparent;
+  border: 0;
+}
+.cli-busca:focus-visible { outline: none; }
 /* Medido: --tinta-tenue dá 2.36 e é ilegível de fato. O texto do placeholder aqui
    é orientação, não enfeite — ele diz o que se pode digitar. */
 .cli-busca::placeholder { color: var(--tinta-fraca); }
-.cli-busca:focus-visible { border-color: var(--foco); }
+
+
+/*
+ * Os três jeitos de procurar, na forma em que se digitam.
+ *
+ * Tokens de leitura, não botões: clicar não faz nada, e dar-lhes cara de botão seria
+ * prometer uma ação que não existe.
+ */
+.cli-exemplos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-1) var(--e-4);
+  margin: var(--e-3) 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-12);
+  color: var(--tinta-fraca);
+}
+.cli-exemplos li { display: flex; align-items: baseline; gap: var(--e-2); }
+.cli-exemplos span {
+  padding: 2px var(--e-2);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-1);
+  font-family: var(--fonte-mono);
+  font-size: var(--t-11);
+}
 
 /* O que o servidor entendeu do termo. Vem da resposta, nunca de um palpite do
    front — ver ResultadoDaBusca. */
@@ -213,6 +276,33 @@ kbd {
  *
  * A presença vem de corpo e peso, que é o que uma ferramenta de trabalho usa.
  */
+/* O cabeçalho ocupa a largura do cartão, e não a medida de leitura: é onde mora a saída,
+   e uma saída no meio do cartão parece um × perdido. */
+.cli-ficha > .cli-ficha-topo { max-width: none; }
+.cli-ficha-topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--e-4);
+}
+/* Fechar é saída, não ação: sem moldura, e só ganha peso quando o ponteiro chega. */
+.cli-fechar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--tinta-fraca);
+  background: transparent;
+  border: 0;
+  border-radius: var(--raio-1);
+  cursor: pointer;
+  transition: color var(--mov-imediato) var(--mov-curva),
+    background var(--mov-imediato) var(--mov-curva);
+}
+.cli-fechar:hover { color: var(--tinta); background: var(--papel-fundo); }
+
 .cli-ficha-nome {
   font-size: var(--t-20);
   font-weight: 600;

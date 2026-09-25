@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { Cliente } from '../../api/clientes';
 import { useBusca, useCliente } from '../../api/clientes';
+import { Icone } from '../../layout/Icone';
 import { Pagina } from '../../layout/Pagina';
 import { useTermoComPausa } from '../../layout/pausa';
 import { CadastroRapido } from './CadastroRapido';
@@ -63,28 +64,45 @@ export function Clientes() {
   useEffect(() => { campo.current?.focus(); }, []);
 
   const naoAchou = termo.trim().length > 0 && resultado?.itens.length === 0 && !resultado.aviso;
-  // Chegando pela paleta, a tela não está esperando: a ficha já está aberta, e a coluna
-  // única deixaria a busca em cima da pessoa que se acabou de abrir.
-  const esperando = termo.trim().length === 0 && !selecionado;
+  const esperando = termo.trim().length === 0;
+  /*
+   * Duas formas, e a tela troca de uma para a outra num clique.
+   *
+   * PROCURANDO: só existe a busca, então ela é a página — uma coluna centrada, com o campo,
+   * a leitura do termo e os resultados na mesma largura. Antes, a coluna da ficha ficava
+   * reservada e vazia desde o primeiro instante: setecentos pixels de nada ao lado de um campo
+   * encolhido no canto, que é o que faz uma tela parecer inacabada em vez de focada.
+   *
+   * LENDO: abrir alguém muda o assunto da tela. Aí sim a ficha ocupa o espaço e a busca
+   * encolhe para a coluna da esquerda, continuando à mão — outra cliente pode ligar no meio.
+   */
+  const lendo = selecionado != null;
 
   return (
     <Pagina>
-    <div className={`pagina-cheia cli-tela${esperando ? ' esperando' : ''}`}>
+    <div className={`pagina-cheia cli-tela${lendo ? ' lendo' : ' procurando'}`
+      + `${esperando ? ' esperando' : ''}`}>
       <header className="cli-cabecalho">
-        <input
-          ref={campo}
-          className="cli-busca"
-          type="search"
-          aria-label="Buscar cliente"
-          placeholder="Nome, apelido ou telefone"
-          value={termo}
-          onChange={(e) => setTermo(e.target.value)}
-          onKeyDown={(e) => {
-            // Esc limpa e devolve a tela ao estado de espera, sem tirar a mão do
-            // teclado (R-UX-02).
-            if (e.key === 'Escape') { setTermo(''); abrirFicha(null); }
-          }}
-        />
+        {/* A lupa dentro do campo diz "digite para procurar" sem gastar uma palavra — e é o
+            mesmo desenho da busca da casca, para as duas serem reconhecidas como a mesma
+            coisa. */}
+        <div className="cli-busca-caixa">
+          <Icone nome="busca" tamanho={20} />
+          <input
+            ref={campo}
+            className="cli-busca"
+            type="search"
+            aria-label="Buscar cliente"
+            placeholder="Nome, apelido ou telefone"
+            value={termo}
+            onChange={(e) => setTermo(e.target.value)}
+            onKeyDown={(e) => {
+              // Esc limpa e devolve a tela ao estado de espera, sem tirar a mão do
+              // teclado (R-UX-02).
+              if (e.key === 'Escape') { setTermo(''); abrirFicha(null); }
+            }}
+          />
+        </div>
         <Leitura resultado={resultado} temTermo={termo.trim().length > 0} />
       </header>
 

@@ -14,6 +14,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
 import { Clientes } from '../src/telas/clientes/Clientes';
 import '../src/estilo/global.css';
 
@@ -85,11 +86,15 @@ window.fetch = async (entrada: RequestInfo | URL, init?: RequestInit) =>
 
 createRoot(document.getElementById('raiz')!).render(
   <StrictMode>
+    {/* A ficha aberta é endereço desde RT-CAT-005 (`/clientes?cliente=…`): sem roteador, a
+        tela não monta. */}
+    <MemoryRouter initialEntries={['/clientes']}>
     <QueryClientProvider client={new QueryClient()}>
       <div style={{ minHeight: '100dvh', background: 'var(--papel-fundo)',
         padding: 'var(--e-8)' }}>
         <Clientes />
       </div>
     </QueryClientProvider>
+    </MemoryRouter>
   </StrictMode>,
 );

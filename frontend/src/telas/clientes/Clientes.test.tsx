@@ -234,6 +234,21 @@ describe('a ficha aberta é endereço', () => {
     expect(screen.queryByRole('heading', { name: /Maria Silva/ })).not.toBeInTheDocument();
     expect(screen.getByLabelText('Buscar cliente')).toHaveValue('silva');
   });
+
+  it('fechar a ficha devolve a tela à busca', async () => {
+    servidor({
+      '/v1/clientes/c1/consentimentos': [],
+      '/v1/clientes/c1/possiveis-duplicados': [],
+      '/v1/clientes/c1': MARIA,
+    });
+    montar('/clientes?cliente=c1');
+    await screen.findByRole('heading', { name: /Maria Silva/ });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar a ficha' }));
+
+    expect(screen.queryByRole('heading', { name: /Maria Silva/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'endereço' })).not.toHaveTextContent('cliente=');
+  });
 });
 
 describe('acessibilidade', () => {
