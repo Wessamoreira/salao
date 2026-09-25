@@ -21,17 +21,28 @@ ORDEM_STATUS = ["implementado", "implementado-parcial", "em-implementacao",
 
 
 def rotinas_do_plano():
-    """Toda linha de tabela do plano que comece com um ID RT-."""
+    """Toda linha de tabela do plano que comece com um ID RT-.
+
+    ID repetido é erro, e erro silencioso: o dicionario sobrescreve, a rotina
+    antiga some da contagem sem aviso, e o plano passa a ter uma rotina
+    entregue que ninguem cobra mais. Aconteceu em 23/09/2026, ao abrir a Fase 7
+    com um RT-FIN-012 que ja existia desde a Fase 5.
+    """
     itens = {}
+    repetidos = []
     fase = None
     for linha in PLANO.read_text(encoding="utf-8").splitlines():
         m = re.match(r"^##\s+Fase\s+(\d+)", linha)
         if m:
             fase = int(m.group(1))
         m = re.match(r"^\|\s*(RT-[A-Z]{3}-\d{3})\s*\|\s*([^|]+?)\s*\|", linha)
-        if m:
+        # So conta dentro de uma fase: o topo do plano tem uma tabela de correcoes de
+        # recorte cuja primeira coluna tambem e um ID, e ela nao e backlog.
+        if m and fase is not None:
+            if m.group(1) in itens:
+                repetidos.append((m.group(1), itens[m.group(1)], m.group(2).strip()))
             itens[m.group(1)] = {"titulo": m.group(2).strip(), "fase": fase}
-    return itens
+    return itens, repetidos
 
 
 def rotinas_documentadas():
@@ -87,11 +98,19 @@ def salto_de_ordem(plano, docs):
 
 
 def main():
-    plano = rotinas_do_plano()
+    plano, repetidos = rotinas_do_plano()
     docs = rotinas_documentadas()
     problemas = []
 
     print(f"PLANO: {len(plano)} rotinas · DOCUMENTADAS: {len(docs)}\n")
+
+    if repetidos:
+        problemas.append(f"{len(repetidos)} ID(s) repetido(s) no plano")
+        print("ID REPETIDO NO PLANO (a linha de baixo apaga a de cima):")
+        for ident, antiga, nova in repetidos:
+            print(f"  {ident}  fase {antiga['fase']}: {antiga['titulo']}")
+            print(f"  {' ' * len(ident)}  e de novo: {nova}")
+        print()
 
     por_status = collections.Counter(d.get("status", "?") for d in docs.values())
     print("Situação do que já foi escrito")

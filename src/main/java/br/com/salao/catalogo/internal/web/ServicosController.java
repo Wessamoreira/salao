@@ -8,6 +8,8 @@ import br.com.salao.catalogo.internal.application.CadastrarServicoUseCase;
 import br.com.salao.catalogo.internal.application.DefinirAtivacaoDoServicoUseCase;
 import br.com.salao.catalogo.internal.application.EtapaBruta;
 import br.com.salao.catalogo.internal.application.DefinirPrecoUseCase;
+import br.com.salao.catalogo.internal.application.EditarServicoUseCase;
+import br.com.salao.catalogo.internal.application.ListarCardapioUseCase;
 import br.com.salao.catalogo.internal.application.ListarServicosUseCase;
 import br.com.salao.catalogo.internal.application.RemoverPrecoFuturoUseCase;
 import jakarta.validation.Valid;
@@ -30,6 +32,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -48,19 +51,24 @@ import org.springframework.web.bind.annotation.RestController;
 public class ServicosController {
 
     private final CadastrarServicoUseCase cadastrar;
+    private final EditarServicoUseCase editar;
     private final ListarServicosUseCase listar;
+    private final ListarCardapioUseCase cardapio;
     private final DefinirAtivacaoDoServicoUseCase definirAtivacao;
     private final DefinirPrecoUseCase definirPreco;
     private final RemoverPrecoFuturoUseCase removerPrecoFuturo;
     private final ServicoApi catalogo;
 
-    public ServicosController(CadastrarServicoUseCase cadastrar, ListarServicosUseCase listar,
+    public ServicosController(CadastrarServicoUseCase cadastrar, EditarServicoUseCase editar,
+                              ListarServicosUseCase listar, ListarCardapioUseCase cardapio,
                               DefinirAtivacaoDoServicoUseCase definirAtivacao,
                               DefinirPrecoUseCase definirPreco,
                               RemoverPrecoFuturoUseCase removerPrecoFuturo,
                               ServicoApi catalogo) {
         this.cadastrar = cadastrar;
+        this.editar = editar;
         this.listar = listar;
+        this.cardapio = cardapio;
         this.definirAtivacao = definirAtivacao;
         this.definirPreco = definirPreco;
         this.removerPrecoFuturo = removerPrecoFuturo;
@@ -84,24 +92,85 @@ public class ServicosController {
             @NotEmpty List<EtapaRequest> etapas) {
     }
 
+    /**
+     * RT-CAT-005 — a receita inteira, e a versão que a tela leu.
+     *
+     * <p>A receita vai completa em vez de por diferença: "troque a etapa 2 para 45 minutos" exigiria
+     * que os dois lados concordassem sobre qual é a etapa 2, e duas pessoas editando ao mesmo tempo
+     * não concordam. A versão resolve isso de uma vez — quem chegou depois é recusado.
+     */
+    public record EditarServicoRequest(
+            @NotBlank @Size(max = 200) String nome,
+            @Size(max = 1000) String descricao,
+            @NotNull Integer versao,
+            @NotEmpty List<EtapaRequest> etapas) {
+    }
+
     public record AtivacaoRequest(@NotNull Boolean ativo) {
     }
 
+    /**
+     * RT-CAT-005 — o serviço como a tela precisa dele.
+     *
+     * <p>Existe por dois motivos. O primeiro: {@code duracaoTotal} e {@code minutosDoProfissional}
+     * são métodos de {@link ServicoResumo}, e método não vira campo no JSON — a tela receberia só
+     * os blocos e teria de somar. Somar é fácil; separar o que ocupa a profissional do que não
+     * ocupa é <strong>regra de domínio</strong> (RN-CAT-001), e uma segunda cópia dela em
+     * JavaScript diria um dia uma coisa enquanto a agenda fazia outra.
+     *
+     * <p>O segundo: a receita chega como {@code etapas} no pedido e voltava como
+     * {@code blocos.blocos} na resposta. Mesma coisa, dois nomes e um aninhamento a mais.
+     */
+    public record ServicoNaTela(UUID id, String nome, String descricao, boolean ativo, int versao,
+                                int duracaoTotal, int minutosDoProfissional,
+                                BigDecimal precoVigente, List<EtapaRequest> etapas) {
+
+        /**
+         * {@code precoVigente} nulo é serviço que ninguém precificou — e é a informação mais
+         * importante da lista, porque é o serviço que a comanda vai recusar vender (RN-CAT-007).
+         * Zero seria um número errado dito com confiança.
+         */
+        static ServicoNaTela de(ServicoResumo servico, Money preco) {
+            return new ServicoNaTela(servico.id(), servico.nome(), servico.descricao(),
+                    servico.ativo(), servico.versao(),
+                    servico.duracaoTotal(), servico.minutosDoProfissional(),
+                    preco == null ? null : preco.valor(),
+                    servico.blocos().blocos().stream()
+                            .map(b -> new EtapaRequest(b.tipo(), b.duracaoMinutos(),
+                                    b.recursosExigidos()))
+                            .toList());
+        }
+    }
+
     @GetMapping
-    public List<ServicoResumo> listar(
+    public List<ServicoNaTela> listar(
             @RequestParam(defaultValue = "false") boolean incluirInativos) {
-        return listar.executar(incluirInativos);
+        return cardapio.executar(incluirInativos).stream()
+                .map(item -> ServicoNaTela.de(item.servico(), item.precoVigente()))
+                .toList();
     }
 
     @PostMapping
-    public ResponseEntity<ServicoResumo> cadastrar(
+    public ResponseEntity<ServicoNaTela> cadastrar(
             @Valid @RequestBody CadastrarServicoRequest req) {
         ServicoResumo criado = cadastrar.executar(req.nome(), req.descricao(),
                 req.etapas().stream()
                         .map(e -> new EtapaBruta(e.tipo(), e.duracaoMinutos(),
                                 e.recursosExigidos()))
                         .toList());
-        return ResponseEntity.created(URI.create("/api/v1/servicos/" + criado.id())).body(criado);
+        return ResponseEntity.created(URI.create("/api/v1/servicos/" + criado.id()))
+                .body(ServicoNaTela.de(criado, null));
+    }
+
+    @PutMapping("/{id}")
+    public ServicoNaTela editar(@PathVariable UUID id,
+                                @Valid @RequestBody EditarServicoRequest req) {
+        return ServicoNaTela.de(editar.executar(id, req.nome(), req.descricao(),
+                req.etapas().stream()
+                        .map(e -> new EtapaBruta(e.tipo(), e.duracaoMinutos(),
+                                e.recursosExigidos()))
+                        .toList(),
+                req.versao()), null);
     }
 
     /**
@@ -147,8 +216,8 @@ public class ServicosController {
     }
 
     @PatchMapping("/{id}/ativacao")
-    public ServicoResumo definirAtivacao(@PathVariable UUID id,
+    public ServicoNaTela definirAtivacao(@PathVariable UUID id,
                                          @Valid @RequestBody AtivacaoRequest req) {
-        return definirAtivacao.executar(id, req.ativo());
+        return ServicoNaTela.de(definirAtivacao.executar(id, req.ativo()), null);
     }
 }

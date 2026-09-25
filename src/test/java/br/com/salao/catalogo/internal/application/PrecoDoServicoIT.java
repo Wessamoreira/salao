@@ -14,6 +14,7 @@ import br.com.salao.shared.dinheiro.Money;
 import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.shared.tenant.AbstractPostgresIT;
 import br.com.salao.shared.tenant.TenantContext;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -41,6 +42,9 @@ class PrecoDoServicoIT extends AbstractPostgresIT {
 
     @Autowired
     private ServicoApi catalogo;
+
+    @Autowired
+    private ListarCardapioUseCase cardapio;
 
     private UUID salao() {
         return provisionar.executar(ProvisionarEstabelecimentoCommand.comPadroes(
@@ -285,5 +289,47 @@ class PrecoDoServicoIT extends AbstractPostgresIT {
         assertThatThrownBy(() -> TenantContext.executar(tenant,
                 () -> definirPreco.executar(UUID.randomUUID(), Money.de("60"), null)))
                 .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    @DisplayName("RT-CAT-005: o cardápio traz o preço vigente de cada serviço, numa consulta")
+    void cardapio_com_preco() {
+        // A tela mostra o preço em cada linha. Perguntar um por um seriam quarenta consultas
+        // para abrir uma tela.
+        UUID tenant = salao();
+        UUID escova = escovaEm(tenant);
+        UUID corte = TenantContext.obter(tenant, () -> cadastrarServico.executar("Corte", null,
+                List.of(new EtapaBruta(TipoDeBloco.ATIVO, 30)))).id();
+        TenantContext.obter(tenant, () -> definirPreco.executar(escova, new Money(new BigDecimal("80.00")), null));
+
+        var itens = TenantContext.obter(tenant, () -> cardapio.executar(true));
+
+        assertThat(itens).hasSize(2);
+        assertThat(itens).filteredOn(i -> i.servico().id().equals(escova))
+                .singleElement()
+                .extracting(i -> i.precoVigente().valor())
+                .isEqualTo(new Money(new BigDecimal("80.00")).valor());
+        // Sem preço vem NULO, não zero: zero é um número errado dito com confiança, e a comanda
+        // recusa vender o serviço justamente porque ele não tem preço (RN-CAT-007).
+        assertThat(itens).filteredOn(i -> i.servico().id().equals(corte))
+                .singleElement()
+                .extracting(ListarCardapioUseCase.ItemDoCardapio::precoVigente)
+                .isNull();
+    }
+
+    @Test
+    @DisplayName("RT-CAT-005: o aumento marcado para amanhã não vira o preço de hoje")
+    void cardapio_ignora_preco_futuro() {
+        UUID tenant = salao();
+        UUID escova = escovaEm(tenant);
+        TenantContext.obter(tenant, () -> definirPreco.executar(escova, new Money(new BigDecimal("80.00")), null));
+        TenantContext.obter(tenant, () -> definirPreco.executar(escova, new Money(new BigDecimal("95.00")),
+                LocalDate.now().plusDays(30)));
+
+        var itens = TenantContext.obter(tenant, () -> cardapio.executar(true));
+
+        assertThat(itens).singleElement()
+                .extracting(i -> i.precoVigente().valor())
+                .isEqualTo(new Money(new BigDecimal("80.00")).valor());
     }
 }

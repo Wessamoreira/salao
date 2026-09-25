@@ -281,3 +281,30 @@ ficaria errada.
 `DuracaoPorProfissionalIT.sem_habilidade_sem_receita`
 **Erro.** `ER-EQP-DURACAO_SEM_HABILIDADE` (422) · **Configurável?** Não
 **Origem.** 2026-09-04
+
+---
+
+### RN-CAT-015 — Editar a receita não mexe no que já foi marcado
+
+**Enunciado.** Alterar nome, descrição ou blocos de um serviço vale para o que for **marcado
+daqui em diante**. Agendamentos que já existem — inclusive os de amanhã — mantêm a receita com
+que foram criados. A edição exige a `versao` lida pela tela; quem chegar depois é recusado.
+
+**Motivo.** O agendamento materializa os blocos dele no momento em que é criado (RT-AGD-002):
+é isso que permite ao banco garantir ausência de sobreposição com um `EXCLUDE`, e é isso que faz
+a agenda de ontem continuar contando a verdade de ontem.
+
+Reescrever os agendamentos futuros junto transformaria uma correção de digitação em movimento de
+agenda: mudaria o horário de clientes que já foram avisadas e poderia criar conflito com o
+agendamento seguinte, que não tem por que ceder espaço. Quem quer mover a agenda usa RT-AGD-008,
+que existe para isso e mostra o que vai mover antes de mover.
+
+A `versao` está aqui pela mesma razão de RT-CLI-007: a tela lê o serviço inteiro para editar, duas
+pessoas podem tê-lo lido, e gravar por cima faria a correção da primeira sumir sem aviso — numa
+receita que decide se cabe um encaixe.
+
+**Onde é garantida.** `EditarServicoUseCase` · `ServicosJdbc.atualizar` (`where versao = :versao`).
+**Rotinas.** RT-CAT-005 · **Teste.** `EditarServicoIT.edita_a_receita`,
+`EditarServicoIT.conflito_de_versao`, `EditarServicoIT.recusa_nao_deixa_receita_pela_metade`
+**Erro.** `ER-CAT-CONFLITO_DE_VERSAO` (409) · **Configurável?** Não
+**Origem.** 2026-09-23

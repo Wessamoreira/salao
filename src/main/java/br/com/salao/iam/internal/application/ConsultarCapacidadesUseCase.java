@@ -94,6 +94,11 @@ public class ConsultarCapacidadesUseCase {
         if (permissoes.contains(Permissao.CLIENTE_LER)) {
             menus.add(new Capacidades.Menu("clientes", "Clientes", "/clientes", "pessoas", "operacao"));
         }
+        // RT-CAT-005 — o cardápio é do dono: mudar a duração de um serviço muda a agenda de
+        // todo mundo (RN-CAT-004). Quem só lê a lista já a recebe pelas telas que precisam dela.
+        if (permissoes.contains(Permissao.CONFIG_GERENCIAR)) {
+            menus.add(new Capacidades.Menu("catalogo", "Catálogo", "/catalogo", "cardapio", "gestao"));
+        }
         if (permissoes.contains(Permissao.ESTOQUE_LER)) {
             menus.add(new Capacidades.Menu("estoque", "Estoque", "/estoque", "caixa", "gestao"));
         }

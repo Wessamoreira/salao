@@ -210,6 +210,37 @@ sugestão registrada com o racional que a gerou.
 
 ---
 
+## Fase 7 — os cadastros ganham tela
+
+**Aberta em 23/09/2026, depois do levantamento de `18-o-que-falta-para-usar.md`.**
+
+Por que existe uma fase para isto, em vez de as telas estarem nas rotinas de origem: as rotinas
+de equipe, catálogo e acesso entregaram **servidor** na Fase 1 e foram fechadas assim, com a
+pendência "não há tela" registrada em cada uma. O sistema ficou com 43% dos endpoints sem por
+onde serem usados — e, na prática, **um salão novo só é configurado por chamada HTTP na mão**,
+inclusive para criar o login da recepção.
+
+Encaixar as telas de volta na Fase 1 marcaria como "fora de ordem" tudo o que já foi entregue
+nas fases 2 a 6. A ordem real do trabalho é esta aqui.
+
+**Pronta quando:** um salão novo é configurado do zero, pela tela, sem uma chamada HTTP na mão —
+e a agenda do dia seguinte abre com colunas, serviços e preços certos.
+
+| ID | Rotina | Tam | Depende de |
+|---|---|---|---|
+| RT-CAT-005 | Tela do catálogo: serviço com blocos, preço com vigência e recurso | G | CAT-001, CAT-002, CAT-003, INF-010 |
+| RT-EQP-005 | Tela da equipe: profissional, jornada, exceções, habilidades e duração | G | EQP-001, EQP-004, CAT-005 |
+| RT-IAM-009 | Tela de acessos: usuário, perfil e exigência de segundo fator | M | IAM-002, IAM-007, INF-010 |
+| RT-EST-013 | Tela de estoque: produto, entrada de lote, saldo e inventário | GG | EST-001, EST-003, EST-006 |
+| RT-FIN-013 | Tela do financeiro: extrato, vale, fechamento e repasse | GG | FIN-004, FIN-005, FIN-006 |
+| RT-AGD-013 | Bloqueio de grade e recorrência na tela da agenda | M | AGD-007, AGD-009, AGD-011 |
+
+A ordem não é gosto: sem catálogo não há o que marcar nem o que lançar; sem equipe a agenda abre
+vazia; sem acesso ninguém além do dono entra. Estoque e financeiro vêm depois porque dependem de
+haver movimento para mostrar.
+
+---
+
 ## Marcos de validação com o dono do salão
 
 Não espere a fase acabar para mostrar. Combine estes quatro momentos:

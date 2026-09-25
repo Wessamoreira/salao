@@ -8,6 +8,8 @@ import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.catalogo.internal.application.AtualizarRecursoUseCase;
 import br.com.salao.catalogo.internal.application.CadastrarRecursoUseCase;
 import br.com.salao.catalogo.internal.application.CadastrarServicoUseCase;
+import br.com.salao.catalogo.internal.application.EditarServicoUseCase;
+import br.com.salao.catalogo.internal.application.ListarCardapioUseCase;
 import br.com.salao.catalogo.internal.application.DefinirAtivacaoDoRecursoUseCase;
 import br.com.salao.catalogo.internal.application.DefinirAtivacaoDoServicoUseCase;
 import br.com.salao.catalogo.internal.application.DefinirPrecoUseCase;
@@ -46,6 +48,22 @@ public class CatalogoConfig {
                                                            RecursosJdbc recursos,
                                                            AuditoriaApi auditoria) {
         return new CadastrarServicoUseCase(servicos, recursos, auditoria);
+    }
+
+    /** RT-CAT-005 — o cardápio com preço, para a tela de quem administra. */
+    @Bean
+    public ListarCardapioUseCase listarCardapioUseCase(ServicosJdbc servicos,
+                                                       EstabelecimentoApi estabelecimentos,
+                                                       Relogio relogio) {
+        return new ListarCardapioUseCase(servicos, estabelecimentos, relogio);
+    }
+
+    /** RT-CAT-005 — corrigir o que já existe, sem cadastrar um serviço novo para isso. */
+    @Bean
+    public EditarServicoUseCase editarServicoUseCase(ServicosJdbc servicos,
+                                                     RecursosJdbc recursos,
+                                                     AuditoriaApi auditoria) {
+        return new EditarServicoUseCase(servicos, recursos, auditoria);
     }
 
     @Bean

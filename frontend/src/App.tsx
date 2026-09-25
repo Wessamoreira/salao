@@ -12,7 +12,8 @@ import { EmBreve } from './telas/EmBreve';
 // Entrar e o segundo fator ficam no pacote de entrada: são a primeira tela de quem chega,
 // e um pedaço à parte para elas seria uma espera antes do login. O resto vem por rota.
 import {
-  Agenda, Clientes, Comandas, Conciliacao, Configuracao, Fila, Painel, Precos, RevisaoDoAgente,
+  Agenda, Catalogo, Clientes, Comandas, Conciliacao, Configuracao, Fila, Painel, Precos,
+  RevisaoDoAgente,
 } from './rotas';
 
 const cliente = new QueryClient({
@@ -69,6 +70,8 @@ export function App() {
               <Route path="/fila" element={<Fila />} />
               <Route path="/comandas" element={<Comandas />} />
               <Route path="/clientes" element={<Clientes />} />
+              {/* RT-CAT-005 — o cardápio: sem ele não há o que marcar nem o que lançar. */}
+              <Route path="/catalogo" element={<Catalogo />} />
               <Route path="/estoque" element={<EmBreve titulo="Estoque" rotina="RT-EST-001" />} />
               <Route path="/financeiro" element={<EmBreve titulo="Financeiro" rotina="RT-FIN-004" />} />
               <Route path="/agente" element={<RevisaoDoAgente />} />

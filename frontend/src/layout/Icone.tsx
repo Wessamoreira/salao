@@ -8,7 +8,8 @@
 export type NomeDeIcone =
   | 'calendario' | 'tesoura' | 'pessoas' | 'caixa' | 'cifrao' | 'engrenagem'
   | 'menu' | 'fechar' | 'sair' | 'busca' | 'recolher' | 'expandir'
-  | 'chevron' | 'escudo' | 'seta' | 'balao' | 'setas' | 'etiqueta' | 'ampulheta';
+  | 'chevron' | 'escudo' | 'seta' | 'balao' | 'setas' | 'etiqueta' | 'ampulheta'
+  | 'cardapio';
 
 export function Icone({ nome, tamanho = 18 }: { nome: string; tamanho?: number }) {
   const comum = {
@@ -28,6 +29,9 @@ export function Icone({ nome, tamanho = 18 }: { nome: string; tamanho?: number }
       return <svg {...comum}><circle cx="9" cy="8" r="3" />
         <path d="M3.5 20v-1.5A4.5 4.5 0 0 1 8 14h2a4.5 4.5 0 0 1 4.5 4.5V20" />
         <path d="M15.5 5.3a3 3 0 0 1 0 5.4M17 14a4.5 4.5 0 0 1 3.5 4.4V20" /></svg>;
+    case 'cardapio':
+      return <svg {...comum}><rect x="4" y="3" width="16" height="18" rx="2" />
+        <path d="M8 8h8M8 12h8M8 16h5" /></svg>;
     case 'etiqueta':
       return <svg {...comum}><path d="M3 11.5V4.5A1.5 1.5 0 0 1 4.5 3h7a1.5 1.5 0 0 1 1.06.44l8 8a1.5 1.5 0 0 1 0 2.12l-7 7a1.5 1.5 0 0 1-2.12 0l-8-8A1.5 1.5 0 0 1 3 11.5Z" />
         <circle cx="7.5" cy="7.5" r="1.25" /></svg>;

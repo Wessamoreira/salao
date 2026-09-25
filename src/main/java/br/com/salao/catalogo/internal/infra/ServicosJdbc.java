@@ -7,7 +7,9 @@ import br.com.salao.catalogo.api.PrecoVigente;
 import br.com.salao.catalogo.api.ServicoResumo;
 import br.com.salao.catalogo.api.TipoDeBloco;
 import br.com.salao.shared.dinheiro.Money;
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,6 +54,25 @@ public class ServicosJdbc implements ServicoApi {
                 .single();
         gravarBlocos(estabelecimentoId, id, blocos);
         return id;
+    }
+
+    /**
+     * RT-CAT-005 — troca nome, descrição e sobe a versão, se ela ainda for a que a tela leu.
+     *
+     * <p>O {@code where versao = :versao} é o bloqueio otimista: devolve zero linhas quando outra
+     * pessoa gravou no meio, e quem chamou traduz isso em recusa. Os blocos são regravados à parte
+     * por {@link #gravarBlocos}, na mesma transação — é a receita inteira que muda de uma vez.
+     */
+    public int atualizar(UUID id, String nome, String descricao, int versao) {
+        return jdbc.sql("""
+                update servico set nome = :nome, descricao = :descricao, versao = versao + 1
+                 where id = :id and versao = :versao
+                """)
+                .param("id", id)
+                .param("nome", nome)
+                .param("descricao", descricao)
+                .param("versao", versao)
+                .update();
     }
 
     /**
@@ -236,6 +257,36 @@ public class ServicosJdbc implements ServicoApi {
                 .param("data", data)
                 .query((rs, linha) -> new Money(rs.getBigDecimal("valor")))
                 .optional();
+    }
+
+    /**
+     * RT-CAT-005 — o preço vigente de vários serviços numa consulta só.
+     *
+     * <p>Existe porque a tela do cardápio mostra o preço de cada linha: perguntar um por um seriam
+     * quarenta consultas para abrir uma tela, e o {@code distinct on} devolve exatamente a linha
+     * que {@link #precoEm} devolveria para cada serviço — a mais recente que já começou a valer.
+     */
+    @Transactional(readOnly = true)
+    public Map<UUID, Money> precosVigentesEm(Collection<UUID> servicoIds, LocalDate data) {
+        if (servicoIds.isEmpty()) {
+            return Map.of();
+        }
+        record Linha(UUID servicoId, BigDecimal valor) {
+        }
+        return jdbc.sql("""
+                select distinct on (servico_id) servico_id, valor
+                  from preco_do_servico
+                 where servico_id in (:servicos)
+                   and vigente_de <= :data
+                 order by servico_id, vigente_de desc
+                """)
+                .param("servicos", servicoIds)
+                .param("data", data)
+                .query((rs, linha) -> new Linha(rs.getObject("servico_id", UUID.class),
+                        rs.getBigDecimal("valor")))
+                .list().stream()
+                .collect(java.util.stream.Collectors.toMap(Linha::servicoId,
+                        l -> new Money(l.valor())));
     }
 
     @Override

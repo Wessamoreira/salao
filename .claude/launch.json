@@ -99,6 +99,17 @@
         "previa:fila"
       ],
       "port": 5174
+    },
+    {
+      "name": "previa-catalogo",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "previa:catalogo"
+      ],
+      "port": 5174
     }
   ]
 }

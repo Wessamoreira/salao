@@ -1,0 +1,317 @@
+/*
+ * RT-CAT-005 — o cardápio.
+ *
+ * A seção é estrutura (título, régua e ar); o papel branco fica para o que é objeto: o serviço,
+ * o equipamento, o preço. É a mesma divisão das telas de fila e de preços — dois níveis de
+ * leitura em vez de uma pilha de caixas iguais.
+ */
+
+.cat-tela {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-6);
+  padding: var(--e-5);
+}
+
+.cat-lista,
+.cat-recursos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ------------------------------------------------------------------ o serviço */
+
+.cat-servico {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--e-4);
+  padding: var(--e-3) var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+/* Fora do cardápio continua visível: o serviço existe no histórico, e escondê-lo faria
+   procurar por um nome que a tela não mostra mais. */
+.cat-servico.inativo { background: var(--papel-fundo); }
+.cat-servico.inativo .cat-servico-nome h3 { color: var(--tinta-fraca); }
+
+.cat-servico-nome { min-width: 0; }
+.cat-servico-nome h3 {
+  margin: 0;
+  font-size: var(--t-14);
+  font-weight: var(--p-forte);
+}
+.cat-servico-nome p {
+  margin: 2px 0 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+}
+
+.cat-tarja {
+  display: inline-block;
+  margin-left: var(--e-2);
+  padding: 1px var(--e-2);
+  color: var(--tinta-fraca);
+  background: var(--papel-afundado);
+  border-radius: var(--raio-1);
+  font-size: var(--t-11);
+  vertical-align: middle;
+}
+
+/*
+ * Os números do serviço. Tabular: a coluna da direita é lida de cima a baixo, comparando — e
+ * sem `tnum` os algarismos dançam de linha para linha.
+ */
+.cat-numeros {
+  display: flex;
+  gap: var(--e-5);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.cat-numeros div { text-align: right; }
+.cat-numeros dt {
+  color: var(--tinta-fraca);
+  font-size: var(--t-11);
+}
+.cat-numeros dd {
+  margin: 0;
+  font-size: var(--t-14);
+  font-weight: var(--p-forte);
+}
+.cat-preco { white-space: nowrap; }
+.cat-sem-preco { color: var(--tinta-fraca); font-weight: var(--p-medio); font-size: var(--t-12); }
+
+.cat-servico-acoes { display: flex; gap: var(--e-2); }
+
+/* ------------------------------------------------------------------ o editor */
+
+.cat-editor-caixa {
+  background: var(--papel);
+  border: 1px solid var(--tinta-tenue);
+  border-radius: var(--raio-2);
+}
+
+.cat-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-4);
+  padding: var(--e-4);
+}
+
+.cat-editor-linha { display: flex; flex-wrap: wrap; gap: var(--e-4); }
+
+.cat-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--t-12);
+}
+.cat-campo > span { color: var(--tinta-fraca); }
+.cat-campo-largo { flex: 1 1 220px; min-width: 0; }
+.cat-campo input,
+.cat-campo select {
+  min-height: 32px;
+  padding: 0 var(--e-2);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-14);
+}
+.cat-campo input[type='number'] { width: 84px; font-variant-numeric: tabular-nums; }
+
+.cat-receita {
+  margin: 0;
+  padding: var(--e-3) var(--e-4) var(--e-4);
+  border: 1px solid var(--regua);
+  border-radius: var(--raio-2);
+}
+.cat-receita > legend {
+  padding: 0 var(--e-2);
+  color: var(--tinta);
+  font-size: var(--t-12);
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+.cat-receita-ajuda {
+  margin: 0 0 var(--e-3);
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  line-height: 1.5;
+}
+
+.cat-etapas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/*
+ * A etapa usa o MESMO desenho da grade: trabalho é bloco cheio com traço de tinta; espera é
+ * hachura. Quem cadastra aqui reconhece o que vai ver na agenda — e é a hachura que ensina, sem
+ * texto, que ali a profissional está livre.
+ */
+.cat-etapa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e-3);
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid var(--regua-forte);
+  border-left-width: 3px;
+  border-radius: var(--raio-2);
+}
+.cat-etapa.ativo { border-left-color: var(--tinta); }
+.cat-etapa.pausa {
+  background: repeating-linear-gradient(
+    45deg, transparent, transparent 4px,
+    var(--papel-afundado) 4px, var(--papel-afundado) 8px);
+  border-left-color: var(--regua-forte);
+}
+
+.cat-recursos-da-etapa {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.cat-recursos-da-etapa > legend {
+  padding: 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-11);
+}
+.cat-marcador {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--t-12);
+}
+.cat-sem-recurso { color: var(--tinta-fraca); font-size: var(--t-12); }
+
+.cat-receita-rodape {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-3);
+  margin-top: var(--e-3);
+}
+.cat-receita-total {
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  font-variant-numeric: tabular-nums;
+}
+
+.cat-editor-acoes { display: flex; gap: var(--e-2); }
+
+/* Aviso de consequência: régua de tinta à esquerda, sem cor de status — o assunto não é o
+   estado de um atendimento. */
+.cat-aviso {
+  margin: 0;
+  padding: var(--e-2) var(--e-3);
+  color: var(--tinta-fraca);
+  background: var(--papel-fundo);
+  border-left: 2px solid var(--regua-forte);
+  font-size: var(--t-12);
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------------ o preço */
+
+.cat-preco-secao {
+  padding: var(--e-4);
+  border-top: 1px solid var(--regua);
+}
+.cat-preco-secao h3 {
+  margin: 0 0 var(--e-3);
+  font-size: var(--t-12);
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+
+.cat-preco-forma {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e-3);
+}
+
+.cat-precos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  margin: var(--e-3) 0 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+.cat-precos li {
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  font-size: var(--t-12);
+}
+.cat-precos strong { min-width: 96px; font-size: var(--t-14); }
+.cat-precos span { color: var(--tinta-fraca); }
+/* O que ainda não começou é tinta fraca com traço: é anúncio, não preço praticado. */
+.cat-precos li.futuro strong {
+  color: var(--tinta-fraca);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+/* ------------------------------------------------------------------ equipamentos */
+
+.cat-recurso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-3);
+  padding: var(--e-2) var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+.cat-recurso.inativo { background: var(--papel-fundo); }
+.cat-recurso-nome { flex: 1 1 160px; font-size: var(--t-14); font-weight: var(--p-medio); }
+.cat-recurso-quantidade {
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  font-variant-numeric: tabular-nums;
+}
+
+.cat-recurso-forma {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e-3);
+  padding: var(--e-3) var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--tinta-tenue);
+  border-radius: var(--raio-2);
+}
+
+.cat-nada {
+  margin: 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+}
+
+@media (max-width: 860px) {
+  .cat-servico { grid-template-columns: 1fr; }
+  .cat-numeros { justify-content: flex-start; }
+  .cat-numeros div { text-align: left; }
+}

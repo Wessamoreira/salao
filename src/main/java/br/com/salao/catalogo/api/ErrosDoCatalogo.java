@@ -52,7 +52,17 @@ public enum ErrosDoCatalogo implements CodigoDeErro {
             "Recurso exigido por serviços ativos"),
 
     RECURSO_NOME_JA_CADASTRADO("ER-CAT-RECURSO_NOME_JA_CADASTRADO", HttpStatus.CONFLICT,
-            "Já existe um recurso com este nome");
+            "Já existe um recurso com este nome"),
+
+    /**
+     * RT-CAT-005 — alguém salvou o serviço entre a leitura da tela e este clique.
+     *
+     * <p>O bloqueio otimista existe aqui porque a receita é editada a partir de uma tela que a leu
+     * inteira: gravar por cima faria a correção do outro sumir sem que ninguém percebesse, e a
+     * receita é o que a agenda usa para decidir se cabe um encaixe.
+     */
+    CONFLITO_DE_VERSAO("ER-CAT-CONFLITO_DE_VERSAO", HttpStatus.CONFLICT,
+            "Este serviço foi alterado por outra pessoa");
 
     private final String codigo;
     private final HttpStatus status;
