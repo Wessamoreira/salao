@@ -50,6 +50,7 @@ Oito telas, em uso contra o backend real:
 | Revisão do agente | `/agente` | trilha das ações da IA, recusas, gravações |
 | Conciliação | `/conciliacao` | extrato do adquirente, divergências, resolução à mão |
 | Preços | `/precos` | sugestões, aprovação e recusa com motivo |
+| Catálogo | `/catalogo` | serviço com receita de blocos, preço com vigência, equipamentos *(24/09)* |
 | Configuração | `/config` | identidade, atendimento, comissão e fechamento |
 | Painel de parede | `/painel` | fila do dia para a tela pendurada |
 
@@ -59,13 +60,16 @@ Mais a porta do sistema (entrar, segundo fator) e a casca (menu, `⌘K`, estado 
 
 ## O buraco, medido
 
-O backend tem **145 endpoints** em 34 controladores. Deles:
+O backend tem **145 endpoints** em 34 controladores. Na medição de 23/09:
 
-- **38 não têm tela nenhuma.**
-- **25 têm só a leitura de lista** que alguma tela usa para preencher um seletor — criar, editar
-  e desativar não existem em lugar nenhum.
+- **38 não tinham tela nenhuma;**
+- **25 tinham só a leitura de lista** que alguma tela usa para preencher um seletor — criar,
+  editar e desativar não existiam em lugar nenhum.
 
-**63 de 145 (43%) do que o servidor sabe fazer não tem por onde ser feito.**
+**63 de 145 (43%) do que o servidor sabia fazer não tinha por onde ser feito.**
+
+Depois da tela do catálogo (RT-CAT-005, 24/09), que cobriu `/v1/servicos` e `/v1/recursos` por
+inteiro, são **53 de 145 (37%)**. Cada tela da fase 7 derruba esse número; ele é o placar.
 
 Não é código faltando no servidor: é tela faltando. Cada linha abaixo tem endpoint testado,
 regra registrada e migration aplicada.
@@ -79,8 +83,9 @@ regra registrada e migration aplicada.
 | Falta | Endpoints prontos | Sem isso |
 |---|---|---|
 | Profissional, jornada semanal, bloqueio de jornada, habilidades | `/v1/profissionais` (8), `/v1/bloqueios-de-jornada` (4) | **A agenda abre vazia.** A própria tela diz: "a agenda aparece quando houver profissional cadastrado com jornada" |
-| Serviço com blocos, preço com vigência, duração por profissional | `/v1/servicos` (7) | Não há o que marcar nem o que lançar na comanda |
-| Recurso (lavatório, cadeira, secador) | `/v1/recursos` (4) | Serviço que exige recurso não pode ser cadastrado |
+| ~~Serviço com blocos, preço com vigência~~ | `/v1/servicos` (7) | **Feito em 24/09** — RT-CAT-005 |
+| ~~Recurso (lavatório, cadeira, secador)~~ | `/v1/recursos` (4) | **Feito em 24/09** — RT-CAT-005 |
+| Duração por profissional | `/v1/profissionais` | a relação é profissional × serviço, e o lugar dela é a tela da equipe |
 | Usuário e login | `/v1/usuarios` (6) | **Ninguém além do primeiro dono consegue entrar.** Criar acesso para a recepção exige chamada HTTP na mão |
 
 Este bloco é o que separa "o sistema roda" de "o salão consegue começar". Hoje, abrir um salão
@@ -139,9 +144,9 @@ da máquina, e o restante do caminho de deploy.
 
 ## Ordem sugerida
 
-1. **Cadastros** (equipe → catálogo → recursos → usuários). É o único bloco que impede o resto de
-   ser usado, e é pré-requisito do próprio teste de aceitação: sem profissional e serviço, não há
-   agenda nem comanda para exercitar.
+1. **Cadastros.** ~~Catálogo e recursos~~ (feitos em 24/09) → **equipe** → **usuários**. É o
+   único bloco que impede o resto de ser usado, e é pré-requisito do próprio teste de aceitação:
+   sem profissional com jornada, a agenda abre vazia mesmo com o cardápio pronto.
 2. **Financeiro** (extrato → vale → fechamento). É o que o dono olha toda semana.
 3. **Estoque** (produto → entrada → saldo).
 4. **Agenda: bloqueio e recorrência.**
