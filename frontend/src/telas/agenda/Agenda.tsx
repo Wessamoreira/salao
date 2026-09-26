@@ -1,14 +1,17 @@
 import { Esqueleto, Falha, Vazio } from '../../layout/Pagina';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
-  useAgendaDoDia, type Agendamento, type AgendaDoDia, type BlocoDoAgendamento,
+  useAgendaDoDia, useCancelar, useConfirmar, useReagendar, useRegistrarFalta, useRemoverBloqueio,
+  type Agendamento, type AgendaDoDia, type BlocoDoAgendamento,
 } from '../../api/agenda';
 import {
-  cargaEmMinutos, faixaDoDia, linhasDaGrade, pixelsPorMinuto, posicao, posicaoDoAgora,
-  rotuloDeCarga, rotuloDeHora, DENSIDADES, type Densidade, type FaixaDoDia,
+  cargaEmMinutos, faixaDoDia, instanteDoPixel, linhasDaGrade, periodoDoArrasto, pixelsPorMinuto,
+  posicao, posicaoDoAgora, rotuloDeCarga, rotuloDeHora, DENSIDADES,
+  type Densidade, type FaixaDoDia,
 } from './grade';
+import { PainelDoGesto, mensagem, type Pedido } from './Gesto';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useCapacidades } from '../../api/capacidades';
+import { pode, useCapacidades } from '../../api/capacidades';
 import { useVagasAbertas } from '../../api/fila';
 import { useConectado } from '../../pwa/conectado';
 import { diaCivil, ehDiaCivil, fusoDoNavegador, somarDias } from '../../layout/tempo';
@@ -134,6 +137,8 @@ export function Agenda() {
   const [parametros, definirParametros] = useSearchParams();
   const [escolhido, definirEscolhido] = useState<string | null>(null);
   const [densidade, definirDensidade] = useState<Densidade>(densidadeGuardada);
+  /* RT-AGD-013 — o que o arrasto desenhou, esperando a pergunta "o quê". */
+  const [pedidoDoGesto, definirPedidoDoGesto] = useState<Pedido | null>(null);
 
   /*
    * O dia é o dia do SALÃO, e ele está no endereço.
@@ -177,6 +182,8 @@ export function Agenda() {
   const extenso = porExtenso(data);
 
   const px = pixelsPorMinuto(densidade);
+  // A tela esconde o gesto de quem não escreve; o caso de uso é quem garante (inviolável nº 6).
+  const podeEscrever = pode(capacidades, 'agenda:write:all');
 
   const escolherDensidade = (nova: Densidade) => {
     definirDensidade(nova);
@@ -266,6 +273,8 @@ export function Agenda() {
                 profissional={profissional}
                 maiorCarga={maiorCarga(agenda)}
                 aoEscolher={definirEscolhido}
+                podeEscrever={podeEscrever}
+                aoPedir={definirPedidoDoGesto}
               />
             ))}
           </div>
@@ -275,8 +284,17 @@ export function Agenda() {
               nome={agenda.nomesDeClientes[
                 agenda.agendamentos.find((a) => a.id === escolhido)!.clienteId]}
               fuso={agenda.fuso}
+              podeEscrever={podeEscrever}
               aoFechar={() => definirEscolhido(null)}
             />
+          )}
+
+          {/* O painel do gesto fica por cima da grade, ancorado no lado do detalhe: os dois
+              nunca aparecem juntos, porque um nasce de arrastar no vazio e o outro de clicar
+              numa tarja. */}
+          {pedidoDoGesto && (
+            <PainelDoGesto pedido={pedidoDoGesto} fuso={agenda.fuso}
+              aoFechar={() => definirPedidoDoGesto(null)} />
           )}
         </div>
       )}
@@ -317,10 +335,32 @@ interface ColunaProps {
   profissional: { id: string; nome: string; apelido: string | null };
   maiorCarga: number;
   aoEscolher: (id: string) => void;
+  podeEscrever: boolean;
+  aoPedir: (pedido: Pedido) => void;
 }
 
 function Coluna({ agenda, faixa, altura, px, densidade, agora, profissional, maiorCarga,
-                  aoEscolher }: ColunaProps) {
+                  aoEscolher, podeEscrever, aoPedir }: ColunaProps) {
+  const pista = useRef<HTMLDivElement>(null);
+  const reagendar = useReagendar();
+  const removerBloqueio = useRemoverBloqueio();
+  /*
+   * A seleção mora na COLUNA, e o reagendamento na tela.
+   *
+   * Selecionar é sempre de uma pessoa só — marcar e bloquear são atos de uma agenda. Arrastar
+   * uma tarja atravessa colunas, e por isso precisa de um estado que as duas enxerguem. Subir a
+   * seleção junto faria a tela redesenhar a grade inteira a cada pixel de arrasto.
+   */
+  const [selecao, definirSelecao] = useState<{ a: number; b: number } | null>(null);
+  /* A tarja que está sendo arrastada, e para que pixel. */
+  const [movendo, definirMovendo] = useState<{ id: string; versao: number; topo: number } | null>(
+    null);
+
+  const topoDoPonteiro = (clientY: number) => {
+    const caixa = pista.current?.getBoundingClientRect();
+    return caixa ? clientY - caixa.top : 0;
+  };
+
   const meus = agenda.agendamentos.filter((a) => a.profissionalId === profissional.id);
   const carga = cargaEmMinutos(meus.filter(ocupaAGrade));
   const jornada = agenda.jornadas[profissional.id] ?? [];
@@ -341,7 +381,34 @@ function Coluna({ agenda, faixa, altura, px, densidade, agora, profissional, mai
         </span>
       </header>
 
-      <div className="agenda-pista" style={{ height: altura }}>
+      <div
+        ref={pista}
+        className={`agenda-pista${podeEscrever ? ' escrevivel' : ''}`}
+        style={{ height: altura }}
+        data-pista={profissional.id}
+        onPointerDown={(evento) => {
+          // Botão esquerdo e só no vazio: tarja e bloqueio param a propagação.
+          if (!podeEscrever || evento.button !== 0) return;
+          evento.currentTarget.setPointerCapture(evento.pointerId);
+          const topo = topoDoPonteiro(evento.clientY);
+          definirSelecao({ a: topo, b: topo });
+        }}
+        onPointerMove={(evento) => {
+          if (selecao) definirSelecao({ a: selecao.a, b: topoDoPonteiro(evento.clientY) });
+        }}
+        onPointerUp={(evento) => {
+          if (!selecao) return;
+          const periodo = periodoDoArrasto(selecao.a, topoDoPonteiro(evento.clientY), faixa,
+            agenda.data, agenda.fuso, px, densidade);
+          definirSelecao(null);
+          aoPedir({
+            profissionalId: profissional.id,
+            profissionalNome: profissional.apelido ?? profissional.nome,
+            ...periodo,
+          });
+        }}
+        onPointerCancel={() => definirSelecao(null)}
+      >
         {/* Fora da jornada primeiro: é fundo, e tudo o mais desenha por cima. */}
         <ForaDaJornada jornada={jornada} faixa={faixa} altura={altura} fuso={agenda.fuso}
           px={px} />
@@ -356,7 +423,22 @@ function Coluna({ agenda, faixa, altura, px, densidade, agora, profissional, mai
           .map((b) => {
             const { topo, altura: h } = posicao(b.janela.inicio, b.janela.fim, faixa,
               agenda.fuso, px);
-            return (
+            /*
+             * Remover bloqueio não pede confirmação; cancelar atendimento pede.
+             *
+             * Um bloqueio não tem ninguém do outro lado — errar custa um clique. Cancelar chega
+             * a uma cliente, e por isso exige motivo.
+             */
+            return podeEscrever ? (
+              <button key={b.id} type="button" className="agenda-bloco bloqueio"
+                style={{ top: topo, height: h }}
+                title={b.descricao ?? b.motivo}
+                aria-label={`Tirar o bloqueio de ${b.motivo.toLowerCase()}`}
+                onPointerDown={(evento) => evento.stopPropagation()}
+                onClick={() => removerBloqueio.mutate(b.id)}>
+                <span className="cliente">{b.motivo.toLowerCase()}</span>
+              </button>
+            ) : (
               <div key={b.id} className="agenda-bloco bloqueio"
                 style={{ top: topo, height: h }}
                 title={b.descricao ?? b.motivo}>
@@ -368,8 +450,50 @@ function Coluna({ agenda, faixa, altura, px, densidade, agora, profissional, mai
         {meus.flatMap((a) => a.blocos.map((bloco, i) => (
           <Tarja key={`${a.id}-${i}`} agendamento={a} bloco={bloco} faixa={faixa}
             fuso={agenda.fuso} px={px} nome={agenda.nomesDeClientes[a.clienteId]}
-            aoEscolher={aoEscolher} />
+            aoEscolher={aoEscolher}
+            /* Só o primeiro bloco arrasta: os demais são pausa e recurso do mesmo
+               atendimento, e arrastar a pausa moveria a coloração inteira por um pedaço
+               que a pessoa não reconhece como "o atendimento". */
+            aoArrastar={podeEscrever && i === 0
+              ? (evento) => {
+                evento.stopPropagation();
+                (evento.currentTarget as HTMLElement).setPointerCapture(evento.pointerId);
+                definirMovendo({ id: a.id, versao: a.versao,
+                  topo: topoDoPonteiro(evento.clientY) });
+              }
+              : undefined}
+            aoMover={movendo?.id === a.id
+              ? (evento) => definirMovendo({ ...movendo, topo: topoDoPonteiro(evento.clientY) })
+              : undefined}
+            aoSoltar={movendo?.id === a.id
+              ? (evento) => {
+                const inicio = instanteDoPixel(topoDoPonteiro(evento.clientY), faixa,
+                  agenda.data, agenda.fuso, px, densidade);
+                definirMovendo(null);
+                if (inicio !== a.inicio) {
+                  reagendar.mutate({ id: a.id, inicio, versao: a.versao });
+                }
+              }
+              : undefined}
+            arrastada={movendo?.id === a.id ? movendo.topo : null}
+          />
         )))}
+
+        {/* A recusa aparece com a frase do servidor, e a tarja já voltou sozinha: o arrasto é
+            otimista porque a agenda é uma tela de segundos, e otimista sem volta é mentira. */}
+        {reagendar.isError && (
+          <p className="agenda-recusa" role="alert">{mensagem(reagendar.error)}</p>
+        )}
+
+        {/* O período aparece enquanto se arrasta: arrastar às cegas é o que transforma um
+            gesto rápido num 409 e numa conversa (R-UX-06). */}
+        {selecao && (
+          <div className="agenda-selecao" aria-hidden="true"
+            style={{
+              top: Math.min(selecao.a, selecao.b),
+              height: Math.max(Math.abs(selecao.b - selecao.a), 12),
+            }} />
+        )}
 
         {topoDoAgora !== null && (
           <div className="agenda-agora" style={{ top: topoDoAgora }}
@@ -419,10 +543,17 @@ function ForaDaJornada({ jornada, faixa, altura, fuso, px }: {
  * hachura sem texto — a cliente está no salão e a profissional está livre —, e é isso
  * que permite ver o buraco de 40 minutos onde cabe um encaixe.
  */
-function Tarja({ agendamento, bloco, faixa, fuso, px, nome, aoEscolher }: {
+function Tarja({ agendamento, bloco, faixa, fuso, px, nome, aoEscolher,
+                aoArrastar, aoMover, aoSoltar, arrastada }: {
   agendamento: Agendamento; bloco: BlocoDoAgendamento;
   faixa: FaixaDoDia; fuso: string; px: number; nome?: string;
   aoEscolher: (id: string) => void;
+  /** Ausentes quando esta tarja não arrasta — sem permissão, ou não é o primeiro bloco. */
+  aoArrastar?: (evento: React.PointerEvent<HTMLElement>) => void;
+  aoMover?: (evento: React.PointerEvent<HTMLElement>) => void;
+  aoSoltar?: (evento: React.PointerEvent<HTMLElement>) => void;
+  /** O pixel para onde o ponteiro a levou; nulo quando não está sendo arrastada. */
+  arrastada: number | null;
 }) {
   const { topo, altura } = posicao(bloco.janela.inicio, bloco.janela.fim, faixa, fuso, px);
   const pausa = bloco.profissionalId === null;
@@ -436,8 +567,13 @@ function Tarja({ agendamento, bloco, faixa, fuso, px, nome, aoEscolher }: {
     );
   }
   return (
-    <button type="button" className={`agenda-bloco ${classe}`}
-      style={{ top: topo, height: altura }}
+    <button type="button"
+      className={`agenda-bloco ${classe}${arrastada !== null ? ' arrastando' : ''}`}
+      // Enquanto arrasta, a tarja segue o ponteiro: o destino aparece antes de soltar.
+      style={{ top: arrastada ?? topo, height: altura }}
+      onPointerDown={aoArrastar}
+      onPointerMove={aoMover}
+      onPointerUp={aoSoltar}
       onClick={() => aoEscolher(agendamento.id)}>
       <span className="hora">{hora}</span>{' '}
       <span className="cliente">{nome ?? 'cliente'}</span>
@@ -456,8 +592,16 @@ function Tarja({ agendamento, bloco, faixa, fuso, px, nome, aoEscolher }: {
  * 100 minutos, 60 são dela e 40 são química. É a diferença que decide se cabe um
  * encaixe, e é invisível na grade.
  */
-function Detalhe({ agendamento, nome, fuso, aoFechar }: {
-  agendamento: Agendamento; nome?: string; fuso: string; aoFechar: () => void;
+/**
+ * O detalhe, que agora também age.
+ *
+ * Confirmar e cancelar são os dois cliques mais frequentes da recepção, e estavam fora da grade
+ * — pendência de RT-AGD-011. Cada um leva a `versao` que a tela leu: se alguém mexeu antes, o
+ * servidor recusa em vez de sobrescrever.
+ */
+function Detalhe({ agendamento, nome, fuso, podeEscrever, aoFechar }: {
+  agendamento: Agendamento; nome?: string; fuso: string; podeEscrever: boolean;
+  aoFechar: () => void;
 }) {
   const duracao = agendamento.blocos.reduce((soma, b) => soma
     + (new Date(b.janela.fim).getTime() - new Date(b.janela.inicio).getTime()) / 60000, 0);
@@ -477,6 +621,91 @@ function Detalhe({ agendamento, nome, fuso, aoFechar }: {
         <dt>Da agenda</dt>
         <dd>{rotuloDeCarga(agendamento.minutosDoProfissional)}</dd>
       </dl>
+
+      {podeEscrever && <AcoesDoAtendimento agendamento={agendamento} aoFechar={aoFechar} />}
     </aside>
+  );
+}
+
+/** Termina o que já acabou de um jeito ou de outro: não há o que fazer com um cancelado. */
+function podeAgir(status: string): boolean {
+  return status === 'SOLICITADO' || status === 'CONFIRMADO';
+}
+
+function AcoesDoAtendimento({ agendamento, aoFechar }: {
+  agendamento: Agendamento; aoFechar: () => void;
+}) {
+  const confirmar = useConfirmar();
+  const cancelar = useCancelar();
+  const falta = useRegistrarFalta();
+  const [cancelando, definirCancelando] = useState(false);
+  const [motivo, definirMotivo] = useState('');
+  const [pelaCliente, definirPelaCliente] = useState(true);
+
+  if (!podeAgir(agendamento.status)) return null;
+
+  const erro = confirmar.error ?? cancelar.error ?? falta.error;
+
+  return (
+    <div className="agenda-detalhe-acoes">
+      {!cancelando && (
+        <div className="agenda-detalhe-botoes">
+          {agendamento.status === 'SOLICITADO' && (
+            <button type="button" className="pagina-acao principal"
+              disabled={confirmar.isPending}
+              onClick={() => confirmar.mutate(
+                { id: agendamento.id, versao: agendamento.versao })}>
+              {confirmar.isPending ? 'Confirmando…' : 'Confirmar'}
+            </button>
+          )}
+          <button type="button" className="pagina-acao discreta"
+            onClick={() => definirCancelando(true)}>Cancelar</button>
+          {/* Sem motivo, ao contrário do cancelamento: o motivo da falta é a própria ausência. */}
+          <button type="button" className="pagina-acao discreta" disabled={falta.isPending}
+            onClick={() => falta.mutate({ id: agendamento.id, versao: agendamento.versao },
+              { onSuccess: aoFechar })}>
+            {falta.isPending ? 'Registrando…' : 'Não veio'}
+          </button>
+        </div>
+      )}
+
+      {cancelando && (
+        <form
+          aria-label="Cancelar o atendimento"
+          onSubmit={(evento) => {
+            evento.preventDefault();
+            cancelar.mutate(
+              { id: agendamento.id, versao: agendamento.versao, motivo: motivo.trim(),
+                pelaCliente },
+              { onSuccess: aoFechar });
+          }}
+        >
+          <label className="agd-campo">
+            <span>Por que está sendo cancelado</span>
+            <input value={motivo} autoFocus placeholder="a cliente remarcou para sexta"
+              onChange={(e) => definirMotivo(e.target.value)} />
+          </label>
+          <label className="agd-repetir">
+            <input type="checkbox" checked={pelaCliente}
+              onChange={(e) => definirPelaCliente(e.target.checked)} />
+            <span>Quem desmarcou foi a cliente</span>
+          </label>
+          <p className="agd-ajuda">
+            O motivo fica no histórico dela — é ele que sustenta a conversa sobre quem desmarca
+            demais.
+          </p>
+          <div className="agenda-detalhe-botoes">
+            <button type="submit" className="pagina-acao principal"
+              disabled={motivo.trim() === '' || cancelar.isPending}>
+              {cancelar.isPending ? 'Cancelando…' : 'Cancelar o atendimento'}
+            </button>
+            <button type="button" className="pagina-acao discreta"
+              onClick={() => definirCancelando(false)}>Voltar</button>
+          </div>
+        </form>
+      )}
+
+      {erro && <p className="erro" role="alert">{mensagem(erro)}</p>}
+    </div>
   );
 }

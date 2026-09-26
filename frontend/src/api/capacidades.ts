@@ -67,7 +67,15 @@ export function useCapacidades() {
   });
 }
 
-/** Pergunta por permissão, nunca por perfil. */
+/**
+ * Pergunta por permissão, nunca por perfil.
+ *
+ * O `?.` no **segundo** ponto não é excesso: `capacidades` sem `permissoes` — um backend de
+ * antes do campo, uma resposta pela metade — derrubava a tela inteira com
+ * `undefined.includes`. É a mesma lição de `grupos` na casca: um campo que o front usa para
+ * decidir o que desenhar não pode derrubar o que ele desenha. Sem permissão conhecida, a
+ * resposta é "não pode", que é o lado seguro.
+ */
 export function pode(capacidades: Capacidades | undefined, permissao: string): boolean {
-  return capacidades?.permissoes.includes(permissao) ?? false;
+  return capacidades?.permissoes?.includes(permissao) ?? false;
 }

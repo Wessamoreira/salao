@@ -150,6 +150,7 @@
 /* ------------------------------------------------------------------ colunas */
 
 .agenda-corpo {
+  position: relative;
   display: flex;
   flex-grow: 1;
   min-height: 0;
@@ -550,3 +551,182 @@
 @media (prefers-reduced-motion: reduce) {
   .agenda-corpo.trocando { transition: none; }
 }
+
+/* ==================================================================== o gesto
+ *
+ * RT-AGD-013 — arrastar na grade.
+ *
+ * A pista só ganha cursor de seleção para quem escreve: um cursor que promete um gesto que o
+ * servidor vai recusar é pior do que nenhum.
+ */
+
+.agenda-pista.escrevivel { cursor: crosshair; touch-action: none; }
+.agenda-pista.escrevivel .agenda-bloco { cursor: pointer; }
+
+/* O período desenhado enquanto o dedo está na tela. Tinta, não cor de status: ainda não é
+   nada — nem atendimento, nem bloqueio. */
+.agenda-selecao {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  background: var(--papel-afundado);
+  border: 1px dashed var(--tinta-fraca);
+  border-radius: var(--raio-1);
+  pointer-events: none;
+}
+
+.agenda-bloco.arrastando {
+  z-index: 3;
+  opacity: 0.85;
+  box-shadow: var(--sombra-2, 0 6px 16px rgb(0 0 0 / 12%));
+}
+
+.agenda-recusa {
+  position: absolute;
+  z-index: 4;
+  right: 4px;
+  bottom: 4px;
+  left: 4px;
+  margin: 0;
+  padding: var(--e-2);
+  background: var(--status-falta-fundo);
+  border-left: 2px solid var(--status-falta);
+  border-radius: var(--raio-1);
+  font-size: var(--t-11);
+}
+
+/* ------------------------------------------------------------------ o painel do gesto */
+
+/*
+ * O painel ancora na GRADE, e é por isso que `.agenda-corpo` ganhou `position: relative`.
+ *
+ * Sem isso ele subia para o canto da página, flutuando acima do cabeçalho e longe do horário
+ * que o gesto acabou de desenhar — o que torna a resposta à pergunta "deste horário?" impossível
+ * de ler junto com a pergunta.
+ */
+.agd-gesto {
+  position: absolute;
+  z-index: 5;
+  top: var(--e-4);
+  right: var(--e-4);
+  width: min(360px, calc(100% - var(--e-6)));
+  padding: var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--tinta-tenue);
+  border-radius: var(--raio-2);
+  box-shadow: var(--sombra-2, 0 10px 30px rgb(0 0 0 / 14%));
+}
+.agd-gesto > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--e-3);
+  margin-bottom: var(--e-3);
+  padding-bottom: var(--e-3);
+  border-bottom: 1px solid var(--regua);
+}
+.agd-gesto > header strong { font-size: var(--t-14); font-variant-numeric: tabular-nums; }
+.agd-gesto > header p { margin: 2px 0 0; color: var(--tinta-fraca); font-size: var(--t-12); }
+
+.agd-gesto-fechar {
+  padding: 0 var(--e-1);
+  color: var(--tinta-fraca);
+  background: transparent;
+  border: 0;
+  font-size: var(--t-16);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.agd-gesto-escolha,
+.agd-gesto-forma { display: flex; flex-direction: column; gap: var(--e-3); }
+.agd-gesto-acoes { display: flex; flex-wrap: wrap; gap: var(--e-2); }
+
+.agd-campo { display: flex; flex-direction: column; gap: 4px; font-size: var(--t-12); position: relative; }
+.agd-campo > span { color: var(--tinta-fraca); }
+.agd-campo input,
+.agd-campo select {
+  min-height: 34px;
+  padding: 0 var(--e-2);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-14);
+}
+.agd-campo.agd-atencao > span { color: var(--tinta); }
+.agd-campo.agd-atencao input { border-color: var(--status-solicitado); }
+
+.agd-achados {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--e-1) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.agd-achados button {
+  width: 100%;
+  padding: var(--e-2);
+  color: var(--tinta);
+  background: var(--papel-fundo);
+  border: 1px solid var(--regua);
+  border-radius: var(--raio-1);
+  font: inherit;
+  font-size: var(--t-13);
+  text-align: left;
+  cursor: pointer;
+}
+.agd-achados button:hover { background: var(--papel-afundado); }
+
+.agd-escolhido {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e-2);
+  margin: 0;
+  font-size: var(--t-14);
+}
+
+.agd-repetir { display: inline-flex; align-items: center; gap: var(--e-2); font-size: var(--t-13); }
+.agd-serie { display: flex; flex-wrap: wrap; gap: var(--e-3); }
+.agd-serie .agd-campo { flex: 1 1 130px; }
+
+.agd-ajuda { margin: 0; color: var(--tinta-fraca); font-size: var(--t-12); line-height: 1.5; }
+
+.agd-nao-couberam {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agd-nao-couberam > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-2);
+  padding: var(--e-1) var(--e-2);
+  background: var(--status-solicitado-fundo);
+  border-left: 2px solid var(--status-solicitado);
+  font-size: var(--t-12);
+  font-variant-numeric: tabular-nums;
+}
+.agd-marca {
+  color: var(--tinta-fraca);
+  font-size: var(--t-10);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+
+/* ------------------------------------------------------------------ o detalhe que age */
+
+.agenda-detalhe-acoes {
+  margin-top: var(--e-3);
+  padding-top: var(--e-3);
+  border-top: 1px solid var(--regua);
+}
+.agenda-detalhe-acoes form { display: flex; flex-direction: column; gap: var(--e-3); }
+.agenda-detalhe-botoes { display: flex; flex-wrap: wrap; gap: var(--e-2); }

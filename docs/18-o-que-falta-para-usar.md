@@ -76,7 +76,8 @@ Cada tela da fase 7 derruba esse número; ele é o placar:
 | RT-EQP-005 · 24/09 | `/v1/profissionais` (+ editar), `/v1/bloqueios-de-jornada` | 41 de 146 (28%) |
 | RT-IAM-009 · 25/09 | `/v1/usuarios` (+ editar e senha), `/v1/perfis`, `/v1/me/senha` | 34 de 150 (23%) |
 | RT-EST-013 · 26/09 | `/v1/produtos` inteiro, `/v1/lotes`, `/v1/inventarios` | 13 de 159 (8%) |
-| RT-FIN-013 · 26/09 | `/v1/extratos`, `/v1/vales`, `/v1/fechamentos`, `/v1/lancamentos` | **5 de 160 (3%)** |
+| RT-FIN-013 · 26/09 | `/v1/extratos`, `/v1/vales`, `/v1/fechamentos`, `/v1/lancamentos` | 5 de 160 (3%) |
+| RT-AGD-013 · 26/09 | `/v1/bloqueios-de-agenda`, `/v1/recorrencias`, as escritas da agenda | **2 de 160 (1%)** |
 
 **Nenhuma área do sistema diz mais "em breve".** `SemTela` foi apagada: ela existia para as duas
 áreas que o servidor sabia fazer e o front não alcançava, e as duas ganharam tela.

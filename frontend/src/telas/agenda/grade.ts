@@ -143,3 +143,72 @@ export function rotuloDeCarga(minutos: number): string {
   const resto = minutos % 60;
   return `${horas}h${String(resto).padStart(2, '0')}`;
 }
+
+/**
+ * O caminho inverso: de pixel para instante.
+ *
+ * É o que faz o arrasto virar horário (RT-AGD-013). Mora aqui, junto do cálculo que desenha,
+ * porque as duas direções precisam concordar — se `posicao` e isto discordarem em um passo, a
+ * tarja é desenhada num lugar e gravada em outro, e ninguém percebe até a cliente chegar.
+ *
+ * O resultado é **preso ao passo da densidade**: numa grade de trinta minutos não existe 14h07,
+ * e deixar o pixel decidir produziria horários que a recepção não escolheu e não consegue
+ * repetir.
+ */
+export function instanteDoPixel(topo: number, faixa: FaixaDoDia, dia: string, fuso: string,
+                                px: number, densidade: Densidade): string {
+  const passo = DENSIDADES[densidade];
+  const minutosNaPista = Math.max(0, topo) / px;
+  const absoluto = faixa.primeiraHora * 60 + minutosNaPista;
+  const preso = Math.round(absoluto / passo) * passo;
+  return instanteLocal(dia, preso, fuso);
+}
+
+/**
+ * O período que o arrasto desenhou, na ordem certa e com pelo menos um passo.
+ *
+ * Arrastar para cima é tão natural quanto para baixo, e um período invertido seria recusado pelo
+ * domínio (`Janela` exige fim depois do início) com um erro que não diz nada a quem só arrastou
+ * no sentido contrário. Um clique sem arrasto vira um passo — que é o que a pessoa quis dizer.
+ */
+export function periodoDoArrasto(topoA: number, topoB: number, faixa: FaixaDoDia, dia: string,
+                                 fuso: string, px: number, densidade: Densidade)
+  : { inicio: string; fim: string } {
+  const de = Math.min(topoA, topoB);
+  const ate = Math.max(topoA, topoB);
+  const umPasso = DENSIDADES[densidade] * px;
+  return {
+    inicio: instanteDoPixel(de, faixa, dia, fuso, px, densidade),
+    fim: instanteDoPixel(Math.max(ate, de + umPasso), faixa, dia, fuso, px, densidade),
+  };
+}
+
+/**
+ * O instante UTC que, lido no fuso do salão, é este dia nestes minutos.
+ *
+ * Duas passadas de propósito: o deslocamento do fuso depende do instante, e o instante depende do
+ * deslocamento. Uma passada erra em uma hora nos dois domingos do ano em que o relógio muda — e
+ * errar uma hora na agenda de um domingo de mudança é exatamente o tipo de defeito que ninguém
+ * reproduz depois.
+ */
+function instanteLocal(dia: string, minutos: number, fuso: string): string {
+  const [ano, mes, d] = dia.split('-').map(Number);
+  const comoSeFosseUtc = Date.UTC(ano, mes - 1, d, 0, minutos);
+  let instante = comoSeFosseUtc - deslocamentoEm(new Date(comoSeFosseUtc), fuso);
+  instante = comoSeFosseUtc - deslocamentoEm(new Date(instante), fuso);
+  return new Date(instante).toISOString();
+}
+
+/** Quanto o fuso do salão está adiantado em relação ao UTC, naquele instante, em milissegundos. */
+function deslocamentoEm(quando: Date, fuso: string): number {
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: fuso, hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(quando);
+  const p = Object.fromEntries(partes.map((x) => [x.type, x.value]));
+  // `% 24`: com `hour12: false` a meia-noite sai como "24" em alguns motores.
+  const lidoComoUtc = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day),
+    Number(p.hour) % 24, Number(p.minute), Number(p.second));
+  return lidoComoUtc - quando.getTime();
+}

@@ -195,3 +195,146 @@ export function usePainel() {
 
   return consulta;
 }
+
+// ------------------------------------------------------------------ RT-AGD-013
+
+export type MotivoDoBloqueio = 'ALMOCO' | 'FERIAS' | 'CURSO' | 'FERIADO' | 'PESSOAL'
+  | 'MANUTENCAO';
+
+export type Frequencia = 'SEMANAL' | 'QUINZENAL';
+
+export interface SerieCriada {
+  recorrencia: { id: string };
+  agendamentos: string[];
+  /** Os instantes que não couberam, na ordem em que teriam acontecido. */
+  naoCouberam: string[];
+}
+
+/** Toda escrita da grade invalida o dia inteiro: mover libera um horário e ocupa outro. */
+function aoEscrever(fila: ReturnType<typeof useQueryClient>) {
+  return () => { void fila.invalidateQueries({ queryKey: ['agenda'] }); };
+}
+
+export interface NovoAgendamento {
+  clienteId: string;
+  profissionalId: string;
+  servicoId: string;
+  inicio: string;
+  /** Quando o servidor recusa por estar fora da jornada, a tela pergunta e reenvia com isto. */
+  forcarForaJornada?: boolean;
+  justificativa?: string;
+}
+
+/**
+ * Marcar pela grade.
+ *
+ * `origem: PAINEL` sempre — marcar pela grade **é** marcar pelo balcão, e é a origem que decide
+ * o status inicial (RN-AGD-013). Um seletor de origem aqui só produziria origem errada.
+ */
+export function useCriarAgendamento() {
+  const fila = useQueryClient();
+  return useMutation({
+    mutationFn: (dados: NovoAgendamento) =>
+      api<Agendamento>('/v1/agendamentos', {
+        method: 'POST', body: JSON.stringify({ ...dados, origem: 'PAINEL' }),
+      }),
+    onSuccess: aoEscrever(fila),
+  });
+}
+
+/** RT-AGD-009 — a cliente que vem toda semana. A resposta traz o que não coube. */
+export function useCriarSerie() {
+  const fila = useQueryClient();
+  return useMutation({
+    mutationFn: (dados: NovoAgendamento & { frequencia: Frequencia; quantidade: number }) =>
+      api<SerieCriada>('/v1/recorrencias', {
+        method: 'POST',
+        body: JSON.stringify({
+          clienteId: dados.clienteId, profissionalId: dados.profissionalId,
+          servicoId: dados.servicoId, primeiroInicio: dados.inicio,
+          frequencia: dados.frequencia, quantidade: dados.quantidade,
+        }),
+      }),
+    onSuccess: aoEscrever(fila),
+  });
+}
+
+/** RT-AGD-010 — um dia que não coube vai para a fila, um por vez. */
+export function usePorDiaNaFila(recorrenciaId: string) {
+  const fila = useQueryClient();
+  return useMutation({
+    mutationFn: (dia: string) =>
+      api<{ id: string }>(`/v1/recorrencias/${recorrenciaId}/fila-de-espera`, {
+        method: 'POST', body: JSON.stringify({ dia }),
+      }),
+    onSuccess: aoEscrever(fila),
+  });
+}
+
+export function useConfirmar() {
+  const fila = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, versao }: { id: string; versao: number }) =>
+      api<Agendamento>(`/v1/agendamentos/${id}/confirmacao`, {
+        method: 'PATCH', body: JSON.stringify({ versao, pelaCliente: false }),
+      }),
+    onSuccess: aoEscrever(fila),
+  });
+}
+
+/** O motivo é obrigatório: é ele que sustenta a conversa sobre quem desmarca demais. */
+export function useCancelar() {
+  const fila = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, versao, motivo, pelaCliente }: {
+      id: string; versao: number; motivo: string; pelaCliente: boolean;
+    }) =>
+      api<Agendamento>(`/v1/agendamentos/${id}/cancelamento`, {
+        method: 'PATCH', body: JSON.stringify({ versao, motivo, pelaCliente }),
+      }),
+    onSuccess: aoEscrever(fila),
+  });
+}
+
+/** Sem motivo, ao contrário do cancelamento: o motivo da falta é a própria ausência. */
+export function useRegistrarFalta() {
+  const fila = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, versao }: { id: string; versao: number }) =>
+      api<Agendamento>(`/v1/agendamentos/${id}/falta`, {
+        method: 'PATCH', body: JSON.stringify({ versao }),
+      }),
+    onSuccess: aoEscrever(fila),
+  });
+}
+
+export function useBloquear() {
+  const fila = useQueryClient();
+  return useMutation({
+    mutationFn: (dados: {
+      profissionalId: string; motivo: MotivoDoBloqueio; descricao: string | null;
+      inicio: string; fim: string;
+    }) => api<BloqueioDaGrade>('/v1/bloqueios-de-agenda', {
+      method: 'POST', body: JSON.stringify(dados),
+    }),
+    onSuccess: aoEscrever(fila),
+  });
+}
+
+export function useRemoverBloqueio() {
+  const fila = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api<void>(`/v1/bloqueios-de-agenda/${id}`, { method: 'DELETE' }),
+    onSuccess: aoEscrever(fila),
+  });
+}
+
+export const MOTIVOS_DO_BLOQUEIO: Array<{ valor: MotivoDoBloqueio; rotulo: string }> = [
+  { valor: 'PESSOAL', rotulo: 'Compromisso pessoal' },
+  { valor: 'ALMOCO', rotulo: 'Almoço' },
+  { valor: 'CURSO', rotulo: 'Curso' },
+  { valor: 'FERIAS', rotulo: 'Férias' },
+  { valor: 'FERIADO', rotulo: 'Feriado' },
+  { valor: 'MANUTENCAO', rotulo: 'Manutenção' },
+];

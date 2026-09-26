@@ -93,7 +93,9 @@ window.fetch = (async (entrada: RequestInfo | URL) => {
   const url = String(entrada);
   const corpo = url.includes('/me/capabilities')
     ? { estabelecimento: { id: 'e1', nome: 'Studio Marilda', timezone: 'America/Sao_Paulo',
-        moeda: 'BRL' }, permissoes: [], grupos: [], menus: [],
+        moeda: 'BRL', periodicidadeDeFechamento: 'MENSAL' },
+        // RT-AGD-013 — com a permissão de escrever, a prévia mostra o gesto.
+        permissoes: ['agenda:read:all', 'agenda:write:all'], grupos: [], menus: [],
         flags: { podeAgendarParaOutros: true }, limites: {} }
     : url.includes('/vagas-abertas') ? VAGAS : RESPOSTA;
   return {

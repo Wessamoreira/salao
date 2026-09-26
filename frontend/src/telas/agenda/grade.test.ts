@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  cargaEmMinutos, faixaDoDia, horaLocal, linhasDaGrade, pixelsPorMinuto, posicao, posicaoDoAgora,
-  rotuloDeCarga, rotuloDeHora, ALTURA_DA_LINHA, DENSIDADES,
+  cargaEmMinutos, faixaDoDia, horaLocal, instanteDoPixel, linhasDaGrade, periodoDoArrasto,
+  pixelsPorMinuto, posicao, posicaoDoAgora, rotuloDeCarga, rotuloDeHora, ALTURA_DA_LINHA,
+  DENSIDADES,
 } from './grade';
 
 /** A régua de sempre: 30 minutos por linha, 1.4px por minuto. */
@@ -168,5 +169,74 @@ describe('densidade da grade', () => {
   it('na compacta toda linha é hora cheia — menos traço, mesmo desenho', () => {
     expect(linhasDaGrade(faixa, 'compacta').every((l) => l.cheia)).toBe(true);
     expect(linhasDaGrade(faixa, 'ampla').filter((l) => l.cheia)).toHaveLength(13);
+  });
+});
+
+describe('do pixel para o instante — RT-AGD-013', () => {
+  const faixa = { primeiraHora: 8, ultimaHora: 20 };
+  const px = pixelsPorMinuto('padrao');
+
+  it('o topo da pista é a primeira hora da faixa', () => {
+    expect(instanteDoPixel(0, faixa, '2026-09-26', 'America/Sao_Paulo', px, 'padrao'))
+      .toBe('2026-09-26T11:00:00.000Z');
+  });
+
+  it('prende ao passo da densidade: numa grade de 30 minutos não existe 14h07', () => {
+    // Deixar o pixel decidir produziria horários que a recepção não escolheu e não repete.
+    const umPoucoDepoisDas14 = (14 - 8) * 60 * px + 7 * px;
+
+    expect(instanteDoPixel(umPoucoDepoisDas14, faixa, '2026-09-26', 'America/Sao_Paulo',
+      px, 'padrao')).toBe('2026-09-26T17:00:00.000Z');
+  });
+
+  it('a densidade ampla admite o quarto de hora', () => {
+    const pxAmplo = pixelsPorMinuto('ampla');
+    const quinzeDepoisDas14 = (14 - 8) * 60 * pxAmplo + 15 * pxAmplo;
+
+    expect(instanteDoPixel(quinzeDepoisDas14, faixa, '2026-09-26', 'America/Sao_Paulo',
+      pxAmplo, 'ampla')).toBe('2026-09-26T17:15:00.000Z');
+  });
+
+  it('ida e volta batem: o que `posicao` desenha, `instanteDoPixel` devolve', () => {
+    // Se as duas direções discordassem em um passo, a tarja seria desenhada num lugar e gravada
+    // em outro — e ninguém perceberia até a cliente chegar.
+    const inicio = '2026-09-26T17:30:00.000Z';
+    const { topo } = posicao(inicio, '2026-09-26T18:00:00.000Z', faixa,
+      'America/Sao_Paulo', px);
+
+    expect(instanteDoPixel(topo, faixa, '2026-09-26', 'America/Sao_Paulo', px, 'padrao'))
+      .toBe(inicio);
+  });
+
+  it('acerta o fuso de Manaus, que não é o do servidor nem o do navegador', () => {
+    expect(instanteDoPixel(0, faixa, '2026-09-26', 'America/Manaus', px, 'padrao'))
+      .toBe('2026-09-26T12:00:00.000Z');
+  });
+});
+
+describe('o período do arrasto', () => {
+  const faixa = { primeiraHora: 8, ultimaHora: 20 };
+  const px = pixelsPorMinuto('padrao');
+  const arrastar = (a: number, b: number) =>
+    periodoDoArrasto(a, b, faixa, '2026-09-26', 'America/Sao_Paulo', px, 'padrao');
+
+  it('arrastar para baixo devolve o período na ordem em que foi desenhado', () => {
+    const duasHoras = arrastar(0, 4 * ALTURA_DA_LINHA);
+
+    expect(duasHoras.inicio).toBe('2026-09-26T11:00:00.000Z');
+    expect(duasHoras.fim).toBe('2026-09-26T13:00:00.000Z');
+  });
+
+  it('arrastar para CIMA devolve a mesma coisa, não um período invertido', () => {
+    // Um período invertido seria recusado pelo domínio com um erro que não diz nada a quem só
+    // arrastou no sentido contrário.
+    expect(arrastar(4 * ALTURA_DA_LINHA, 0)).toEqual(arrastar(0, 4 * ALTURA_DA_LINHA));
+  });
+
+  it('clicar sem arrastar vale um passo, que é o que a pessoa quis dizer', () => {
+    const clique = arrastar(0, 0);
+
+    expect(clique.inicio).toBe('2026-09-26T11:00:00.000Z');
+    expect(clique.fim).toBe('2026-09-26T11:30:00.000Z');
   });
 });

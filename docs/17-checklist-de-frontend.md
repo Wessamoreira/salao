@@ -513,6 +513,35 @@ Duas decisões desta tela que valem para as próximas:
 E o `plural` que eu tinha escrito no estoque apareceu de novo aqui, dois dias depois. Virou
 `layout/plural.ts` — "1 pessoa(s)" é o jeito de não decidir, e quem lê é que paga.
 
+## Faixa 9 — a agenda passou a escrever
+
+`/agenda` (RT-AGD-013, 26/09). Era a tela que a recepção deixa aberta o dia inteiro e **só lia**.
+
+Dois defeitos reais, e nenhum veio da rodada de mutação (13 de 13 mortas):
+
+1. **`pode()` derrubava a tela inteira** quando as capacidades chegavam sem o campo de
+   permissões: `capacidades?.permissoes.includes` tem o `?.` no primeiro ponto e não no segundo.
+   É exatamente a lição de `grupos` registrada na faixa anterior — *um campo que o front usa para
+   decidir o que desenhar não pode derrubar o que ele desenha*. A casca tinha aprendido; `pode`
+   não. Quem achou foi o teste que já existia, ao ver a tela sumir.
+2. **O painel do gesto ancorava na página, não na grade** (`.agenda-corpo` era `static`): ele
+   subia para o canto superior da tela, longe do horário que o gesto acabou de desenhar. Achado
+   na prévia.
+
+E um engano de teste que se repetiu duas vezes na mesma hora: **`fireEvent` é síncrono e a
+escrita sai num microtask.** A asserção "não escreveu nada" passava mesmo quando escrevia. Onde o
+teste afirma uma ausência depois de um `fireEvent`, ele precisa esperar o microtask — senão está
+provando o relógio, não o código.
+
+Três decisões que ficam:
+
+- **o gesto define o período; o painel pergunta só o quê.** Seis campos obrigatórios fariam a
+  recepção voltar para o papel;
+- **arrastar define o início; a duração é do serviço.** Um arrasto torto não pode virar uma
+  coloração de vinte minutos — e a tela mostra em que hora termina, para a diferença ser visível;
+- **remover bloqueio não pede confirmação; cancelar atendimento pede.** Um tem ninguém do outro
+  lado; o outro chega a uma cliente.
+
 ## O que isto NÃO propõe mudar
 
 A direção de `16-design-system.md` está certa e continua valendo: back-office neutro, cor só onde
