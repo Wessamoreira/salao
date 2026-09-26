@@ -847,3 +847,28 @@ só para "está perto de vencer" em todo o sistema.
 **Rotinas.** RT-EST-012 · **Teste.** `QueimaDeVencimentoTest.janela`, `.vencido_fica_de_fora`,
 `QueimaDeVencimentoIT.fora_da_janela`, `.vencido_nao_queima`, `.lote_mais_proximo`, `.sem_validade`
 **Configurável?** Não · **Origem.** 2026-09-21, decisão do dono
+
+---
+
+### RN-EST-040 — A contagem aberta se reencontra sem guardar o id
+
+**Enunciado.** Existe no máximo uma contagem aberta por salão, e ela é consultável **sem o id** —
+`GET /v1/inventarios/aberto`. Sem contagem aberta a resposta é `204`, não erro.
+
+**Motivo.** O banco já garantia a unicidade (índice único parcial, V46), e a única forma de
+alcançar um inventário era pelo `id` que `abrir` devolveu. Perder esse `id` — fechar a aba, trocar
+de máquina, o celular descarregar no meio do depósito — deixava o salão com uma contagem aberta que
+**ninguém conseguia consultar, aplicar nem cancelar**, e sem poder abrir outra, porque o índice
+recusa a segunda. Um beco sem saída permanente, com saída só por `update` no banco.
+
+Contagem de salão leva horas e é feita andando. Supor que a aba sobrevive a isso é supor errado.
+
+A rota devolve `204` e não `404` porque "não há contagem aberta" é uma resposta, não uma rota
+inexistente; e não um envelope `{"aberto": null}`, que obrigaria a tela a desembrulhar em toda
+leitura para descobrir a mesma coisa.
+
+**Onde é garantida.** `InventariosJdbc.aberto` (sob RLS, filtrando `status = 'ABERTO'`) ·
+`ConsultarInventarioAbertoUseCase` · índice único parcial de `V46`.
+**Rotinas.** RT-EST-013 · **Teste.** `TelaDeEstoqueIT.acha_a_contagem_aberta_sem_o_id`,
+`.sem_contagem_aberta_devolve_vazio`, `.aplicar_libera_o_proximo`
+**Configurável?** Não · **Origem.** 2026-09-26

@@ -6,24 +6,30 @@ import './sem-tela.css';
 /**
  * A área que o servidor já sabe fazer e que ainda não tem tela.
  *
+ * <h2>Sobrou uma</h2>
+ *
+ * Eram duas até 26/09; o estoque ganhou a dele (RT-EST-013). O tipo estreitou junto — uma união
+ * com um membro só é feia e é honesta, e o dia em que ela virar `never` é o dia de apagar esta
+ * tela inteira.
+ *
  * <h2>O texto anterior mentia</h2>
  *
  * Ele dizia "esta área chega com a rotina RT-EST-001" — e RT-EST-001 tinha sido entregue
  * semanas antes. Quem lia concluía que o estoque inteiro estava por fazer, quando o que falta
- * é **a tela**: doze rotinas de estoque e doze de financeiro estão implementadas e testadas no
- * servidor (`18-o-que-falta-para-usar.md`).
+ * é **a tela**: doze rotinas de financeiro estão implementadas e testadas no servidor
+ * (`18-o-que-falta-para-usar.md`).
  *
  * Nomear a rotina errada é pior do que não nomear nenhuma: manda procurar no lugar errado.
  *
  * <h2>Três coisas, nesta ordem</h2>
  *
  * O que já existe — para não parecer que o assunto está por começar. **O que dá para fazer
- * hoje**, com o caminho, porque quase sempre dá: produto se vende na comanda e o estoque baixa
- * sozinho. E o que esta tela vai trazer, com a rotina certa.
+ * hoje**, com o caminho, porque quase sempre dá: a comanda já recebe, dá desconto e apura
+ * comissão. E o que esta tela vai trazer, com a rotina certa.
  *
  * O meio é o que importa: uma tela vazia que só se desculpa desperdiça a visita.
  */
-export function SemTela({ area }: { area: 'estoque' | 'financeiro' }) {
+export function SemTela({ area }: { area: 'financeiro' }) {
   const { data: capacidades } = useCapacidades();
   const conteudo = CONTEUDO[area];
 
@@ -76,27 +82,7 @@ interface Conteudo {
   rotina: string;
 }
 
-const CONTEUDO: Record<'estoque' | 'financeiro', Conteudo> = {
-  estoque: {
-    icone: 'caixa',
-    titulo: 'O estoque funciona — falta a tela dele',
-    existe: 'Produto, entrada de lote com validade, saldo e custo médio, baixa FEFO, perda e '
-      + 'ajuste, inventário, código de barras e alerta de mínimo estão entregues e testados no '
-      + 'servidor. O que não existe ainda é por onde fazer isso com o dedo.',
-    hoje: [
-      { rota: '/comandas', acao: 'Vender produto na comanda',
-        detalhe: 'a baixa acontece no fechamento, do lote que vence primeiro' },
-      { rota: '/precos', acao: 'Ver e aplicar sugestão de preço',
-        detalhe: 'margem mínima, encalhe e queima de vencimento' },
-    ],
-    falta: [
-      'Cadastrar produto e definir o que é venda e o que é consumo interno',
-      'Dar entrada de lote, com custo e validade',
-      'Ver saldo, custo médio e o que está por vencer',
-      'Fazer inventário e ajustar a contagem',
-    ],
-    rotina: 'RT-EST-013',
-  },
+const CONTEUDO: Record<'financeiro', Conteudo> = {
   financeiro: {
     icone: 'cifrao',
     titulo: 'O financeiro funciona — falta a tela dele',

@@ -7,6 +7,7 @@ import br.com.salao.estoque.internal.application.DefinirPrecoDeVendaUseCase;
 import br.com.salao.estoque.internal.application.AbrirInventarioUseCase;
 import br.com.salao.estoque.internal.application.AplicarInventarioUseCase;
 import br.com.salao.estoque.internal.application.CancelarInventarioUseCase;
+import br.com.salao.estoque.internal.application.ConsultarInventarioAbertoUseCase;
 import br.com.salao.estoque.internal.application.ConsultarInventarioUseCase;
 import br.com.salao.estoque.internal.application.ContarLoteUseCase;
 import br.com.salao.estoque.internal.application.ConsultarFichaUseCase;
@@ -158,6 +159,12 @@ public class EstoqueConfig {
     public ContarLoteUseCase contarLoteUseCase(InventariosJdbc inventarios, LotesJdbc lotes,
                                                Relogio relogio) {
         return new ContarLoteUseCase(inventarios, lotes, relogio);
+    }
+
+    @Bean
+    public ConsultarInventarioAbertoUseCase consultarInventarioAbertoUseCase(
+            InventariosJdbc inventarios) {
+        return new ConsultarInventarioAbertoUseCase(inventarios);
     }
 
     @Bean

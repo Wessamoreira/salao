@@ -74,7 +74,8 @@ Cada tela da fase 7 derruba esse número; ele é o placar:
 |---|---|---|
 | RT-CAT-005 · 24/09 | `/v1/servicos`, `/v1/recursos` | 53 de 145 (37%) |
 | RT-EQP-005 · 24/09 | `/v1/profissionais` (+ editar), `/v1/bloqueios-de-jornada` | 41 de 146 (28%) |
-| RT-IAM-009 · 25/09 | `/v1/usuarios` (+ editar e senha), `/v1/perfis`, `/v1/me/senha` | **34 de 150 (23%)** |
+| RT-IAM-009 · 25/09 | `/v1/usuarios` (+ editar e senha), `/v1/perfis`, `/v1/me/senha` | 34 de 150 (23%) |
+| RT-EST-013 · 26/09 | `/v1/produtos` inteiro, `/v1/lotes`, `/v1/inventarios` | **13 de 159 (8%)** |
 
 O total sobe porque as telas acharam endpoints que faltavam: editar serviço, editar profissional,
 editar usuário, definir senha e o catálogo de perfis. Buraco que só aparece quando alguém tenta
@@ -114,7 +115,12 @@ trabalha — sem sair da tela.
 O pagamento da cliente já é registrado na comanda. O que não existe é o outro lado: quanto cada
 profissional tem a receber, o que foi adiantado, e o fechamento do mês.
 
-### 3. Estoque — o produto sai e ninguém dá baixa pela tela
+### 3. ~~Estoque~~ — feito em 26/09 (RT-EST-013)
+
+`/v1/produtos` tinha 13 endpoints e o front usava **um**. E oito casos de uso — perda, ajuste,
+devolução e os cinco do inventário — não tinham rota HTTP nenhuma. Agora têm, e têm tela.
+
+*O texto abaixo é o levantamento de 23/09, mantido como registro do que faltava.*
 
 `/v1/produtos` tem 13 endpoints; a única coisa que o front faz é listar o que é vendável para a
 comanda. Cadastro, entrada de lote, saldo, custo médio, inventário, queima de vencimento e código

@@ -26,7 +26,7 @@ const MENUS = {
   ],
 };
 
-function montar(area: 'estoque' | 'financeiro', menus = MENUS.dono) {
+function montar(area: 'financeiro', menus = MENUS.dono) {
   chamar.mockImplementation(async () => ({
     estabelecimento: { timezone: 'America/Sao_Paulo' }, permissoes: [], menus,
   }));
@@ -42,13 +42,13 @@ beforeEach(() => { chamar.mockReset(); });
 
 describe('a área que ainda não tem tela', () => {
   it('nomeia a rotina da TELA, não a que já foi entregue', async () => {
-    // O texto anterior dizia "esta área chega com a rotina RT-EST-001" — e RT-EST-001 estava
-    // implementada havia semanas. Quem lia concluía que o estoque inteiro estava por fazer, e
-    // ia procurar no lugar errado.
-    montar('estoque');
+    // O texto anterior dizia "esta área chega com a rotina RT-FIN-004" — e RT-FIN-004 estava
+    // implementada havia semanas. Quem lia concluía que o financeiro inteiro estava por fazer,
+    // e ia procurar no lugar errado.
+    montar('financeiro');
 
-    expect(await screen.findByText(/RT-EST-013/)).toBeInTheDocument();
-    expect(screen.queryByText(/RT-EST-001/)).not.toBeInTheDocument();
+    expect(await screen.findByText(/RT-FIN-013/)).toBeInTheDocument();
+    expect(screen.queryByText(/RT-FIN-004/)).not.toBeInTheDocument();
   });
 
   it('diz que o servidor já faz, em vez de deixar parecer que a área está por começar', () => {
@@ -59,20 +59,20 @@ describe('a área que ainda não tem tela', () => {
   });
 
   it('oferece o caminho que resolve hoje — e ele leva a uma tela de verdade', async () => {
-    // Quase sempre dá para fazer por outro lugar: produto se vende na comanda, e o estoque
-    // baixa sozinho no fechamento.
-    montar('estoque');
+    // Quase sempre dá para fazer por outro lugar: a comanda já recebe, dá desconto e apura a
+    // comissão na hora do fechamento.
+    montar('financeiro');
 
-    const caminho = await screen.findByRole('link', { name: 'Vender produto na comanda' });
+    const caminho = await screen.findByRole('link', { name: 'Receber e fechar comanda' });
     expect(caminho).toHaveAttribute('href', '/comandas');
   });
 
   it('não oferece caminho que esta pessoa não pode abrir', async () => {
     // O menu vem do servidor (inviolável nº 6); um link para tela sem permissão seria um beco.
-    montar('estoque', MENUS.recepcao);
-    await screen.findByRole('link', { name: 'Vender produto na comanda' });
+    montar('financeiro', MENUS.recepcao);
+    await screen.findByRole('link', { name: 'Receber e fechar comanda' });
 
-    expect(screen.queryByRole('link', { name: /sugestão de preço/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /maquininha/ })).not.toBeInTheDocument();
   });
 
   it('sem caminho nenhum, some a coluna inteira em vez de sobrar um título vazio', async () => {
@@ -87,8 +87,8 @@ describe('a área que ainda não tem tela', () => {
 
 describe('acessibilidade', () => {
   it('não tem violação estrutural', async () => {
-    const { container } = montar('estoque');
-    await screen.findByRole('link', { name: 'Vender produto na comanda' });
+    const { container } = montar('financeiro');
+    await screen.findByRole('link', { name: 'Receber e fechar comanda' });
 
     await deveSerAcessivel(container);
   });

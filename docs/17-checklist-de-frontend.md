@@ -468,6 +468,23 @@ Regra que fica: **um campo que o front só usa para ORDENAR não pode derrubar o
 E o "copiado" só aparece quando copiou: sem HTTPS a área de transferência falha em silêncio, e
 prometer a cópia faria alguém colar nada na mensagem com a senha.
 
+## Faixa 7 — a prévia como instrumento, não como enfeite
+
+`/estoque` e `/estoque/contagem` (RT-EST-013, 26/09). A rodada de mutação matou 15 de 15 e **não
+achou nenhum destes quatro** — todos apareceram ao olhar a prévia:
+
+1. **A consulta quebrava no caso normal.** `204` vira `undefined`, e o TanStack Query recusa
+   `undefined` como dado: "não há contagem aberta" — o estado de quase todo dia — levava a tela
+   inteira ao erro. Teste unitário não pega, porque o dublê devolvia o que o real não devolve.
+2. **O campo mais importante da tela estava invisível**: sem borda e sem fundo, porque a regra de
+   campo não o alcançava. Ao lado do botão, parecia que só havia botão.
+3. **Uma unidade fixa em "un"** faria 500 ml de tinta virarem "500 un".
+4. **Produto desativado sumia junto com o botão que o traz de volta.**
+
+E uma lição de processo: escrever um `*.css` que já existia **apagou** o estilo do leitor de
+código de barras. Arquivo que já existe se edita, não se escreve por cima — e a prévia foi o que
+mostrou, porque o teste de tela não olha CSS.
+
 ## O que isto NÃO propõe mudar
 
 A direção de `16-design-system.md` está certa e continua valendo: back-office neutro, cor só onde

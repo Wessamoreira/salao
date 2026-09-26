@@ -13,7 +13,8 @@ import { MinhaSenha } from './telas/acessos/MinhaSenha';
 // Entrar e o segundo fator ficam no pacote de entrada: são a primeira tela de quem chega,
 // e um pedaço à parte para elas seria uma espera antes do login. O resto vem por rota.
 import {
-  Acessos, Agenda, Catalogo, Clientes, Comandas, Conciliacao, Configuracao, Equipe, Fila, Painel,
+  Acessos, Agenda, Catalogo, Clientes, Comandas, Conciliacao, Configuracao, Contagem, Equipe,
+  Estoque, Fila, Painel,
   Precos, RevisaoDoAgente,
 } from './rotas';
 
@@ -77,7 +78,9 @@ export function App() {
               <Route path="/catalogo" element={<Catalogo />} />
               {/* RT-EQP-005 — sem profissional com jornada, a agenda abre vazia. */}
               <Route path="/equipe" element={<Equipe />} />
-              <Route path="/estoque" element={<SemTela area="estoque" />} />
+              {/* RT-EST-013 — oito casos de uso do estoque não tinham porta HTTP. */}
+              <Route path="/estoque" element={<Estoque />} />
+              <Route path="/estoque/contagem" element={<Contagem />} />
               <Route path="/financeiro" element={<SemTela area="financeiro" />} />
               <Route path="/agente" element={<RevisaoDoAgente />} />
               <Route path="/conciliacao" element={<Conciliacao />} />

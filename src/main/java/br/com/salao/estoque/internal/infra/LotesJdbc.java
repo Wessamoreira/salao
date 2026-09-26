@@ -342,8 +342,8 @@ public class LotesJdbc {
     @Transactional(readOnly = true)
     public List<AlertasDeEstoque.LoteVencendo> vencendoEm(int dias) {
         return jdbc.sql("""
-                select l.id, l.produto_id, p.nome as produto, l.codigo, l.validade,
-                       l.custo_unitario,
+                select l.id, l.produto_id, p.nome as produto, p.unidade, l.codigo,
+                       l.validade, l.custo_unitario,
                        coalesce(sum(m.quantidade), 0) as quantidade,
                        (l.validade - current_date) as dias_restantes
                   from lote l
@@ -351,7 +351,8 @@ public class LotesJdbc {
                   left join movimento_estoque m on m.lote_id = l.id
                  where l.validade is not null
                    and l.validade <= current_date + cast(:dias as integer)
-                 group by l.id, l.produto_id, p.nome, l.codigo, l.validade, l.custo_unitario
+                 group by l.id, l.produto_id, p.nome, p.unidade, l.codigo, l.validade,
+                          l.custo_unitario
                 having coalesce(sum(m.quantidade), 0) > 0
                  order by l.validade, lower(p.nome)
                 """)
@@ -384,6 +385,7 @@ public class LotesJdbc {
                 rs.getObject("id", UUID.class),
                 rs.getObject("produto_id", UUID.class),
                 rs.getString("produto"),
+                UnidadeDeMedida.valueOf(rs.getString("unidade")),
                 rs.getString("codigo"),
                 quantidade,
                 rs.getDate("validade").toLocalDate(),

@@ -23,7 +23,9 @@ import br.com.salao.estoque.internal.application.ConsultarSaldoUseCase;
 import br.com.salao.estoque.internal.application.DadosDaEntrada;
 import br.com.salao.estoque.internal.application.ListarLotesUseCase;
 import br.com.salao.estoque.internal.application.ListarProdutosUseCase;
+import br.com.salao.estoque.api.BaixaDeEstoque;
 import br.com.salao.estoque.internal.application.RegistrarEntradaDeLoteUseCase;
+import br.com.salao.estoque.internal.application.RegistrarPerdaUseCase;
 import br.com.salao.shared.dinheiro.Money;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -67,6 +69,7 @@ public class ProdutosController {
     private final DefinirCodigoDeBarrasUseCase definirCodigoDeBarras;
     private final DefinirEstoqueMinimoUseCase definirEstoqueMinimo;
     private final ConsultarAlertasUseCase alertas;
+    private final RegistrarPerdaUseCase registrarPerda;
     private final ProdutoApi produtos;
 
     public ProdutosController(CadastrarProdutoUseCase cadastrar, AtualizarProdutoUseCase atualizar,
@@ -78,10 +81,13 @@ public class ProdutosController {
                               ConsultarSaldoUseCase consultarSaldo,
                               DefinirCodigoDeBarrasUseCase definirCodigoDeBarras,
                               DefinirEstoqueMinimoUseCase definirEstoqueMinimo,
-                              ConsultarAlertasUseCase alertas, ProdutoApi produtos) {
+                              ConsultarAlertasUseCase alertas,
+                              RegistrarPerdaUseCase registrarPerda,
+                              ProdutoApi produtos) {
         this.definirCodigoDeBarras = definirCodigoDeBarras;
         this.definirEstoqueMinimo = definirEstoqueMinimo;
         this.alertas = alertas;
+        this.registrarPerda = registrarPerda;
         this.produtos = produtos;
         this.cadastrar = cadastrar;
         this.atualizar = atualizar;
@@ -210,8 +216,8 @@ public class ProdutosController {
 
     /** RT-EST-008 — o que está acabando e o que vai vencer. */
     @GetMapping("/alertas")
-    public AlertasDeEstoque alertas(@RequestParam(required = false) Integer dias) {
-        return alertas.executar(dias);
+    public AlertasResponse alertas(@RequestParam(required = false) Integer dias) {
+        return AlertasResponse.de(alertas.executar(dias));
     }
 
     @PatchMapping("/{id}/ativacao")
@@ -231,6 +237,133 @@ public class ProdutosController {
             @RequestParam(defaultValue = "false") boolean somenteVendaveis) {
         return listar.executar(somenteAtivos, somenteVendaveis).stream()
                 .map(ProdutoResponse::de).toList();
+    }
+
+    /**
+     * O saldo como a tela o recebe.
+     *
+     * <p>{@code Money} serializa como {@code {"valor": …}} e {@code semEstoque()} é método
+     * derivado, que o Jackson não vê. A rota devolvia o registro de domínio cru — duas formas do
+     * mesmo dinheiro na mesma API, que é exatamente o que {@link ProdutoResponse} existe para
+     * evitar. Nenhuma tela consumia isto ainda.
+     *
+     * @param custoMedio <strong>nulo</strong> quando não há estoque, e nulo não é zero: zero
+     *                   diria "tenho unidades que não custaram nada", que é o caso da amostra
+     */
+    public record SaldoResponse(
+            UUID produtoId,
+            String nome,
+            UnidadeDeMedida unidade,
+            BigDecimal quantidade,
+            BigDecimal custoMedio,
+            BigDecimal valorEmEstoque,
+            boolean semEstoque) {
+
+        static SaldoResponse de(SaldoDoProduto s) {
+            return new SaldoResponse(s.produtoId(), s.nome(), s.unidade(), s.quantidade(),
+                    s.custoMedio() == null ? null : s.custoMedio().valor(),
+                    s.valorEmEstoque().valor(), s.semEstoque());
+        }
+    }
+
+    /** O lote como a tela o recebe. Mesmo motivo de {@link SaldoResponse}. */
+    public record LoteResponse(
+            UUID id,
+            UUID produtoId,
+            String codigo,
+            BigDecimal custoUnitario,
+            BigDecimal quantidade,
+            LocalDate validade,
+            LocalDate recebidoEm) {
+
+        static LoteResponse de(LoteResumo l) {
+            return new LoteResponse(l.id(), l.produtoId(), l.codigo(),
+                    l.custoUnitario().valor(), l.quantidade(), l.validade(), l.recebidoEm());
+        }
+    }
+
+    /**
+     * Os alertas como a tela os recebe.
+     *
+     * <p>{@code faltando()} é o número do pedido de compra e {@code custoEmRisco()} é o que faz o
+     * dono agir — os dois são métodos derivados, e sem DTO simplesmente não chegavam.
+     */
+    public record AlertasResponse(
+            int diasDeAviso,
+            BigDecimal custoEmRisco,
+            List<FaltaResponse> abaixoDoMinimo,
+            List<VencendoResponse> vencendo) {
+
+        static AlertasResponse de(AlertasDeEstoque a) {
+            return new AlertasResponse(a.diasDeAviso(), a.custoEmRisco().valor(),
+                    a.abaixoDoMinimo().stream().map(FaltaResponse::de).toList(),
+                    a.vencendo().stream().map(VencendoResponse::de).toList());
+        }
+    }
+
+    public record FaltaResponse(
+            UUID produtoId,
+            String nome,
+            UnidadeDeMedida unidade,
+            BigDecimal quantidade,
+            BigDecimal minimo,
+            BigDecimal faltando,
+            boolean zerado) {
+
+        static FaltaResponse de(AlertasDeEstoque.ProdutoEmFalta p) {
+            return new FaltaResponse(p.produtoId(), p.nome(), p.unidade(), p.quantidade(),
+                    p.minimo(), p.faltando(), p.zerado());
+        }
+    }
+
+    public record VencendoResponse(
+            UUID loteId,
+            UUID produtoId,
+            String produto,
+            UnidadeDeMedida unidade,
+            String codigo,
+            BigDecimal quantidade,
+            LocalDate validade,
+            long diasRestantes,
+            BigDecimal custoEmRisco,
+            boolean vencido) {
+
+        static VencendoResponse de(AlertasDeEstoque.LoteVencendo l) {
+            return new VencendoResponse(l.loteId(), l.produtoId(), l.produto(), l.unidade(),
+                    l.codigo(), l.quantidade(), l.validade(), l.diasRestantes(),
+                    l.custoEmRisco().valor(), l.vencido());
+        }
+    }
+
+    // ------------------------------------------------------------------ RT-EST-005
+
+    /**
+     * @param quantidade positiva: o sinal é do caso de uso, que sabe que perda é saída
+     * @param motivo obrigatório (RN-EST-014), conferido aqui e pelo banco
+     */
+    public record PerdaRequest(
+            @NotNull @jakarta.validation.constraints.Positive BigDecimal quantidade,
+            @Size(max = 500) String motivo) {
+    }
+
+    /**
+     * A perda é <strong>do produto</strong>, e o FEFO escolhe os lotes.
+     *
+     * <p>Quem viu o xampu vazar no chão sabe o produto e a quantidade, não o lote. Exigir o lote
+     * faria alguém escolher um qualquer para poder continuar — e o número certo entraria no lugar
+     * errado. Quando o lote É sabido, o caminho é o ajuste ({@code POST /lotes/{id}/ajustes}).
+     */
+    @PostMapping("/{id}/perdas")
+    public BaixaResponse registrarPerda(@PathVariable UUID id,
+                                        @Valid @RequestBody PerdaRequest req) {
+        BaixaDeEstoque baixa = registrarPerda.executar(id, req.quantidade(), req.motivo());
+        return new BaixaResponse(baixa.quantidade(), baixa.custoTotal().valor(),
+                baixa.parcelas().size());
+    }
+
+    /** @param lotesAtingidos de quantas caixas diferentes a perda saiu */
+    public record BaixaResponse(BigDecimal quantidade, BigDecimal custoTotal,
+                                int lotesAtingidos) {
     }
 
     // ------------------------------------------------------------------ RT-EST-002
@@ -255,11 +388,11 @@ public class ProdutosController {
 
     /** A caixa chegou: cria o lote e o movimento de entrada, numa transação. */
     @PostMapping("/{id}/lotes")
-    public ResponseEntity<LoteResumo> registrarEntrada(@PathVariable UUID id,
-                                                       @Valid @RequestBody EntradaRequest req) {
+    public ResponseEntity<LoteResponse> registrarEntrada(@PathVariable UUID id,
+                                                         @Valid @RequestBody EntradaRequest req) {
         LoteResumo lote = registrarEntrada.executar(id, req.paraDados());
         return ResponseEntity.created(URI.create("/api/v1/produtos/" + id + "/lotes"))
-                .body(lote);
+                .body(LoteResponse.de(lote));
     }
 
     /**
@@ -269,9 +402,9 @@ public class ProdutosController {
      *                        explicam de onde saiu o que já foi vendido
      */
     @GetMapping("/{id}/lotes")
-    public List<LoteResumo> lotes(@PathVariable UUID id,
-                                  @RequestParam(defaultValue = "true") boolean somenteComSaldo) {
-        return listarLotes.executar(id, somenteComSaldo);
+    public List<LoteResponse> lotes(@PathVariable UUID id,
+                                    @RequestParam(defaultValue = "true") boolean somenteComSaldo) {
+        return listarLotes.executar(id, somenteComSaldo).stream().map(LoteResponse::de).toList();
     }
 
     // ------------------------------------------------------------------ RT-EST-003
@@ -286,14 +419,15 @@ public class ProdutosController {
      *                          mostrar o que está zerado
      */
     @GetMapping("/saldos")
-    public List<SaldoDoProduto> saldos(
+    public List<SaldoResponse> saldos(
             @RequestParam(defaultValue = "false") boolean somenteComEstoque) {
-        return consultarSaldo.deTodos(somenteComEstoque);
+        return consultarSaldo.deTodos(somenteComEstoque).stream()
+                .map(SaldoResponse::de).toList();
     }
 
     /** Quanto há deste produto, e a que custo médio. Nada disso é coluna: tudo é projeção. */
     @GetMapping("/{id}/saldo")
-    public ResponseEntity<SaldoDoProduto> saldo(@PathVariable UUID id) {
-        return ResponseEntity.of(consultarSaldo.doProduto(id));
+    public ResponseEntity<SaldoResponse> saldo(@PathVariable UUID id) {
+        return ResponseEntity.of(consultarSaldo.doProduto(id).map(SaldoResponse::de));
     }
 }

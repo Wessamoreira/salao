@@ -54,6 +54,8 @@ public record AlertasDeEstoque(
             UUID loteId,
             UUID produtoId,
             String produto,
+            /** A medida do produto: sem ela, "500" de tinta viraria "500 un" na tela. */
+            UnidadeDeMedida unidade,
             String codigo,
             BigDecimal quantidade,
             LocalDate validade,

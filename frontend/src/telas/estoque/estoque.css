@@ -1,18 +1,20 @@
 /*
- * RT-EST-009 — o leitor de código de barras.
+ * O estoque: o leitor de código de barras (RT-EST-009) e o depósito (RT-EST-013).
  *
- * Duas aparências, porque são dois papéis:
+ * Um arquivo só porque o leitor mora dentro da contagem, e separá-lo em dois faria a tela
+ * importar duas folhas para desenhar uma coisa.
+ */
+
+/* ================================================================== o leitor
  *
- * - numa tela compartilhada (lançar produto na comanda) ele é UM CAMPO a mais, e tem de
- *   parecer com os vizinhos. Cartão, borda de destaque e indicador de estado ali seriam
- *   três enfeites dizendo o que o campo já diz;
- * - numa tela dedicada a bipar (`segurarFoco`) ele toma o foco de todo mundo, e aí precisa
- *   dizer em que estado está — daí o cartão, a borda que acende e o alvo de 44px.
+ * Duas aparências, porque são dois papéis: numa tela compartilhada ele é UM CAMPO a
+ * mais e parece com os vizinhos; numa tela dedicada a bipar (`segurarFoco`) ele toma o
+ * foco de todo mundo, e aí precisa dizer em que estado está — daí o cartão, a borda que
+ * acende e o alvo de 44px.
  *
- * Rótulo em caixa normal, escuro, junto do controle: é a convenção do produto, e está
- * explicada em `comandas.css`. Versalete de 10px em --tinta-fraca é o desenho do SELO e do
- * cabeçalho de tabela; reusá-lo para rótulo é o que faz o sistema parecer não ter sido
- * desenhado.
+ * Rótulo em caixa normal, escuro, junto do controle: é a convenção do produto, explicada
+ * em `comandas.css`. Versalete de 10px em --tinta-fraca é o desenho do SELO e do
+ * cabeçalho de tabela; reusá-lo para rótulo é o que faz o sistema parecer não desenhado.
  */
 .est-rotulo {
   display: block;
@@ -112,4 +114,356 @@
 .est-achado-codigo {
   font-family: var(--fonte-mono);
   font-variant-numeric: tabular-nums;
+}
+
+/* ================================================================== o depósito
+ *
+ * Mesma divisão das outras telas de gestão: a seção é estrutura, o papel branco é o
+ * objeto — aqui, o produto e a caixa. Números de estoque são tabulares: uma coluna de
+ * quantidades que dança é uma coluna que não se soma de olho.
+ */
+
+.est-tela {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-6);
+  padding: var(--e-5);
+}
+
+.est-lista,
+.est-alertas,
+.est-lotes,
+.est-contar,
+.est-divergencias,
+.est-achados {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.est-ajuda {
+  margin: var(--e-3) 0 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------------------ a busca */
+
+.est-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-3);
+  margin-bottom: var(--e-3);
+}
+.est-filtros .est-busca { flex: 1 1 260px; margin-bottom: 0; }
+.est-incluir {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-2);
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+}
+
+.est-busca {
+  display: flex;
+  align-items: center;
+  gap: var(--e-2);
+  margin-bottom: var(--e-3);
+  padding: 0 var(--e-3);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  color: var(--tinta-fraca);
+}
+.est-busca input {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  color: var(--tinta);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: var(--t-14);
+  outline: none;
+}
+
+.est-achados > li > button {
+  width: 100%;
+  padding: var(--e-2) var(--e-3);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-13);
+  text-align: left;
+  cursor: pointer;
+}
+.est-achados > li > button:hover { background: var(--papel-fundo); }
+
+/* ------------------------------------------------------------------ o produto */
+
+.est-produto {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px 120px auto;
+  align-items: center;
+  gap: var(--e-4);
+  padding: var(--e-3) var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+/* Quem saiu do catálogo só aparece quando se pede, e aparece apagado. */
+.est-produto.inativo { background: var(--papel-fundo); }
+.est-produto.inativo .est-quem h3 { color: var(--tinta-fraca); }
+
+.est-quem { min-width: 0; }
+.est-quem h3 { margin: 0; font-size: var(--t-14); font-weight: var(--p-forte); }
+.est-sub {
+  margin: 1px 0 0;
+  overflow: hidden;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.est-quantidade,
+.est-custo,
+.est-valor {
+  margin: 0;
+  font-size: var(--t-13);
+  font-variant-numeric: tabular-nums;
+}
+.est-custo,
+.est-valor { color: var(--tinta-fraca); text-align: right; }
+.est-valor { color: var(--tinta); }
+
+.est-quantidade { display: flex; align-items: baseline; gap: var(--e-2); flex-wrap: wrap; }
+
+.est-acoes { display: flex; gap: var(--e-2); }
+
+/* A marca é a única cor da tela: âmbar pede ação, e vermelho é o que já aconteceu. */
+.est-marca {
+  padding: 0 var(--e-1);
+  color: var(--tinta);
+  background: var(--status-solicitado-fundo);
+  border-left: 2px solid var(--status-solicitado);
+  font-size: var(--t-11);
+  white-space: nowrap;
+}
+.est-marca.grave {
+  background: var(--status-falta-fundo);
+  border-left-color: var(--status-falta);
+}
+
+/* ------------------------------------------------------------------ atenção */
+
+.est-atencao {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--e-5);
+}
+.est-atencao h3 {
+  margin: 0 0 var(--e-2);
+  font-size: var(--t-12);
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+.est-alertas > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 var(--e-3);
+  padding: var(--e-2) var(--e-3);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+.est-alerta-nome { font-size: var(--t-13); font-weight: var(--p-forte); }
+.est-alertas .est-ajuda { grid-column: 1 / -1; margin: 2px 0 0; }
+
+/* ------------------------------------------------------------------ o editor */
+
+.est-editor {
+  display: flex;
+  flex-direction: column;
+  background: var(--papel);
+  border: 1px solid var(--tinta-tenue);
+  border-radius: var(--raio-2);
+}
+.est-bloco { padding: var(--e-4); }
+.est-bloco + .est-bloco { border-top: 1px solid var(--regua); }
+
+.est-editor-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-4);
+  padding: var(--e-3) var(--e-4);
+  background: var(--papel-fundo);
+  border-bottom: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2) var(--raio-2) 0 0;
+}
+.est-editor-quem { min-width: 0; }
+.est-editor-quem h3 { margin: 0; font-size: var(--t-14); font-weight: var(--p-forte); }
+.est-editor-quem p {
+  margin: 1px 0 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Versalete só nos títulos de bloco — o nome do produto no topo fica em caixa normal. */
+.est-bloco h3 {
+  margin: 0 0 var(--e-3);
+  font-size: var(--t-12);
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+
+.est-campos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e-3) var(--e-4);
+}
+.est-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--t-12);
+}
+.est-campo > span { color: var(--tinta-fraca); }
+.est-campo-largo { flex: 1 1 240px; min-width: 0; }
+.est-campo input,
+.est-campo select,
+.est-contar input {
+  min-height: 32px;
+  padding: 0 var(--e-2);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-14);
+  font-variant-numeric: tabular-nums;
+}
+.est-campo select:disabled { color: var(--tinta-fraca); background: var(--papel-fundo); }
+
+.est-com-acao { display: flex; align-items: center; gap: var(--e-2); }
+.est-com-acao input { width: 140px; }
+
+.est-extras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-3) var(--e-5);
+  margin-top: var(--e-4);
+  padding-top: var(--e-4);
+  border-top: 1px solid var(--regua);
+}
+
+.est-acoes-bloco {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-2);
+  margin-top: var(--e-4);
+}
+
+/* ------------------------------------------------------------------ as caixas */
+
+.est-lote {
+  display: grid;
+  grid-template-columns: 110px 160px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--e-3);
+  padding: var(--e-2) 0;
+  border-bottom: 1px solid var(--regua);
+  font-size: var(--t-13);
+}
+.est-lotes > li:last-child .est-lote { border-bottom: 0; }
+.est-lote-quanto { font-variant-numeric: tabular-nums; font-weight: var(--p-forte); }
+.est-lote-validade { color: var(--tinta-fraca); font-size: var(--t-12); }
+.est-lote-acoes { display: flex; gap: var(--e-1); }
+.est-lote .est-ajuda { margin: 0; }
+
+.est-movimento {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e-3);
+  margin-top: var(--e-3);
+  padding: var(--e-3) var(--e-4);
+  background: var(--papel-fundo);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+.est-movimento .est-ajuda { flex-basis: 100%; margin: 0; }
+.est-movimento .erro { flex-basis: 100%; margin: 0; }
+
+/* ------------------------------------------------------------------ a contagem */
+
+.est-contagem-aberta > p { margin: 0 0 var(--e-2); font-size: var(--t-13); }
+.est-contagem-aberta .est-ajuda { margin: 0 0 var(--e-3); }
+
+.est-contar > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--e-3);
+  padding: var(--e-2) 0;
+  border-bottom: 1px solid var(--regua);
+}
+.est-contar > li:last-child { border-bottom: 0; }
+.est-contar-lote {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--t-13);
+}
+.est-contar-lote small { color: var(--tinta-fraca); font-size: var(--t-11); }
+/*
+ * O campo da contagem é o mais importante da tela, e ela se usa andando com o celular na mão:
+ * 44px de alvo e número grande. Sem a regra de campo acima ele herdava o reset global — sem
+ * borda e sem fundo —, e ficava literalmente invisível ao lado do botão.
+ */
+.est-contar input {
+  width: 96px;
+  min-height: 44px;
+  font-size: var(--t-16);
+  text-align: right;
+}
+/* O botão acompanha o campo: um alvo de 24px ao lado de um de 44 é meio par de botões. */
+.est-contar .pagina-acao { min-height: 44px; }
+
+.est-divergencias > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: baseline;
+  gap: var(--e-3);
+  padding: var(--e-2) var(--e-3);
+  background: var(--papel-fundo);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+.est-divergencia-numeros {
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 960px) {
+  .est-produto { grid-template-columns: minmax(0, 1fr) auto; }
+  .est-quantidade,
+  .est-custo,
+  .est-valor { grid-column: 1; text-align: left; }
+  .est-acoes { grid-column: 2; grid-row: 1; }
+  .est-lote { grid-template-columns: minmax(0, 1fr) auto; }
+  .est-lote-acoes { grid-column: 1 / -1; }
 }

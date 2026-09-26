@@ -112,6 +112,25 @@ public class InventariosJdbc {
                 .update();
     }
 
+    /**
+     * RN-EST-040 — a contagem aberta deste salão, sem precisar do id.
+     *
+     * <p>Sem isto, perder o id que {@code abrir} devolveu — fechar a aba, trocar de máquina, o
+     * celular descarregar no meio do depósito — deixava a contagem viva e inalcançável: não dava
+     * para consultar, aplicar nem cancelar, e o índice único parcial recusava abrir outra.
+     *
+     * <p>Sob RLS, então "deste salão" não é cláusula: é a policy. E o {@code limit 1} não é
+     * defesa contra duplicata — o índice já garante que não há — mas contra a leitura de quem
+     * chegar aqui sem saber disso.
+     */
+    @Transactional(readOnly = true)
+    public Optional<InventarioDeEstoque> aberto() {
+        return jdbc.sql("select id from inventario where status = 'ABERTO' limit 1")
+                .query(UUID.class)
+                .optional()
+                .flatMap(this::porId);
+    }
+
     /** O inventário com os itens e o nome do produto e do lote, para a tela de conferência. */
     @Transactional(readOnly = true)
     public Optional<InventarioDeEstoque> porId(UUID inventarioId) {
