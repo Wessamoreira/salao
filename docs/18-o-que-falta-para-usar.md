@@ -75,7 +75,11 @@ Cada tela da fase 7 derruba esse número; ele é o placar:
 | RT-CAT-005 · 24/09 | `/v1/servicos`, `/v1/recursos` | 53 de 145 (37%) |
 | RT-EQP-005 · 24/09 | `/v1/profissionais` (+ editar), `/v1/bloqueios-de-jornada` | 41 de 146 (28%) |
 | RT-IAM-009 · 25/09 | `/v1/usuarios` (+ editar e senha), `/v1/perfis`, `/v1/me/senha` | 34 de 150 (23%) |
-| RT-EST-013 · 26/09 | `/v1/produtos` inteiro, `/v1/lotes`, `/v1/inventarios` | **13 de 159 (8%)** |
+| RT-EST-013 · 26/09 | `/v1/produtos` inteiro, `/v1/lotes`, `/v1/inventarios` | 13 de 159 (8%) |
+| RT-FIN-013 · 26/09 | `/v1/extratos`, `/v1/vales`, `/v1/fechamentos`, `/v1/lancamentos` | **5 de 160 (3%)** |
+
+**Nenhuma área do sistema diz mais "em breve".** `SemTela` foi apagada: ela existia para as duas
+áreas que o servidor sabia fazer e o front não alcançava, e as duas ganharam tela.
 
 O total sobe porque as telas acharam endpoints que faltavam: editar serviço, editar profissional,
 editar usuário, definir senha e o catálogo de perfis. Buraco que só aparece quando alguém tenta
@@ -101,6 +105,14 @@ regra registrada e migration aplicada.
 Este bloco era o que separava "o sistema roda" de "o salão consegue começar", e **está fechado**:
 desde 25/09 dá para abrir um salão novo — cardápio, equipe com jornada e os logins de quem
 trabalha — sem sair da tela.
+
+### 2. ~~Financeiro~~ — feito em 26/09 (RT-FIN-013)
+
+Todas as rotas existiam; o que faltava era a tela. Com uma exceção que a tela achou: **não existia
+lançamento de ajuste**, e o caminho que RN-FIN-023 oferece por escrito para reaplicar um valor
+depois de um estorno não tinha rota.
+
+*O texto abaixo é o levantamento de 23/09, mantido como registro.*
 
 ### 2. Financeiro — o dinheiro entra e não fecha
 

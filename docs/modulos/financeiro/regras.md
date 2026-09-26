@@ -835,3 +835,37 @@ mais, e o aviso deixaria de ser lido (mesma razão de RN-FIN-030).
 **Rotinas.** RT-FIN-012 · **Teste.** `RecebiveisIT.taxa_acima_do_contrato`,
 `.taxa_dentro_do_contrato`, `.taxa_sem_contrato_nao_avisa`, `Conciliacao.test.tsx`
 **Configurável?** Não · **Origem.** 2026-09-20, decisão do dono
+
+---
+
+### RN-FIN-041 — O ajuste manual é escrito no sinal de quem recebe
+
+**Enunciado.** `POST /v1/lancamentos` grava uma linha `AJUSTE` com `origem_tipo = 'MANUAL'`,
+apontando para um profissional, com motivo obrigatório e competência no dia do salão
+(RN-FIN-014). O `valor` chega no **sinal de quem recebe** — positivo aumenta o que a pessoa tem a
+receber — e o razão o inverte uma vez, ao gravar. Exige `financeiro:close`.
+
+**Motivo.** RN-FIN-023 recusa estornar um estorno e oferece o caminho certo por escrito: *"quem
+quer o valor de volta faz um lançamento novo, com motivo e rastro próprio"*. Esse lançamento não
+existia. `TipoDeLancamento.AJUSTE` e `origem_tipo = 'MANUAL'` estavam no modelo sem nada que os
+escrevesse, e a doc de RT-FIN-007 já registrava a falta como "a próxima peça natural".
+
+Sem ele, uma comissão apurada errada podia ser **anulada** e não **corrigida**: o extrato ficava
+certo e a pessoa sem o dinheiro. A saída improvisada seria um vale — que mente, porque vale é
+adiantamento, e some do relatório de adiantamento de quem nunca adiantou nada.
+
+O sinal entra invertido pela mesma razão que o extrato inverte (RN-FIN-011): no razão a comissão é
+negativa, porque sai do salão. Exigir esse sinal de quem digita seria exigir que ela conhecesse a
+contabilidade do razão para consertar um erro de digitação — e o engano de sinal num ajuste custa
+o dobro do valor, na direção errada.
+
+`financeiro:close`, e não `financeiro:advance`: escrever direto no razão é o ato mais perigoso do
+módulo, e quem o faz é quem responde pelo repasse. Adiantar é instrumento com fato próprio
+(`vale`); ajustar é caneta no livro.
+
+**Onde é garantida.** `RegistrarAjusteNoRazaoUseCase` · `LancamentosController.registrar`.
+**Rotinas.** RT-FIN-013 · **Teste.** `AjusteNoRazaoIT.ajuste_positivo_entra_negativo_no_razao`,
+`.aparece_no_extrato_no_sinal_de_quem_recebe`, `.exige_motivo`, `.recusa_valor_zero`,
+`.recusa_profissional_inexistente`, `.competencia_e_o_dia_do_salao`, `.sem_permissao_nao_ajusta`
+**Erro.** `ER-FIN-DADOS_INVALIDOS` (422) · **Configurável?** Não
+**Origem.** 2026-09-26

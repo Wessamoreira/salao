@@ -77,7 +77,7 @@ public class ConsultarExtratoUseCase {
                         l.dataCompetencia(), l.tipo(), l.descricao(),
                         // Invertido uma vez, aqui: no razão a comissão sai do salão; na conta da
                         // pessoa ela entra.
-                        l.valor().negado(), l.origemTipo(), l.origemId()))
+                        l.valor().negado(), l.origemTipo(), l.origemId(), l.id()))
                 .toList();
         Money aReceber = linhas.stream()
                 .map(ExtratoDoProfissional.LinhaDoExtrato::valor)

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './http';
+export { plural } from '../layout/plural';
 
 /**
  * RT-EST-013 — o depósito.
@@ -315,16 +316,6 @@ const UNIDADES: Record<Unidade, string> = {
 export function quantidade(valor: number, unidade: Unidade): string {
   const numero = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 3 }).format(valor);
   return `${numero} ${UNIDADES[unidade]}`;
-}
-
-/**
- * `1 lote` · `3 lotes`.
- *
- * O "(s)" é o jeito de não decidir, e quem lê é que paga: "1 lote(s) contados" é uma frase que
- * ninguém escreveria à mão.
- */
-export function plural(n: number, um: string, varios: string): string {
-  return `${n} ${n === 1 ? um : varios}`;
 }
 
 export const FINALIDADES: Record<Finalidade, string> = {

@@ -31,6 +31,7 @@ import br.com.salao.financeiro.internal.application.PrevisaoDeRecebimento;
 import br.com.salao.financeiro.internal.application.TaxaNoRazao;
 import br.com.salao.financeiro.internal.application.PreverImportacaoUseCase;
 import br.com.salao.financeiro.internal.application.Razao;
+import br.com.salao.financeiro.internal.application.RegistrarAjusteNoRazaoUseCase;
 import br.com.salao.financeiro.internal.application.RegistrarValeUseCase;
 import br.com.salao.financeiro.internal.application.RemoverRegraDeComissaoUseCase;
 import br.com.salao.financeiro.internal.application.ResolverDivergenciaUseCase;
@@ -128,6 +129,14 @@ public class FinanceiroConfig {
     @Bean
     public ValesJdbc valesJdbc(DataSource dataSource) {
         return new ValesJdbc(JdbcClient.create(dataSource));
+    }
+
+    @Bean
+    public RegistrarAjusteNoRazaoUseCase registrarAjusteNoRazaoUseCase(
+            LancamentosJdbc lancamentos, ProfissionalApi profissionais, Competencia competencia,
+            AuditoriaApi auditoria, Relogio relogio) {
+        return new RegistrarAjusteNoRazaoUseCase(lancamentos, profissionais, competencia, auditoria,
+                relogio);
     }
 
     @Bean

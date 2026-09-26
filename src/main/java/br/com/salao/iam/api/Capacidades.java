@@ -33,7 +33,15 @@ public record Capacidades(
         boolean mfaAtivo,
         boolean mfaObrigatorio) {
 
-    public record EstabelecimentoResumo(UUID id, String nome, String timezone, String moeda) {
+    /**
+     * @param periodicidadeDeFechamento RT-FIN-013 — de quanto em quanto tempo as comissões viram
+     *                                  repasse. Chega por aqui, e não pela configuração, porque
+     *                                  quem abre o financeiro tem {@code financeiro:read:all} e
+     *                                  não necessariamente {@code config:manage} — e é com ela
+     *                                  que a tela sugere o período, em vez de pedir duas datas
+     */
+    public record EstabelecimentoResumo(UUID id, String nome, String timezone, String moeda,
+                                        PeriodicidadeDeFechamento periodicidadeDeFechamento) {
     }
 
     /**

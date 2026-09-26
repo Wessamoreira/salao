@@ -1,0 +1,274 @@
+/*
+ * RT-FIN-013 — o dinheiro de quem trabalha.
+ *
+ * Tudo aqui é número que se soma de olho contra um caderno: numerais tabulares em toda coluna, e
+ * uma escala de tamanho que separa o total do item. A única cor é a do saldo negativo — é a linha
+ * que alguém vai perguntar, e é a única sobre a qual se age.
+ */
+
+.fin-tela {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-6);
+  padding: var(--e-5);
+}
+
+.fin-lista,
+.fin-linhas,
+.fin-vales,
+.fin-fechamentos {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fin-ajuda {
+  margin: var(--e-2) 0 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  line-height: 1.5;
+}
+/* Consequência que alguém do outro lado vai sentir — período fechado, data de hoje. */
+.fin-atencao {
+  padding: var(--e-2) var(--e-3);
+  color: var(--tinta);
+  background: var(--status-solicitado-fundo);
+  border-left: 2px solid var(--status-solicitado);
+}
+
+/* ------------------------------------------------------------------ o período */
+
+.fin-periodo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--e-3);
+  padding: var(--e-3) var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--tinta-tenue);
+  border-radius: var(--raio-2);
+}
+
+.fin-passo {
+  width: 36px;
+  height: 36px;
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font-size: var(--t-16);
+  line-height: 1;
+  cursor: pointer;
+}
+.fin-passo:hover { background: var(--papel-fundo); }
+
+.fin-periodo-nome {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: var(--e-3);
+  text-align: center;
+}
+.fin-periodo-nome strong { font-size: var(--t-16); }
+
+.fin-outro {
+  padding: 0;
+  color: var(--tinta-fraca);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--regua-forte);
+  font: inherit;
+  font-size: var(--t-12);
+  cursor: pointer;
+}
+
+.fin-datas {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: var(--e-3);
+  margin-top: var(--e-2);
+  padding-top: var(--e-3);
+  border-top: 1px solid var(--regua);
+}
+
+/* ------------------------------------------------------------------ campos */
+
+.fin-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--t-12);
+}
+.fin-campo > span { color: var(--tinta-fraca); }
+.fin-campo-largo { flex: 1 1 260px; min-width: 0; }
+.fin-campo input,
+.fin-campo select {
+  min-height: 32px;
+  padding: 0 var(--e-2);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-14);
+  font-variant-numeric: tabular-nums;
+}
+
+.fin-acoes { display: flex; flex-wrap: wrap; gap: var(--e-2); }
+
+/* ------------------------------------------------------------------ quem recebe */
+
+.fin-pessoa {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) repeat(4, 140px) auto;
+  align-items: center;
+  gap: var(--e-3);
+  padding: var(--e-3) var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+.fin-pessoa h3 { margin: 0; font-size: var(--t-14); font-weight: var(--p-forte); }
+
+.fin-numero {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  text-align: right;
+}
+.fin-numero > span {
+  color: var(--tinta-fraca);
+  font-size: var(--t-10);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+.fin-numero > strong {
+  font-size: var(--t-14);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--p-normal);
+}
+.fin-numero.destaque > strong { font-weight: var(--p-forte); }
+/* A única cor da tela: quem adiantou mais do que ganhou atravessa o mês devendo. */
+.fin-numero > strong.devendo,
+.fin-linha-valor.devendo { color: var(--status-falta); }
+
+/* ------------------------------------------------------------------ o extrato */
+
+.fin-extrato {
+  margin-top: var(--e-2);
+  padding: var(--e-4);
+  background: var(--papel-fundo);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+
+.fin-totais {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-3) var(--e-5);
+  margin-bottom: var(--e-4);
+  padding-bottom: var(--e-3);
+  border-bottom: 1px solid var(--regua);
+}
+.fin-totais .fin-numero { text-align: left; }
+
+.fin-linha {
+  display: grid;
+  grid-template-columns: 52px 110px minmax(0, 1fr) 110px auto;
+  align-items: baseline;
+  gap: var(--e-3);
+  padding: var(--e-2) 0;
+  border-bottom: 1px solid var(--regua);
+  font-size: var(--t-13);
+}
+.fin-linhas > li:last-child .fin-linha { border-bottom: 0; }
+.fin-linha-data,
+.fin-linha-valor { font-variant-numeric: tabular-nums; }
+.fin-linha-valor { text-align: right; }
+.fin-linha-tipo {
+  color: var(--tinta-fraca);
+  font-size: var(--t-11);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+.fin-linha-descricao {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ correções */
+
+.fin-correcao {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e-3);
+  margin: var(--e-2) 0;
+  padding: var(--e-3) var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--tinta-tenue);
+  border-radius: var(--raio-2);
+}
+.fin-correcao .fin-ajuda,
+.fin-correcao .erro,
+.fin-correcao .fin-acoes { flex-basis: 100%; margin-top: 0; }
+
+.fin-confirmar {
+  padding: var(--e-3) var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--tinta-tenue);
+  border-radius: var(--raio-2);
+}
+.fin-confirmar > p { margin: 0 0 var(--e-3); font-size: var(--t-13); line-height: 1.5; }
+.fin-confirmar .erro { margin: 0 0 var(--e-3); }
+
+/* ------------------------------------------------------------------ vale e repasse */
+
+.fin-vale,
+.fin-fechamento {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px minmax(0, 1.4fr) auto;
+  align-items: baseline;
+  gap: var(--e-3);
+  padding: var(--e-2) var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font-size: var(--t-13);
+}
+.fin-vale.cancelado,
+.fin-fechamento.estornado { background: var(--papel-fundo); color: var(--tinta-fraca); }
+
+.fin-vale-quem { font-weight: var(--p-forte); }
+.fin-vale-valor { font-variant-numeric: tabular-nums; text-align: right; }
+.fin-vale .fin-ajuda,
+.fin-fechamento .fin-ajuda { margin: 0; }
+
+.fin-marca {
+  padding: 0 var(--e-1);
+  color: var(--tinta-fraca);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-1);
+  font-size: var(--t-10);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+
+@media (max-width: 1080px) {
+  .fin-pessoa { grid-template-columns: minmax(0, 1fr) auto; }
+  .fin-pessoa .fin-numero { grid-column: 1; text-align: left; }
+  .fin-pessoa > button { grid-column: 2; grid-row: 1; }
+  .fin-linha { grid-template-columns: 52px minmax(0, 1fr) auto; }
+  .fin-linha-tipo { grid-column: 2; }
+  .fin-vale,
+  .fin-fechamento { grid-template-columns: minmax(0, 1fr) auto; }
+  .fin-vale .fin-ajuda,
+  .fin-fechamento .fin-ajuda { grid-column: 1 / -1; }
+}

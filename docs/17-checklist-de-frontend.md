@@ -485,6 +485,34 @@ E uma lição de processo: escrever um `*.css` que já existia **apagou** o esti
 código de barras. Arquivo que já existe se edita, não se escreve por cima — e a prévia foi o que
 mostrou, porque o teste de tela não olha CSS.
 
+## Faixa 8 — a última tela, e o que o teste achou antes da tela
+
+`/financeiro` (RT-FIN-013, 26/09). A rodada de mutação matou 17 de 17; os dois defeitos reais
+foram achados pelos **testes que eu estava escrevendo**, e não pela rodada:
+
+1. **"Período anterior" de um mês inteiro andava trinta e um dias**, caindo em 29/01–28/02 — que
+   não é o mês anterior e não é nada. Um mês inteiro anda um mês; qualquer outro recorte anda o
+   próprio tamanho.
+2. **A tela disparava três consultas antes de saber a permissão.** Quem tem só
+   `financeiro:read:own` via três 403 chegarem antes da explicação de por que a tela não abre.
+
+E um terceiro, achado ao rodar o teste pela primeira vez: `vi.useFakeTimers()` falsifica todos os
+relógios e **trava `findBy*` e o `userEvent`** — dezessete testes morreram em timeout dizendo "não
+achei o elemento", que é a pista mais enganosa possível. `{ toFake: ['Date'] }` é o que se quer
+quando a intenção é só fixar o dia.
+
+Duas decisões desta tela que valem para as próximas:
+
+- **a tela é o período.** Tudo pende de "de/até", com um controle só no alto. Cada seção com o seu
+  recorte produziria a conversa mais cara do sistema: duas pessoas olhando números diferentes e
+  concluindo que uma está errada;
+- **a prévia é a lista e é a confirmação.** A tabela que responde "quem tem a receber" é
+  literalmente a que o servidor usa para calcular o repasse, com o mesmo hash. Uma tabela "de
+  visualização" ao lado garantiria que um dia as duas divergissem.
+
+E o `plural` que eu tinha escrito no estoque apareceu de novo aqui, dois dias depois. Virou
+`layout/plural.ts` — "1 pessoa(s)" é o jeito de não decidir, e quem lê é que paga.
+
 ## O que isto NÃO propõe mudar
 
 A direção de `16-design-system.md` está certa e continua valendo: back-office neutro, cor só onde

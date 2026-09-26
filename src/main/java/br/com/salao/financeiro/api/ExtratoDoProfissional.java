@@ -72,6 +72,14 @@ public record ExtratoDoProfissional(
             String descricao,
             Money valor,
             String origemTipo,
-            UUID origemId) {
+            UUID origemId,
+            /**
+             * RT-FIN-013 — o id da própria linha do razão.
+             *
+             * <p>É por ele que se estorna (RT-FIN-007), e o extrato é o único lugar em que o razão
+             * é lido. Sem isto, a tela mostrava a linha errada e não tinha como pedir a anulação
+             * dela: só a origem inteira — a comanda toda, em vez do item.
+             */
+            UUID lancamentoId) {
     }
 }

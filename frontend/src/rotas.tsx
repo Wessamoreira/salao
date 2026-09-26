@@ -30,6 +30,7 @@ const carregar = {
   acessos: () => import('./telas/acessos/Acessos'),
   estoque: () => import('./telas/estoque/Estoque'),
   contagem: () => import('./telas/estoque/Contagem'),
+  financeiro: () => import('./telas/financeiro/Financeiro'),
   painel: () => import('./telas/agenda/Painel'),
 };
 
@@ -47,6 +48,8 @@ export const Configuracao = lazy(() =>
   carregar.config().then((m) => ({ default: m.Configuracao })));
 export const Acessos = lazy(() => carregar.acessos().then((m) => ({ default: m.Acessos })));
 export const Estoque = lazy(() => carregar.estoque().then((m) => ({ default: m.Estoque })));
+export const Financeiro = lazy(() =>
+  carregar.financeiro().then((m) => ({ default: m.Financeiro })));
 export const Contagem = lazy(() =>
   carregar.contagem().then((m) => ({ default: m.Contagem })));
 export const RevisaoDoAgente = lazy(() =>
@@ -66,6 +69,7 @@ const POR_ROTA: Record<string, () => Promise<unknown>> = {
   '/config': carregar.config,
   '/acessos': carregar.acessos,
   '/estoque': carregar.estoque,
+  '/financeiro': carregar.financeiro,
 };
 
 /**

@@ -35,7 +35,16 @@ export interface Capacidades {
   nome: string;
   email: string;
   perfil: string;
-  estabelecimento: { id: string; nome: string; timezone: string; moeda: string };
+  estabelecimento: {
+    id: string; nome: string; timezone: string; moeda: string;
+    /**
+     * RT-FIN-013 — de quanto em quanto tempo as comissões viram repasse.
+     *
+     * Chega por aqui, e não pela configuração, porque quem abre o financeiro tem
+     * `financeiro:read:all` e não necessariamente `config:manage`.
+     */
+    periodicidadeDeFechamento: 'SEMANAL' | 'QUINZENAL' | 'MENSAL';
+  };
   permissoes: string[];
   grupos: GrupoDeMenu[];
   menus: Menu[];

@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -70,18 +71,34 @@ public class FechamentosController {
     public record PreviaResponse(
             LocalDate de,
             LocalDate ate,
-            Money totalARepassar,
+            BigDecimal totalARepassar,
             int quantosRecebem,
+            /** O hash das posições: é ele que garante que se confirma o número que se viu. */
             String versao,
             List<LinhaResponse> linhas) {
 
         public record LinhaResponse(
                 UUID profissionalId,
                 String profissionalNome,
-                Money saldoAnterior,
-                Money movimentoDoPeriodo,
-                Money saldoFinal,
-                Money aRepassar) {
+                BigDecimal saldoAnterior,
+                BigDecimal movimentoDoPeriodo,
+                /** Antes do piso: negativo quando é a pessoa que deve ao salão. */
+                BigDecimal saldoFinal,
+                BigDecimal aRepassar) {
+
+            static LinhaResponse de(PreviaDoFechamento.LinhaDaPrevia l, String nome) {
+                return new LinhaResponse(l.profissionalId(), nome, l.saldoAnterior().valor(),
+                        l.movimentoDoPeriodo().valor(), l.saldoFinal().valor(),
+                        l.aRepassar().valor());
+            }
+        }
+
+        static PreviaResponse de(PreviaDoFechamento previa, Map<UUID, String> nomes) {
+            return new PreviaResponse(previa.de(), previa.ate(),
+                    previa.totalARepassar().valor(), previa.quantosRecebem(), previa.versao(),
+                    previa.linhas().stream()
+                            .map(l -> LinhaResponse.de(l, nomes.get(l.profissionalId())))
+                            .toList());
         }
     }
 
@@ -91,12 +108,18 @@ public class FechamentosController {
             String profissionalNome,
             LocalDate periodoInicio,
             LocalDate periodoFim,
-            Money saldoAnterior,
-            Money movimentoDoPeriodo,
-            Money valorRepassado,
-            Money saldoATransportar,
+            BigDecimal saldoAnterior,
+            BigDecimal movimentoDoPeriodo,
+            BigDecimal valorRepassado,
+            BigDecimal saldoATransportar,
             /** Nulo enquanto o documento vale. Preenchido, ele é histórico. */
             java.time.Instant estornadoEm) {
+
+        static FechamentoResponse de(FechamentoDoProfissional f, String nome) {
+            return new FechamentoResponse(f.id(), f.profissionalId(), nome, f.periodoInicio(),
+                    f.periodoFim(), f.saldoAnterior().valor(), f.movimentoDoPeriodo().valor(),
+                    f.valorRepassado().valor(), f.saldoATransportar().valor(), f.estornadoEm());
+        }
     }
 
     /**
@@ -112,13 +135,7 @@ public class FechamentosController {
         PreviaDoFechamento previa = prever.executar(de, ate);
         Map<UUID, String> nomes = nomesDe(previa.linhas().stream()
                 .map(PreviaDoFechamento.LinhaDaPrevia::profissionalId).toList());
-        return new PreviaResponse(previa.de(), previa.ate(), previa.totalARepassar(),
-                previa.quantosRecebem(), previa.versao(),
-                previa.linhas().stream()
-                        .map(l -> new PreviaResponse.LinhaResponse(l.profissionalId(),
-                                nomes.get(l.profissionalId()), l.saldoAnterior(),
-                                l.movimentoDoPeriodo(), l.saldoFinal(), l.aRepassar()))
-                        .toList());
+        return PreviaResponse.de(previa, nomes);
     }
 
     @PostMapping
@@ -159,10 +176,7 @@ public class FechamentosController {
         Map<UUID, String> nomes = nomesDe(fechamentos.stream()
                 .map(FechamentoDoProfissional::profissionalId).toList());
         return fechamentos.stream()
-                .map(f -> new FechamentoResponse(f.id(), f.profissionalId(),
-                        nomes.get(f.profissionalId()), f.periodoInicio(), f.periodoFim(),
-                        f.saldoAnterior(), f.movimentoDoPeriodo(), f.valorRepassado(),
-                        f.saldoATransportar(), f.estornadoEm()))
+                .map(f -> FechamentoResponse.de(f, nomes.get(f.profissionalId())))
                 .toList();
     }
 

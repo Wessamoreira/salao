@@ -81,11 +81,18 @@ public class ValesController {
             UUID id,
             UUID profissionalId,
             String profissionalNome,
-            Money valor,
+            /** Sempre positivo: é o que saiu da gaveta. No extrato ele aparece com menos. */
+            BigDecimal valor,
             FormaDoVale forma,
             LocalDate dataCompetencia,
             String motivo,
             boolean cancelado) {
+
+        static ValeResponse de(Vale vale, String nome) {
+            return new ValeResponse(vale.id(), vale.profissionalId(), nome,
+                    vale.valor().valor(), vale.forma(), vale.dataCompetencia(), vale.motivo(),
+                    vale.cancelado());
+        }
     }
 
     @PostMapping
@@ -146,7 +153,6 @@ public class ValesController {
     }
 
     private ValeResponse resposta(Vale vale, String nome) {
-        return new ValeResponse(vale.id(), vale.profissionalId(), nome, vale.valor(),
-                vale.forma(), vale.dataCompetencia(), vale.motivo(), vale.cancelado());
+        return ValeResponse.de(vale, nome);
     }
 }

@@ -17,7 +17,8 @@ vi.mock('../rotas', () => ({ precarregar: (rota: string) => precarregar(rota) })
 
 const capacidadesDeRecepcao: Capacidades = {
   usuarioId: 'u1', nome: 'Joana', email: 'joana@salao.test', perfil: 'RECEPCAO',
-  estabelecimento: { id: 'e1', nome: 'Studio Marilda', timezone: 'America/Sao_Paulo', moeda: 'BRL' },
+  estabelecimento: { id: 'e1', nome: 'Studio Marilda', timezone: 'America/Sao_Paulo',
+    moeda: 'BRL', periodicidadeDeFechamento: 'MENSAL' },
   permissoes: ['agenda:read:all', 'comanda:open'],
   grupos: [
     { id: 'operacao', rotulo: 'Operação' },

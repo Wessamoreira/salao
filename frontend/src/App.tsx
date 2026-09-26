@@ -8,13 +8,12 @@ import { Casca } from './layout/Casca';
 import { Protegida } from './layout/Protegida';
 import { Login } from './telas/Login';
 import { SegundoFator } from './telas/SegundoFator';
-import { SemTela } from './telas/SemTela';
 import { MinhaSenha } from './telas/acessos/MinhaSenha';
 // Entrar e o segundo fator ficam no pacote de entrada: são a primeira tela de quem chega,
 // e um pedaço à parte para elas seria uma espera antes do login. O resto vem por rota.
 import {
   Acessos, Agenda, Catalogo, Clientes, Comandas, Conciliacao, Configuracao, Contagem, Equipe,
-  Estoque, Fila, Painel,
+  Estoque, Financeiro, Fila, Painel,
   Precos, RevisaoDoAgente,
 } from './rotas';
 
@@ -81,7 +80,8 @@ export function App() {
               {/* RT-EST-013 — oito casos de uso do estoque não tinham porta HTTP. */}
               <Route path="/estoque" element={<Estoque />} />
               <Route path="/estoque/contagem" element={<Contagem />} />
-              <Route path="/financeiro" element={<SemTela area="financeiro" />} />
+              {/* RT-FIN-013 — a última tela que dizia "em breve". */}
+              <Route path="/financeiro" element={<Financeiro />} />
               <Route path="/agente" element={<RevisaoDoAgente />} />
               <Route path="/conciliacao" element={<Conciliacao />} />
               <Route path="/precos" element={<Precos />} />
