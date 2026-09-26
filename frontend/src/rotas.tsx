@@ -27,6 +27,7 @@ const carregar = {
   conciliacao: () => import('./telas/conciliacao/Conciliacao'),
   precos: () => import('./telas/precos/Precos'),
   config: () => import('./telas/config/Configuracao'),
+  acessos: () => import('./telas/acessos/Acessos'),
   painel: () => import('./telas/agenda/Painel'),
 };
 
@@ -42,6 +43,7 @@ export const Precos = lazy(() => carregar.precos().then((m) => ({ default: m.Pre
 export const Painel = lazy(() => carregar.painel().then((m) => ({ default: m.Painel })));
 export const Configuracao = lazy(() =>
   carregar.config().then((m) => ({ default: m.Configuracao })));
+export const Acessos = lazy(() => carregar.acessos().then((m) => ({ default: m.Acessos })));
 export const RevisaoDoAgente = lazy(() =>
   carregar.agente().then((m) => ({ default: m.RevisaoDoAgente })));
 
@@ -57,6 +59,7 @@ const POR_ROTA: Record<string, () => Promise<unknown>> = {
   '/conciliacao': carregar.conciliacao,
   '/precos': carregar.precos,
   '/config': carregar.config,
+  '/acessos': carregar.acessos,
 };
 
 /**

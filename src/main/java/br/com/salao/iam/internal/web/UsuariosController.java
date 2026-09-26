@@ -7,6 +7,8 @@ import br.com.salao.iam.api.UsuarioResumo;
 import br.com.salao.iam.internal.application.AlterarPerfilDoUsuarioUseCase;
 import br.com.salao.iam.internal.application.CriarUsuarioUseCase;
 import br.com.salao.iam.internal.application.DefinirAtivacaoDoUsuarioUseCase;
+import br.com.salao.iam.internal.application.DefinirSenhaDoUsuarioUseCase;
+import br.com.salao.iam.internal.application.EditarUsuarioUseCase;
 import br.com.salao.iam.internal.application.ListarUsuariosUseCase;
 import br.com.salao.iam.internal.application.ResetarSegundoFatorUseCase;
 import jakarta.validation.Valid;
@@ -40,20 +42,26 @@ public class UsuariosController {
 
     private final CriarUsuarioUseCase criar;
     private final ListarUsuariosUseCase listar;
+    private final EditarUsuarioUseCase editar;
     private final AlterarPerfilDoUsuarioUseCase alterarPerfil;
     private final DefinirAtivacaoDoUsuarioUseCase definirAtivacao;
+    private final DefinirSenhaDoUsuarioUseCase definirSenha;
     private final ResetarSegundoFatorUseCase resetarMfa;
     private final DefinirTelefoneDoUsuarioUseCase definirTelefone;
 
     public UsuariosController(CriarUsuarioUseCase criar, ListarUsuariosUseCase listar,
+                              EditarUsuarioUseCase editar,
                               AlterarPerfilDoUsuarioUseCase alterarPerfil,
                               DefinirAtivacaoDoUsuarioUseCase definirAtivacao,
+                              DefinirSenhaDoUsuarioUseCase definirSenha,
                               ResetarSegundoFatorUseCase resetarMfa,
                               DefinirTelefoneDoUsuarioUseCase definirTelefone) {
         this.criar = criar;
         this.listar = listar;
+        this.editar = editar;
         this.alterarPerfil = alterarPerfil;
         this.definirAtivacao = definirAtivacao;
+        this.definirSenha = definirSenha;
         this.resetarMfa = resetarMfa;
         this.definirTelefone = definirTelefone;
     }
@@ -67,6 +75,15 @@ public class UsuariosController {
             @NotBlank @Email @Size(max = 320) String email,
             @NotBlank @Size(max = 200) String senha,
             @NotNull Perfil perfil) {
+    }
+
+    /** RN-IAM-024 — sem perfil e sem senha: os dois têm rota própria, com trava própria. */
+    public record EditarUsuarioRequest(
+            @NotBlank @Size(max = 200) String nome,
+            @NotBlank @Email @Size(max = 320) String email) {
+    }
+
+    public record SenhaRequest(@NotBlank @Size(max = 200) String senha) {
     }
 
     public record PerfilRequest(@NotNull Perfil perfil) {
@@ -85,6 +102,28 @@ public class UsuariosController {
         UUID id = criar.executar(requisicao.nome(), requisicao.email(), requisicao.senha(),
                 requisicao.perfil());
         return ResponseEntity.created(URI.create("/api/v1/usuarios/" + id)).build();
+    }
+
+    /** RN-IAM-024 — corrigir a ficha. Trocar o e-mail encerra as sessões da pessoa. */
+    @PutMapping("/{id}")
+    public ResponseEntity<Void> editar(@PathVariable UUID id,
+                                       @Valid @RequestBody EditarUsuarioRequest requisicao) {
+        editar.executar(id, requisicao.nome(), requisicao.email());
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * RN-IAM-025 — o administrador define a senha de outra pessoa.
+     *
+     * <p>{@code POST}, e não {@code PUT}: não é um recurso que se lê de volta — é um ato, com
+     * efeito colateral (as sessões daquela pessoa caem).
+     */
+    @PostMapping("/{id}/senha")
+    public ResponseEntity<Void> definirSenha(@PathVariable UUID id,
+                                             @Valid @RequestBody SenhaRequest requisicao,
+                                             @AuthenticationPrincipal Jwt jwt) {
+        definirSenha.executar(id, requisicao.senha(), UUID.fromString(jwt.getSubject()));
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/perfil")

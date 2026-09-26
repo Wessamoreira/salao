@@ -9,10 +9,11 @@ import { Protegida } from './layout/Protegida';
 import { Login } from './telas/Login';
 import { SegundoFator } from './telas/SegundoFator';
 import { SemTela } from './telas/SemTela';
+import { MinhaSenha } from './telas/acessos/MinhaSenha';
 // Entrar e o segundo fator ficam no pacote de entrada: são a primeira tela de quem chega,
 // e um pedaço à parte para elas seria uma espera antes do login. O resto vem por rota.
 import {
-  Agenda, Catalogo, Clientes, Comandas, Conciliacao, Configuracao, Equipe, Fila, Painel,
+  Acessos, Agenda, Catalogo, Clientes, Comandas, Conciliacao, Configuracao, Equipe, Fila, Painel,
   Precos, RevisaoDoAgente,
 } from './rotas';
 
@@ -61,6 +62,8 @@ export function App() {
             <Route path="/entrar/verificacao" element={<SegundoFator />} />
             <Route path="/seguranca/segundo-fator"
               element={<Protegida><SegundoFator /></Protegida>} />
+            {/* RT-IAM-009 — trocar a PRÓPRIA senha; o endpoint existia sem tela desde a Fase 0. */}
+            <Route path="/seguranca/senha" element={<Protegida><MinhaSenha /></Protegida>} />
 
             <Route element={<Protegida><Casca /></Protegida>}>
               <Route index element={<Navigate to="/agenda" replace />} />
@@ -80,6 +83,8 @@ export function App() {
               <Route path="/conciliacao" element={<Conciliacao />} />
               <Route path="/precos" element={<Precos />} />
               <Route path="/config" element={<Configuracao />} />
+              {/* RT-IAM-009 — sem esta tela, dar login à recepção era chamada HTTP na mão. */}
+              <Route path="/acessos" element={<Acessos />} />
             </Route>
 
             {/*

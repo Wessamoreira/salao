@@ -1,0 +1,321 @@
+/*
+ * RT-IAM-009 — quem entra no sistema.
+ *
+ * Mesma divisão da equipe e do catálogo: a seção é estrutura, o papel branco é o objeto — aqui,
+ * a pessoa e o acesso dela. A única cor da tela é a da pendência, e ela é âmbar porque é o que
+ * pede ação, não o que deu errado.
+ */
+
+.acs-tela {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-6);
+  padding: var(--e-5);
+}
+
+.acs-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ------------------------------------------------------------------ a pessoa */
+
+/*
+ * Faixas FIXAS, e não `auto`, no perfil e na situação.
+ *
+ * Cada linha é um grid próprio: com faixa `auto`, a largura de "configura o segundo fator ao
+ * entrar" empurra a coluna daquela linha e não a das outras, e o perfil sai serrilhado de linha
+ * para linha. É uma lista que se lê varrendo a coluna de cima a baixo — e coluna que não fica no
+ * mesmo lugar não se varre.
+ */
+.acs-pessoa {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 150px 232px auto;
+  align-items: center;
+  gap: var(--e-4);
+  padding: var(--e-3) var(--e-4);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+.acs-pessoa.inativa { background: var(--papel-fundo); }
+.acs-pessoa.inativa .acs-quem h3 { color: var(--tinta-fraca); }
+
+.acs-inicial {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: var(--tinta);
+  background: var(--papel-afundado);
+  border-radius: 50%;
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+}
+
+.acs-quem { min-width: 0; }
+.acs-quem h3 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--e-2);
+  margin: 0;
+  font-size: var(--t-14);
+  font-weight: var(--p-forte);
+}
+.acs-email {
+  margin: 1px 0 0;
+  overflow: hidden;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* "você" é etiqueta de contexto, não status: fica em tinta fraca e em caixa alta pequena. */
+.acs-voce {
+  color: var(--tinta-fraca);
+  font-size: var(--t-10);
+  font-weight: var(--p-forte);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+
+.acs-perfil {
+  margin: 0;
+  font-size: var(--t-13);
+}
+
+.acs-situacao {
+  margin: 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  white-space: nowrap;
+}
+
+.acs-marca { color: var(--tinta-fraca); }
+/* A pendência é a única informação desta lista sobre a qual se age — e a única em cor. */
+.acs-marca.atencao {
+  padding: 0 var(--e-1);
+  color: var(--tinta);
+  background: var(--status-solicitado-fundo);
+  border-left: 2px solid var(--status-solicitado);
+}
+
+.acs-acoes { display: flex; gap: var(--e-2); }
+
+/* ------------------------------------------------------------------ o editor */
+
+.acs-editor {
+  display: flex;
+  flex-direction: column;
+  background: var(--papel);
+  border: 1px solid var(--tinta-tenue);
+  border-radius: var(--raio-2);
+}
+.acs-bloco { padding: var(--e-4); }
+.acs-bloco + .acs-bloco { border-top: 1px solid var(--regua); }
+
+/* De quem é a conta, no alto e sem competir com as seções: nome em tinta cheia, régua embaixo. */
+.acs-editor-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--e-4);
+  padding: var(--e-3) var(--e-4);
+  background: var(--papel-fundo);
+  border-bottom: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2) var(--raio-2) 0 0;
+}
+.acs-editor-quem { min-width: 0; }
+.acs-editor-quem h3 {
+  margin: 0;
+  font-size: var(--t-14);
+  font-weight: var(--p-forte);
+}
+.acs-editor-quem p {
+  margin: 1px 0 0;
+  overflow: hidden;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Versalete só nos títulos DE BLOCO. Escrito `.acs-editor h3`, esta regra alcançava também o
+   nome no topo do editor e o punha em caixa alta — mesma especificidade, e ganhava por vir
+   depois. A correção é o seletor dizer onde vale, não a ordem do arquivo. */
+.acs-bloco h3 {
+  margin: 0 0 var(--e-3);
+  font-size: var(--t-12);
+  font-weight: var(--p-pesado);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+
+.acs-ajuda {
+  margin: var(--e-3) 0 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  line-height: 1.5;
+}
+.acs-ajuda a { color: var(--tinta); }
+/* Consequência que a pessoa do outro lado vai sentir — sessão encerrada, acesso trocado. */
+.acs-atencao {
+  padding: var(--e-2) var(--e-3);
+  color: var(--tinta);
+  background: var(--status-solicitado-fundo);
+  border-left: 2px solid var(--status-solicitado);
+}
+
+.acs-estado { margin: 0; font-size: var(--t-13); }
+
+/* A ajuda tem margem só em cima, porque quase sempre vem DEPOIS dos campos. Quando vem antes
+   — o telefone do agente explica o que ligar um número concede —, o rótulo encostava nela. */
+.acs-ajuda + .acs-campos { margin-top: var(--e-3); }
+
+.acs-campos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e-3) var(--e-4);
+}
+
+.acs-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--t-12);
+}
+.acs-campo > span { color: var(--tinta-fraca); }
+.acs-campo-largo { flex: 1 1 240px; min-width: 0; }
+/* A frase tem vinte e poucos caracteres: num campo de tela inteira, "Gerar outra" ficaria a meio
+   metro do que ele gera. */
+.acs-campo-senha { flex: 0 1 340px; min-width: 0; }
+.acs-campo input {
+  min-height: 32px;
+  padding: 0 var(--e-2);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-14);
+}
+
+.acs-acoes-bloco {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+  margin-top: var(--e-4);
+}
+.acs-gerar { align-self: flex-end; }
+
+/* ------------------------------------------------------------------ perfis */
+
+.acs-perfis {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.acs-perfis > li {
+  padding: var(--e-2) var(--e-3);
+  border: 1px solid transparent;
+  border-radius: var(--raio-2);
+}
+.acs-perfis > li.escolhido {
+  background: var(--papel-fundo);
+  border-color: var(--regua-forte);
+}
+
+.acs-perfil-opcao {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0 var(--e-2);
+  align-items: baseline;
+  cursor: pointer;
+}
+.acs-perfil-nome {
+  display: flex;
+  align-items: baseline;
+  gap: var(--e-2);
+  font-size: var(--t-13);
+  font-weight: var(--p-forte);
+}
+.acs-perfil-resumo {
+  grid-column: 2;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  line-height: 1.5;
+}
+
+/* Não é alerta: é uma condição do perfil, e some quando o perfil não a tem. */
+.acs-exige-2fa {
+  padding: 0 var(--e-1);
+  color: var(--tinta-fraca);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-1);
+  font-size: var(--t-10);
+  font-weight: var(--p-normal);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+
+.acs-pode-fazer {
+  margin: var(--e-2) 0 0 calc(var(--e-4) + 2px);
+  font-size: var(--t-12);
+}
+.acs-pode-fazer > summary {
+  color: var(--tinta-fraca);
+  cursor: pointer;
+}
+.acs-pode-fazer > ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 2px var(--e-4);
+  margin: var(--e-2) 0 0;
+  padding-left: var(--e-4);
+  color: var(--tinta-fraca);
+  line-height: 1.6;
+}
+
+/* ------------------------------------------------------------------ a credencial */
+
+.acs-senha { margin-top: var(--e-3); }
+
+.acs-credencial {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--e-1) var(--e-4);
+  margin: var(--e-3) 0 0;
+  padding: var(--e-3) var(--e-4);
+  background: var(--papel-fundo);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+.acs-credencial dt {
+  color: var(--tinta-fraca);
+  font-size: var(--t-11);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
+}
+.acs-credencial dd {
+  margin: 0;
+  font-size: var(--t-14);
+  /* A senha é para ser lida e ditada: tabular separa o que se confunde. */
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .acs-pessoa { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .acs-perfil,
+  .acs-situacao { grid-column: 2; }
+  .acs-acoes { grid-column: 3; grid-row: 1; }
+}

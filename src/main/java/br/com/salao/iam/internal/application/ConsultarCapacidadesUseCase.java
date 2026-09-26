@@ -123,6 +123,11 @@ public class ConsultarCapacidadesUseCase {
         if (permissoes.contains(Permissao.AGENTE_REVISAR)) {
             menus.add(new Capacidades.Menu("agente", "Agente", "/agente", "balao", "gestao"));
         }
+        // RT-IAM-009 — em Sistema, ao lado de Configurações: mexer em quem entra é mexer no
+        // sistema, não no dia. Quem não gerencia usuário não tem o que fazer lá.
+        if (permissoes.contains(Permissao.USUARIO_GERENCIAR)) {
+            menus.add(new Capacidades.Menu("acessos", "Acessos", "/acessos", "escudo", "sistema"));
+        }
         if (permissoes.contains(Permissao.CONFIG_GERENCIAR)) {
             menus.add(new Capacidades.Menu("configuracao", "Configurações", "/config", "engrenagem", "sistema"));
         }

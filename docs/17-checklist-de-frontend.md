@@ -450,6 +450,24 @@ Três correções, e cada uma vale para além deste caso:
 
 Regra que fica: **um campo que o front só usa para ORDENAR não pode derrubar o que ele ordena.**
 
+## Faixa 6 — a tela que faltava para o sistema sair de uma pessoa só
+
+`/acessos` (RT-IAM-009, 25/09). Três coisas que valem para qualquer tela de administração:
+
+1. **Perfil se escolhe lendo o que ele faz.** "GERENTE" não diz se a pessoa passa a ver o
+   dinheiro do salão, e é essa a pergunta de quem escolhe. As frases vêm do servidor, com um
+   teste provando que nenhuma permissão ficou sem frase — um dicionário no front envelheceria
+   calado.
+2. **Cada ato tem o seu botão.** Mudar perfil e definir senha derrubam a sessão da pessoa;
+   corrigir o nome, não. Escondê-los dentro de um "salvar" faria um botão manso produzir uma
+   consequência que ninguém pediu — e a pessoa do outro lado descobriria sendo desconectada no
+   meio de um atendimento.
+3. **O que não dá para fazer diz por quê, na linha.** A própria conta não se rebaixa nem se
+   desativa (RN-IAM-015). Em vez de botão cinza, está escrito o motivo e para onde ir.
+
+E o "copiado" só aparece quando copiou: sem HTTPS a área de transferência falha em silêncio, e
+prometer a cópia faria alguém colar nada na mensagem com a senha.
+
 ## O que isto NÃO propõe mudar
 
 A direção de `16-design-system.md` está certa e continua valendo: back-office neutro, cor só onde

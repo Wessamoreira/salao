@@ -68,8 +68,17 @@ O backend tem **145 endpoints** em 34 controladores. Na medição de 23/09:
 
 **63 de 145 (43%) do que o servidor sabia fazer não tinha por onde ser feito.**
 
-Depois da tela do catálogo (RT-CAT-005, 24/09), que cobriu `/v1/servicos` e `/v1/recursos` por
-inteiro, são **53 de 145 (37%)**. Cada tela da fase 7 derruba esse número; ele é o placar.
+Cada tela da fase 7 derruba esse número; ele é o placar:
+
+| Depois de | O que passou a ter tela | Sem tela |
+|---|---|---|
+| RT-CAT-005 · 24/09 | `/v1/servicos`, `/v1/recursos` | 53 de 145 (37%) |
+| RT-EQP-005 · 24/09 | `/v1/profissionais` (+ editar), `/v1/bloqueios-de-jornada` | 41 de 146 (28%) |
+| RT-IAM-009 · 25/09 | `/v1/usuarios` (+ editar e senha), `/v1/perfis`, `/v1/me/senha` | **34 de 150 (23%)** |
+
+O total sobe porque as telas acharam endpoints que faltavam: editar serviço, editar profissional,
+editar usuário, definir senha e o catálogo de perfis. Buraco que só aparece quando alguém tenta
+usar.
 
 Não é código faltando no servidor: é tela faltando. Cada linha abaixo tem endpoint testado,
 regra registrada e migration aplicada.
@@ -82,14 +91,15 @@ regra registrada e migration aplicada.
 
 | Falta | Endpoints prontos | Sem isso |
 |---|---|---|
-| Profissional, jornada semanal, bloqueio de jornada, habilidades | `/v1/profissionais` (8), `/v1/bloqueios-de-jornada` (4) | **A agenda abre vazia.** A própria tela diz: "a agenda aparece quando houver profissional cadastrado com jornada" |
+| ~~Profissional, jornada semanal, bloqueio de jornada, habilidades~~ | `/v1/profissionais` (9), `/v1/bloqueios-de-jornada` (4) | **Feito em 24/09** — RT-EQP-005. A agenda deixou de abrir vazia |
 | ~~Serviço com blocos, preço com vigência~~ | `/v1/servicos` (7) | **Feito em 24/09** — RT-CAT-005 |
 | ~~Recurso (lavatório, cadeira, secador)~~ | `/v1/recursos` (4) | **Feito em 24/09** — RT-CAT-005 |
-| Duração por profissional | `/v1/profissionais` | a relação é profissional × serviço, e o lugar dela é a tela da equipe |
-| Usuário e login | `/v1/usuarios` (6) | **Ninguém além do primeiro dono consegue entrar.** Criar acesso para a recepção exige chamada HTTP na mão |
+| ~~Duração por profissional~~ | `/v1/profissionais` | **Feito em 24/09** — mora nas habilidades, dentro da tela da equipe |
+| ~~Usuário e login~~ | `/v1/usuarios` (8), `/v1/perfis` (1) | **Feito em 25/09** — RT-IAM-009. Antes, criar acesso para a recepção exigia chamada HTTP na mão |
 
-Este bloco é o que separa "o sistema roda" de "o salão consegue começar". Hoje, abrir um salão
-novo exige Postman.
+Este bloco era o que separava "o sistema roda" de "o salão consegue começar", e **está fechado**:
+desde 25/09 dá para abrir um salão novo — cardápio, equipe com jornada e os logins de quem
+trabalha — sem sair da tela.
 
 ### 2. Financeiro — o dinheiro entra e não fecha
 

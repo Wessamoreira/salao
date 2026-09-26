@@ -254,6 +254,11 @@ export function Casca() {
                 <Icone nome="escudo" tamanho={16} />
                 <span>Segundo fator</span>
               </button>
+              <button className="casca-conta-item" type="button" role="menuitem"
+                onClick={() => { setContaAberta(false); navegar('/seguranca/senha'); }}>
+                <Icone nome="chave" tamanho={16} />
+                <span>Trocar minha senha</span>
+              </button>
               <button className="casca-conta-item perigo" type="button" role="menuitem"
                 onClick={sair} disabled={!conectado || saindo}
                 title={conectado ? undefined

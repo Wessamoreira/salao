@@ -498,3 +498,53 @@ que a cliente toca. Um link `http` poderia ser trocado no caminho.
 **Rotinas.** RT-CFG-001, RT-CNV-008 · **Teste.** `DadosDoEstabelecimentoTest.contato_*`,
 `ConfiguracaoIT.contato_para_clientes`
 **Configurável?** É a própria configuração · **Origem.** 2026-09-19
+
+---
+
+### RN-IAM-024 — Nome e e-mail se corrigem; e-mail novo encerra as sessões
+
+**Enunciado.** `usuario:manage` corrige nome e e-mail de uma conta. Corrigir **só o nome** não
+mexe nas sessões; trocar o e-mail revoga todas as sessões daquela pessoa. Perfil, ativação e senha
+não passam por aqui: cada um tem caminho próprio, com trava própria.
+
+**Motivo.** O índice de e-mail é global (V7). Sem esta operação, um e-mail digitado errado no
+cadastro deixa a pessoa sem conseguir entrar **e** ocupa o endereço certo para sempre — a única
+saída seria `update` no banco. O caso é frequente o bastante (é um campo digitado uma vez, por
+outra pessoa) para não depender de acesso ao banco.
+
+As sessões caem no e-mail porque o e-mail é o identificador de entrada: a sessão aberta foi obtida
+com uma credencial que não existe mais. No nome não caem porque nome não é credencial — derrubar a
+recepção no meio do expediente para consertar um acento seria punição por conserto.
+
+**Onde é garantida.** `EditarUsuarioUseCase` · `UsuariosJdbc.editar`.
+**Rotinas.** RT-IAM-009 · **Teste.** `TelaDeAcessosIT.corrigir_nome_nao_derruba_sessao`,
+`.trocar_email_derruba_sessoes`, `.email_repetido_nao_diz_onde`, `.sem_permissao_nao_edita`
+**Erro.** `ER-IAM-EMAIL_JA_CADASTRADO` (409) · **Configurável?** Não
+**Origem.** 2026-09-25
+
+---
+
+### RN-IAM-025 — O administrador define a senha de outra pessoa, nunca a própria
+
+**Enunciado.** `usuario:manage` define uma senha nova para outra conta, sem apresentar a senha
+antiga dela, e todas as sessões daquela pessoa caem. Sobre a **própria** conta a operação é
+recusada: o caminho é `PUT /v1/me/senha`, que exige a senha atual.
+
+**Motivo.** Esquecer a senha é mais comum do que perder o celular, e o segundo já tinha conserto
+(`resetar-mfa`, RT-IAM-007). Sem o primeiro, quem esquece a senha fica de fora do sistema e a
+saída é mexer no banco.
+
+A recusa sobre si mesmo é o que mantém de pé a exigência da senha atual. Sem ela, quem sentasse no
+computador do balcão com a sessão do dono aberta trocaria a senha do dono **sem saber a senha do
+dono** — exatamente o cenário que RT-IAM-007 cita ao exigi-la. É a mesma trava de RN-IAM-015,
+aplicada a uma operação que não é rebaixamento nem desativação, e por isso escrita aqui.
+
+É operação perigosa e o desenho reconhece, como em `resetar-mfa`: exige `usuario:manage`, encerra
+as sessões do alvo, audita e registra em log de aviso. Confirmar a identidade de quem pediu é de
+quem administra — nenhum sistema resolve isso sozinho.
+
+**Onde é garantida.** `DefinirSenhaDoUsuarioUseCase` (`GestaoDeUsuarios.recusarSobreSiMesmo`).
+**Rotinas.** RT-IAM-009 · **Teste.** `TelaDeAcessosIT.define_senha_de_outra_pessoa`,
+`.senha_curta_recusada`, `.nao_define_a_propria_senha`, `.sem_permissao_nao_define_senha`
+**Erro.** `ER-IAM-OPERACAO_SOBRE_SI_MESMO` (422) · **Configurável?** Não
+**Origem.** 2026-09-25

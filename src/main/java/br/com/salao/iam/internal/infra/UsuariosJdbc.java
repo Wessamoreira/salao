@@ -42,6 +42,14 @@ public class UsuariosJdbc {
             returning id
             """;
 
+    /** RN-IAM-024 — só o que é ficha. Perfil, ativação e senha têm comando próprio. */
+    private static final String EDITAR = """
+            update usuario
+               set nome = :nome, email = :email, email_normalizado = :emailNormalizado,
+                   versao = versao + 1
+             where id = :id
+            """;
+
     private static final String ALTERAR_PERFIL =
             "update usuario set perfil = :perfil, versao = versao + 1 where id = :id";
 
@@ -128,6 +136,13 @@ public class UsuariosJdbc {
                 .param("emailNormalizado", emailNormalizado).param("senhaHash", senhaHash)
                 .param("perfil", perfil.name())
                 .query(UUID.class).single();
+    }
+
+    @Transactional
+    public int editar(UUID usuarioId, String nome, String email, String emailNormalizado) {
+        return jdbc.sql(EDITAR)
+                .param("id", usuarioId).param("nome", nome).param("email", email)
+                .param("emailNormalizado", emailNormalizado).update();
     }
 
     @Transactional

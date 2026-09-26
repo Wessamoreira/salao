@@ -14,6 +14,9 @@ import br.com.salao.iam.internal.application.ConsultarCapacidadesUseCase;
 import br.com.salao.iam.internal.application.LimitesDoUsuario;
 import br.com.salao.iam.internal.application.CriarUsuarioUseCase;
 import br.com.salao.iam.internal.application.DefinirAtivacaoDoUsuarioUseCase;
+import br.com.salao.iam.internal.application.DefinirSenhaDoUsuarioUseCase;
+import br.com.salao.iam.internal.application.EditarUsuarioUseCase;
+import br.com.salao.iam.internal.application.ListarPerfisUseCase;
 import br.com.salao.iam.internal.application.ListarUsuariosUseCase;
 import br.com.salao.iam.internal.application.ResetarSegundoFatorUseCase;
 import br.com.salao.iam.internal.application.TrocarSenhaUseCase;
@@ -165,6 +168,25 @@ public class IamConfig {
     @Bean
     public ListarUsuariosUseCase listarUsuariosUseCase(UsuariosJdbc usuarios) {
         return new ListarUsuariosUseCase(usuarios);
+    }
+
+    @Bean
+    public ListarPerfisUseCase listarPerfisUseCase() {
+        return new ListarPerfisUseCase();
+    }
+
+    @Bean
+    public EditarUsuarioUseCase editarUsuarioUseCase(
+            UsuariosJdbc usuarios, RefreshTokensJdbc tokens, Relogio relogio,
+            AuditoriaApi auditoria) {
+        return new EditarUsuarioUseCase(usuarios, tokens, relogio, auditoria);
+    }
+
+    @Bean
+    public DefinirSenhaDoUsuarioUseCase definirSenhaDoUsuarioUseCase(
+            UsuariosJdbc usuarios, RefreshTokensJdbc tokens, PasswordEncoder codificador,
+            Relogio relogio, AuditoriaApi auditoria) {
+        return new DefinirSenhaDoUsuarioUseCase(usuarios, tokens, codificador, relogio, auditoria);
     }
 
     @Bean
