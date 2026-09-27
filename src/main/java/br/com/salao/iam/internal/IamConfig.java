@@ -1,7 +1,7 @@
 package br.com.salao.iam.internal;
 
 import br.com.salao.iam.internal.application.ResolvedorDeUsuarioEfetivo;
-import br.com.salao.iam.internal.application.DefinirTelefoneDoUsuarioUseCase;
+import br.com.salao.iam.internal.application.DefinirTelefonesDoUsuarioUseCase;
 import br.com.salao.iam.api.UsuarioEfetivoApi;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.api.NomesDeUsuariosApi;
@@ -259,9 +259,9 @@ public class IamConfig {
     }
 
     @Bean
-    public DefinirTelefoneDoUsuarioUseCase definirTelefoneDoUsuarioUseCase(
+    public DefinirTelefonesDoUsuarioUseCase definirTelefonesDoUsuarioUseCase(
             UsuariosJdbc usuarios, EstabelecimentoApi estabelecimentos, AuditoriaApi auditoria) {
-        return new DefinirTelefoneDoUsuarioUseCase(usuarios, estabelecimentos, auditoria);
+        return new DefinirTelefonesDoUsuarioUseCase(usuarios, estabelecimentos, auditoria);
     }
 
     /** RT-CNV-007 — nomes por id, para quem mostra quem sem ler o cadastro. */

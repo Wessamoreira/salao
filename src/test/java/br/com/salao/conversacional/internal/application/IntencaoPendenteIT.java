@@ -442,8 +442,9 @@ class IntencaoPendenteIT extends AbstractAgenteIT {
     void permissao_retirada_no_meio() throws SQLException {
         Cenario c = cenario();
         String codigo = (String) pedirMarcacao(c, "wamid.1", LocalTime.of(13, 0)).get("codigo");
-        try (var ps = comoOwner().prepareStatement(
-                "update usuario set perfil = 'PROFISSIONAL' where telefone = ?")) {
+        try (var ps = comoOwner().prepareStatement("""
+                update usuario set perfil = 'PROFISSIONAL'
+                 where id = (select usuario_id from telefone_do_usuario where telefone = ?)""")) {
             ps.setString(1, c.bia());
             ps.executeUpdate();
         }
@@ -478,7 +479,7 @@ class IntencaoPendenteIT extends AbstractAgenteIT {
         Cenario c = cenario();
         var intencao = pedirMarcacao(c, "wamid.1", LocalTime.of(13, 0));
         try (var ps = comoOwner().prepareStatement(
-                "update usuario set telefone = null where telefone = ?")) {
+                "delete from telefone_do_usuario where telefone = ?")) {
             ps.setString(1, c.bia());
             ps.executeUpdate();
         }
@@ -489,6 +490,26 @@ class IntencaoPendenteIT extends AbstractAgenteIT {
         var resposta = execucao(c.tenant(), "wamid.2");
         assertThat(resposta.get("usuario_efetivo_id")).as("quem respondeu é a nova dona do número")
                 .isNotEqualTo(intencao.get("usuario_efetivo_id"));
+        assertThat((String) resposta.get("resposta")).startsWith("Não encontrei pedido");
+        assertThat(intencaoDa(c.tenant(), "wamid.1")).containsEntry("status", "PENDENTE");
+        assertThat(agendamentos(c.tenant())).isEmpty();
+    }
+
+    @Test
+    @DisplayName("RN-CNV-033: pede de um número da conta e confirma do outro — o código não vale")
+    void confirmacao_nao_atravessa_numero() throws SQLException {
+        // A mesma pessoa, dois aparelhos (RN-IAM-026). O código foi mandado AO NÚMERO que pediu e é
+        // a resposta àquela mensagem; soltá-lo para a pessoa faria um número ligado hoje confirmar
+        // uma gravação que ele não pediu — e é gravação no domínio.
+        Cenario c = cenario();
+        String outro = maisUmNumero(c.salao(), c.bia());
+        var intencao = pedirMarcacao(c, "wamid.1", LocalTime.of(13, 0));
+
+        responder(c, outro, "wamid.2", "SIM " + intencao.get("codigo"));
+
+        var resposta = execucao(c.tenant(), "wamid.2");
+        assertThat(resposta.get("usuario_efetivo_id")).as("é a MESMA pessoa, pelo outro aparelho")
+                .isEqualTo(intencao.get("usuario_efetivo_id"));
         assertThat((String) resposta.get("resposta")).startsWith("Não encontrei pedido");
         assertThat(intencaoDa(c.tenant(), "wamid.1")).containsEntry("status", "PENDENTE");
         assertThat(agendamentos(c.tenant())).isEmpty();

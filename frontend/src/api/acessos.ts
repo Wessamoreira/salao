@@ -8,8 +8,12 @@ export interface Usuario {
   id: string;
   nome: string;
   email: string;
-  /** RT-CNV-002 — E.164. Nulo para quem não usa o agente, que é quase todo mundo. */
-  telefone: string | null;
+  /**
+   * RT-IAM-010 — E.164, até dois. Vazio para quem não usa o agente, que é quase todo mundo.
+   *
+   * Lista, e não "principal e outro": a posição no banco é vaga, não hierarquia (RN-IAM-026).
+   */
+  telefones: string[];
   perfil: Perfil;
   ativo: boolean;
   mfaAtivo: boolean;
@@ -133,13 +137,19 @@ export function useResetarSegundoFator() {
   });
 }
 
-/** RN-IAM-022 — o telefone pelo qual o agente reconhece esta pessoa. Vazio o remove. */
-export function useDefinirTelefoneDoUsuario() {
+/**
+ * RN-IAM-022 — os números pelos quais o agente reconhece esta pessoa. A lista inteira, sempre.
+ *
+ * Um PUT com a lista, e não "ligar" e "desligar" separados: a tela mostra dois campos e salva o que
+ * mostra, e a auditoria registra um antes e um depois — que é a pergunta real. Dois endpoints
+ * dariam duas linhas de trilha para um gesto só.
+ */
+export function useDefinirTelefonesDoUsuario() {
   const fila = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, telefone }: { id: string; telefone: string }) =>
-      api<void>(`/v1/usuarios/${id}/telefone`, {
-        method: 'PUT', body: JSON.stringify({ telefone }),
+    mutationFn: ({ id, telefones }: { id: string; telefones: string[] }) =>
+      api<void>(`/v1/usuarios/${id}/telefones`, {
+        method: 'PUT', body: JSON.stringify({ telefones }),
       }),
     onSuccess: aoEscrever(fila),
   });

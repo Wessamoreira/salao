@@ -166,6 +166,7 @@ automático, e criar uma migration sem `estabelecimento_id` quebra o build.
 | RT-CNV-007 | Auditoria de ação por IA (`acao_ia`) + painel de revisão | M | CNV-004 |
 | RT-CNV-008 | Aviso de IA ao cliente na primeira interação (LGPD) | P | CNV-002 |
 | RT-CNV-009 | Janela de agregação: uma volta do modelo por rajada, não por mensagem | M | CNV-003, CNV-004 |
+| RT-IAM-010 | Dois números por pessoa: o pessoal e o do salão | M | CNV-002, IAM-009 |
 
 **Padrão inegociável:** operação que grava passa por `simular` → confirmação humana explícita →
 `confirmar`. O LLM nunca escreve direto no domínio. Mensagem de cliente é entrada não confiável;

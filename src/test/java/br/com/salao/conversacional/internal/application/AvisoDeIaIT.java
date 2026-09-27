@@ -129,7 +129,7 @@ class AvisoDeIaIT extends AbstractAgenteIT {
         String bia = pessoa(salao, Perfil.RECEPCAO);
         String dona = telefoneNovo();
         TenantContext.executar(salao.tenant(), () -> com(() -> {
-            definirTelefone.executar(salao.adminId(), dona);
+            definirTelefones.executar(salao.adminId(), List.of(dona));
             return null;
         }, Permissao.USUARIO_GERENCIAR));
 

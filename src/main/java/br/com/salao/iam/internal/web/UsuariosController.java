@@ -1,7 +1,7 @@
 package br.com.salao.iam.internal.web;
 
 import org.springframework.web.bind.annotation.PutMapping;
-import br.com.salao.iam.internal.application.DefinirTelefoneDoUsuarioUseCase;
+import br.com.salao.iam.internal.application.DefinirTelefonesDoUsuarioUseCase;
 import br.com.salao.iam.api.Perfil;
 import br.com.salao.iam.api.UsuarioResumo;
 import br.com.salao.iam.internal.application.AlterarPerfilDoUsuarioUseCase;
@@ -47,7 +47,7 @@ public class UsuariosController {
     private final DefinirAtivacaoDoUsuarioUseCase definirAtivacao;
     private final DefinirSenhaDoUsuarioUseCase definirSenha;
     private final ResetarSegundoFatorUseCase resetarMfa;
-    private final DefinirTelefoneDoUsuarioUseCase definirTelefone;
+    private final DefinirTelefonesDoUsuarioUseCase definirTelefones;
 
     public UsuariosController(CriarUsuarioUseCase criar, ListarUsuariosUseCase listar,
                               EditarUsuarioUseCase editar,
@@ -55,7 +55,7 @@ public class UsuariosController {
                               DefinirAtivacaoDoUsuarioUseCase definirAtivacao,
                               DefinirSenhaDoUsuarioUseCase definirSenha,
                               ResetarSegundoFatorUseCase resetarMfa,
-                              DefinirTelefoneDoUsuarioUseCase definirTelefone) {
+                              DefinirTelefonesDoUsuarioUseCase definirTelefones) {
         this.criar = criar;
         this.listar = listar;
         this.editar = editar;
@@ -63,11 +63,16 @@ public class UsuariosController {
         this.definirAtivacao = definirAtivacao;
         this.definirSenha = definirSenha;
         this.resetarMfa = resetarMfa;
-        this.definirTelefone = definirTelefone;
+        this.definirTelefones = definirTelefones;
     }
 
-    /** RT-CNV-002 — sem {@code @NotBlank}: vazio é o pedido de TIRAR o telefone da conta. */
-    public record TelefoneRequest(@Size(max = 40) String telefone) {
+    /**
+     * RT-IAM-010 — a lista inteira, sempre. Vazia é o pedido de TIRAR os números da conta.
+     *
+     * <p>O teto de dois não está aqui: quem o garante é o banco (RN-IAM-026), e um {@code @Size}
+     * duplicaria a regra num lugar que a requisição seguinte pode contornar.
+     */
+    public record TelefonesRequest(List<@Size(max = 40) String> telefones) {
     }
 
     public record CriarUsuarioRequest(
@@ -149,11 +154,11 @@ public class UsuariosController {
         return ResponseEntity.noContent().build();
     }
 
-    /** RT-CNV-002 — o telefone pelo qual o agente reconhece esta pessoa. */
-    @PutMapping("/{id}/telefone")
-    public ResponseEntity<Void> definirTelefone(@PathVariable UUID id,
-                                                @Valid @RequestBody TelefoneRequest requisicao) {
-        definirTelefone.executar(id, requisicao.telefone());
+    /** RT-IAM-010 — os números pelos quais o agente reconhece esta pessoa. */
+    @PutMapping("/{id}/telefones")
+    public ResponseEntity<Void> definirTelefones(@PathVariable UUID id,
+                                                 @Valid @RequestBody TelefonesRequest requisicao) {
+        definirTelefones.executar(id, requisicao.telefones());
         return ResponseEntity.noContent().build();
     }
 }

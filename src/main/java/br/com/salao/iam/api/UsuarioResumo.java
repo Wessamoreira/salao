@@ -1,6 +1,7 @@
 package br.com.salao.iam.api;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -14,8 +15,11 @@ public record UsuarioResumo(
         UUID id,
         String nome,
         String email,
-        /** RT-CNV-002 — E.164, só dígitos. Nulo para quem não usa o agente, que é quase todo mundo. */
-        String telefone,
+        /**
+         * RT-IAM-010 — E.164, só dígitos, até dois. Vazia para quem não usa o agente, que é quase
+         * todo mundo. Lista, e não "principal e outro": a vaga no banco é vaga, não hierarquia.
+         */
+        List<String> telefones,
         Perfil perfil,
         boolean ativo,
         boolean mfaAtivo,

@@ -19,21 +19,41 @@ import org.springframework.transaction.annotation.Transactional;
  */
 public class UsuariosJdbc {
 
-    private static final String CAMPOS_DO_RESUMO =
-            "id, nome, email, telefone, perfil, ativo, mfa_ativo, ultimo_acesso_em";
+    /**
+     * RT-IAM-010 — os telefones vêm junto, num array, na ordem da vaga.
+     *
+     * <p>Subconsulta e não {@code left join}: com duas linhas de telefone o join duplicaria o
+     * usuário, e a lista de acessos passaria a mostrar a mesma pessoa duas vezes — o tipo de defeito
+     * que aparece só na conta que tem dois números.
+     */
+    private static final String TELEFONES_DA_LINHA = """
+            array(select t.telefone from telefone_do_usuario t
+                   where t.usuario_id = u.id order by t.posicao)""";
 
-    private static final String LISTAR =
-            "select " + CAMPOS_DO_RESUMO + " from usuario order by ativo desc, nome";
+    private static final String CAMPOS_DO_RESUMO =
+            "u.id, u.nome, u.email, u.perfil, u.ativo, u.mfa_ativo, u.ultimo_acesso_em, "
+            + TELEFONES_DA_LINHA + " as telefones";
+
+    private static final String LISTAR = "select " + CAMPOS_DO_RESUMO
+            + " from usuario u order by u.ativo desc, u.nome";
 
     private static final String POR_ID =
-            "select " + CAMPOS_DO_RESUMO + " from usuario where id = :id";
+            "select " + CAMPOS_DO_RESUMO + " from usuario u where u.id = :id";
 
     private static final String POR_TELEFONE = """
-            select id, nome, perfil, ativo, bloqueado_ate from usuario where telefone = :telefone
+            select u.id, u.nome, u.perfil, u.ativo, u.bloqueado_ate
+              from usuario u
+              join telefone_do_usuario t on t.usuario_id = u.id
+             where t.telefone = :telefone
             """;
 
-    private static final String DEFINIR_TELEFONE =
-            "update usuario set telefone = :telefone, versao = versao + 1 where id = :id";
+    private static final String APAGAR_TELEFONES =
+            "delete from telefone_do_usuario where usuario_id = :id";
+
+    private static final String LIGAR_TELEFONE = """
+            insert into telefone_do_usuario (estabelecimento_id, usuario_id, telefone, posicao)
+            values (:tenant, :id, :telefone, :posicao)
+            """;
 
     private static final String CRIAR = """
             insert into usuario
@@ -87,7 +107,7 @@ public class UsuariosJdbc {
                 rs.getObject("id", UUID.class),
                 rs.getString("nome"),
                 rs.getString("email"),
-                rs.getString("telefone"),
+                List.of((String[]) rs.getArray("telefones").getArray()),
                 Perfil.valueOf(rs.getString("perfil")),
                 rs.getBoolean("ativo"),
                 rs.getBoolean("mfa_ativo"),
@@ -117,10 +137,26 @@ public class UsuariosJdbc {
                 .optional();
     }
 
+    /**
+     * RT-IAM-010 — troca a lista inteira: apaga as vagas e regrava as que vieram.
+     *
+     * <p>Apagar e regravar, e não casar linha a linha: são no máximo duas, a tabela é irmã e o
+     * diff em memória seria mais código para o mesmo efeito. A vaga é sempre 1, 2 na ordem em que
+     * chegaram, o que faz tirar o primeiro e pôr outro reaproveitar a vaga livre — sem buraco.
+     *
+     * <p>Na mesma transação do caso de uso: o {@code delete} sozinho deixaria a pessoa sem número
+     * nenhum se o {@code insert} seguinte violasse a unicidade, e ela perderia o acesso ao agente
+     * por causa de um número que nem chegou a ser ligado.
+     */
     @Transactional
-    public int definirTelefone(UUID usuarioId, String telefone) {
-        return jdbc.sql(DEFINIR_TELEFONE)
-                .param("id", usuarioId).param("telefone", telefone).update();
+    public void definirTelefones(UUID tenant, UUID usuarioId, List<String> telefones) {
+        jdbc.sql(APAGAR_TELEFONES).param("id", usuarioId).update();
+        for (int i = 0; i < telefones.size(); i++) {
+            jdbc.sql(LIGAR_TELEFONE)
+                    .param("tenant", tenant).param("id", usuarioId)
+                    .param("telefone", telefones.get(i)).param("posicao", i + 1)
+                    .update();
+        }
     }
 
     /** O que a política do usuário efetivo precisa saber de uma conta. */

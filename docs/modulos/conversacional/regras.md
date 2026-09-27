@@ -749,3 +749,19 @@ completo e muito melhor que não responder; a transcrição que chegar depois vi
 **Rotinas.** RT-CNV-009 · **Teste.** `JanelaDeAgregacaoIT.transcricao_travada_nao_segura_alem_do_teto`,
 `.quem_nao_para_de_escrever_recebe_no_teto`
 **Configurável?** O teto · **Origem.** 2026-09-27
+
+### RN-CNV-033 — A confirmação vale no número que pediu, não na pessoa
+
+**Enunciado.** "SIM 4821" só decide a intenção pendente **daquele telefone**. Com dois números
+ligados à mesma conta (RN-IAM-026), quem pede do celular pessoal e responde do número do salão recebe
+"não há pedido neste número" — não a gravação.
+
+**Motivo.** Decisão do dono (27/09/2026), e escrita aqui porque até então era consequência de
+implementação e não escolha. O código foi mandado **àquele** canal e é a resposta àquela mensagem;
+soltar a pendência para a pessoa faria um número ligado hoje poder confirmar uma gravação que ele não
+pediu — e é gravação no domínio, com o resumo de outra pessoa na tela.
+
+**Onde é garantida.** `ConfirmarPeloCodigo` · `IntencoesJdbc` (a pendente é travada por telefone,
+RN-CNV-015).
+**Rotinas.** RT-CNV-005, RT-IAM-010 · **Teste.** `VariosNumerosIT.confirmacao_nao_atravessa_numero`
+**Configurável?** Não · **Origem.** 2026-09-27, decisão do dono

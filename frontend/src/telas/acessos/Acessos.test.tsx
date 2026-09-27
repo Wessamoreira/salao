@@ -25,18 +25,19 @@ vi.mock('../../api/http', () => ({
 const EU = 'u1';
 
 const MARILDA = {
-  id: EU, nome: 'Marilda Souza', email: 'marilda@salao.test', telefone: null,
+  id: EU, nome: 'Marilda Souza', email: 'marilda@salao.test', telefones: [],
   perfil: 'ADMIN', ativo: true, mfaAtivo: true, ultimoAcessoEm: new Date().toISOString(),
 };
 
 const ANA = {
-  id: 'u2', nome: 'Ana Ribeiro', email: 'ana@salao.test', telefone: '5511987654321',
+  id: 'u2', nome: 'Ana Ribeiro', email: 'ana@salao.test',
+  telefones: ['5511987654321', '5511933332222'],
   perfil: 'GERENTE', ativo: true, mfaAtivo: false,
   ultimoAcessoEm: new Date(Date.now() - 3 * 86_400_000).toISOString(),
 };
 
 const BIA = {
-  id: 'u3', nome: 'Bia Nogueira', email: 'bia@salao.test', telefone: null,
+  id: 'u3', nome: 'Bia Nogueira', email: 'bia@salao.test', telefones: [],
   perfil: 'RECEPCAO', ativo: true, mfaAtivo: false, ultimoAcessoEm: null,
 };
 
@@ -299,13 +300,48 @@ describe('corrigir e promover', () => {
     expect(screen.getByText('Sem segundo fator configurado.')).toBeInTheDocument();
   });
 
-  it('o telefone do agente aparece como se lê, e é tratado como permissão', async () => {
-    // RN-IAM-022: quem escreve daquele número age com as permissões da conta.
+  it('os telefones do agente aparecem como se leem, e são tratados como permissão', async () => {
+    // RN-IAM-022: quem escreve de qualquer um deles age com as permissões da conta.
     montar();
     await abrir('Ana Ribeiro');
 
     expect(screen.getByLabelText('Telefone')).toHaveValue('(11) 98765-4321');
+    expect(screen.getByLabelText('Outro telefone')).toHaveValue('(11) 93333-2222');
     expect(screen.getByText(/age com as permissões desta conta/)).toBeInTheDocument();
+    // As duas vagas ocupadas: não há o que acrescentar.
+    expect(screen.queryByRole('button', { name: 'Acrescentar outro número' }))
+      .not.toBeInTheDocument();
+  });
+
+  it('o segundo campo só aparece quando se pede: campo vazio permanente convida a preencher',
+    async () => {
+      // RN-IAM-026: são duas vagas, não uma hierarquia — e o que se põe aqui dá acesso à agenda.
+      montar();
+      await abrir('Bia Nogueira');
+
+      expect(screen.getByLabelText('Telefone')).toHaveValue('');
+      expect(screen.queryByLabelText('Outro telefone')).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Acrescentar outro número' }));
+
+      expect(screen.getByLabelText('Outro telefone')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Acrescentar outro número' }))
+        .not.toBeInTheDocument();
+    });
+
+  it('salva a lista inteira, sem os campos vazios', async () => {
+    montar();
+    await abrir('Bia Nogueira');
+
+    await userEvent.type(screen.getByLabelText('Telefone'), '(11) 91111-2222');
+    await userEvent.click(screen.getByRole('button', { name: 'Acrescentar outro número' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar telefones' }));
+
+    expect(ultimoEnvio('/telefones')).toEqual({
+      caminho: '/v1/usuarios/u3/telefones',
+      metodo: 'PUT',
+      corpo: { telefones: ['11911112222'] },
+    });
   });
 });
 

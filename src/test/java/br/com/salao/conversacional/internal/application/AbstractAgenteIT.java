@@ -11,7 +11,7 @@ import br.com.salao.iam.api.ResultadoDeAutenticacao;
 import br.com.salao.iam.internal.application.AutenticarCommand;
 import br.com.salao.iam.internal.application.AutenticarUseCase;
 import br.com.salao.iam.internal.application.CriarUsuarioUseCase;
-import br.com.salao.iam.internal.application.DefinirTelefoneDoUsuarioUseCase;
+import br.com.salao.iam.internal.application.DefinirTelefonesDoUsuarioUseCase;
 import br.com.salao.iam.internal.application.ListarUsuariosUseCase;
 import br.com.salao.iam.internal.application.ProvisionarEstabelecimentoCommand;
 import br.com.salao.iam.internal.application.ProvisionarEstabelecimentoUseCase;
@@ -171,7 +171,7 @@ abstract class AbstractAgenteIT extends AbstractPostgresIT {
     @Autowired protected ProvisionarEstabelecimentoUseCase provisionar;
     @Autowired protected AutenticarUseCase autenticar;
     @Autowired protected CriarUsuarioUseCase criarUsuario;
-    @Autowired protected DefinirTelefoneDoUsuarioUseCase definirTelefone;
+    @Autowired protected DefinirTelefonesDoUsuarioUseCase definirTelefones;
     @Autowired protected RegistrarCanalDoWhatsAppUseCase registrarCanal;
     @Autowired protected ReceberLoteDoWhatsAppUseCase receber;
     @Autowired protected ProcessadorDeInteracoes processador;
@@ -248,10 +248,38 @@ abstract class AbstractAgenteIT extends AbstractPostgresIT {
         TenantContext.executar(salao.tenant(), () -> com(() -> {
             UUID id = criarUsuario.executar(nome, "p-" + UUID.randomUUID() + "@salao.test",
                     "senha-bem-comprida-1", perfil);
-            definirTelefone.executar(id, telefone);
+            definirTelefones.executar(id, List.of(telefone));
             return null;
         }, Permissao.USUARIO_GERENCIAR));
         return telefone;
+    }
+
+    /**
+     * RT-IAM-010 — acrescenta um segundo número a quem já tem um, sem tirar o primeiro.
+     *
+     * <p>Acha a conta pelo número que ela já tem: {@code pessoa(...)} devolve o telefone, não o id, e
+     * mudar aquela assinatura por causa deste caso obrigaria a mexer em todas as chamadas.
+     *
+     * @return o número novo
+     */
+    protected String maisUmNumero(Salao salao, String telefoneAtual) throws SQLException {
+        String novo = telefoneNovo();
+        UUID id;
+        var conexao = comoApp(salao.tenant());
+        try (var ps = conexao.prepareStatement(
+                "select usuario_id from telefone_do_usuario where telefone = ?")) {
+            ps.setString(1, telefoneAtual);
+            try (var rs = ps.executeQuery()) {
+                id = rs.next() ? rs.getObject(1, UUID.class) : null;
+            }
+        } finally {
+            conexao.rollback();
+        }
+        TenantContext.executar(salao.tenant(), () -> com(() -> {
+            definirTelefones.executar(id, List.of(telefoneAtual, novo));
+            return null;
+        }, Permissao.USUARIO_GERENCIAR));
+        return novo;
     }
 
     protected void entregar(String telefone, String wamid, String tipo, String texto) {

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  useDefinirAtivacao, useDefinirPerfil, useDefinirSenha, useDefinirTelefoneDoUsuario,
+  useDefinirAtivacao, useDefinirPerfil, useDefinirSenha, useDefinirTelefonesDoUsuario,
   useEditarUsuario, useResetarSegundoFator, type Perfil, type Usuario,
 } from '../../api/acessos';
 import { formatarTelefone } from '../../api/clientes';
@@ -48,7 +48,7 @@ export function EditorDeAcesso({ usuario, souEu, aoFechar }: {
       <Ficha usuario={usuario} />
       <PerfilDaConta usuario={usuario} souEu={souEu} />
       <Seguranca usuario={usuario} souEu={souEu} />
-      <TelefoneDoAgente usuario={usuario} />
+      <TelefonesDoAgente usuario={usuario} />
       <Acesso usuario={usuario} souEu={souEu} />
     </div>
   );
@@ -248,41 +248,66 @@ function Seguranca({ usuario, souEu }: { usuario: Usuario; souEu: boolean }) {
   );
 }
 
-/** RN-IAM-022 — ligar um telefone a uma conta é conceder permissão, não preencher cadastro. */
-function TelefoneDoAgente({ usuario }: { usuario: Usuario }) {
-  const salvar = useDefinirTelefoneDoUsuario();
-  const [telefone, definirTelefone] = useState(formatarTelefone(usuario.telefone));
+/** Só os dígitos, que é como o servidor compara — e como esta tela decide se algo mudou. */
+const digitos = (texto: string) => texto.replace(/\D/g, '');
 
-  const mudou = telefone.replace(/\D/g, '') !== (usuario.telefone ?? '').replace(/\D/g, '');
+/**
+ * RN-IAM-022 / RN-IAM-026 — ligar um número a uma conta é conceder permissão, não preencher
+ * cadastro. Até dois: o celular pessoal e o do balcão.
+ *
+ * <p>Os dois campos não são "principal" e "reserva" — a ordem no banco é vaga, não hierarquia. O
+ * segundo campo só aparece quando há o que pôr nele: um campo vazio permanente convida a preencher
+ * algo, e o que se preenche aqui dá acesso à agenda do salão.
+ */
+function TelefonesDoAgente({ usuario }: { usuario: Usuario }) {
+  const salvar = useDefinirTelefonesDoUsuario();
+  const gravados = usuario.telefones;
+  const [campos, definirCampos] = useState<string[]>(
+    gravados.length > 0 ? gravados.map(formatarTelefone) : ['']);
+
+  const informados = campos.map(digitos).filter((t) => t !== '');
+  const mudou = informados.join(',') !== gravados.join(',');
+  const cabeMais = campos.length < 2;
+
+  const trocar = (posicao: number, valor: string) =>
+    definirCampos(campos.map((c, i) => (i === posicao ? valor : c)));
 
   return (
     <form
       className="acs-bloco"
-      aria-label="Telefone do agente"
+      aria-label="Telefones do agente"
       onSubmit={(evento) => {
         evento.preventDefault();
-        if (mudou) salvar.mutate({ id: usuario.id, telefone: telefone.trim() });
+        if (mudou) salvar.mutate({ id: usuario.id, telefones: informados });
       }}
     >
-      <h3>Telefone no agente</h3>
+      <h3>Telefones no agente</h3>
       <p className="acs-ajuda">
-        Quem escrever de <strong>deste número</strong> para o WhatsApp do salão age com as
-        permissões desta conta. Deixe em branco para desligar.
+        Quem escrever de <strong>qualquer um destes números</strong> para o WhatsApp do salão age
+        com as permissões desta conta. Deixe em branco para desligar.
       </p>
 
       <div className="acs-campos">
-        <label className="acs-campo">
-          <span>Telefone</span>
-          <input value={telefone} inputMode="tel" placeholder="(11) 98765-4321"
-            onChange={(e) => definirTelefone(e.target.value)} />
-        </label>
+        {campos.map((campo, posicao) => (
+          <label className="acs-campo" key={posicao}>
+            <span>{posicao === 0 ? 'Telefone' : 'Outro telefone'}</span>
+            <input value={campo} inputMode="tel" placeholder="(11) 98765-4321"
+              onChange={(e) => trocar(posicao, e.target.value)} />
+          </label>
+        ))}
       </div>
 
       {salvar.isError && <p className="erro" role="alert">{mensagem(salvar.error)}</p>}
 
       <div className="acs-acoes-bloco">
+        {cabeMais && (
+          <button className="pagina-acao discreta" type="button"
+            onClick={() => definirCampos([...campos, ''])}>
+            Acrescentar outro número
+          </button>
+        )}
         <button className="pagina-acao discreta" type="submit" disabled={!mudou || salvar.isPending}>
-          {salvar.isPending ? 'Salvando…' : 'Salvar telefone'}
+          {salvar.isPending ? 'Salvando…' : 'Salvar telefones'}
         </button>
       </div>
     </form>

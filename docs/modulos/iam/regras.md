@@ -455,11 +455,18 @@ O teto só tira. Uma política que acrescentasse permissão seria o confused dep
 
 ---
 
-### RN-IAM-022 — Telefone do usuário: só dígitos, único por salão, comparação exata
+### RN-IAM-022 — Os telefones do usuário: só dígitos, únicos por salão, comparação exata
 
-**Enunciado.** `usuario.telefone` é opcional, em E.164 só dígitos, normalizado a partir do que se
-digita com as regras de `Telefone`. É único por estabelecimento, **inclusive entre contas
-inativas**. A identificação compara o número exato do remetente — sem aproximação, nem "com ou sem
+> **Revisada em RT-IAM-010 (27/09/2026).** Até ali era UM telefone, na coluna `usuario.telefone`.
+> Quem trabalha em salão quase sempre tem dois aparelhos — o pessoal e o do balcão —, e do segundo o
+> agente a tratava como desconhecida: ela recebia o aviso de RN-CNV-027 dizendo que ali não se
+> atende cliente, idêntico ao que um estranho lê, sem meio de descobrir o motivo. Agora são até dois
+> (RN-IAM-026), em `telefone_do_usuario`, e a coluna saiu. Tudo o mais abaixo continua valendo,
+> agora no plural.
+
+**Enunciado.** Os telefones de um usuário são opcionais, em E.164 só dígitos, normalizados a partir
+do que se digita com as regras de `Telefone`. Cada um é único por estabelecimento, **inclusive entre
+contas inativas**. A identificação compara o número exato do remetente — sem aproximação, nem "com ou sem
 o nono dígito". Ligar ou tirar o telefone de uma conta exige `usuario:manage`, e a auditoria guarda
 o número anterior e o novo, inteiros.
 
@@ -477,13 +484,12 @@ Ligar telefone parece cadastro e é gesto de permissão: dá a quem escreve daqu
 permissões daquela conta. Daí `usuario:manage`, e daí a trilha com o número inteiro — ela existe
 para responder "quem apontou este telefone para esta conta", e mascarada não responde.
 
-**Onde é garantida.** `V51__telefone_do_usuario.sql` (check e índice
-`um_telefone_por_usuario_no_salao`) · `DefinirTelefoneDoUsuarioUseCase` ·
-`ResolvedorDeUsuarioEfetivo.identificarPorTelefone`.
-**Rotinas.** RT-CNV-002 · **Teste.** `UsuarioEfetivoIT.telefone_em_uso`,
+**Onde é garantida.** `V69__telefones_do_usuario.sql` (check e índice único por salão) ·
+`DefinirTelefonesDoUsuarioUseCase` · `ResolvedorDeUsuarioEfetivo.identificarPorTelefone`.
+**Rotinas.** RT-CNV-002, RT-IAM-010 · **Teste.** `UsuarioEfetivoIT.telefone_em_uso`,
 `.mesmo_telefone_em_dois_saloes`, `.remover_telefone`, `.telefone_invalido`, `.sem_permissao`,
-`.auditoria_do_telefone`, `.sem_nono_digito`, `.isolamento`
-**Configurável?** Não · **Origem.** 2026-09-12
+`.auditoria_do_telefone`, `.sem_nono_digito`, `.isolamento` · `VariosNumerosIT`
+**Configurável?** Não · **Origem.** 2026-09-12, revisada em 2026-09-27
 
 ### RN-IAM-023 — Contato para clientes: telefone normalizado ou link https, opcional
 
@@ -548,3 +554,20 @@ quem administra — nenhum sistema resolve isso sozinho.
 `.senha_curta_recusada`, `.nao_define_a_propria_senha`, `.sem_permissao_nao_define_senha`
 **Erro.** `ER-IAM-OPERACAO_SOBRE_SI_MESMO` (422) · **Configurável?** Não
 **Origem.** 2026-09-25
+
+### RN-IAM-026 — Dois números por pessoa, e o teto é forma no banco, não contagem no código
+
+**Enunciado.** Uma conta tem no máximo dois telefones ligados. A vaga é uma coluna `posicao` que só
+aceita 1 ou 2, com índice único em `(estabelecimento_id, usuario_id, posicao)`: o terceiro número não
+é recusado, é impossível. A posição não significa "principal" nem "secundário" — tirar um e pôr
+outro reaproveita a vaga que ficou livre.
+
+**Motivo.** Dois é o que a vida real pede: o celular pessoal e o do balcão. O teto vira forma, e não
+`count(*) < 2` no caso de uso, pela mesma razão do `EXCLUDE` da agenda (RN-AGD-004): duas requisições
+simultâneas atravessam a contagem juntas, e nenhuma vê a outra. Trigger não, que é proibido aqui — a
+regra ficaria invisível e não testável em unidade.
+
+**Onde é garantida.** `V69` (`posicao` + os dois índices únicos) · `DefinirTelefonesDoUsuarioUseCase`.
+**Rotinas.** RT-IAM-010 · **Teste.** `VariosNumerosIT.terceiro_numero_recusado`,
+`.vaga_livre_e_reaproveitada`
+**Configurável?** Não · **Origem.** 2026-09-27, decisão do dono

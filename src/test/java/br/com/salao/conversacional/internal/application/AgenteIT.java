@@ -225,7 +225,7 @@ class AgenteIT extends AbstractAgenteIT {
         Salao salao = salao();
         String telefone = telefoneNovo();
         TenantContext.executar(salao.tenant(), () -> com(() -> {
-            definirTelefone.executar(salao.adminId(), telefone);
+            definirTelefones.executar(salao.adminId(), List.of(telefone));
             return null;
         }, Permissao.USUARIO_GERENCIAR));
         naFila(salao.tenant(), telefone, "wamid.1", "quanto faturei hoje?");

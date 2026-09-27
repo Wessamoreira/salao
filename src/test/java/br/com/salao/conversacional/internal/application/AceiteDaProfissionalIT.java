@@ -490,7 +490,9 @@ class AceiteDaProfissionalIT extends AbstractAgenteIT {
         Cenario c = cenario(true);
         pedidoConfirmado(c);
         try (var ps = comoOwner().prepareStatement(
-                "update usuario set perfil = 'PROFISSIONAL' where telefone = ?")) {
+                """
+                update usuario set perfil = 'PROFISSIONAL'
+                 where id = (select usuario_id from telefone_do_usuario where telefone = ?)""")) {
             ps.setString(1, c.bia());
             ps.executeUpdate();
         }

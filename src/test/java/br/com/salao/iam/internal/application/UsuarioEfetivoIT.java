@@ -23,6 +23,7 @@ import br.com.salao.shared.tenant.AbstractPostgresIT;
 import br.com.salao.shared.tenant.TenantContext;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
@@ -50,7 +51,7 @@ class UsuarioEfetivoIT extends AbstractPostgresIT {
     @Autowired private AutenticarUseCase autenticar;
     @Autowired private CriarUsuarioUseCase criar;
     @Autowired private ListarUsuariosUseCase listar;
-    @Autowired private DefinirTelefoneDoUsuarioUseCase definirTelefone;
+    @Autowired private DefinirTelefonesDoUsuarioUseCase definirTelefones;
     @Autowired private UsuarioEfetivoApi usuariosEfetivos;
     @Autowired private CadastrarProdutoUseCase cadastrarProduto;
     @Autowired private DefinirPrecoDeVendaUseCase definirPreco;
@@ -95,7 +96,7 @@ class UsuarioEfetivoIT extends AbstractPostgresIT {
             UUID id = criar.executar(nome, nome.toLowerCase() + "-" + UUID.randomUUID()
                     + "@salao.test", SENHA, perfil);
             if (telefone != null) {
-                definirTelefone.executar(id, telefone);
+                definirTelefones.executar(id, List.of(telefone));
             }
             return id;
         }));
@@ -170,7 +171,7 @@ class UsuarioEfetivoIT extends AbstractPostgresIT {
          */
         Salao salao = salao();
         TenantContext.executar(salao.tenant(), () -> comoGestor(() -> {
-            definirTelefone.executar(salao.adminId(), "11977776666");
+            definirTelefones.executar(salao.adminId(), List.of("11977776666"));
             return null;
         }));
         executarComoOwner("update usuario set mfa_ativo = true where id = ?", salao.adminId());
@@ -367,7 +368,7 @@ class UsuarioEfetivoIT extends AbstractPostgresIT {
 
         Throwable erro = catchThrowable(() -> TenantContext.executar(salao.tenant(), () ->
                 comoGestor(() -> {
-                    definirTelefone.executar(nice, "(11) 98888-7777");
+                    definirTelefones.executar(nice, List.of("(11) 98888-7777"));
                     return null;
                 })));
 
@@ -389,13 +390,13 @@ class UsuarioEfetivoIT extends AbstractPostgresIT {
     }
 
     @Test
-    @DisplayName("vazio tira o telefone, e o agente deixa de reconhecer a pessoa")
+    @DisplayName("lista vazia tira os telefones, e o agente deixa de reconhecer a pessoa")
     void remover_telefone() {
         Salao salao = salao();
         UUID bia = pessoa(salao, "Bia", Perfil.RECEPCAO, "11988887777");
 
         TenantContext.executar(salao.tenant(), () -> comoGestor(() -> {
-            definirTelefone.executar(bia, "  ");
+            definirTelefones.executar(bia, List.of());
             return null;
         }));
 
@@ -411,7 +412,7 @@ class UsuarioEfetivoIT extends AbstractPostgresIT {
 
         Throwable erro = catchThrowable(() -> TenantContext.executar(salao.tenant(), () ->
                 comoGestor(() -> {
-                    definirTelefone.executar(bia, "123");
+                    definirTelefones.executar(bia, List.of("123"));
                     return null;
                 })));
 
@@ -428,7 +429,7 @@ class UsuarioEfetivoIT extends AbstractPostgresIT {
         // Spring recusa antes com AuthenticationCredentialsNotFoundException — que prova outra
         // coisa, e foi o que a primeira versão deste teste provava sem querer.
         assertThatThrownBy(() -> TenantContext.executar(salao.tenant(), () -> comAutoridades(() -> {
-            definirTelefone.executar(bia, "11988887777");
+            definirTelefones.executar(bia, List.of("11988887777"));
             return null;
         }, Permissao.ESTOQUE_ESCREVER, Permissao.CLIENTE_ESCREVER, Permissao.AGENDA_ESCREVER_TODAS)))
                 .isInstanceOf(AccessDeniedException.class);
@@ -440,21 +441,21 @@ class UsuarioEfetivoIT extends AbstractPostgresIT {
         Salao salao = salao();
         UUID bia = pessoa(salao, "Bia", Perfil.RECEPCAO, "11988887777");
         TenantContext.executar(salao.tenant(), () -> comoGestor(() -> {
-            definirTelefone.executar(bia, "11955554444");
+            definirTelefones.executar(bia, List.of("11955554444"));
             return null;
         }));
 
         var conexao = comoApp(salao.tenant());
         try (var ps = conexao.prepareStatement("""
-                select antes->>'telefone' as antes, depois->>'telefone' as depois
+                select antes->>'telefones' as antes, depois->>'telefones' as depois
                   from auditoria where acao = 'USUARIO_TELEFONE_DEFINIDO' and entidade_id = ?
                  order by id desc limit 1
                 """)) {
             ps.setObject(1, bia);
             try (var rs = ps.executeQuery()) {
                 assertThat(rs.next()).isTrue();
-                assertThat(rs.getString("antes")).isEqualTo("5511988887777");
-                assertThat(rs.getString("depois")).isEqualTo("5511955554444");
+                assertThat(rs.getString("antes")).isEqualTo("[\"5511988887777\"]");
+                assertThat(rs.getString("depois")).isEqualTo("[\"5511955554444\"]");
             }
         } finally {
             conexao.rollback();
@@ -470,6 +471,7 @@ class UsuarioEfetivoIT extends AbstractPostgresIT {
         var lista = TenantContext.obter(salao.tenant(), () -> comoGestor(() -> listar.executar()));
 
         assertThat(lista).filteredOn(u -> u.id().equals(bia))
-                .singleElement().extracting(UsuarioResumo::telefone).isEqualTo("5511988887777");
+                .singleElement().extracting(UsuarioResumo::telefones)
+                .isEqualTo(List.of("5511988887777"));
     }
 }
