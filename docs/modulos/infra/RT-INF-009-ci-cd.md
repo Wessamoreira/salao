@@ -178,7 +178,54 @@ restart pede um certificado novo e o Let's Encrypt barra por limite); `ATRAS_DE_
 só porque nada alcança a aplicação sem passar pelo Caddy; e o backup largando privilégio com `gosu`
 depois do `chown` do volume.
 
-## 10. Pendências
+## 10. O backup fora da máquina (26/09/2026)
+
+Sete dias de dump no mesmo disco protegem contra **erro humano** — "alguém apagou a agenda de
+ontem" — e não contra **perder a VM**. São riscos diferentes, e até aqui só o primeiro tinha
+resposta.
+
+### O que foi feito
+
+O serviço `backup-remoto` manda a cópia para um bucket compatível com S3 — AWS, Cloudflare R2,
+Backblaze B2, MinIO. Quatro variáveis no `.env` e o dump sai daqui.
+
+**Quatro decisões que valem o registro:**
+
+**Sai cifrado; o que fica, não.** São dois riscos outra vez. A cópia local vive dentro da VM, com
+o mesmo acesso do banco, e cifrá-la só acrescentaria uma senha a perder no dia em que ela for a
+única que resta. A cópia remota vive no disco de outra pessoa: quem tiver a credencial do bucket
+lê a agenda, o telefone e a ficha de todas as clientes (LGPD). `openssl enc -aes-256-cbc
+-pbkdf2 -iter 600000`, com a senha em `BACKUP_SENHA_DO_ARQUIVO`.
+
+**Destino sem senha é recusado, e o serviço não sobe.** O erro aparece no `up`, não na madrugada.
+Mandar PII em claro para um bucket porque alguém esqueceu uma variável é o tipo de acidente que
+não se corrige depois.
+
+**Um serviço à parte, e não mais um laço no `backup.sh`.** A imagem do dump é `postgres:18` de
+propósito — o `pg_dump` precisa ser o da mesma versão do servidor —, e ela **não tem cliente HTTP
+nenhum**: nem `curl`, nem `wget`, nem `python`. Verificado, não suposto. Instalar um a cada boot
+seria uma dependência de rede no caminho do backup.
+
+**O envio entra no healthcheck.** Um envio que quebrasse em silêncio recriaria exatamente o
+problema que o healthcheck do dump existe para resolver: descobrir no dia do restore. Com
+`BACKUP_DESTINO` vazio o serviço fica saudável por vacuidade — não há para onde sair, e travar o
+deploy por isso seria exigir um bucket que o dono ainda não decidiu ter.
+
+### A volta inteira, verificada
+
+Com a pilha de produção de pé e um servidor S3 local: `pg_dump` → `openssl enc` → `aws s3 sync` →
+`aws s3 cp` de volta → `openssl enc -d` → `pg_restore` num Postgres limpo. A linha gravada antes
+do dump voltou. Está no registro de `runbook/restore.md`.
+
+**Um defeito que só apareceu rodando:** o serviço reiniciava em laço porque `/backups` é montado
+nele como **somente-leitura** — quem apaga dump é o serviço do dump, com a retenção dele — e a
+marca de "último envio" era escrita ali. Ela passou a morar num volume próprio, que é o que
+mantém a fronteira de pé.
+
+E duas recusas verificadas com o Docker: destino sem senha **sai com código 1**, e sem destino o
+serviço segue e avisa no log a cada volta.
+
+## 11. Pendências
 
 - [ ] **Máquina de homologação** (risco R-11). O job existe e está pulado. Decisão do dono em
       22/09/2026: seguir sem ela por enquanto. É a única coisa que falta para a rotina fechar, e
@@ -193,9 +240,13 @@ depois do `chown` do volume.
       quem reverta às 22h
 - [x] ~~`docker-compose.yml` de produção~~ — feito em 22/09/2026, em `ops/producao/`, e verificado
       rodando (seção 5b)
-- [ ] **O backup não sai da máquina.** Sete dias de dump no mesmo disco protegem contra erro
-      humano, não contra perder a VM. O `backup.sh` ganha o envio para um bucket quando houver um, e
-      é ele que o teste mensal de restore passa a usar
+- [x] ~~**O backup não sai da máquina.**~~ Feito em 26/09/2026: o serviço `backup-remoto` manda a
+      cópia **cifrada** para um bucket compatível com S3 (AWS, R2, B2, MinIO). Falta só o dono
+      escolher o bucket e preencher quatro variáveis — o código está pronto e verificado de ponta a
+      ponta. Ver a seção 5c e o registro de 26/09 em `runbook/restore.md`
+- [ ] **O bucket ainda não existe.** `BACKUP_DESTINO` vazio é o estado de hoje, e o serviço
+      `backup-remoto` diz isso no log a cada hora, de propósito. É a última coisa que separa "o
+      backup protege contra erro humano" de "o backup protege contra perder a VM"
 - [x] ~~**Nada avisa se o backup parar.**~~ Feito em 22/09/2026: o serviço `backup` tem healthcheck
       — "há dump de menos de 26 horas?". Dump velho deixa o serviço `unhealthy`, e `up -d --wait`
       recusa o deploy. Verificado com o Docker executando o teste: `unhealthy` com dump de dois

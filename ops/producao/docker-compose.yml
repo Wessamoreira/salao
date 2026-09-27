@@ -125,6 +125,9 @@ services:
       PGPASSWORD: ${DB_OWNER_PASSWORD:?defina no .env}
       PGDATABASE: ${POSTGRES_DB:-salao}
       RETENCAO_DIAS: ${BACKUP_RETENCAO_DIAS:-7}
+      # Cifra a cópia que SAI da máquina. Vazia, nada sai — e o serviço
+      # `backup-remoto` recusa subir se houver destino sem senha.
+      BACKUP_SENHA_DO_ARQUIVO: ${BACKUP_SENHA_DO_ARQUIVO:-}
     volumes:
       - ./backup.sh:/backup.sh:ro
       - salao-backups:/backups
@@ -150,10 +153,57 @@ services:
       driver: json-file
       options: { max-size: "10m", max-file: "3" }
 
+  # ---------------------------------------------------------------------------
+  # Tira o backup de dentro da máquina (RT-INF-009).
+  #
+  # Imagem separada porque a do dump é `postgres:18` — o `pg_dump` precisa ser o da
+  # mesma versão do servidor — e ela não tem cliente HTTP nenhum. Cada uma faz o que
+  # sabe: uma dumpa, a outra fala com bucket.
+  #
+  # Sobe mesmo sem destino configurado, de propósito: aparece no `docker compose ps`
+  # dizendo que o backup não sai daqui. Serviço ausente ninguém lembra de ligar.
+  # ---------------------------------------------------------------------------
+  backup-remoto:
+    image: amazon/aws-cli:2.27.0
+    restart: unless-stopped
+    depends_on:
+      backup:
+        condition: service_started
+    environment:
+      BACKUP_DESTINO: ${BACKUP_DESTINO:-}
+      BACKUP_SENHA_DO_ARQUIVO: ${BACKUP_SENHA_DO_ARQUIVO:-}
+      BACKUP_INTERVALO_SEGUNDOS: ${BACKUP_INTERVALO_SEGUNDOS:-3600}
+      AWS_ACCESS_KEY_ID: ${BACKUP_CHAVE:-}
+      AWS_SECRET_ACCESS_KEY: ${BACKUP_SEGREDO:-}
+      AWS_DEFAULT_REGION: ${BACKUP_REGIAO:-us-east-1}
+      # Vazio para a AWS; preenchido para R2, B2, MinIO e qualquer outro compatível.
+      AWS_ENDPOINT_URL: ${BACKUP_ENDPOINT:-}
+    volumes:
+      - ./enviar-backup.sh:/enviar-backup.sh:ro
+      # Só leitura: quem apaga dump é o serviço do dump, com a retenção dele.
+      - salao-backups:/backups:ro
+      # O estado do envio mora à parte, justamente porque /backups é só leitura.
+      - salao-envio:/estado
+    entrypoint: ["/bin/sh", "/enviar-backup.sh"]
+    # "Saiu daqui?" — a segunda pergunta que importa sobre um backup. Sem destino, a
+    # resposta é sim por vacuidade: não há para onde sair, e travar o deploy por isso
+    # seria exigir um bucket que o dono ainda não decidiu ter.
+    healthcheck:
+      test: ["CMD-SHELL",
+             "test -z \"$$BACKUP_DESTINO\" || test -n \"$$(find /backups/.ultimo-envio -mmin -1560 -print -quit 2>/dev/null)\""]
+      interval: 1h
+      timeout: 10s
+      retries: 1
+      start_period: 10m
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
 volumes:
   salao-pg:
   salao-arquivos:
   salao-logs:
   salao-backups:
+  salao-envio:
   caddy-dados:
   caddy-config:

@@ -20,7 +20,8 @@ Os quatro ficam em `/opt/salao`, e só eles:
 ```bash
 sudo mkdir -p /opt/salao && sudo chown "$USER" /opt/salao
 scp ops/producao/docker-compose.yml ops/producao/Caddyfile \
-    ops/producao/backup.sh ops/producao/.env.exemplo usuario@maquina:/opt/salao/
+    ops/producao/backup.sh ops/producao/enviar-backup.sh \
+    ops/producao/.env.exemplo usuario@maquina:/opt/salao/
 ```
 
 ## 2. Preencher o `.env`
@@ -101,6 +102,8 @@ continuam no GHCR.
 | `caddy` sem certificado | Porta 80 fechada, ou DNS ainda não propagado. `docker compose logs caddy` |
 | `502` no navegador | A aplicação ainda está subindo — o Flyway roda antes do Tomcat |
 | `backup` reiniciando | Senha do owner errada no `.env` |
+| `backup-remoto` reiniciando | `BACKUP_DESTINO` preenchido e `BACKUP_SENHA_DO_ARQUIVO` vazio — o dump não sai em claro, de propósito |
+| `backup-remoto` *unhealthy* | O envio parou. O log diz se é credencial, bucket ou rede — e `up -d --wait` recusa deploy novo até resolver |
 | `backup` `unhealthy` | Nenhum dump nas últimas 26 horas. `docker compose logs backup` diz por quê; `docker compose restart backup` faz um na hora |
 | Deploy recusado com o `backup` `unhealthy` | É de propósito: código novo por cima de backup quebrado é o que não se quer. Resolva o backup e repita |
 
