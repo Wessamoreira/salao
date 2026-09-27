@@ -218,8 +218,8 @@ class ProdutosWebIT extends AbstractPostgresIT {
 
         assertThat(saldo.statusCode()).isEqualTo(200);
         assertThat(saldo.body()).contains("\"quantidade\":15.000")
-                .contains("\"custoMedio\":{\"valor\":22.0000}")
-                .contains("\"valorEmEstoque\":{\"valor\":330.0000}");
+                .contains("\"custoMedio\":22.0000")
+                .contains("\"valorEmEstoque\":330.0000");
     }
 
     @Test

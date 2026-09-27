@@ -87,7 +87,7 @@ class FechamentosWebIT extends AbstractPostgresIT {
         var previa = get("/api/v1/fechamentos/previa" + query, token);
         assertThat(previa.statusCode()).isEqualTo(200);
         assertThat(previa.body()).contains("\"profissionalNome\":\"Ana\"")
-                .contains("\"totalARepassar\":{\"valor\":60.0000}");
+                .contains("\"totalARepassar\":60.0000");
         String versao = extrair(previa.body(), "versao");
 
         var confirmacao = post("/api/v1/fechamentos", """
@@ -95,12 +95,12 @@ class FechamentosWebIT extends AbstractPostgresIT {
                 """.formatted(hoje.minusDays(5), hoje, versao), token);
         assertThat(confirmacao.statusCode()).isEqualTo(201);
         assertThat(confirmacao.body()).contains("\"profissionalNome\":\"Ana\"")
-                .contains("\"valorRepassado\":{\"valor\":60.0000}");
+                .contains("\"valorRepassado\":60.0000");
 
         var lista = get("/api/v1/fechamentos" + query, token);
         assertThat(lista.statusCode()).isEqualTo(200);
         assertThat(lista.body()).contains("\"profissionalNome\":\"Ana\"")
-                .contains("\"saldoATransportar\":{\"valor\":0.0000}");
+                .contains("\"saldoATransportar\":0.0000");
     }
 
     @Test
