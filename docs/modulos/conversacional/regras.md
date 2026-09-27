@@ -694,3 +694,58 @@ uma queda deixaria o número marcado e ninguém avisado.
 **Rotinas.** RT-CNV-008 · **Teste.** `AvisoDeIaIT.guarda_so_a_impressao`, `.contato_por_salao`,
 `.aplicacao_nao_apaga`, `.avisado_uma_vez_sem_modelo`, `CofreDeCampoTest`
 **Configurável?** Não · **Origem.** 2026-09-19, decisão do dono
+
+### RN-CNV-030 — Uma volta do modelo por rajada: o telefone é a unidade, não a mensagem
+
+**Enunciado.** As conversas pendentes de um mesmo telefone são reservadas juntas, viram uma entrada só
+— as mensagens na ordem em que chegaram, separadas por quebra de linha — e uma volta só do modelo.
+Responde a última; as anteriores ficam `JUNTADA` apontando para ela, no mesmo commit. Cabem 20
+mensagens numa rajada: o que passar disso forma a rajada seguinte, na ordem. Toque de botão não
+agrega: não passa pelo modelo, e dois toques trazem tokens diferentes.
+
+**Motivo.** É assim que se usa WhatsApp: "oi", pausa, "queria marcar com a Ana", áudio. Três execuções
+respondiam três vezes, a primeira sem saber que haveria uma segunda — o agente parece que não estava
+prestando atenção, que é o que faz alguém desistir de falar com um robô. O custo é o efeito menor.
+Uma linha por mensagem continua: concatenar na pendente que já existe derrubaria a unicidade por
+`mensagem_id`, que é o que torna o reenvio da Meta inofensivo.
+
+**Onde é garantida.** `ProcessadorDeInteracoes.RESERVAR` (CTEs `rajada`/`madura`/`escolhida`) ·
+`ConcluirExecucao.Alvo` · `ExecucoesJdbc.juntar` · `V68` (`JUNTADA`, `respondida_por`).
+**Rotinas.** RT-CNV-009 · **Teste.** `JanelaDeAgregacaoIT.rajada_vira_uma_volta_do_modelo`,
+`.na_ordem_em_que_chegaram`, `.absorvidas_apontam_para_quem_respondeu`, `.botao_nao_espera`,
+`.telefones_diferentes_nao_se_misturam`, `.enxurrada_tem_teto_de_tamanho`
+**Configurável?** Não · **Origem.** 2026-09-27
+
+### RN-CNV-031 — O silêncio se mede na caixa de entrada, não na fila de execuções
+
+**Enunciado.** A rajada só é respondida quando nada chegou daquele número dentro da janela
+(`app.agente.janela-de-agregacao`, padrão 15s) **e** nenhum áudio recente dele ainda está sendo
+baixado ou transcrito. Ambas as perguntas são feitas a `mensagem_recebida`.
+
+**Motivo.** O áudio é o caso difícil: ele já é mensagem recebida e só vira execução quando a
+transcrição termina (RT-CNV-003). Medir o silêncio na fila responderia o texto antes de o áudio
+existir, e ele viraria uma resposta solta — exatamente o que esta rotina veio corrigir. É por isso que
+a role de plataforma passou a ler `mensagem_recebida`, e só as colunas que dizem QUE algo chegou:
+`texto` e `midia_id` ficaram fora do grant.
+
+**Onde é garantida.** `ProcessadorDeInteracoes.RESERVAR` (CTE `madura`) · `V68` (política
+`manutencao` e grant por coluna em `mensagem_recebida`).
+**Rotinas.** RT-CNV-009 · **Teste.** `JanelaDeAgregacaoIT.espera_o_audio_virar_texto`,
+`.sozinha_nao_espera_alem_da_janela`
+**Configurável?** A janela · **Origem.** 2026-09-27
+
+### RN-CNV-032 — Nenhuma espera é infinita: o teto vence a janela
+
+**Enunciado.** Contado de quando a rajada começou, `app.agente.teto-de-espera` (padrão 2min) torna a
+rajada respondível mesmo sem silêncio e mesmo com áudio em transcrição. Um áudio parado há mais que o
+teto deixa de ser considerado: ele não cala o agente para sempre.
+
+**Motivo.** Três modos de falha com o mesmo desfecho — transcrição travada, provedor fora do ar, e
+quem não para de escrever — deixariam o agente mudo. Responder com o que se tem é pior que responder
+completo e muito melhor que não responder; a transcrição que chegar depois vira uma execução nova, que
+é o comportamento anterior a esta rotina.
+
+**Onde é garantida.** `ProcessadorDeInteracoes.RESERVAR` (`r.comecou_em <= :vencido_em`).
+**Rotinas.** RT-CNV-009 · **Teste.** `JanelaDeAgregacaoIT.transcricao_travada_nao_segura_alem_do_teto`,
+`.quem_nao_para_de_escrever_recebe_no_teto`
+**Configurável?** O teto · **Origem.** 2026-09-27

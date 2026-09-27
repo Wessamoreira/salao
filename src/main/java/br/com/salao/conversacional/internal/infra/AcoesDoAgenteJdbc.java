@@ -37,12 +37,12 @@ public class AcoesDoAgenteJdbc {
                  intencoes, gravou, bloqueada, modelo, tokens_entrada, tokens_saida,
                  custo_estimado_usd)
             select e.estabelecimento_id, e.id, :agora, e.tipo, e.status, e.motivo_recusa,
-                   e.usuario_efetivo_id, e.de_telefone, m.tipo = 'AUDIO',
+                   e.usuario_efetivo_id, e.de_telefone, r.veio_de_audio,
                    case when e.tipo = 'BOTAO' then
                         case when e.entrada like '%:sim' then 'Aceitar'
                              when e.entrada like '%:nao' then 'Recusar'
                              else 'Botão' end
-                        else e.entrada end,
+                        else r.pedido end,
                    e.resposta, e.ferramentas,
                    coalesce(i.intencoes, '[]'::jsonb),
                    coalesce(i.gravou, false),
@@ -52,7 +52,15 @@ public class AcoesDoAgenteJdbc {
                      or e.ferramentas @> '[{"desfecho":"SEM_PERMISSAO"}]',
                    e.modelo, e.tokens_entrada, e.tokens_saida, e.custo_estimado_usd
               from execucao_do_agente e
-              join mensagem_recebida m on m.id = e.mensagem_id
+              -- RT-CNV-009 — a rajada, e não a mensagem: o pedido é tudo o que a pessoa disse antes
+              -- de o agente responder, na ordem em que chegou, e basta UM áudio nela para a ação ter
+              -- vindo de áudio. Sem isto a trilha mostraria só a última frase da conversa.
+              join lateral (
+                   select bool_or(bm.tipo = 'AUDIO') as veio_de_audio,
+                          string_agg(b.entrada, :separador order by bm.sequencia) as pedido
+                     from execucao_do_agente b
+                     join mensagem_recebida bm on bm.id = b.mensagem_id
+                    where b.id = e.id or b.respondida_por = e.id) r on true
               left join lateral (
                    select jsonb_agg(jsonb_build_object(
                               'ferramenta', x.ferramenta, 'resumo', x.resumo, 'status', x.status,
@@ -110,6 +118,7 @@ public class AcoesDoAgenteJdbc {
     public boolean registrar(UUID execucaoId, Instant agora) {
         return jdbc.sql(REGISTRAR)
                 .param("execucao", execucaoId)
+                .param("separador", ExecucoesJdbc.SEPARADOR_DA_RAJADA)
                 .param("agora", Timestamp.from(agora))
                 .update() == 1;
     }

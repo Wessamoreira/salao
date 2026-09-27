@@ -14,3 +14,15 @@ app.rede:
   # O limite continua testado onde ele é o assunto — LimiteDeTaxaWebIT declara o seu valor
   # por @DynamicPropertySource, que vence este arquivo.
   limite-autenticacao: 500
+
+app.agente:
+  # RT-CNV-009 — a suíte não espera ninguém terminar de falar.
+  #
+  # Aqui, e não em AbstractAgenteIT: @DynamicPropertySource da superclasse VENCE o da subclasse, e
+  # JanelaDeAgregacaoIT — a única classe que precisa de janela de verdade — não conseguiria
+  # sobrepor. Este arquivo é o piso, e o @DynamicPropertySource dela vence, como diz o cabeçalho.
+  #
+  # Zero desliga a ESPERA, não a agregação: duas pendentes do mesmo telefone continuam virando uma
+  # volta só do modelo, e é isso que as outras ITs do agente passam a provar de graça.
+  janela-de-agregacao: PT0S
+  teto-de-espera: PT2M

@@ -172,6 +172,13 @@ app.agente:
   # o número da recepção.
   limite-por-telefone-por-hora: ${AGENTE_LIMITE_TELEFONE_HORA:30}
   intervalo: ${AGENTE_INTERVALO:PT15S}
+  # RT-CNV-009 — quanto o agente espera a pessoa terminar de falar. Quem manda "oi", pensa e manda o
+  # resto fez UM pedido: a janela é o silêncio depois do qual a rajada vira uma volta só do modelo.
+  # Quinze segundos é o tempo de digitar a segunda frase.
+  janela-de-agregacao: ${AGENTE_JANELA:PT15S}
+  # E o quanto uma rajada pode segurar o agente. Nada espera para sempre: transcrição travada,
+  # provedor fora do ar, ou quem não para de escrever. Vencido, responde-se com o que se tem.
+  teto-de-espera: ${AGENTE_TETO_DE_ESPERA:PT2M}
   # RT-CNV-005 — por quanto tempo o pedido de confirmação vale. Depois disso "SIM 4821" não grava
   # nada: a pessoa pede de novo, e o horário é conferido de novo. ISO-8601 (PT10M).
   intencao:

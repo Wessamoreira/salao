@@ -1,5 +1,6 @@
 package br.com.salao.conversacional.internal.infra;
 
+import br.com.salao.conversacional.internal.application.ConcluirExecucao;
 import br.com.salao.conversacional.internal.application.Orquestrador;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -18,6 +19,27 @@ import tools.jackson.databind.ObjectMapper;
  * instância já encerrou não é sobrescrita.
  */
 public class ExecucoesJdbc {
+
+    /**
+     * RT-CNV-009 — entre as mensagens de uma rajada. Uma quebra de linha, e não " " nem "; ": é como
+     * a pessoa escreveu.
+     *
+     * <p>Uma constante, e não um literal em cada consulta, porque o texto que o modelo LEU e o que a
+     * trilha REMONTA precisam ser o mesmo texto — separadores diferentes fariam a trilha mentir por
+     * um caractere, que é o tipo de divergência que ninguém encontra.
+     */
+    public static final String SEPARADOR_DA_RAJADA = "\n";
+
+    /**
+     * O que a pessoa disse por inteiro: a entrada desta execução mais a das que ela absorveu, na
+     * ordem em que chegaram — {@code mensagem_recebida.sequencia}, e não a ordem da fila, que o áudio
+     * inverte (a transcrição termina depois do texto que veio depois dele).
+     */
+    private static final String ENTRADA_DA_RAJADA = """
+            (select string_agg(j.entrada, :separador order by jm.sequencia)
+               from execucao_do_agente j
+               join mensagem_recebida jm on jm.id = j.mensagem_id
+              where j.id = e.id or j.respondida_por = e.id)""";
 
     /**
      * RT-CNV-006 — de onde veio a execução.
@@ -61,13 +83,14 @@ public class ExecucoesJdbc {
     @Transactional(readOnly = true)
     public List<Orquestrador.Troca> historico(String telefone, Instant desde, int limite) {
         var trocas = new ArrayList<>(jdbc.sql("""
-                select entrada, resposta from execucao_do_agente
-                 where de_telefone = :telefone and status = 'CONCLUIDA' and concluida_em >= :desde
-                   and tipo = 'CONVERSA'
-                 order by concluida_em desc
+                select %s as entrada, e.resposta from execucao_do_agente e
+                 where e.de_telefone = :telefone and e.status = 'CONCLUIDA'
+                   and e.concluida_em >= :desde and e.tipo = 'CONVERSA'
+                 order by e.concluida_em desc
                  limit :limite
-                """)
+                """.formatted(ENTRADA_DA_RAJADA))
                 .param("telefone", telefone)
+                .param("separador", SEPARADOR_DA_RAJADA)
                 .param("desde", Timestamp.from(desde))
                 .param("limite", limite)
                 .query((rs, n) -> new Orquestrador.Troca(rs.getString("entrada"),
@@ -152,14 +175,46 @@ public class ExecucoesJdbc {
                 .update();
     }
 
+    /**
+     * RT-CNV-009 — a rajada INTEIRA volta para a fila, e volta junta.
+     *
+     * <p>Adiar só quem responderia deixaria as absorvidas reservadas por dez minutos: a volta
+     * seguinte leria metade do que a pessoa disse, responderia com isso, e o resto viraria uma
+     * segunda resposta. Soltar a reserva das duas pontas é o que faz a rajada se reformar igual.
+     */
     @Transactional
-    public int adiar(UUID id, String erro, Instant proxima) {
+    public int adiar(ConcluirExecucao.Alvo alvo, String erro, Instant proxima) {
+        var ids = new ArrayList<UUID>(alvo.absorvidas());
+        ids.add(alvo.id());
         return jdbc.sql("""
                 update execucao_do_agente
                    set reservada_ate = null, proxima_tentativa_em = :proxima, ultimo_erro = :erro
-                 where id = :id and status = 'PENDENTE'
+                 where id in (:ids) and status = 'PENDENTE'
                 """)
-                .param("id", id).param("proxima", Timestamp.from(proxima)).param("erro", erro)
+                .param("ids", ids)
+                .param("proxima", Timestamp.from(proxima)).param("erro", erro)
+                .update();
+    }
+
+    /**
+     * RN-CNV-030 — as mensagens que foram respondidas junto com a seguinte.
+     *
+     * <p>Não some com a linha: a trilha responde "o que o agente fez com esta mensagem?", e "foi
+     * respondida junto com a seguinte" é uma resposta. Condicionada a {@code PENDENTE} como todas as
+     * transições daqui, e no mesmo commit do encerramento de quem respondeu.
+     */
+    @Transactional
+    public int juntar(List<UUID> absorvidas, UUID quemRespondeu) {
+        if (absorvidas.isEmpty()) {
+            return 0;
+        }
+        return jdbc.sql("""
+                update execucao_do_agente
+                   set status = 'JUNTADA', respondida_por = :respondeu, reservada_ate = null
+                 where id in (:ids) and status = 'PENDENTE'
+                """)
+                .param("respondeu", quemRespondeu)
+                .param("ids", absorvidas)
                 .update();
     }
 

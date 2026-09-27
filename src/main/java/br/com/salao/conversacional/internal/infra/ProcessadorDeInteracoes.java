@@ -31,9 +31,13 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -60,6 +64,13 @@ import tools.jackson.databind.JsonNode;
  *
  * <p>A reserva da linha é a mesma do processador de áudio (RN-CNV-008): um comando atômico, que vence.
  *
+ * <h2>A unidade não é a mensagem: é a rajada — RT-CNV-009</h2>
+ *
+ * <p>Quem manda "oi", pensa, manda o resto e ainda grava um áudio fez UM pedido. O que a reserva
+ * devolve, portanto, não é uma linha: é o que aquele telefone disse desde que começou a falar, numa
+ * entrada só e numa volta só do modelo. Quem responde é a última mensagem; as outras ficam JUNTADA,
+ * apontando para ela. Ver {@link #RESERVAR}.
+ *
  * <p><strong>Nada é enviado daqui.</strong> Encerrar a conversa enfileira a resposta na saída para a
  * equipe, no mesmo commit ({@link ConcluirExecucao}); quem manda é o {@code DespachanteParaEquipe}.
  */
@@ -68,24 +79,108 @@ public class ProcessadorDeInteracoes {
     private static final Logger log = LoggerFactory.getLogger(ProcessadorDeInteracoes.class);
 
     private static final int LOTE = 10;
+    /**
+     * RT-CNV-009 — quantas mensagens cabem numa rajada.
+     *
+     * <p>Ninguém manda vinte frases em quinze segundos querendo dizer uma coisa só. Sem teto, porém,
+     * uma enxurrada — engano, script, número em laço — viraria UM prompt gigante: o limite por
+     * telefone contaria uma conversa, e o teto de custo do salão iria embora numa chamada. As que
+     * sobram formam a rajada seguinte, na ordem, e são respondidas logo depois.
+     */
+    private static final int MAXIMO_DA_RAJADA = 20;
     private static final Duration RESERVA = Duration.ofMinutes(10);
     private static final Duration JANELA_DO_HISTORICO = Duration.ofHours(24);
     private static final int TROCAS_NO_HISTORICO = 6;
     private static final DateTimeFormatter FORMATO_DO_AGORA =
             DateTimeFormatter.ofPattern("EEEE, dd/MM/yyyy HH:mm", Locale.forLanguageTag("pt-BR"));
 
+    /**
+     * RT-CNV-009 — a janela de agregação mora AQUI, e em nenhum outro lugar.
+     *
+     * <p>Reservar já era decidir "quando", e a fila já tem a coluna que significa isso. Um agendador
+     * à parte, uma fila em memória ou um {@code sleep} no consumidor seriam um SEGUNDO lugar onde o
+     * quando mora — e o segundo lugar é o que diverge quando duas instâncias rodam.
+     *
+     * <p>Em prosa: das pendentes que já poderiam rodar ({@code pronta}), agrupam-se as conversas por
+     * telefone ({@code rajada}); passam as rajadas que já podem ser respondidas ({@code madura}); e
+     * reserva-se a rajada INTEIRA, não só a última linha — reservar só a última deixaria as
+     * anteriores soltas para outra instância formar uma segunda rajada com elas.
+     */
     private static final String RESERVAR = """
+            with pronta as (
+                select e.id, e.estabelecimento_id, e.de_telefone, e.tipo, e.proxima_tentativa_em,
+                       m.sequencia
+                  from execucao_do_agente e
+                  join mensagem_recebida m on m.id = e.mensagem_id
+                 where e.status = 'PENDENTE'
+                   and e.proxima_tentativa_em <= :agora
+                   and (e.reservada_ate is null or e.reservada_ate < :agora)
+            ),
+            rajada as (
+                -- RN-CNV-030 — a unidade é o telefone, não a mensagem. `comecou_em` é de quando a
+                -- pessoa começou a falar, e é dele que o teto é contado.
+                select p.estabelecimento_id, p.de_telefone,
+                       min(p.proxima_tentativa_em) as comecou_em
+                  from pronta p
+                 where p.tipo = 'CONVERSA'
+                 group by p.estabelecimento_id, p.de_telefone
+            ),
+            madura as (
+                select r.estabelecimento_id, r.de_telefone, r.comecou_em
+                  from rajada r
+                 -- RN-CNV-032 — o teto vence a janela. Transcrição travada, provedor fora do ar ou
+                 -- quem não para de escrever: nada segura o agente para sempre.
+                 where r.comecou_em <= :vencido_em
+                    -- RN-CNV-031 — silêncio de verdade: nada chegou deste número dentro da janela.
+                    -- Medido em `mensagem_recebida`, e não na fila: o áudio já é mensagem recebida
+                    -- e ainda não é execução, e é ele o caso difícil.
+                    or (not exists (select 1 from mensagem_recebida m
+                                     where m.estabelecimento_id = r.estabelecimento_id
+                                       and m.de_telefone = r.de_telefone
+                                       and m.recebida_em > :silencio_desde)
+                        -- E nenhum áudio dele ainda virando texto. Só os recentes: um travado de
+                        -- ontem não pode calar o agente hoje.
+                        and not exists (select 1 from mensagem_recebida m
+                                          join transcricao_de_audio t on t.mensagem_id = m.id
+                                         where m.estabelecimento_id = r.estabelecimento_id
+                                           and m.de_telefone = r.de_telefone
+                                           and m.recebida_em > :vencido_em
+                                           and t.status in ('PENDENTE', 'BAIXADA')))
+                 order by r.comecou_em
+                 limit :lote
+            ),
+            escolhida as (
+                -- O toque de botão não espera nada: não passa pelo modelo, não custa, e quem tocou
+                -- está olhando a tela. Dois toques também não se juntam — cada um traz o seu token.
+                (select p.id from pronta p
+                  where p.tipo = 'BOTAO' order by p.proxima_tentativa_em limit :lote)
+                union all
+                -- `n` corta a enxurrada: as primeiras MAXIMO_DA_RAJADA, na ordem em que chegaram,
+                -- e as que sobram formam a rajada seguinte.
+                select c.id
+                  from (select p.id, p.estabelecimento_id, p.de_telefone,
+                               row_number() over (partition by p.estabelecimento_id, p.de_telefone
+                                                      order by p.sequencia) as n
+                          from pronta p
+                         where p.tipo = 'CONVERSA') c
+                  join madura d on d.estabelecimento_id = c.estabelecimento_id
+                               and d.de_telefone = c.de_telefone
+                 where c.n <= :maximo
+            )
             update execucao_do_agente e
                set reservada_ate = :reserva, tentativas = e.tentativas + 1
-             where e.id in (
-                   select id from execucao_do_agente
-                    where status = 'PENDENTE'
-                      and proxima_tentativa_em <= :agora
-                      and (reservada_ate is null or reservada_ate < :agora)
-                    order by proxima_tentativa_em
-                    limit :lote
-                      for update skip locked)
-            returning e.id, e.estabelecimento_id, e.de_telefone, e.entrada, e.tipo, e.tentativas
+              from mensagem_recebida m
+             where m.id = e.mensagem_id
+               and e.status = 'PENDENTE'
+               and (e.reservada_ate is null or e.reservada_ate < :agora)
+               -- O `for update skip locked` trava na TABELA, e não na CTE — Postgres não permite
+               -- travar o resultado de um union. Sem ele duas instâncias se esperariam, e poderiam
+               -- travar uma à outra se varressem as mesmas linhas em ordens diferentes.
+               and e.id in (select x.id from execucao_do_agente x
+                             where x.id in (select id from escolhida)
+                               for update skip locked)
+            returning e.id, e.estabelecimento_id, e.de_telefone, e.entrada, e.tipo, e.tentativas,
+                      m.sequencia
             """;
 
     private final ConexaoDeManutencao manutencao;
@@ -98,6 +193,8 @@ public class ProcessadorDeInteracoes {
     private final ConsumoDeIaJdbc consumo;
     private final LimitePorTelefone limite;
     private final BigDecimal tetoDiario;
+    private final Duration janela;
+    private final Duration tetoDeEspera;
     private final ProporIntencao propor;
     private final ConfirmarPeloCodigo confirmar;
     private final DecidirAceite decidirAceite;
@@ -111,6 +208,7 @@ public class ProcessadorDeInteracoes {
                                    Orquestrador orquestrador, ModeloDeLinguagem modelo,
                                    PrecoDoModelo preco, ConsumoDeIaJdbc consumo,
                                    LimitePorTelefone limite, BigDecimal tetoDiario,
+                                   Duration janela, Duration tetoDeEspera,
                                    ProporIntencao propor, ConfirmarPeloCodigo confirmar,
                                    DecidirAceite decidirAceite, ConcluirExecucao concluir,
                                    TransacaoSomenteLeitura somenteLeitura, Relogio relogio,
@@ -125,6 +223,8 @@ public class ProcessadorDeInteracoes {
         this.consumo = consumo;
         this.limite = limite;
         this.tetoDiario = tetoDiario;
+        this.janela = janela;
+        this.tetoDeEspera = tetoDeEspera;
         this.propor = propor;
         this.confirmar = confirmar;
         this.decidirAceite = decidirAceite;
@@ -135,7 +235,28 @@ public class ProcessadorDeInteracoes {
     }
 
     private record Reservada(UUID id, UUID estabelecimentoId, String telefone, String entrada,
-                             ExecucoesJdbc.Tipo tipo, int tentativas) {
+                             ExecucoesJdbc.Tipo tipo, int tentativas, long sequencia) {
+    }
+
+    /**
+     * RT-CNV-009 — o que a pessoa disse, e a execução que responde por tudo.
+     *
+     * <p>{@code quemResponde} é sempre a última mensagem da rajada: é a linha que fica CONCLUÍDA, que
+     * vai para a trilha e de quem sai a resposta. {@code absorvidas} são as anteriores, que viram
+     * {@code JUNTADA} apontando para ela — no MESMO commit, senão uma queda no meio deixaria metade
+     * da rajada respondida e metade pendente, e o agente responderia duas vezes.
+     *
+     * @param entrada as mensagens na ordem em que chegaram, que é o que o modelo lê
+     */
+    private record Rajada(Reservada quemResponde, List<UUID> absorvidas, String entrada) {
+
+        ConcluirExecucao.Alvo alvo() {
+            return new ConcluirExecucao.Alvo(quemResponde.id(), absorvidas);
+        }
+
+        int mensagens() {
+            return absorvidas.size() + 1;
+        }
     }
 
     private record Simulada(UUID usuarioId, FerramentaDeEscrita.Simulacao simulacao) {
@@ -158,34 +279,68 @@ public class ProcessadorDeInteracoes {
             return 0;
         }
         int feitas = 0;
-        for (Reservada r : reservar()) {
-            feitas += tentar(r);
+        for (Rajada rajada : reservar()) {
+            feitas += tentar(rajada);
         }
         return feitas;
     }
 
-    private List<Reservada> reservar() {
+    /**
+     * Reserva e agrupa: o banco decide QUAIS linhas saem; aqui elas viram rajadas.
+     *
+     * <p>O agrupamento é em memória de propósito. A consulta já garante que as conversas de um
+     * telefone saem juntas ou não saem; montar a entrada e escolher quem responde é decisão de
+     * domínio, e SQL que escolhesse isso seria a mesma regra escrita duas vezes.
+     */
+    private List<Rajada> reservar() {
         Instant agora = relogio.agora();
-        return manutencao.jdbc().sql(RESERVAR)
-                .param("reserva", OffsetDateTime.ofInstant(agora.plus(RESERVA), ZoneOffset.UTC))
-                .param("agora", OffsetDateTime.ofInstant(agora, ZoneOffset.UTC))
+        var reservadas = manutencao.jdbc().sql(RESERVAR)
+                .param("reserva", emUtc(agora.plus(RESERVA)))
+                .param("agora", emUtc(agora))
+                .param("silencio_desde", emUtc(agora.minus(janela)))
+                .param("vencido_em", emUtc(agora.minus(tetoDeEspera)))
                 .param("lote", LOTE)
+                .param("maximo", MAXIMO_DA_RAJADA)
                 .query((rs, n) -> new Reservada(
                         rs.getObject("id", UUID.class),
                         rs.getObject("estabelecimento_id", UUID.class),
                         rs.getString("de_telefone"),
                         rs.getString("entrada"),
                         ExecucoesJdbc.Tipo.valueOf(rs.getString("tipo")),
-                        rs.getInt("tentativas")))
+                        rs.getInt("tentativas"),
+                        rs.getLong("sequencia")))
                 .list();
+
+        var rajadas = new ArrayList<Rajada>();
+        var conversas = new LinkedHashMap<String, List<Reservada>>();
+        for (Reservada r : reservadas) {
+            if (r.tipo() == ExecucoesJdbc.Tipo.BOTAO) {
+                rajadas.add(new Rajada(r, List.of(), r.entrada()));
+            } else {
+                conversas.computeIfAbsent(r.estabelecimentoId() + " " + r.telefone(),
+                        k -> new ArrayList<>()).add(r);
+            }
+        }
+        for (List<Reservada> mensagens : conversas.values()) {
+            mensagens.sort(Comparator.comparingLong(Reservada::sequencia));
+            Reservada ultima = mensagens.getLast();
+            rajadas.add(new Rajada(ultima,
+                    mensagens.subList(0, mensagens.size() - 1).stream().map(Reservada::id).toList(),
+                    mensagens.stream().map(Reservada::entrada)
+                            .collect(Collectors.joining(ExecucoesJdbc.SEPARADOR_DA_RAJADA))));
+        }
+        return rajadas;
     }
 
-    private int tentar(Reservada r) {
+    private int tentar(Rajada rajada) {
+        Reservada r = rajada.quemResponde();
         try {
-            TenantContext.executar(r.estabelecimentoId(), () -> conduzir(r));
+            TenantContext.executar(r.estabelecimentoId(), () -> conduzir(rajada));
+            metricas.summary("conversacional.rajada").record(rajada.mensagens());
             return 1;
         } catch (FalhaPermanente e) {
-            registrar(r, () -> concluir.falhou(r.id(), recortar(e.getMessage()), relogio.agora()));
+            registrar(r, () ->
+                    concluir.falhou(rajada.alvo(), recortar(e.getMessage()), relogio.agora()));
             contar("falhou");
             log.warn("Conversa {} falhou de vez: {}", r.id(), e.getMessage());
         } catch (RuntimeException e) {
@@ -194,9 +349,11 @@ public class ProcessadorDeInteracoes {
             String erro = recortar(e.getMessage());
             registrar(r, () -> {
                 if (desistir) {
-                    concluir.falhou(r.id(), erro, relogio.agora());
+                    concluir.falhou(rajada.alvo(), erro, relogio.agora());
                 } else {
-                    execucoes.adiar(r.id(), erro, proxima);
+                    // A rajada inteira volta, e junta: adiar só quem responderia deixaria as
+                    // absorvidas reservadas por dez minutos e a próxima volta leria metade dela.
+                    execucoes.adiar(rajada.alvo(), erro, proxima);
                 }
             });
             contar(desistir ? "falhou" : "adiada");
@@ -206,9 +363,10 @@ public class ProcessadorDeInteracoes {
         return 0;
     }
 
-    private void conduzir(Reservada r) {
+    private void conduzir(Rajada rajada) {
+        Reservada r = rajada.quemResponde();
         if (r.tipo() == ExecucoesJdbc.Tipo.BOTAO) {
-            conduzirBotao(r);
+            conduzirBotao(rajada);
             return;
         }
         UUID salao = r.estabelecimentoId();
@@ -218,25 +376,25 @@ public class ProcessadorDeInteracoes {
         // entre elas, a segunda viria NaoIdentificado e o cast estouraria.
         var identificacao = usuarios.identificarPorTelefone(r.telefone());
         if (identificacao instanceof Identificacao.NaoIdentificado(var motivo)) {
-            concluir.recusada(r.id(), motivo.name(), null, null, agora);
+            concluir.recusada(rajada.alvo(), motivo.name(), null, null, agora);
             contar("recusada_identidade");
             return;
         }
         UsuarioEfetivo usuario = ((Identificacao.Identificado) identificacao).usuario();
 
         if (!limite.consumir(salao, r.telefone())) {
-            concluir.recusada(r.id(), "LIMITE_POR_TELEFONE", usuario.usuarioId(), null, agora);
+            concluir.recusada(rajada.alvo(), "LIMITE_POR_TELEFONE", usuario.usuarioId(), null, agora);
             contar("recusada_limite");
             return;
         }
 
         // RT-CNV-005 — a confirmação é reconhecida, nunca interpretada: esta mensagem não chega ao
         // modelo, e a resposta a ela é do servidor.
-        var codigo = CodigoDeConfirmacao.codigoEm(r.entrada());
+        var codigo = CodigoDeConfirmacao.codigoEm(rajada.entrada());
         if (codigo.isPresent()) {
             var decisao = confirmar.executar(r.telefone(), usuario.usuarioId(), r.id(),
                     codigo.get());
-            concluir.semModelo(r.id(), r.telefone(), usuario.usuarioId(), decisao.resposta(),
+            concluir.semModelo(rajada.alvo(), r.telefone(), usuario.usuarioId(), decisao.resposta(),
                     relogio.agora());
             contar(desfechoDaConfirmacao(decisao.desfecho()));
             return;
@@ -287,16 +445,16 @@ public class ProcessadorDeInteracoes {
         };
 
         var resultado = orquestrador.conduzir(new Orquestrador.Conversa(usuario, nomeDoSalao,
-                agoraNoSalao, r.entrada(), historico), orcamento, executor);
+                agoraNoSalao, rajada.entrada(), historico), orcamento, executor);
 
         if (resultado.desfecho() == Orquestrador.Desfecho.TETO_ATINGIDO) {
-            concluir.recusada(r.id(), "TETO_DE_CUSTO", usuario.usuarioId(), resultado,
+            concluir.recusada(rajada.alvo(), "TETO_DE_CUSTO", usuario.usuarioId(), resultado,
                     relogio.agora());
             contar("recusada_teto");
             log.warn("Salão {} atingiu o teto diário de custo do agente", salao);
             return;
         }
-        concluir.conduzida(r.id(), r.telefone(), usuario.usuarioId(), resultado, relogio.agora());
+        concluir.conduzida(rajada.alvo(), r.telefone(), usuario.usuarioId(), resultado, relogio.agora());
         contar("concluida");
     }
 
@@ -307,14 +465,15 @@ public class ProcessadorDeInteracoes {
      * pedido foi mandado (RN-CNV-019). O limite por telefone continua valendo — é ele que torna tocar
      * em sequência inútil.
      */
-    private void conduzirBotao(Reservada r) {
+    private void conduzirBotao(Rajada rajada) {
+        Reservada r = rajada.quemResponde();
         if (!limite.consumir(r.estabelecimentoId(), r.telefone())) {
-            concluir.recusada(r.id(), "LIMITE_POR_TELEFONE", null, null, relogio.agora());
+            concluir.recusada(rajada.alvo(), "LIMITE_POR_TELEFONE", null, null, relogio.agora());
             contar("recusada_limite");
             return;
         }
         var decisao = decidirAceite.executar(r.telefone(), r.id(), r.entrada());
-        concluir.semModelo(r.id(), r.telefone(), decisao.usuarioEfetivoId(), decisao.resposta(),
+        concluir.semModelo(rajada.alvo(), r.telefone(), decisao.usuarioEfetivoId(), decisao.resposta(),
                 relogio.agora());
         contar("aceite_" + decisao.desfecho().name().toLowerCase(Locale.ROOT));
     }
@@ -341,6 +500,10 @@ public class ProcessadorDeInteracoes {
 
     private void contar(String desfecho) {
         metricas.counter("conversacional.agente", "desfecho", desfecho).increment();
+    }
+
+    private static OffsetDateTime emUtc(Instant instante) {
+        return OffsetDateTime.ofInstant(instante, ZoneOffset.UTC);
     }
 
     private static String recortar(String erro) {

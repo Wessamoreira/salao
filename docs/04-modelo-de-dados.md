@@ -414,6 +414,15 @@ alvo tem no máximo uma resolução valendo, e pode ter várias ao longo do temp
 reescreve — `revoke update, delete`, com `grant update` só das três colunas da reabertura. O razão passa a
 aceitar `CONCILIACAO` como origem, e é por ela que a reabertura estorna o ajuste.
 
+RT-CNV-009 (`V68`) faz o agente responder a **rajada**, e não a mensagem. `mensagem_recebida` ganha
+`sequencia` — a ordem de chegada como fato, porque `recebida_em` empata dentro de um lote da Meta e a
+ordem da fila **inverte o áudio** (que só vira execução quando a transcrição termina). Em
+`execucao_do_agente` entram o estado `JUNTADA` e `respondida_por`, presos um ao outro nos dois
+sentidos: a mensagem absorvida não some, aponta para quem respondeu por ela. A consulta que reserva
+passa a medir silêncio em `mensagem_recebida`, e por isso a role de plataforma ganha `select` ali —
+**por coluna**, como o `grant update (processada_em)` de V50: `texto` e `midia_id` ficam de fora,
+porque a janela precisa saber que algo chegou, nunca o que dizia.
+
 A correção do teste de restore (`V67`) reescreve `imutavel_unaccent` qualificando o schema:
 `public.unaccent('public.unaccent'::regdictionary, $1)`. Sem isso o `pg_restore` — que roda com
 `search_path` vazio — não conseguia criar `cliente`, porque a coluna gerada `busca` inlineia essa

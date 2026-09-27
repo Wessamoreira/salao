@@ -242,11 +242,12 @@ class AgenteIT extends AbstractAgenteIT {
     void limite_por_telefone() throws SQLException {
         Salao salao = salao();
         String bia = pessoa(salao, Perfil.RECEPCAO);
+        // Uma volta por mensagem, de propósito: desde RT-CNV-009 o limite conta RAJADAS — seis
+        // mensagens de uma vez seriam uma conversa só, e não gastariam seis.
         for (int i = 1; i <= 6; i++) {
             naFila(salao.tenant(), bia, "wamid." + i, "mensagem " + i);
+            processador.executar();
         }
-
-        processador.executar();
 
         long recusadas = 0;
         long concluidas = 0;

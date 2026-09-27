@@ -274,12 +274,14 @@ public class ConversacionalConfig {
             ModeloDeLinguagem modelo, PrecoDoModelo preco, ConsumoDeIaJdbc consumo,
             LimitePorTelefone limite,
             @Value("${app.agente.teto-diario-usd:2.00}") BigDecimal tetoDiario,
+            @Value("${app.agente.janela-de-agregacao:PT15S}") Duration janela,
+            @Value("${app.agente.teto-de-espera:PT2M}") Duration tetoDeEspera,
             ProporIntencao propor, ConfirmarPeloCodigo confirmar, DecidirAceite decidirAceite,
             ConcluirExecucao concluir, TransacaoSomenteLeitura somenteLeitura, Relogio relogio,
             MeterRegistry metricas) {
         return new ProcessadorDeInteracoes(manutencao, execucoes, usuarios, estabelecimentos,
-                orquestrador, modelo, preco, consumo, limite, tetoDiario, propor, confirmar,
-                decidirAceite, concluir, somenteLeitura, relogio, metricas);
+                orquestrador, modelo, preco, consumo, limite, tetoDiario, janela, tetoDeEspera,
+                propor, confirmar, decidirAceite, concluir, somenteLeitura, relogio, metricas);
     }
 
     // ------------------------------------------------------------------ RT-CNV-005
