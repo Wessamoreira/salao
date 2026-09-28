@@ -20,7 +20,7 @@
   <properties>
     <java.version>25</java.version>
     <spring-modulith.version>2.1.1</spring-modulith.version>
-    <archunit.version>1.5.0</archunit.version>
+    <archunit.version>1.5.1</archunit.version>
     <testcontainers.version>2.0.5</testcontainers.version>
   </properties>
 
