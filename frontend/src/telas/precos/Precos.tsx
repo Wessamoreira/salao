@@ -273,25 +273,30 @@ function Trilha({ fuso }: { fuso: string }) {
           : itens.length === 0 ? <p className="prc-nada">Nenhuma decisão ainda.</p>
             : (
               <div className="prc-rolagem">
-                <table className="prc-tabela">
-                  <thead>
-                    <tr>
-                      <th>Quando</th>
-                      <th>Produto</th>
-                      <th>O que foi feito</th>
-                      <th>Motivo da recusa</th>
+                {/* No toque a linha vira cartão (RT-INF-018); os papéis explícitos mantêm a
+                    tabela para o leitor de tela depois da troca de `display`. */}
+                <table className="prc-tabela tabela-cartoes" role="table">
+                  <thead role="rowgroup">
+                    <tr role="row">
+                      <th role="columnheader">Quando</th>
+                      <th role="columnheader">Produto</th>
+                      <th role="columnheader">O que foi feito</th>
+                      <th role="columnheader">Motivo da recusa</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody role="rowgroup">
                     {itens.map((decisao) => (
-                      <tr key={decisao.id}>
-                        <td>
+                      <tr key={decisao.id} role="row">
+                        <td role="cell">
                           {quando(decisao.decididaEm, fuso)}
                           {decisao.quemDecidiu && <span className="prc-quem"> · {decisao.quemDecidiu}</span>}
                         </td>
-                        <td>{decisao.produto}</td>
-                        <td>{oQueFoiFeito(decisao)}</td>
-                        <td className="prc-justificativa">{decisao.justificativa ?? '—'}</td>
+                        <td role="cell" data-rotulo="Produto" className="tabela-cartoes-largo">{decisao.produto}</td>
+                        <td role="cell" data-rotulo="O que foi feito" className="tabela-cartoes-largo">{oQueFoiFeito(decisao)}</td>
+                        <td role="cell" data-rotulo="Motivo da recusa"
+                          className={`prc-justificativa tabela-cartoes-largo${decisao.justificativa ? '' : ' tabela-cartoes-vazio'}`}>
+                          {decisao.justificativa ?? '—'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

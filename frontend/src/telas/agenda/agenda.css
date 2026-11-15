@@ -116,6 +116,7 @@
   transition: color var(--mov-imediato) var(--mov-curva),
     background var(--mov-imediato) var(--mov-curva);
 }
+.agenda-densidade-unidade { display: none; }
 .agenda-densidade button:hover { color: var(--tinta); }
 .agenda-densidade button[aria-pressed='true'] {
   color: var(--tinta);
@@ -506,9 +507,16 @@
 .agenda-detalhe-fechar:hover { color: var(--tinta); }
 
 @media (max-width: 820px) {
+  /*
+   * No toque, a folha da casca É o cartão (RT-INF-013). Margem, borda e canto aqui dentro
+   * seriam um cartão dentro de outro, com dois cantos arredondados um dentro do outro — e
+   * 24px a menos de grade numa tela onde cada coluna já briga por largura.
+   */
   .agenda {
-    height: calc(100% - var(--e-6));
-    margin: var(--e-3);
+    height: 100%;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
   }
   .agenda-topo { gap: var(--e-2); padding: var(--e-2) var(--e-3); }
   .agenda-data { font-size: var(--t-14); }
@@ -520,14 +528,38 @@
     position: fixed;
     z-index: 70;
     right: var(--e-3);
-    bottom: var(--e-3);
+    /* Acima das abas da casca, e não por cima delas: o detalhe é consultado com a navegação
+       ainda à mão. Fora da casca (prévia) a variável não existe e vale só a faixa de gestos. */
+    bottom: calc(var(--abas-total, env(safe-area-inset-bottom, 0px)) + var(--e-3));
     left: var(--e-3);
     width: auto;
-    max-height: min(420px, calc(100dvh - 96px));
+    max-height: min(420px, calc(100dvh - 96px - var(--abas-total, 0px)));
     border: 1px solid var(--regua-forte);
     border-top: 3px solid var(--vinho);
     box-shadow: var(--sombra-flutuante);
   }
+}
+
+/*
+ * Celular em pé: o cabeçalho não cabe numa linha e a seta de próximo dia ficava cortada
+ * para fora da tela. A data fica com as setas — elas navegam a data, e separá-las seria
+ * separar o controle do que ele controla —, e a densidade desce para a linha de baixo,
+ * inteira, como controle segmentado.
+ */
+@media (max-width: 560px) {
+  .agenda-topo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--e-2);
+  }
+  .agenda-topo-espaco { display: none; }
+  .agenda-navegacao { grid-row: 1; grid-column: 2; }
+  .agenda-densidade { grid-row: 2; grid-column: 1 / -1; }
+  .agenda-densidade button { flex: 1; }
+  /* Botões esticados: o rótulo solto ao lado parecia uma quarta opção. A unidade entra em
+     cada botão ("15 min") e o rótulo sai (RT-INF-018). */
+  .agenda-densidade > span { display: none; }
+  .agenda-densidade-unidade { display: inline; }
 }
 
 @media (max-width: 420px) {
@@ -644,17 +676,6 @@
 
 .agd-campo { display: flex; flex-direction: column; gap: 4px; font-size: var(--t-12); position: relative; }
 .agd-campo > span { color: var(--tinta-fraca); }
-.agd-campo input,
-.agd-campo select {
-  min-height: 34px;
-  padding: 0 var(--e-2);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-2);
-  font: inherit;
-  font-size: var(--t-14);
-}
 .agd-campo.agd-atencao > span { color: var(--tinta); }
 .agd-campo.agd-atencao input { border-color: var(--status-solicitado); }
 

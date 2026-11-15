@@ -1,31 +1,38 @@
 /*
- * RT-ATD-008 — tela de fechamento.
+ * RT-ATD-008 — a tela de fechamento. RT-ATD-009 — no balcão: três colunas, como um caixa.
  *
- * Todo valor vem dos tokens (design/tokens.css). Número solto aqui é bug de rigor.
+ *   abertas │ trabalho (lançar, itens, totais) │ receber (pago, forma, falta, fechar)
  *
- * A tela tem estado em quase tudo — seleção, foco, comanda esquecida, comanda quitada —
- * e estado inline não existe. É por isso que ela é arquivo, e não `style={{}}`.
+ * Cada coluna rola sozinha, e a do dinheiro tem o pé fixo: "Falta receber" e "Fechar
+ * comanda" ficam à vista com qualquer número de itens (R-UX-08). No celular vira uma coluna, e
+ * o mesmo pé gruda na base da tela, acima das abas.
+ *
+ * Todo valor vem dos tokens. Status é MARCA (fundo claro, borda, barra), nunca cor de letra:
+ * nenhuma cor de status passa AA como texto sobre papel (16-design-system.md).
  */
 
+/* A tela que se desenha inteira precisa de altura definida para as colunas rolarem sozinhas. */
+.pagina:has(> .pagina-corpo > .cmd-tela) { height: 100%; }
+
 .cmd-tela {
-  display: grid;
-  grid-template-columns: minmax(240px, 300px) 1fr;
-  gap: var(--e-8);
   height: 100%;
-  padding: var(--e-6);
-  align-content: start;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
 }
 
-/* ---------------------------------------------------------------------------
- * A barra de comandas abertas (R-UX-07).
- *
- * Coluna fixa à esquerda, sempre presente: "comanda aberta esquecida é dinheiro
- * que sai pela porta". Escondê-la atrás de um menu seria o mesmo que não tê-la.
- * ------------------------------------------------------------------------- */
+/* ------------------------------------------------------------------ abertas (R-UX-07) */
 
+/*
+ * Coluna fixa à esquerda, sempre presente: "comanda aberta esquecida é dinheiro que sai pela
+ * porta". Escondê-la atrás de um menu seria o mesmo que não tê-la.
+ */
 .cmd-barra {
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--e-4) var(--e-3);
+  background: var(--papel-fundo);
   border-right: 1px solid var(--regua);
-  padding-right: var(--e-5);
 }
 
 .cmd-barra-topo {
@@ -33,155 +40,178 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--e-2);
-  padding-bottom: var(--e-4);
+  padding: 0 var(--e-2) var(--e-3);
 }
-
 .cmd-barra-titulo {
-  font-family: var(--fonte);
-  font-size: var(--t-12);
-  font-weight: 500;
-  letter-spacing: 0.06em;
+  margin: 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-11);
+  font-weight: var(--p-forte);
+  letter-spacing: var(--tr-micro);
   text-transform: uppercase;
-  color: var(--tinta-fraca);
-  margin: 0;
 }
-
 .cmd-barra-contador {
-  font-size: var(--t-14);
-  font-variant-numeric: var(--numerais);
   color: var(--tinta-fraca);
-}
-
-.cmd-barra-vazia {
   font-size: var(--t-12);
-  color: var(--tinta-fraca);
-  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.cmd-barra-vazia {
   margin: 0;
+  padding: 0 var(--e-2);
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  line-height: 1.5;
 }
 
 .cmd-barra-lista {
-  list-style: none;
-  margin: 0;
-  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--e-1);
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .cmd-linha {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: var(--e-1) var(--e-3);
   width: 100%;
-  padding: var(--e-3);
-  border: 1px solid transparent;
-  border-radius: var(--raio-2);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--e-1) var(--e-2);
+  padding: var(--e-2) var(--e-3);
+  color: var(--tinta);
   background: transparent;
+  border: 0;
+  border-radius: var(--raio-2);
+  font: inherit;
   text-align: left;
   cursor: pointer;
-  font: inherit;
-  color: var(--tinta);
-  transition: background var(--mov-imediato) ease;
+  transition: background var(--mov-imediato) var(--mov-curva);
 }
-
 .cmd-linha:hover { background: var(--papel-afundado); }
-.cmd-linha:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
-
+/* Selecionada: papel e a barra de posição em tinta — a mesma marca da lateral do sistema. */
 .cmd-linha.selecionada {
   background: var(--papel);
-  border-color: var(--regua-forte);
+  box-shadow: inset 2px 0 0 var(--tinta), 0 0 0 1px var(--regua);
 }
 
 .cmd-linha-numero {
-  font-variant-numeric: var(--numerais);
   color: var(--tinta-fraca);
   font-size: var(--t-12);
+  font-variant-numeric: tabular-nums;
 }
-
 .cmd-linha-nome {
   overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: var(--t-14);
+  font-weight: var(--p-medio);
   white-space: nowrap;
-  font-size: var(--t-14);
+  text-overflow: ellipsis;
 }
-
 .cmd-linha-valor {
-  font-variant-numeric: var(--numerais);
-  font-size: var(--t-14);
+  font-size: var(--t-12);
+  font-variant-numeric: tabular-nums;
 }
 
 /*
- * O alerta de comanda esquecida (R-UX-07) é cor E texto.
- *
- * Só a cor deixaria de fora quem não a distingue — e este aviso é sobre dinheiro
- * ficando para trás, que é justamente o que ninguém pode perder.
+ * A comanda esquecida (R-UX-07) é TEXTO e marca: "aberta há 4h" em tinta, com o ponto da
+ * falta. Só a cor deixaria de fora quem não a distingue — e a cor, como letra, não passaria
+ * no contraste.
  */
 .cmd-linha-aviso {
-  grid-column: 1 / -1;
-  font-size: var(--t-10);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--status-falta);
+  grid-column: 2 / -1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e-1);
+  color: var(--tinta);
+  font-size: var(--t-11);
+  font-weight: var(--p-medio);
+}
+.cmd-linha-aviso::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  background: var(--status-falta);
+  border-radius: 50%;
 }
 
-.cmd-linha.esquecida { border-left: 2px solid var(--status-falta); }
+.cmd-sem-comanda {
+  display: grid;
+  place-items: center;
+  padding: var(--e-10) var(--e-6);
+}
 
-/* ------------------------------------------------------------------ a conta */
+/* ------------------------------------------------------------------ a comanda */
 
-
-
-
-/*
- * Largura máxima em pixel, e não da escala de espaçamento: a escala governa
- * espaçamento (§4), e isto é medida de linha — a conta fica ilegível esticada na
- * largura de um monitor de balcão.
- */
 .cmd-conta {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+}
+
+.cmd-trabalho {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--e-6);
-  max-width: 780px;
+  gap: var(--e-5);
+  padding: var(--e-5) var(--e-6) var(--e-8);
+  background: var(--papel);
 }
 
 .cmd-conta-topo {
   display: flex;
-  align-items: baseline;
-  gap: var(--e-3);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--e-2) var(--e-3);
 }
-
-/*
- * Sans, não serifa.
- *
- * O design system reserva a fonte serifada de identidade a dois lugares — identidade do
- * estabelecimento e TOTAIS —, e "Comanda #128" é texto operacional. A primeira versão
- * desta tela usava serifa aqui e sans nos totais: exatamente o inverso.
- */
 .cmd-conta-titulo {
-  font-size: var(--t-20);
-  font-weight: 500;
+  display: flex;
+  align-items: baseline;
+  gap: var(--e-2);
   margin: 0;
+  font-size: var(--t-20);
+  font-weight: var(--p-forte);
+  letter-spacing: var(--tr-titulo);
 }
+.cmd-conta-numero { font-variant-numeric: tabular-nums; }
+.cmd-conta-cliente {
+  color: var(--tinta-fraca);
+  font-size: var(--t-16);
+  font-weight: var(--p-medio);
+  letter-spacing: var(--tr-corpo);
+}
+.cmd-conta-cliente::before { content: '·'; margin-right: var(--e-2); }
 
-.cmd-conta-numero { font-variant-numeric: var(--numerais); }
-
+/* O selo: rótulo em tinta, status no fundo e na borda. */
 .cmd-selo {
-  font-size: var(--t-10);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: var(--e-1) var(--e-2);
+  padding: 2px var(--e-2);
+  color: var(--tinta);
   border-radius: var(--raio-1);
+  font-size: var(--t-11);
+  font-weight: var(--p-forte);
 }
-
-.cmd-selo-aberta { background: var(--status-atendendo-fundo); color: var(--status-atendendo); }
-.cmd-selo-fechada { background: var(--status-confirmado-fundo); color: var(--status-confirmado); }
-.cmd-selo-estornada { background: var(--status-falta-fundo); color: var(--status-falta); }
+.cmd-selo-aberta {
+  background: var(--status-atendendo-fundo);
+  box-shadow: inset 0 0 0 1px var(--status-atendendo);
+}
+.cmd-selo-fechada {
+  background: var(--status-confirmado-fundo);
+  box-shadow: inset 0 0 0 1px var(--status-confirmado);
+}
+.cmd-selo-estornada {
+  background: var(--status-falta-fundo);
+  box-shadow: inset 0 0 0 1px var(--status-falta);
+}
 
 .cmd-erro {
   margin: 0;
   padding: var(--e-3) var(--e-4);
-  border-left: 2px solid var(--status-falta);
-  background: var(--status-falta-fundo);
   color: var(--tinta);
+  background: var(--status-falta-fundo);
+  border-left: 3px solid var(--status-falta);
   font-size: var(--t-14);
   line-height: 1.5;
 }
@@ -189,278 +219,387 @@
 /* ------------------------------------------------------------------ lançar */
 
 .cmd-lancar {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--e-5);
-  padding: var(--e-4);
   background: var(--papel);
-  border: 1px solid var(--regua);
-  border-radius: var(--raio-2);
-}
-
-.cmd-lancar-bloco {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--e-2) var(--e-3);
-  align-items: end;
-}
-
-.cmd-lancar-bloco .cmd-rotulo { grid-column: 1 / -1; }
-.cmd-lancar-bloco .cmd-campo { grid-column: 1; }
-.cmd-lancar-bloco .cmd-botao { grid-column: 1 / -1; justify-self: start; }
-/*
- * O leitor (RT-EST-009) e o aviso do código sem dono ocupam a linha inteira.
- *
- * Quem posiciona é o HOST, não o componente: o leitor não sabe que caiu num grid de duas
- * colunas. Sem estas duas linhas o aviso era colocado automaticamente na coluna 2 e
- * esmagava o formulário — e só apareceu ao abrir o navegador.
- */
-.cmd-lancar-bloco .est-leitor,
-.cmd-lancar-bloco .est-achado { grid-column: 1 / -1; }
-
-/*
- * Mesma convenção de rótulo do resto do produto: caixa normal, escuro, junto do
- * controle. Era versalete de 10px em --tinta-fraca — o mesmo desenho do selo de status
- * logo acima, e o mesmo desenho do título de seção nas configurações. Três coisas
- * diferentes com a mesma aparência é o que faz o produto parecer não ter sido desenhado.
- *
- * Versalete continua certo onde é ETIQUETA e não rótulo: o selo da comanda, o aviso de
- * linha, o cabeçalho da tabela de itens.
- */
-.cmd-rotulo {
-  font-size: var(--t-12);
-  font-weight: var(--p-forte);
-  letter-spacing: var(--tr-corpo);
-  color: var(--tinta);
-}
-
-.cmd-campo {
-  font: inherit;
-  font-size: var(--t-14);
-  padding: var(--e-2) var(--e-3);
   border: 1px solid var(--regua-forte);
   border-radius: var(--raio-2);
-  background: var(--papel);
-  color: var(--tinta);
-  width: 100%;
 }
 
-.cmd-campo:focus-visible { outline: 2px solid var(--tinta); outline-offset: 1px; }
+/* Uma linha por forma de lançar: campos e botão na mesma altura, na ordem em que se preenche. */
+.cmd-lancar-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--e-3);
+  padding: var(--e-3) var(--e-4) var(--e-4);
+}
+.cmd-lancar-linha + .cmd-lancar-linha { border-top: 1px solid var(--regua); }
+
+.cmd-grupo {
+  min-width: 0;
+  flex: 1 1 160px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-1);
+}
+.cmd-grupo-largo { flex: 2 1 220px; }
+.cmd-grupo-qtd { flex: 0 0 96px; }
+.cmd-linha-inteira { flex-basis: 100%; margin: 0; }
+
+.cmd-rotulo {
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  font-weight: var(--p-medio);
+}
+
+/* RT-INF-017: o desenho vem do controle padrão (componentes.css); aqui só o que é desta tela. */
+.cmd-campo { width: 100%; height: var(--controle); }
+
+/* O leitor de código entra na linha do produto, na mesma altura dos outros campos. */
+.cmd-lancar-linha .est-leitor { flex: 1 1 200px; min-width: 0; }
+.cmd-lancar-linha .est-rotulo {
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  font-weight: var(--p-medio);
+}
+.cmd-lancar-linha .est-leitor-campo { height: var(--controle); }
+/* O leitor vem do estoque com 8px entre rótulo e campo; os grupos daqui têm 4px. Com a linha
+   alinhada pela base, a diferença subia o rótulo "Bipar produto" acima dos vizinhos. */
+.cmd-lancar-linha .est-leitor-linha { margin-top: var(--e-1); }
+.cmd-lancar-linha .est-rotulo { display: block; line-height: inherit; }
+/* O "Clique aqui antes de bipar" fica para o leitor de tela; o placeholder já diz o mesmo a
+   quem vê, e a frase embaixo do campo desalinhava a linha inteira. */
+.cmd-lancar-linha .est-leitor-estado {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
 .cmd-botao {
-  font: inherit;
-  font-size: var(--t-12);
-  padding: var(--e-2) var(--e-4);
+  height: var(--controle);
+  padding: 0 var(--e-4);
+  color: var(--tinta);
+  background: var(--papel);
   border: 1px solid var(--regua-forte);
   border-radius: var(--raio-2);
-  background: var(--papel);
-  color: var(--tinta);
-  cursor: pointer;
-}
-
-.cmd-botao:hover:not(:disabled) { background: var(--papel-afundado); }
-.cmd-botao:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
-.cmd-botao:disabled { color: var(--tinta-tenue); cursor: not-allowed; }
-
-.cmd-botao-primario {
-  background: var(--tinta);
-  color: var(--papel);
-  border-color: var(--tinta);
+  font: inherit;
   font-size: var(--t-14);
-  padding: var(--e-3) var(--e-6);
+  font-weight: var(--p-medio);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--mov-imediato) var(--mov-curva);
 }
-
-.cmd-botao-primario:disabled { background: var(--papel-afundado); border-color: var(--regua-forte); }
+.cmd-botao:hover:not(:disabled) { background: var(--papel-fundo); border-color: var(--tinta-tenue); }
+.cmd-botao:disabled { color: var(--tinta-fraca); background: var(--papel-fundo); cursor: not-allowed; }
 
 /* ------------------------------------------------------------------ itens */
 
+.cmd-itens-rolagem {
+  max-width: 100%;
+  overflow-x: auto;
+}
 .cmd-itens {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--t-14);
 }
-
-.cmd-itens-rolagem {
-  max-width: 100%;
-  overflow-x: auto;
-  scrollbar-gutter: stable;
-}
-
-.cmd-itens th, .cmd-itens td {
+.cmd-itens th,
+.cmd-itens td {
   padding: var(--e-3) var(--e-2);
-  border-bottom: 1px solid var(--regua);
   text-align: left;
-  vertical-align: top;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--regua);
 }
-
 .cmd-itens thead th {
-  font-size: var(--t-10);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  padding-top: 0;
   color: var(--tinta-fraca);
-  font-weight: 500;
+  font-size: var(--t-11);
+  font-weight: var(--p-forte);
+  letter-spacing: var(--tr-micro);
+  text-transform: uppercase;
   border-bottom-color: var(--regua-forte);
 }
+.cmd-itens th:first-child,
+.cmd-itens td:first-child { padding-left: 0; }
+.cmd-itens th:last-child,
+.cmd-itens td:last-child { padding-right: 0; }
 
-.cmd-num { text-align: right; font-variant-numeric: var(--numerais); }
-
-.cmd-item-nome { font-weight: 400; display: flex; flex-direction: column; gap: var(--e-1); }
-
-.cmd-item-tipo, .cmd-item-executante {
-  font-size: var(--t-10);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+.cmd-num { text-align: right !important; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* A célula continua CÉLULA: `display: flex` nela tirava o `th` da tabela, e a régua de baixo
+   da coluna do nome saía 2px fora da linha das outras. Quem empilha são os filhos. */
+.cmd-item-nome { font-weight: var(--p-normal); }
+.cmd-item-descricao { display: block; font-weight: var(--p-medio); }
+.cmd-item-meta {
+  display: block;
+  margin-top: 2px;
   color: var(--tinta-fraca);
+  font-size: var(--t-12);
 }
-
-.cmd-item-total { font-weight: 500; }
-
+.cmd-item-total { font-weight: var(--p-forte); }
 .cmd-itens-vazio {
-  font-size: var(--t-14);
-  color: var(--tinta-fraca);
-  padding: var(--e-6) 0;
   margin: 0;
+  padding: var(--e-8) 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-14);
+  text-align: center;
+  border: 1px dashed var(--regua-forte);
+  border-radius: var(--raio-2);
 }
 
 .cmd-desconto { display: flex; justify-content: flex-end; }
-
 .cmd-desconto-campo {
-  font: inherit;
-  font-size: var(--t-12);
-  font-variant-numeric: var(--numerais);
+  /* Cabe o desconto já dado ("R$ 17,00"), que aparece como dica até alguém digitar. */
+  width: 10ch;
+  padding: 0 var(--e-2);
+  font-variant-numeric: tabular-nums;
   text-align: right;
-  width: 6ch;
-  padding: var(--e-1) var(--e-2);
-  border: 1px solid var(--regua);
-  border-radius: var(--raio-1);
-  background: var(--papel-afundado);
-  color: var(--tinta);
 }
 
-.cmd-desconto-campo:focus-visible { outline: 2px solid var(--tinta); outline-offset: 1px; }
-
-.cmd-acoes { text-align: right; }
-
+.cmd-acoes { width: 40px; text-align: right; }
+/* Remover: um ícone discreto, com nome para o leitor de tela e dica ao passar o mouse. */
 .cmd-remover {
-  font: inherit;
-  font-size: var(--t-10);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  background: none;
-  border: none;
-  padding: var(--e-1);
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
   color: var(--tinta-fraca);
+  background: transparent;
+  border: 0;
+  border-radius: var(--raio-1);
   cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  transition: background var(--mov-imediato) var(--mov-curva),
+    color var(--mov-imediato) var(--mov-curva);
 }
-
-.cmd-remover:hover { color: var(--status-falta); }
-.cmd-remover:focus-visible { outline: 2px solid var(--tinta); outline-offset: 2px; }
-
-/* ------------------------------------------------------------------ totais */
-
-.cmd-totais {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--e-8);
-}
-
-.cmd-total { display: flex; flex-direction: column; align-items: flex-end; gap: var(--e-1); }
-
-.cmd-total-rotulo {
-  font-size: var(--t-10);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--tinta-fraca);
-}
-
-.cmd-total-valor { font-size: var(--t-16); font-variant-numeric: var(--numerais); }
+.cmd-remover:hover:not(:disabled) { color: var(--tinta); background: var(--papel-afundado); }
+.cmd-remover:disabled { cursor: not-allowed; }
 
 /*
- * O total é um dos DOIS lugares onde a serifa entra (16-design-system §3).
- *
- * "O negócio é beleza — um gesto editorial se justifica." E é aqui que ele cabe: o
- * número que a cliente vai pagar é o momento da tela, não mais uma linha de tabela.
+ * Os totais como uma nota: rótulo à esquerda, valor à direita, uma linha por número — o mesmo
+ * desenho do resumo da coluna do dinheiro (`.cmd-resumo`), para as duas metades se lerem como
+ * um documento só. Eram três colunas lado a lado com o TOTAL mais alto que os outros dois
+ * rótulos, e em 360px o bruto vazava pela esquerda do painel.
  */
+.cmd-totais {
+  width: min(100%, 360px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  margin-left: auto;
+  padding-top: var(--e-4);
+}
+.cmd-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--e-3);
+}
+.cmd-total-rotulo { color: var(--tinta-fraca); font-size: var(--t-14); }
+.cmd-total-valor {
+  font-size: var(--t-14);
+  font-weight: var(--p-medio);
+  font-variant-numeric: tabular-nums;
+}
+/* Total: o único gesto editorial da tela — a Bricolage é reservada a identidade e totais.
+   O traço acima é o "soma" da nota: separa o que compõe do que resulta. */
+.cmd-total.forte {
+  margin-top: var(--e-1);
+  padding-top: var(--e-3);
+  border-top: 1px solid var(--regua-forte);
+}
+.cmd-total.forte .cmd-total-rotulo { color: var(--tinta); font-weight: var(--p-forte); }
 .cmd-total.forte .cmd-total-valor {
   font-family: var(--fonte-identidade);
   font-size: var(--t-30);
+  font-weight: var(--p-forte);
+  letter-spacing: var(--tr-display);
 }
 
-/* ------------------------------------------------------------------ pagamento */
+/* ------------------------------------------------------------------ receber */
+
+.cmd-receber {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-5);
+  padding: var(--e-5) var(--e-5) 0;
+  background: var(--papel-fundo);
+  border-left: 1px solid var(--regua);
+}
+
+/* O recibo: dois números do servidor, alinhados como numa nota. */
+.cmd-resumo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
+  margin: 0;
+}
+.cmd-resumo > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--e-3);
+}
+.cmd-resumo dt { color: var(--tinta-fraca); font-size: var(--t-14); }
+.cmd-resumo dd {
+  margin: 0;
+  font-size: var(--t-14);
+  font-weight: var(--p-medio);
+  font-variant-numeric: tabular-nums;
+}
 
 .cmd-pagamentos {
   display: flex;
   flex-direction: column;
   gap: var(--e-4);
-  padding: var(--e-4);
+}
+
+/* Os pagamentos registrados: uma superfície, régua entre as linhas (RT-INF-016). */
+.cmd-pagos {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
   background: var(--papel);
-  border: 1px solid var(--regua);
+  border: 1px solid var(--regua-forte);
   border-radius: var(--raio-2);
 }
-
-.cmd-pagos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-
 .cmd-pago {
   display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: var(--e-4);
-  align-items: baseline;
-  padding: var(--e-2) 0;
-  border-bottom: 1px solid var(--regua);
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--e-3);
+  min-height: 44px;
+  padding: 0 var(--e-1) 0 var(--e-3);
   font-size: var(--t-14);
 }
-
+.cmd-pago + .cmd-pago { border-top: 1px solid var(--regua); }
 .cmd-pago-parcelas { color: var(--tinta-fraca); font-size: var(--t-12); }
-.cmd-pago-valor { font-variant-numeric: var(--numerais); }
+.cmd-pago-valor { font-variant-numeric: tabular-nums; }
 
 .cmd-forma {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap: var(--e-2) var(--e-3);
-  align-items: end;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--e-2) var(--e-2);
 }
-
-.cmd-forma .cmd-rotulo { grid-row: 1; }
-.cmd-forma .cmd-campo { grid-row: 2; }
-.cmd-forma .cmd-botao { grid-row: 2; }
-
-/* ------------------------------------------------------------------ fechar */
-
-.cmd-fechar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--e-6);
-  padding-top: var(--e-5);
-  border-top: 1px solid var(--regua-forte);
-}
-
-.cmd-restante { display: flex; flex-direction: column; gap: var(--e-1); }
-
-.cmd-restante-rotulo {
-  font-size: var(--t-10);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--tinta-fraca);
-}
+.cmd-forma > .cmd-formas,
+.cmd-forma > .cmd-rotulo { grid-column: 1 / -1; }
+.cmd-forma > .cmd-rotulo { margin-top: var(--e-2); }
 
 /*
- * O número que a tela inteira existe para mostrar (R-UX-08).
- *
- * Ele é o maior da tela junto com o total, e muda de cor quando zera — mas o que
- * diz "pode fechar" não é a cor: é o botão deixar de estar desabilitado.
+ * A forma em botões de rádio: um toque para a escolha mais repetida do dia. O rádio nativo
+ * fica por baixo, invisível e inteiro — é ele que recebe o clique, as setas e o leitor de
+ * tela; o que se vê é o rótulo.
  */
+.cmd-formas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.cmd-formas > legend { margin-bottom: var(--e-2); padding: 0; }
+.cmd-forma-opcao { position: relative; }
+.cmd-forma-opcao input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.cmd-forma-opcao span {
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--e-3);
+  color: var(--tinta);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font-size: var(--t-12);
+  font-weight: var(--p-medio);
+  transition: background var(--mov-imediato) var(--mov-curva);
+}
+.cmd-forma-opcao:hover span { border-color: var(--tinta-tenue); }
+.cmd-forma-opcao input:checked + span {
+  color: var(--papel);
+  background: var(--tinta);
+  border-color: var(--tinta);
+}
+.cmd-forma-opcao input:focus-visible + span {
+  outline: 2px solid var(--foco);
+  outline-offset: 2px;
+}
+
+/* O pé: "Falta receber" e "Fechar comanda", fixos na base da coluna. */
+.cmd-fechar {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-3);
+  padding: var(--e-4) 0 var(--e-5);
+  background: var(--papel-fundo);
+  border-top: 1px solid var(--regua-forte);
+}
+.cmd-restante {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e-3);
+}
+.cmd-restante-rotulo {
+  color: var(--tinta-fraca);
+  font-size: var(--t-14);
+  font-weight: var(--p-medio);
+}
 .cmd-restante-valor {
   font-family: var(--fonte-identidade);
   font-size: var(--t-30);
-  font-variant-numeric: var(--numerais);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tr-display);
+}
+/* Quitada: a marca de confirmado no fundo, o número continua em tinta. */
+.cmd-restante.quitada {
+  padding: var(--e-2) var(--e-3);
+  background: var(--status-confirmado-fundo);
+  box-shadow: inset 3px 0 0 var(--status-confirmado);
+  border-radius: 0 var(--raio-1) var(--raio-1) 0;
 }
 
-.cmd-restante-valor.quitada { color: var(--status-confirmado); }
+.cmd-botao-primario {
+  width: 100%;
+  height: 48px;
+  color: var(--papel);
+  background: var(--tinta);
+  border-color: var(--tinta);
+  font-size: var(--t-16);
+  font-weight: var(--p-forte);
+}
+.cmd-botao-primario:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--tinta) 86%, white);
+  border-color: transparent;
+}
+.cmd-botao-primario:disabled {
+  color: var(--tinta-fraca);
+  background: var(--papel-afundado);
+  border-color: var(--regua-forte);
+}
+.cmd-por-que {
+  margin: 0;
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+  text-align: center;
+}
 
-/* Acessível a leitor de tela, invisível na página. */
+/* ------------------------------------------------------------------ utilidades */
+
 .cmd-oculto {
   position: absolute;
   width: 1px;
@@ -470,110 +609,201 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
-  border: 0;
-}
-
-/* ---------------------------------------------------------------- responsividade
- *
- * No celular a lista de comandas vira uma faixa horizontal. Ela continua visível —
- * não vai para outro passo — e a conta preserva a ordem de leitura do desktop.
- */
-@media (max-width: 1100px) {
-  .cmd-tela {
-    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
-    gap: var(--e-5);
-    padding: var(--e-5);
-  }
-}
-
-@media (max-width: 820px) {
-  .cmd-tela {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--e-5);
-    height: auto;
-    min-height: 100%;
-    padding: var(--e-4);
-  }
-
-  .cmd-barra {
-    min-width: 0;
-    padding: 0 0 var(--e-4);
-    border-right: 0;
-    border-bottom: 1px solid var(--regua);
-  }
-
-  .cmd-barra-topo { padding-bottom: var(--e-3); }
-  .cmd-barra-lista {
-    flex-direction: row;
-    gap: var(--e-2);
-    overflow-x: auto;
-    padding-bottom: var(--e-2);
-    scroll-snap-type: x proximity;
-    scrollbar-gutter: stable;
-  }
-  .cmd-barra-lista > li {
-    flex: 0 0 min(280px, 82vw);
-    scroll-snap-align: start;
-  }
-
-  .cmd-linha.selecionada { background: var(--papel); }
-  .cmd-conta { max-width: none; }
-}
-
-@media (max-width: 640px) {
-  .cmd-lancar { grid-template-columns: 1fr; }
-  .cmd-lancar-bloco + .cmd-lancar-bloco {
-    padding-top: var(--e-4);
-    border-top: 1px solid var(--regua);
-  }
-
-  .cmd-itens { min-width: 640px; }
-  .cmd-totais {
-    justify-content: space-between;
-    gap: var(--e-4);
-  }
-  .cmd-total { align-items: flex-start; }
-
-  .cmd-forma { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .cmd-forma .cmd-botao { grid-column: 1 / -1; justify-self: start; }
-}
-
-@media (max-width: 480px) {
-  .cmd-tela { padding: var(--e-3); }
-  .cmd-conta { gap: var(--e-5); }
-  .cmd-conta-topo { align-items: center; justify-content: space-between; }
-  .cmd-totais { flex-wrap: wrap; }
-  .cmd-total.forte {
-    width: 100%;
-    padding-top: var(--e-3);
-    border-top: 1px solid var(--regua);
-  }
-  .cmd-total.forte .cmd-total-valor { font-size: var(--t-25); }
-
-  .cmd-pago {
-    grid-template-columns: 1fr auto;
-    gap: var(--e-2) var(--e-3);
-  }
-  .cmd-pago .cmd-remover { grid-column: 1 / -1; justify-self: start; }
-
-  .cmd-fechar {
-    align-items: stretch;
-    flex-direction: column;
-    gap: var(--e-4);
-  }
-  .cmd-botao-primario { width: 100%; min-height: 44px; }
 }
 
 /*
- * A metade que ainda está sendo relida.
- *
- * Cada ação devolve os itens OU a conta; a outra metade chega um instante depois. Ela
- * continua na tela, legível, mas esmaecida e sem clique — quem lê sabe que aquele número
- * é o de um segundo atrás. Esconder seria pior (a tela salta); mostrar sem avisar, também
- * (o total mente por um instante).
+ * A metade que ainda está sendo relida (RN-ATD-008): esmaecida e sem clique até o servidor
+ * responder — número velho sem aviso é que não pode.
  */
 .cmd-metade[aria-busy='true'] {
   opacity: 0.55;
   pointer-events: none;
-  transition: opacity var(--t-rapido, 120ms) ease-out;
+  transition: opacity var(--mov-imediato) var(--mov-curva);
+}
+
+/* ------------------------------------------------------------------ larguras */
+
+/* Notebook e tablet deitado: as abertas sobem para uma faixa; trabalho e dinheiro lado a lado. */
+@media (max-width: 1180px) {
+  .cmd-tela {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .cmd-barra {
+    display: flex;
+    align-items: center;
+    gap: var(--e-3);
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: var(--e-3) var(--e-4);
+    border-right: 0;
+    border-bottom: 1px solid var(--regua);
+    scroll-snap-type: x proximity;
+    /* A borda esmaecida diz que a faixa continua: era o "cortado sem aviso" de M5. */
+    mask-image: linear-gradient(90deg, black calc(100% - 48px), transparent);
+  }
+  .cmd-barra-topo { flex-shrink: 0; padding: 0; }
+  .cmd-barra-lista { flex-direction: row; gap: var(--e-2); }
+  .cmd-barra-lista > li { flex: 0 0 auto; scroll-snap-align: start; }
+  .cmd-linha {
+    width: 220px;
+    background: var(--papel);
+    box-shadow: 0 0 0 1px var(--regua);
+  }
+  .cmd-conta { grid-template-columns: minmax(0, 1fr) 320px; }
+}
+
+/*
+ * Toque: uma coluna. O pé "Falta receber + Fechar comanda" gruda na base da área que rola,
+ * logo acima das abas — R-UX-08 no lugar do polegar.
+ */
+@media (max-width: 820px) {
+  .pagina:has(> .pagina-corpo > .cmd-tela) { height: auto; }
+  /* Folga embaixo do tamanho do pé fixo, para ele nunca cobrir o último pagamento. */
+  .cmd-tela { height: auto; grid-template-rows: auto auto; padding-bottom: 96px; }
+
+  /* A faixa das abertas: o título em cima, as comandas embaixo, e só elas rolam. */
+  .cmd-barra {
+    display: block;
+    overflow: visible;
+    padding: var(--e-3) 0 var(--e-3) var(--e-4);
+    mask-image: none;
+  }
+  .cmd-barra-topo { padding: 0 var(--e-4) var(--e-2) 0; }
+  .cmd-barra-lista {
+    overflow-x: auto;
+    padding: 2px var(--e-4) 2px 2px;
+    scroll-snap-type: x proximity;
+    mask-image: linear-gradient(90deg, black calc(100% - 40px), transparent);
+  }
+  .cmd-conta { grid-template-columns: minmax(0, 1fr); }
+  .cmd-trabalho { overflow: visible; padding: var(--e-4); }
+  .cmd-receber {
+    overflow: visible;
+    padding: var(--e-4) var(--e-4) 0;
+    border-left: 0;
+    border-top: 1px solid var(--regua);
+  }
+  /*
+   * O pé é FIXO acima das abas, não `sticky`: um elemento grudado só gruda dentro do próprio
+   * bloco, e o bloco do dinheiro fica lá embaixo da tela — o pé só apareceria quando ninguém
+   * mais precisasse dele. Fora da casca, `--abas-total` não existe e ele encosta na base.
+   */
+  .cmd-fechar {
+    position: fixed;
+    z-index: 20;
+    left: 0;
+    right: 0;
+    bottom: var(--abas-total, env(safe-area-inset-bottom, 0px));
+    flex-direction: row;
+    align-items: center;
+    gap: var(--e-3);
+    padding: var(--e-2) var(--e-4);
+    background: var(--papel);
+    border-top: 1px solid var(--regua-forte);
+  }
+  .cmd-restante { flex-direction: column; align-items: flex-start; gap: 0; }
+  .cmd-restante-rotulo { font-size: var(--t-12); }
+  .cmd-restante-valor { font-size: var(--t-25); line-height: 1.1; }
+  .cmd-restante.quitada { padding: var(--e-1) var(--e-2); }
+  .cmd-fechar .cmd-botao-primario { flex: 1; width: auto; }
+  /* O motivo do botão desarmado já está à vista no valor ao lado; continua lido junto com o
+     botão por quem usa leitor de tela. */
+  .cmd-por-que {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .cmd-conta-titulo { font-size: var(--t-16); }
+  .cmd-conta-cliente { font-size: var(--t-14); }
+  .cmd-lancar-linha { padding: var(--e-3); }
+  .cmd-grupo, .cmd-grupo-largo, .cmd-lancar-linha .est-leitor { flex-basis: 100%; }
+  .cmd-lancar-linha .cmd-botao { flex: 1 1 auto; }
+  /* Dedo, não ponteiro. */
+  .cmd-campo, .cmd-botao, .cmd-lancar-linha .est-leitor-campo { height: var(--controle-toque); font-size: var(--t-16); }
+  .cmd-forma-opcao span { height: 40px; }
+}
+
+/* Celular em pé: a coluna do preço unitário sai — quantidade, desconto e total contam a conta. */
+@media (max-width: 640px) {
+  .cmd-itens thead th:nth-child(3),
+  .cmd-itens tbody td:nth-child(3) { display: none; }
+}
+
+/*
+ * RT-ATD-010 — no toque, o formulário de lançar fica atrás de "Adicionar à comanda", e o que
+ * aparece depois do cabeçalho é a conta. No desktop o botão não existe e nada muda.
+ */
+.cmd-lancar-abrir { display: none; }
+
+@media (max-width: 820px) {
+  .cmd-lancar-abrir {
+    width: 100%;
+    height: var(--controle-toque);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--e-2);
+    padding: 0 var(--e-3) 0 var(--e-4);
+    color: var(--tinta);
+    background: var(--papel);
+    border: 1px solid var(--regua-forte);
+    border-radius: var(--raio-2);
+    font: inherit;
+    font-size: var(--t-16);
+    font-weight: var(--p-forte);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .cmd-lancar-abrir:active { background: var(--papel-afundado); }
+  .cmd-lancar-abrir svg {
+    color: var(--tinta-fraca);
+    transition: transform var(--mov-curto) var(--mov-curva);
+  }
+  .cmd-lancar-area[data-aberta] .cmd-lancar-abrir {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  .cmd-lancar-area[data-aberta] .cmd-lancar-abrir svg { transform: rotate(180deg); }
+
+  /* Recolhido só pelo CSS: o formulário continua montado e não perde o que foi escolhido. */
+  .cmd-lancar-area:not([data-aberta]) .cmd-lancar-corpo { display: none; }
+  /* Aberto, ele encaixa embaixo do botão como uma peça só. */
+  .cmd-lancar-area[data-aberta] .cmd-lancar {
+    border-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+}
+
+/*
+ * RT-INF-018 — no toque, a linha do item é cartão (`tabela-cartoes`): nome e remover em cima,
+ * os números numa linha só, alinhados à direita como numa nota. Abaixo de 640px o unitário
+ * continua fora, pela mesma razão de antes: quantidade, desconto e total contam a conta.
+ */
+@media (max-width: 820px) {
+  table.cmd-itens.tabela-cartoes > tbody > tr {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: start;
+  }
+  table.cmd-itens.tabela-cartoes > tbody > tr > .cmd-item-nome { grid-column: 1 / 4; }
+  table.cmd-itens.tabela-cartoes > tbody > tr > .cmd-acoes {
+    grid-row: 1;
+    grid-column: 4;
+    justify-self: end;
+  }
+}
+@media (max-width: 640px) {
+  table.cmd-itens.tabela-cartoes > tbody > tr { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  table.cmd-itens.tabela-cartoes > tbody > tr > .cmd-item-nome { grid-column: 1 / 3; }
+  table.cmd-itens.tabela-cartoes > tbody > tr > .cmd-acoes { grid-column: 3; }
+  table.cmd-itens.tabela-cartoes > tbody > tr > td:nth-child(3) { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cmd-linha, .cmd-botao, .cmd-remover, .cmd-forma-opcao span, .cmd-metade { transition: none; }
 }

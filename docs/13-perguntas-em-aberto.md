@@ -55,6 +55,12 @@ resposta muda com o tempo de qualquer forma.
 | 13 | Volume: agendamentos/dia e profissionais simultâneos? | Dimensiona pool, VM e densidade da grade |
 | 14 | Orçamento mensal: infra + WhatsApp por conversa + LLM + **STT** | STT de áudio ficou fora da conta original e não é barato. **Desde RT-CNV-003 bloqueia de verdade:** os áudios são guardados e esperam um provedor. **E desde RT-CNV-004, o LLM:** sem chave e preço, as conversas esperam |
 
+## De uso no balcão
+
+| # | Pergunta | Impacto |
+|---|---|---|
+| 15 | A conciliação é feita no celular, ou só no computador? | Desde RT-INF-018, tabela no toque vira cartão (R-UX-25) — menos a conciliação: cinco tabelas e o painel de decisão medido pela largura da rolagem (RT-FIN-011). Se for usada no celular, ela entra na regra numa rotina própria; se não, a exceção vai registrada em R-UX-25 |
+
 ---
 
 ## Como usar este arquivo

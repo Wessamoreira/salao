@@ -24,16 +24,41 @@
   --regua:            #dce2e5;   /* divisória interna, linha de meia hora */
   --regua-forte:      #c5ced2;   /* borda de container, linha de hora cheia */
 
-  --espelho:              #20282d; /* menu lateral */
-  --espelho-hover:        #29343a;
-  --espelho-ativo:        #344148;
-  --espelho-regua:        #3d4b52;
-  --espelho-texto:        #fcfdfd;
-  --espelho-texto-fraco:  #c4ccd0;
-  --vinho:                #6f3651; /* única cor de marca */
+  /* Grafite NEUTRO (15/11/2026): o cinza azulado de antes lia como "fundo azul" — e azul-
+     noite com brilho é a cara do sistema gerado por IA. Mesma luminância, sem matiz;
+     todos os pares de contraste subiram (ver 16-design-system.md, "A marca"). */
+  --espelho:              #1c1c1e; /* a moldura: menu, splash, carregamento, porta */
+  --espelho-hover:        #27272a;
+  --espelho-ativo:        #323236;
+  --espelho-regua:        #3f3f44;
+  --espelho-texto:        #fafafa;
+  --espelho-texto-fraco:  #c7c7cc;
+  --vinho:                #6f3651; /* cor de identidade DO SALÃO (avatar, placa) */
   --vinho-fundo:          #f7f1f4;
   --metal:                #9da8ad; /* aço escovado, não dourado */
   --metal-claro:          #cbd2d5;
+
+  /* ---------------------------------------------------------------------
+   * A marca do produto — Nexo (RT-INF-014). Medidas na arte original
+   * (design/marca/original/nexo-icone.png), não aproximadas.
+   *
+   * A REGRA: a marca fala onde o produto se apresenta — splash, carregamento,
+   * porta do sistema. Onde o trabalho acontece (agenda, comanda, financeiro),
+   * ela não aparece: o degradê e o brilho competiriam com a cor de status, que
+   * é a única cor que carrega informação ali.
+   * ------------------------------------------------------------------- */
+  --marca-noite:    #07052c;   /* o fundo da ARTE original; a interface não usa */
+  --marca-violeta:  #8324fb;
+  --marca-anil:     #1b3ffb;
+  --marca-ciano:    #00f8fd;
+
+  /* A interface SOBRE a moldura escura (porta do sistema, carregamento). Cor mínima: branco
+     e cinzas neutros; a única cor da tela é o N. Contraste medido sobre --espelho:
+     texto 15,5:1 · rótulo 11,2:1 · fraco 7,2:1. O traço (1,6:1) só separa, nunca é texto. */
+  --noite-texto:    #f4f4f5;
+  --noite-rotulo:   #d1d1d6;
+  --noite-fraco:    #a8a8ae;
+  --noite-traco:    #3f3f44;
 
   /* ---------------------------------------------------------------------
    * Status — mesma chroma (0.115) e luminosidade (0.62), só a matiz muda.
@@ -72,10 +97,20 @@
      dependência de internet depois da primeira visita — e, ao contrário da pilha de
      sistema que estava aqui antes, o MESMO desenho em toda máquina. A pilha antiga
      entregava Avenir Next só no macOS e Bodoni só no macOS: fora dele o produto não
-     tinha fonte, tinha empréstimo. */
-  --fonte-identidade: "Bodoni Moda Variable", Didot, "Iowan Old Style", Georgia, serif;
-  --fonte:            "Archivo Variable", "Segoe UI", system-ui, sans-serif;
-  --fonte-mono:       ui-monospace, "SF Mono", Menlo, monospace;
+     tinha fonte, tinha empréstimo.
+
+     15/11/2026 — DUAS famílias, as mesmas do Ecoa, a pedido do dono ("não quero várias
+     fontes"). Eram três desenhos na tela: didone nos totais, grotesca no texto e a
+     monoespaçada do sistema em código e exemplo de busca.
+     · Atkinson Hyperlegible Next em todo texto. Desenhada para distinguir o que se confunde
+       (0/O, 1/l/I), que era o único motivo da monoespaçada — por isso ela some.
+     · Bricolage Grotesque nos títulos de identidade e nos totais: o gesto continua num
+       lugar só, agora sem trocar de família de letra no meio da conta.
+     As duas têm numeral tabular (`--numerais`), medido: dez "1" e dez "0" com a mesma
+     largura — a grade de horários continua alinhando em coluna. */
+  --fonte-identidade: "Bricolage Grotesque Variable", "Segoe UI", system-ui, sans-serif;
+  --fonte:            "Atkinson Hyperlegible Next Variable", "Segoe UI", system-ui, sans-serif;
+  --fonte-mono:       var(--fonte);
 
   /* Pesos nomeados. Com eixo contínuo eles são DESENHOS, não negrito sintetizado —
      que era o traço sujo de antes, sentido sem conseguir ser nomeado. */
@@ -92,6 +127,14 @@
   --t-20: 20px;
   --t-25: 25px;    /* identidade */
   --t-30: 30px;    /* total */
+
+  /* ---------------------------------------------------------------------
+   * Controle — RT-INF-017. UMA altura para campo e botão: na mesma linha, um não
+   * fica mais alto que o outro. Eram seis alturas (28 a 42px) em onze arquivos.
+   * Abaixo de 820px vale a do toque (dedo, não ponteiro).
+   * ------------------------------------------------------------------- */
+  --controle:       36px;
+  --controle-toque: 44px;
 
   /* Grade densa exige número que alinha em coluna. */
   --numerais: "tnum" 1;
@@ -132,8 +175,8 @@
 
   /* Sombra existe só para o que FLUTUA — menu, diálogo. Card não tem sombra:
      é o traço mais reconhecível de tela gerada sem critério. */
-  --sombra-flutuante: 0 10px 30px rgb(23 33 38 / 12%),
-                      0 2px 8px rgb(23 33 38 / 8%);
+  --sombra-flutuante: 0 10px 30px rgb(28 28 30 / 12%),
+                      0 2px 8px rgb(28 28 30 / 8%);
 
   /* ---------------------------------------------------------------------
    * Movimento — curto o bastante para não ser notado.

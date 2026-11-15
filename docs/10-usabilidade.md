@@ -249,6 +249,67 @@ não.** As setas do dia usam `replace` (andar seis dias não pode custar seis to
 ficha usa navegação normal, porque o gesto de voltar tem de fechar a pessoa que se abriu, e não
 largar a busca inteira.
 
+## R-UX-22 — No toque, a navegação mora no alcance do polegar
+`RT-INF-013`
+
+Abaixo de 820 px a navegação é uma barra de abas na base da tela: os quatro primeiros menus na
+ordem de `/me/capabilities`, e **"Mais"** com a navegação completa numa folha que sobe de baixo.
+
+O hambúrguer no canto de cima era o alvo mais longe da mão em qualquer celular segurado com uma
+mão só, e toda troca de tela custava dois toques ali. A profissional abre a própria agenda entre
+um atendimento e outro, com a outra mão ocupada.
+
+Três consequências que fazem parte da regra:
+
+1. **O front escolhe quantos, nunca quais.** Quatro abas porque cinco alvos de 72 px é o limite
+   numa tela de 360 px; quais são é a ordem do servidor (inviolável nº 6).
+2. **Fora das abas, o "Mais" acende.** Nenhuma aba acesa diria que a pessoa não está em lugar
+   nenhum.
+3. **Nada flutuante cobre as abas.** Painel que sobe da base (o detalhe da agenda) para acima
+   delas — a navegação continua à mão enquanto se consulta.
+
+## R-UX-23 — Versão nova não assume no meio do trabalho
+`RT-INF-013`
+
+Publicou-se uma versão: ela baixa em segundo plano e **espera**. A barra mostra
+"Versão nova · Atualizar", e só o clique a ativa — recarregando a página inteira, em todas as
+abas abertas ao mesmo tempo.
+
+Assumir sozinha apagava o cache da versão que a aba ainda usava: a próxima tela não carregada
+pedia um arquivo que não existia mais, e a barreira mostrava erro numa tela que estava certa.
+E recarregar sozinho, no meio de uma comanda, é perder o que estava sendo digitado.
+
+Como o balcão abre às 8h e não navega de documento o dia inteiro, a procura por versão nova roda
+ao voltar para a janela e a cada hora — sem isso uma correção das 9h só chegaria no dia seguinte.
+
+## R-UX-24 — O alvo de toque vai até a borda
+`RT-INF-018`
+
+No celular instalado, a faixa da barra de gestos pertence às abas: cada aba é alvo do traço de
+cima até o vidro. Medido antes da regra, com a barra do iPhone: 34px fora dos botões, e só 10 de
+20 toques de teste acertavam a aba — tocar abaixo do rótulo, onde o polegar repousa, não fazia
+nada. Da faixa só se reserva o que o indicador de gestos precisa (a faixa menos `--e-3`), e o
+ícone encosta onde a mão está.
+
+Quem fica acima das abas usa a altura da barra inteira (`--abas-total`), declarada uma vez: somar
+a faixa por conta própria em cada tela é como uma delas fica por baixo das abas.
+
+## R-UX-25 — No toque, tabela de registros vira cartão
+`RT-INF-018`
+
+Abaixo de 820px nenhuma lista de registros pede rolagem lateral: a linha vira cartão, com o que
+identifica o registro em cima, cada dado com a etiqueta da coluna e as ações numa linha própria.
+Rolagem lateral esconde a coluna que decide (o total, a saída da fila) atrás de um gesto que
+ninguém sabe que precisa fazer.
+
+Duas consequências que fazem parte da regra:
+
+1. **A tabela continua tabela para quem não enxerga.** Os papéis (`role="table"`, `row`, `cell`)
+   ficam explícitos na marcação, porque mudar o `display` faz o navegador descartar a semântica.
+2. **Exceção é decisão, não esquecimento.** A agenda rola de lado por regra própria (colunas por
+   profissional); a barra de comandas abertas é uma fila de cartões. Tela nova que precise rolar
+   de lado justifica aqui.
+
 ---
 
 ## Acessibilidade — piso obrigatório

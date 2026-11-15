@@ -53,3 +53,6 @@ Thumbs.db
 *.log
 logs/
 tmp/
+
+# Bytecode do Python (scripts de apoio, como a skill gerar-imagem)
+__pycache__/

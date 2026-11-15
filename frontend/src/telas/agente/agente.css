@@ -10,7 +10,6 @@
 
 .agt-tela {
   --agt-hora: 48px;
-  max-width: 1080px;
   margin: 0 auto;
 }
 
@@ -43,17 +42,9 @@
   font-size: var(--t-12);
   font-weight: var(--p-forte);
 }
+/* RT-INF-017: o desenho vem do controle padrão (componentes.css); aqui só o que é desta tela. */
 .agt-filtro select {
-  min-height: 32px;
   max-width: 220px;
-  padding: 0 var(--e-3);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-2);
-  font: inherit;
-  font-weight: var(--p-normal);
-  cursor: pointer;
 }
 
 .agt-recorte button:focus-visible,
@@ -65,7 +56,7 @@
 /* ------------------------------------------------------------------ totais */
 
 /*
- * Uma linha de livro-caixa, não quatro cartões: os totais se leem como frase, e a Bodoni
+ * Uma linha de livro-caixa, não quatro cartões: os totais se leem como frase, e a Bricolage
  * aparece só nos números — o único lugar desta tela onde ela tem direito de estar.
  */
 .agt-resumo {
@@ -415,6 +406,9 @@
     row-gap: var(--e-1);
   }
   .agt-pedido { grid-column: 2 / -1; }
+  /* O selo descia para a coluna da hora (48px) e transbordava sobre a barra de status. No
+     celular ele mora na coluna do texto, alinhado com quem pediu. */
+  .agt-linha > .agt-etiqueta { grid-column: 2 / -1; justify-self: start; }
   .agt-detalhe { padding: var(--e-2) var(--e-4) var(--e-5) var(--e-5); }
   .agt-chamada { grid-template-columns: minmax(0, 1fr); }
   .agt-argumentos { grid-column: 1; }

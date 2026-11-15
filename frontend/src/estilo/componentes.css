@@ -9,6 +9,90 @@
  * biblioteca de coisas que ninguém usa.
  */
 
+/* ==================================================================== o controle
+ *
+ * RT-INF-017 — campo de texto, select e área de texto, definidos UMA vez.
+ *
+ * Eram vinte definições em onze arquivos, com seis alturas (28 a 42px): cada tela parecia de
+ * um produto. Agora todo controle do sistema nasce assim, sem a tela pedir.
+ *
+ * ESPECIFICIDADE ZERO (`:where`). É o que deixa a tela particularizar sem brigar: uma regra de
+ * classe qualquer — o código em fonte monoespaçada, o número alinhado à direita, o campo sem
+ * borda dentro de uma caixa de busca — vence esta, sem `!important`. O que a tela não disser,
+ * vem daqui.
+ */
+:where(
+  input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='color'],
+    [type='hidden'], [type='submit'], [type='button']),
+  select,
+  textarea
+) {
+  box-sizing: border-box;
+  min-height: var(--controle);
+  padding: 0 var(--e-3);
+  color: var(--tinta);
+  background-color: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+  font: inherit;
+  font-size: var(--t-14);
+  transition: border-color var(--mov-imediato) var(--mov-curva),
+    box-shadow var(--mov-imediato) var(--mov-curva);
+}
+:where(input, select, textarea)::placeholder { color: var(--tinta-fraca); }
+:where(input, select, textarea):hover:not(:disabled, :focus) { border-color: var(--tinta-tenue); }
+
+/* O foco desenha a borda em tinta e um halo: o anel global de 2px afastado ficava solto em
+   volta de um campo, e dois contornos concêntricos leem como erro. */
+:where(input, select, textarea):focus-visible {
+  outline: none;
+  border-color: var(--foco);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--foco) 14%, transparent);
+}
+/* O que o servidor recusou: borda de falta (marca, nunca texto colorido). */
+:where(input, select, textarea)[aria-invalid='true'] { border-color: var(--status-falta); }
+:where(input, select, textarea):disabled {
+  color: var(--tinta-fraca);
+  background-color: var(--papel-fundo);
+  cursor: not-allowed;
+}
+
+/*
+ * O select continua NATIVO — no celular abre o seletor do sistema, o melhor que existe para o
+ * polegar. Só o desenho muda: sem o degradê do macOS, e com a seta em dois degradês (nada de
+ * imagem, nada a liberar na CSP).
+ */
+:where(select) {
+  padding-right: var(--e-8);
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--tinta-fraca) 50%),
+    linear-gradient(135deg, var(--tinta-fraca) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+:where(textarea) {
+  min-height: 88px;
+  padding: var(--e-2) var(--e-3);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+/* Dedo, não ponteiro. */
+@media (max-width: 820px) {
+  :where(
+    input:not([type='checkbox'], [type='radio'], [type='range'], [type='file'], [type='color'],
+      [type='hidden'], [type='submit'], [type='button']),
+    select
+  ) {
+    min-height: var(--controle-toque);
+    /* 16px: abaixo disso o Safari do iPhone dá zoom ao focar o campo. */
+    font-size: var(--t-16);
+  }
+}
+
 .campo { display: block; margin-bottom: var(--e-4); }
 /*
  * `:first-child` é o rótulo, e a restrição é necessária.
@@ -37,18 +121,12 @@
   letter-spacing: var(--tr-corpo);
   color: var(--tinta);
 }
+/* O desenho do controle vem do padrão acima; aqui só o que é do `.campo`: a largura. */
 .campo input,
-.campo select {
+.campo select,
+.campo textarea {
   display: block;
   width: 100%;
-  min-height: 42px;
-  padding: var(--e-2) var(--e-3);
-  font: inherit;
-  font-size: var(--t-14);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-2);
 }
 /* Explicação do campo, quando o rótulo não basta. Fica ABAIXO do controle: acima, ela
    separaria o rótulo do que ele nomeia. */
@@ -66,7 +144,7 @@
 }
 
 .acao {
-  min-height: 42px;
+  min-height: var(--controle);
   padding: var(--e-2) var(--e-4);
   font: inherit;
   font-size: var(--t-14);
@@ -189,3 +267,82 @@
 
 /* Entre seções, ar — e não mais uma borda. Duas molduras seguidas viram grade de caixas. */
 .secao-tela + .secao-tela { margin-top: var(--e-10); }
+
+/* ------------------------------------------------------------------ tabela que vira cartão
+ *
+ * RT-INF-018, R-UX-25 — no toque, tabela de registros não pede rolagem lateral.
+ *
+ * Abaixo de 820px cada linha vira um cartão: a primeira célula em cima (o que identifica o
+ * registro), cada dado com a etiqueta da coluna ao lado (`data-rotulo`), e o que for largo
+ * (ações, texto livre) numa linha inteira (`tabela-cartoes-largo`). A etiqueta é o desenho de
+ * ETIQUETA do sistema (16-design-system, 3b): é o mesmo papel do cabeçalho da coluna.
+ *
+ * Trocar o `display` de table/tr/td faz Chrome e Safari descartarem a semântica de tabela. A
+ * marcação de quem usa esta classe declara os papéis (`role="table"`, `row`, `cell`…), que
+ * sobrevivem; o cabeçalho fica no DOM, escondido só da vista.
+ *
+ * Especificidade deliberada (elemento + classe + filhos): vence a regra de célula da tela
+ * (`.cmd-itens td`, `.cmd-num`) sem `!important`. O que é só de uma tela vai na tela.
+ */
+@media (max-width: 820px) {
+  table.tabela-cartoes,
+  table.tabela-cartoes > tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  table.tabela-cartoes > thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  table.tabela-cartoes > tbody > tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--e-2) var(--e-4);
+    padding: var(--e-3) 0;
+    border-bottom: 1px solid var(--regua);
+  }
+  table.tabela-cartoes > tbody > tr:last-child { border-bottom: 0; }
+
+  table.tabela-cartoes > tbody > tr > :is(th, td) {
+    display: block;
+    min-width: 0;
+    max-width: none;
+    padding: 0;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* O que identifica o registro: a linha inteira. O peso fica com a tela — a primeira célula
+     costuma levar texto de apoio junto (observação, quem fez), que não pode engrossar. */
+  table.tabela-cartoes > tbody > tr > :is(th, td):first-child { grid-column: 1 / -1; }
+
+  table.tabela-cartoes > tbody > tr > .tabela-cartoes-largo { grid-column: 1 / -1; }
+
+  /* Na tabela, a célula vazia guarda o lugar da coluna; no cartão ela é só uma etiqueta com
+     um traço embaixo. Quem sabe que está vazia é a tela, que marca a célula. */
+  table.tabela-cartoes > tbody > tr > .tabela-cartoes-vazio { display: none; }
+
+  table.tabela-cartoes [data-rotulo]::before {
+    /* A segunda declaração dá à etiqueta um texto alternativo vazio: o leitor de tela já
+       anuncia a coluna pelo cabeçalho, e não deve ouvir "Total" duas vezes. A primeira é o
+       fallback de quem não entende a sintaxe. */
+    content: attr(data-rotulo);
+    content: attr(data-rotulo) / "";
+    display: block;
+    margin-bottom: var(--e-1);
+    color: var(--tinta-fraca);
+    font-size: var(--t-10);
+    font-weight: var(--p-medio);
+    letter-spacing: var(--tr-micro);
+    text-transform: uppercase;
+  }
+}

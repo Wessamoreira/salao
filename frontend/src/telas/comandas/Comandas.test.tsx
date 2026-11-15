@@ -141,6 +141,34 @@ describe('tela de fechamento', () => {
     expect(fechar).toBeDisabled();
   });
 
+  it('o botão desarmado diz por quê, com o valor que veio do servidor', async () => {
+    // RT-ATD-009: botão cinza sem motivo é a pergunta que a recepção faz ao gerente. O motivo
+    // fica ligado ao botão, e é lido junto com ele por quem usa leitor de tela.
+    servidor();
+    montar();
+
+    const fechar = await screen.findByRole('button', { name: 'Fechar comanda' });
+    // `\s`: o Intl separa "R$" do número com espaço não separável, que impede a quebra de linha.
+    expect(fechar).toHaveAccessibleDescription(/^Falta receber R\$\s90,00 para fechar\.$/);
+  });
+
+  it('a forma de pagamento é um toque: rádio, com Dinheiro como padrão', async () => {
+    servidor();
+    montar();
+    await screen.findByRole('region', { name: 'Comanda 42' });
+
+    expect(screen.getByRole('radio', { name: 'Dinheiro' })).toBeChecked();
+    await userEvent.click(screen.getByRole('radio', { name: 'Pix' }));
+    await userEvent.type(screen.getByLabelText('Valor'), '50');
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar' }));
+
+    await waitFor(() => {
+      expect(chamar).toHaveBeenCalledWith('/v1/comandas/k1/pagamentos', expect.objectContaining({
+        body: JSON.stringify({ forma: 'PIX', valor: 50 }),
+      }));
+    });
+  });
+
   it('libera o fechamento quando a conta zera', async () => {
     servidor({
       '/v1/comandas/k1/conta': {
@@ -339,6 +367,35 @@ describe('o que chega, e o que ainda não chegou', () => {
       liberarConta();
       await waitFor(() => expect(contaDe()).toHaveAttribute('aria-busy', 'false'));
     });
+});
+
+describe('no toque, lançar fica atrás de um botão (RT-ATD-010)', () => {
+  it('com itens, começa recolhido, diz o estado e alterna', async () => {
+    // No celular o formulário ocupava a tela antes dos itens. Recolhido, a conta vem primeiro.
+    servidor();
+    montar();
+
+    const botao = await screen.findByRole('button', { name: 'Adicionar à comanda' });
+    expect(botao).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.click(botao);
+    expect(botao).toHaveAttribute('aria-expanded', 'true');
+    // Recolher é só CSS: o formulário continua montado e não perde o que se escolheu.
+    expect(screen.getByRole('button', { name: 'Lançar serviço' })).toBeInTheDocument();
+  });
+
+  it('comanda vazia já abre com o formulário à vista', async () => {
+    // Sem conta para mostrar, o próximo passo é lançar — recolher seria um toque a mais.
+    servidor({
+      '/v1/comandas/k1/conta': {
+        comanda: COMANDA, pagamentos: [], totalPago: dinheiro(0), restante: dinheiro(0),
+      },
+      '/v1/comandas/k1': { comanda: COMANDA, itens: [] },
+    });
+    montar();
+
+    const botao = await screen.findByRole('button', { name: 'Adicionar à comanda' });
+    expect(botao).toHaveAttribute('aria-expanded', 'true');
+  });
 });
 
 describe('acessibilidade', () => {

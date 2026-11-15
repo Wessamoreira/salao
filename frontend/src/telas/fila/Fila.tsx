@@ -287,19 +287,21 @@ function NaFila({ fuso }: { fuso: string }) {
         : esperas.isError ? <Falha aoTentar={() => esperas.refetch()}>{mensagem(esperas.error)}</Falha>
           : total > 0 && (
             <div className="fil-rolagem">
-              <table className="fil-tabela">
-                <thead>
-                  <tr>
-                    <th>Cliente</th>
-                    <th>Serviço</th>
-                    <th>Com quem</th>
-                    <th>Dias</th>
-                    <th>Horário</th>
-                    <th>Desde</th>
-                    <th><span className="fil-invisivel">Saída da fila</span></th>
+              {/* No toque a linha vira cartão (RT-INF-018); os papéis explícitos mantêm a
+                  tabela para o leitor de tela depois da troca de `display`. */}
+              <table className="fil-tabela tabela-cartoes" role="table">
+                <thead role="rowgroup">
+                  <tr role="row">
+                    <th role="columnheader">Cliente</th>
+                    <th role="columnheader">Serviço</th>
+                    <th role="columnheader">Com quem</th>
+                    <th role="columnheader">Dias</th>
+                    <th role="columnheader">Horário</th>
+                    <th role="columnheader">Desde</th>
+                    <th role="columnheader"><span className="fil-invisivel">Saída da fila</span></th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody role="rowgroup">
                   {esperas.data.map((espera) => (
                     <LinhaDaEspera key={espera.id} espera={espera} fuso={fuso} />
                   ))}
@@ -316,18 +318,18 @@ function LinhaDaEspera({ espera, fuso }: { espera: Espera; fuso: string }) {
   const [confirmando, definirConfirmando] = useState<'ATENDIDA' | 'DESISTIU' | null>(null);
 
   return (
-    <tr>
-      <td>
+    <tr role="row">
+      <td role="cell">
         {espera.cliente ?? 'Cliente'}
         {espera.recorrenciaId && <span className="fil-nota"> · da série</span>}
         {espera.observacao && <span className="fil-observacao">{espera.observacao}</span>}
       </td>
-      <td>{espera.servico ?? '—'}</td>
-      <td>{espera.profissional ?? 'Qualquer uma'}</td>
-      <td className="fil-numero">{intervalo(espera.aceitaDe, espera.aceitaAte)}</td>
-      <td className="fil-numero">{faixa(espera.horaDe, espera.horaAte) ?? 'Qualquer hora'}</td>
-      <td className="fil-numero">{diaCurto(espera.naFilaDesde, fuso)}</td>
-      <td className="fil-saida">
+      <td role="cell" data-rotulo="Serviço">{espera.servico ?? '—'}</td>
+      <td role="cell" data-rotulo="Com quem">{espera.profissional ?? 'Qualquer uma'}</td>
+      <td role="cell" data-rotulo="Dias" className="fil-numero">{intervalo(espera.aceitaDe, espera.aceitaAte)}</td>
+      <td role="cell" data-rotulo="Horário" className="fil-numero">{faixa(espera.horaDe, espera.horaAte) ?? 'Qualquer hora'}</td>
+      <td role="cell" data-rotulo="Desde" className="fil-numero">{diaCurto(espera.naFilaDesde, fuso)}</td>
+      <td role="cell" className="fil-saida tabela-cartoes-largo">
         {confirmando == null ? (
           <>
             <button type="button" className="acao-discreta"

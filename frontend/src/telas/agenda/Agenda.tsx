@@ -100,6 +100,9 @@ function Densidades({ atual, aoEscolher }: {
           title={`${DENSIDADES[nome]} minutos por linha`}
           onClick={() => aoEscolher(nome)}>
           {DENSIDADES[nome]}
+          {/* No toque o botão estica e o rótulo solto lia como uma quarta opção (RT-INF-018):
+              lá a unidade entra na opção. O nome acessível já vem do aria-label. */}
+          <span className="agenda-densidade-unidade" aria-hidden="true"> min</span>
         </button>
       ))}
     </div>

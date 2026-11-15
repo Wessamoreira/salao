@@ -16,6 +16,7 @@ justificar por escrito aqui, não uma exceção silenciosa no CSS.
 | Crítica estruturada | skill `design:design-critique` | 7 achados aplicados — ver "O que a crítica corrigiu" |
 | Formalização em sistema | skill `design:design-system` | Este documento e `design/tokens.css` |
 | Acabamento na implementação | skill `frontend-design` | Casca responsiva e identidade material em `RT-INF-010` |
+| O app instalado | skill `frontend-design` | A moldura, as abas do toque e a janela própria em `RT-INF-013` |
 | Auditoria de acessibilidade | skill `design:accessibility-review` | Pendente do `RT-INF-010` |
 
 Os arquivos-fonte do canvas vivem em `design/*.dc.html` e são re-semeados a cada alteração — o
@@ -24,8 +25,9 @@ canvas publicado nunca é editado direto.
 ## A direção, em uma frase
 
 **Back-office de recepção com régua de horários.** Branco e cinza frio organizam o trabalho, a
-lateral escura ancora a navegação e uma única cor de marca identifica o salão. A personalidade vem
-do ritmo da agenda e dos detalhes próprios da operação — não de uma estética genérica de luxo.
+moldura em grafite neutro (sem azul — `RT-INF-016`) segura a folha onde ele acontece, e uma única cor de marca identifica o salão. A
+personalidade vem do ritmo da agenda e dos detalhes próprios da operação — não de uma estética
+genérica de luxo.
 
 ## As quatro decisões que sustentam tudo
 
@@ -91,6 +93,16 @@ o produto perde identidade por omissão.
 > E os pesos passam a ser tokens (`--p-normal` a `--p-pesado`), com uma escala de entreletra por
 > tamanho (`--tr-micro` a `--tr-display`) que antes não existia — o mesmo tracking ia do rótulo de
 > 10px ao total de 30px.
+
+> **Correção de 15/11/2026 — duas fontes, as mesmas do Ecoa (`RT-INF-019`).** O dono pediu
+> *"não quero várias fontes"*: eram três desenhos na tela (Bodoni Moda nos totais, Archivo no
+> texto, a monoespaçada do sistema em código). Agora **Atkinson Hyperlegible Next** em todo o
+> texto e **Bricolage Grotesque** na identidade e nos totais — a dupla do Ecoa, outro produto
+> dele. A Atkinson foi desenhada para distinguir o que se confunde (0/O, 1/l/I), que era o único
+> serviço da monoespaçada, e por isso ela saiu. O que este documento diz sobre o **papel** de cada
+> fonte continua valendo — um gesto só, nos totais; numeral tabular sempre — e o que diz sobre a
+> didone e a Archivo acima fica como histórico da decisão anterior. As duas têm `tnum`, medido;
+> o zero da Atkinson é cortado por desenho, e fica: é o mesmo zero do Ecoa.
 
 ### 3b. Três convenções de texto, e cada coisa usa a sua
 
@@ -202,6 +214,84 @@ mais reconhecível de tela gerada sem critério, e o mais fácil de evitar.
 Raios de 4px, 8px e 12px cobrem bloco, controle e painel. O terceiro raio não é decoração: impede
 que uma folha móvel tenha o mesmo desenho de um chip, sem transformar tudo em cápsula.
 
+## A moldura — `RT-INF-013`
+
+A lateral sempre foi o `--espelho`. Desde 15/11/2026 ele é a **moldura do produto inteiro**: uma
+superfície escura e contínua que segura uma **folha** clara, como o espelho encaixado na bancada.
+
+| Onde | O que é moldura | O que é folha |
+|---|---|---|
+| Desktop | Lateral + 8px (`--e-2`) em volta da folha | Topo e área de trabalho, cantos de 12px |
+| Desktop instalado | Também a barra de título (Window Controls Overlay) | Igual |
+| Celular e tablet em pé | Status bar em cima, abas embaixo | Tudo entre os dois, cantos de 12px |
+| Porta do sistema | O fundo, com as linhas do livro de horários | O cartão de entrar |
+| Splash e boot | Tudo (`background_color` do manifest = `--espelho`) | — |
+
+**Por que ela, e não um tratamento de superfície.** Três lugares precisavam de uma superfície que
+não fosse conteúdo: a barra de título da janela instalada, a área do status bar no iPhone e a
+barra de abas. A moldura é a mesma resposta para os três — em vez de três remendos. E é um objeto
+do splash à agenda: antes a sequência piscava bege → escuro → claro.
+
+**As regras que ela segue, e que ela não quebra:**
+
+- **A folha não tem sombra.** Ela não flutua, está encaixada. A regra de sombra acima vale inteira.
+- **Nenhuma cor nova.** A moldura é `--espelho`; o ativo é `--espelho-ativo` com ícone em
+  `--metal-claro`, nas abas exatamente como na lateral — quem aprendeu uma já sabe a outra.
+- **A placa é do salão; o símbolo é do produto.** A placa de aço com as iniciais em didone
+  identifica o estabelecimento na lateral. O produto tem símbolo próprio — ver "O símbolo" abaixo.
+- **No celular, a folha É o cartão.** Uma tela que já desenha painel próprio (a agenda) tira a
+  própria borda abaixo de 820px: cartão dentro de cartão são dois cantos arredondados um dentro do
+  outro, e largura de grade perdida.
+
+**O custo, medido:** 16px de largura da grade numa tela de 1440px (1,1%).
+
+## O controle — `RT-INF-017`
+
+Campo de texto, select e área de texto são definidos **uma vez**, em `componentes.css`, com
+especificidade zero (`:where`): toda tela os herda sem pedir, e a regra de uma tela só acrescenta o
+que é dela (fonte monoespaçada em código, número à direita, controle sem caixa dentro de uma
+caixa). Eram vinte definições com seis alturas.
+
+**Uma altura** para campo e botão: `--controle` 36px, `--controle-toque` 44px no toque. O select
+continua nativo (no celular abre o seletor do sistema) com a seta redesenhada sem imagem. O foco é
+borda em tinta com halo, não o anel solto afastado do campo.
+
+## A tabela no toque — `RT-INF-018`
+
+Abaixo de 820px, tabela de registros vira cartão (`tabela-cartoes`, em `componentes.css`): a
+primeira célula em cima, cada dado com a **etiqueta** da coluna (o desenho 3b — é o mesmo papel do
+cabeçalho, ao lado do dado), e o que for largo numa linha inteira. Uma classe, como o controle:
+três telas não ganham três versões. Célula vazia some do cartão, porque no cartão ela é só uma
+etiqueta com um traço embaixo.
+
+## A marca — `RT-INF-014`
+
+**Nexo** (nome de trabalho). A arte é do dono: o N em fita, de violeta a ciano, sobre noite.
+Original intacto em `design/marca/original/`; as peças do sistema saem de
+`design/marca/preparar-marca.py`. Cores em `design/tokens.css`, seção da marca.
+
+**A regra que a marca segue: ela fala onde o produto se apresenta, e cala onde o trabalho
+acontece.**
+
+| Fala | Cala |
+|---|---|
+| Ícone, favicon, splash do app instalado | Agenda, comanda, financeiro, toda tela dentro da casca |
+| Carregamento inicial (ícone sobre a noite) | Moldura e lateral (continuam `--espelho`) |
+| Porta do sistema (direção D: saudação, N vazando, campos de uma linha) | Botão primário do sistema (continua `--tinta`) |
+
+Por que calar dentro: o sistema inteiro se apoia em **cor só onde carrega informação** (decisão 1
+deste documento). Um degradê violeta-ciano na área de trabalho seria a cor mais forte da tela sem
+dizer nada, e a recepção leria nele um status que não existe.
+
+**Cor mínima onde a marca fala:** a única cor da tela é a arte. A interface sobre a noite é
+branco e os cinzas `--noite-*`; o degradê não vira botão, fundo nem borda.
+
+**Na lateral, a marca do produto e o nome do salão** (`RT-INF-017`): o ícone do Nexo e o nome
+do estabelecimento em Archivo, com "nexo" embaixo. A placa de aço com iniciais em didone saiu: o
+dono pediu a marca na lateral, e a didone fica só nos totais.
+
+O que foi tentado e recusado antes da arte do dono está em `RT-INF-014`.
+
 ## Movimento
 
 120ms e 180ms, curva `cubic-bezier(0.2, 0, 0, 1)`. Curto o bastante para não ser notado — a
@@ -244,7 +334,7 @@ nomear.
 
 ## O que este projeto não faz
 
-Gradiente roxo · sombra grande em card · ícone genérico em toda linha · emoji em título ·
+Gradiente roxo **na área de trabalho** (a marca tem o dela, e ele fica na porta — ver "A marca") · sombra grande em card · ícone genérico em toda linha · emoji em título ·
 espaçamento uniforme de 24px · Inter e Roboto · cor decorativa fora da identidade · canto muito
 arredondado · animação que se nota.
 

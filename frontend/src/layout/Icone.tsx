@@ -1,7 +1,7 @@
 /*
  * Os ícones da casca, num lugar só.
  *
- * Traço de 1.75 em caixa de 24: é o peso que acompanha a Archivo em 500/600 sem pesar
+ * Traço de 1.75 em caixa de 24: é o peso que acompanha a Atkinson em 500/600 sem pesar
  * mais que o rótulo ao lado. Ícone mais fino some no menu escuro; mais grosso vira o
  * elemento dominante de uma linha cujo assunto é a palavra.
  */
@@ -9,7 +9,7 @@ export type NomeDeIcone =
   | 'calendario' | 'tesoura' | 'pessoas' | 'caixa' | 'cifrao' | 'engrenagem'
   | 'menu' | 'fechar' | 'sair' | 'busca' | 'recolher' | 'expandir'
   | 'chevron' | 'escudo' | 'seta' | 'balao' | 'setas' | 'etiqueta' | 'ampulheta'
-  | 'cardapio' | 'cracha' | 'chave';
+  | 'cardapio' | 'cracha' | 'chave' | 'instalar';
 
 export function Icone({ nome, tamanho = 18 }: { nome: string; tamanho?: number }) {
   const comum = {
@@ -81,6 +81,9 @@ export function Icone({ nome, tamanho = 18 }: { nome: string; tamanho?: number }
     case 'balao':
       return <svg {...comum}><path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-4.5 3.5V17H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
         <path d="M8 9h8M8 12.5h5" /></svg>;
+    case 'instalar':
+      return <svg {...comum}><path d="M12 4v10M8 10l4 4 4-4" />
+        <path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3" /></svg>;
     default:
       return <svg {...comum}><circle cx="12" cy="12" r="8" /></svg>;
   }

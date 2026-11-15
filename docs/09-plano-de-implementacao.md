@@ -167,6 +167,7 @@ automático, e criar uma migration sem `estabelecimento_id` quebra o build.
 | RT-CNV-008 | Aviso de IA ao cliente na primeira interação (LGPD) | P | CNV-002 |
 | RT-CNV-009 | Janela de agregação: uma volta do modelo por rajada, não por mensagem | M | CNV-003, CNV-004 |
 | RT-IAM-010 | Dois números por pessoa: o pessoal e o do salão | M | CNV-002, IAM-009 |
+| RT-CNV-010 | A cliente pergunta: horário, serviço e preço — e a recepção marca | G | CNV-004, CNV-008, AGD-001 |
 
 **Padrão inegociável:** operação que grava passa por `simular` → confirmação humana explícita →
 `confirmar`. O LLM nunca escreve direto no domínio. Mensagem de cliente é entrada não confiável;
@@ -236,6 +237,15 @@ e a agenda do dia seguinte abre com colunas, serviços e preços certos.
 | RT-EST-013 | Tela de estoque: produto, entrada de lote, saldo e inventário | GG | EST-001, EST-003, EST-006 |
 | RT-FIN-013 | Tela do financeiro: extrato, vale, fechamento e repasse | GG | FIN-004, FIN-005, FIN-006 |
 | RT-AGD-013 | Bloqueio de grade e recorrência na tela da agenda | M | AGD-007, AGD-009, AGD-011 |
+| RT-INF-013 | O app instalado: a moldura, as abas do toque e a janela própria | M | INF-010 |
+| RT-INF-014 | O símbolo do produto e a porta do sistema | P | INF-013 |
+| RT-INF-016 | Moldes de página: uma largura, listas inteiras, moldura sem azul | M | INF-014 |
+| RT-ATD-009 | A comanda no balcão: três colunas, o dinheiro sempre à vista | M | ATD-008, INF-016 |
+| RT-INF-017 | Componentes padrão: um campo, uma altura, a marca na lateral, o QR do segundo fator | M | INF-016, IAM-005 |
+| RT-CLI-008 | A tela de clientes: sem pulo, com rosto | P | CLI-006, INF-017 |
+| RT-INF-018 | O toque até a borda: abas inteiras, tabela que vira cartão | P | INF-013, INF-017 |
+| RT-INF-019 | Duas fontes: as mesmas do Ecoa, e a monoespaçada sai | P | INF-010, INF-017 |
+| RT-ATD-010 | A comanda organizada: totais como nota, a conta antes do formulário no toque | P | ATD-009, INF-018 |
 
 A ordem não é gosto: sem catálogo não há o que marcar nem o que lançar; sem equipe a agenda abre
 vazia; sem acesso ninguém além do dono entra. Estoque e financeiro vêm depois porque dependem de
