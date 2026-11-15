@@ -195,9 +195,15 @@ function Item({ opcao, marcada, posicao, aoMarcar, aoEscolher }: {
       <span className="paleta-item-rotulo">
         {ehSecao ? opcao.menu.rotulo : nomeDaCliente(opcao.cliente)}
       </span>
-      <span className="paleta-item-rota">
-        {ehSecao ? opcao.menu.rota : formatarTelefone(opcao.cliente.telefone)}
-      </span>
+      {/*
+        RT-INF-017 — o endereço técnico (`/agenda`) saiu: é jargão de quem programa, e não
+        ajuda ninguém a escolher. O telefone da cliente fica: é o que separa duas Marias.
+      */}
+      {!ehSecao && (
+        <span className="paleta-item-detalhe">{formatarTelefone(opcao.cliente.telefone)}</span>
+      )}
+      {/* O que a pessoa pode fazer com a linha marcada: Enter. */}
+      {marcada && <kbd className="paleta-item-enter" aria-hidden="true">↵</kbd>}
     </button>
   );
 }

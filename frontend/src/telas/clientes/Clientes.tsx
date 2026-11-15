@@ -80,8 +80,12 @@ export function Clientes() {
 
   return (
     <Pagina>
-    <div className={`pagina-cheia cli-tela${lendo ? ' lendo' : ' procurando'}`
-      + `${esperando ? ' esperando' : ''}`}>
+    {/*
+      RT-CLI-008 — duas colunas FIXAS: a lista à esquerda, a ficha à direita. Antes a busca
+      saía do centro para a esquerda no clique, e a tela inteira mudava de lugar no momento em
+      que a pessoa escolhia. Agora só o conteúdo da direita troca.
+    */}
+    <div className={`pagina-cheia cli-tela${lendo ? ' lendo' : ''}${esperando ? ' esperando' : ''}`}>
       <header className="cli-cabecalho">
         {/* A lupa dentro do campo diz "digite para procurar" sem gastar uma palavra — e é o
             mesmo desenho da busca da casca, para as duas serem reconhecidas como a mesma
@@ -106,7 +110,7 @@ export function Clientes() {
         <Leitura resultado={resultado} temTermo={termo.trim().length > 0} />
       </header>
 
-      <div>
+      <div className="cli-painel cli-painel-lista">
         <Resultados
           resultado={resultado}
           termo={termo}
@@ -116,8 +120,10 @@ export function Clientes() {
         />
       </div>
 
-      <div>
+      <div className="cli-painel cli-painel-ficha">
         {naoAchou ? (
+          // Sem resultado, a coluna da ficha É o cadastro: ao lado do aviso, e não embaixo
+          // dele, a uma rolagem de distância.
           <div className="cli-ficha">
             <CadastroRapido
               termoInicial={termo.trim()}
@@ -129,7 +135,16 @@ export function Clientes() {
           <Isolado key={selecionado.id}>
             <Ficha cliente={selecionado} aoSair={() => abrirFicha(null)} />
           </Isolado>
-        ) : null}
+        ) : (
+          <div className="cli-sem-ficha">
+            <Icone nome="pessoas" tamanho={22} />
+            <p>
+              {esperando
+                ? 'A ficha de quem você procurar aparece aqui.'
+                : 'Escolha alguém na lista para ver a ficha.'}
+            </p>
+          </div>
+        )}
       </div>
     </div>
     </Pagina>

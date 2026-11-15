@@ -3,6 +3,8 @@ package br.com.salao.catalogo.internal;
 import tools.jackson.databind.ObjectMapper;
 import br.com.salao.shared.agente.Ferramenta;
 import br.com.salao.catalogo.internal.application.FerramentaListarServicos;
+import br.com.salao.catalogo.internal.application.FerramentaServicosDoBalcao;
+import br.com.salao.catalogo.internal.application.ServicosDoBalcaoUseCase;
 import br.com.salao.catalogo.api.RecursoApi;
 import br.com.salao.catalogo.api.ServicoApi;
 import br.com.salao.catalogo.internal.application.AtualizarRecursoUseCase;
@@ -131,5 +133,20 @@ public class CatalogoConfig {
     @Bean
     public Ferramenta ferramentaListarServicos(ListarServicosUseCase listar, ObjectMapper json) {
         return new FerramentaListarServicos(listar, json);
+    }
+
+    // ------------------------------------------------------------------ RT-CNV-010
+
+    /** ADR-0011 — público por desenho: ver o javadoc da classe. */
+    @Bean
+    public ServicosDoBalcaoUseCase servicosDoBalcaoUseCase(ServicosJdbc servicos, Relogio relogio) {
+        return new ServicosDoBalcaoUseCase(servicos, relogio);
+    }
+
+    @Bean
+    public Ferramenta ferramentaServicosDoBalcao(ServicosDoBalcaoUseCase servicos,
+                                                 EstabelecimentoApi estabelecimentos,
+                                                 ObjectMapper json) {
+        return new FerramentaServicosDoBalcao(servicos, estabelecimentos, json);
     }
 }

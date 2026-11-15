@@ -2,6 +2,7 @@ package br.com.salao.conversacional.internal.application;
 
 import br.com.salao.iam.api.UsuarioEfetivo;
 import br.com.salao.shared.agente.Ferramenta;
+import br.com.salao.shared.agente.FerramentaDoBalcao;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -51,10 +52,25 @@ public class CatalogoDeFerramentas {
         return Optional.ofNullable(nome == null ? null : porNome.get(nome));
     }
 
-    public List<Ferramenta> permitidasPara(UsuarioEfetivo usuario) {
-        return porNome.values().stream()
-                .filter(f -> podeUsar(usuario, f))
-                .toList();
+    /**
+     * RT-CNV-010 — dois catálogos, e o compilador obriga a dizer qual.
+     *
+     * <p>À equipe, o que as permissões dela liberam — e nunca uma ferramenta do balcão. À visitante,
+     * só as do balcão — e nunca uma da equipe. Os dois filtros são explícitos de propósito: o
+     * segundo já seria garantido por {@code permissoesExigidas()} vazio, e o primeiro por a
+     * visitante não ter permissão nenhuma, mas depender disso faria a separação ser consequência de
+     * outra regra em vez de decisão desta.
+     */
+    public List<Ferramenta> permitidasPara(QuemFala quem) {
+        return switch (quem) {
+            case QuemFala.DaEquipe(UsuarioEfetivo usuario) -> porNome.values().stream()
+                    .filter(f -> !(f instanceof FerramentaDoBalcao))
+                    .filter(f -> podeUsar(usuario, f))
+                    .toList();
+            case QuemFala.Visitante() -> porNome.values().stream()
+                    .filter(FerramentaDoBalcao.class::isInstance)
+                    .toList();
+        };
     }
 
     /**

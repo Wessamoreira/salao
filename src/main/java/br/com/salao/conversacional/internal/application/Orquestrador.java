@@ -9,7 +9,6 @@ import br.com.salao.conversacional.internal.application.ModeloDeLinguagem.Pedido
 import br.com.salao.conversacional.internal.application.ModeloDeLinguagem.Resposta;
 import br.com.salao.conversacional.internal.application.ModeloDeLinguagem.ResultadoDeFerramenta;
 import br.com.salao.iam.api.ErrosDoIam;
-import br.com.salao.iam.api.UsuarioEfetivo;
 import br.com.salao.shared.agente.Ferramenta;
 import br.com.salao.shared.agente.FerramentaDeEscrita;
 import br.com.salao.shared.agente.FerramentaDeLeitura;
@@ -93,7 +92,7 @@ public class Orquestrador {
     public record Troca(String entrada, String resposta) {
     }
 
-    public record Conversa(UsuarioEfetivo usuario, String nomeDoSalao, String agoraNoSalao,
+    public record Conversa(QuemFala quem, String nomeDoSalao, String agoraNoSalao,
                            String entrada, List<Troca> historico) {
     }
 
@@ -123,7 +122,7 @@ public class Orquestrador {
     }
 
     public Resultado conduzir(Conversa conversa, Orcamento orcamento, ExecutorDeFerramenta executor) {
-        List<Ferramenta> permitidas = catalogo.permitidasPara(conversa.usuario());
+        List<Ferramenta> permitidas = catalogo.permitidasPara(conversa.quem());
         Set<String> nomesPermitidos = permitidas.stream().map(Ferramenta::nome)
                 .collect(Collectors.toUnmodifiableSet());
         List<FerramentaOferecida> ofertas = permitidas.stream()
@@ -280,12 +279,26 @@ public class Orquestrador {
      * falar de uma porta que não existe.
      */
     private static String sistema(Conversa conversa, boolean propoe) {
-        String base = """
+        String base = switch (conversa.quem()) {
+            case QuemFala.DaEquipe(var usuario) -> """
                 Você é o assistente do salão %s e conversa pelo WhatsApp com %s, da equipe.
                 Agora no salão: %s. Datas e horas são sempre as do salão.
                 Responda em português do Brasil, em poucas frases, como numa conversa de WhatsApp.
                 Use as ferramentas disponíveis para consultar informações; não invente dados."""
-                .formatted(conversa.nomeDoSalao(), conversa.usuario().nome(), conversa.agoraNoSalao());
+                    .formatted(conversa.nomeDoSalao(), usuario.nome(), conversa.agoraNoSalao());
+            // RT-CNV-010 — a frase sobre não marcar é DESCRIÇÃO, e não tranca: a ferramenta de
+            // marcar não existe neste catálogo. Ela está aqui para o modelo não prometer o que não
+            // vai acontecer, que é o que ele faria ao não encontrar a ferramenta.
+            case QuemFala.Visitante() -> """
+                Você é o assistente do salão %s e conversa pelo WhatsApp com uma pessoa \
+                que não é da equipe.
+                Agora no salão: %s. Datas e horas são sempre as do salão.
+                Responda em português do Brasil, em poucas frases, como numa conversa de WhatsApp.
+                Use as ferramentas disponíveis para consultar informações; não invente dados.
+                Você NÃO marca, desmarca nem altera nada: quem faz isso é a equipe do salão. \
+                Quando a pessoa quiser marcar, diga que alguém do salão vai falar com ela."""
+                    .formatted(conversa.nomeDoSalao(), conversa.agoraNoSalao());
+        };
         if (!propoe) {
             return base;
         }

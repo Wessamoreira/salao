@@ -274,13 +274,15 @@ public class ConversacionalConfig {
             ModeloDeLinguagem modelo, PrecoDoModelo preco, ConsumoDeIaJdbc consumo,
             LimitePorTelefone limite,
             @Value("${app.agente.teto-diario-usd:2.00}") BigDecimal tetoDiario,
+            @Value("${app.agente.teto-diario-do-visitante-usd:1.00}") BigDecimal tetoDoVisitante,
             @Value("${app.agente.janela-de-agregacao:PT15S}") Duration janela,
             @Value("${app.agente.teto-de-espera:PT2M}") Duration tetoDeEspera,
             ProporIntencao propor, ConfirmarPeloCodigo confirmar, DecidirAceite decidirAceite,
             ConcluirExecucao concluir, TransacaoSomenteLeitura somenteLeitura, Relogio relogio,
             MeterRegistry metricas) {
         return new ProcessadorDeInteracoes(manutencao, execucoes, usuarios, estabelecimentos,
-                orquestrador, modelo, preco, consumo, limite, tetoDiario, janela, tetoDeEspera,
+                orquestrador, modelo, preco, consumo, limite, tetoDiario, tetoDoVisitante,
+                janela, tetoDeEspera,
                 propor, confirmar, decidirAceite, concluir, somenteLeitura, relogio, metricas);
     }
 

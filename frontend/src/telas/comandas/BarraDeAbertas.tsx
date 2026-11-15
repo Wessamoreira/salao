@@ -49,9 +49,7 @@ export function BarraDeAbertas({ comandas, selecionadaId, aoSelecionar }: {
                       continua vendo que esta comanda está aberta há muito tempo.
                     */}
                   {esquecida && (
-                    <span className="cmd-linha-aviso">
-                      aberta há {Math.floor(horas)}h
-                    </span>
+                    <span className="cmd-linha-aviso">aberta há {Math.floor(horas)}h</span>
                   )}
                 </button>
               </li>

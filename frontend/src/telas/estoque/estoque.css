@@ -190,6 +190,8 @@
   font: inherit;
   font-size: var(--t-14);
   outline: none;
+  min-height: 0;
+  box-shadow: none;
 }
 
 .est-achados > li > button {
@@ -342,17 +344,10 @@
 }
 .est-campo > span { color: var(--tinta-fraca); }
 .est-campo-largo { flex: 1 1 240px; min-width: 0; }
+/* RT-INF-017: o desenho vem do controle padrão (componentes.css); aqui só o que é desta tela. */
 .est-campo input,
 .est-campo select,
 .est-contar input {
-  min-height: 32px;
-  padding: 0 var(--e-2);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-2);
-  font: inherit;
-  font-size: var(--t-14);
   font-variant-numeric: tabular-nums;
 }
 .est-campo select:disabled { color: var(--tinta-fraca); background: var(--papel-fundo); }
@@ -466,4 +461,25 @@
   .est-acoes { grid-column: 2; grid-row: 1; }
   .est-lote { grid-template-columns: minmax(0, 1fr) auto; }
   .est-lote-acoes { grid-column: 1 / -1; }
+}
+
+/* ------------------------------------------------------------------ RT-INF-016
+ *
+ * A lista é UMA superfície: uma borda em volta da lista inteira e uma régua fina entre as
+ * linhas — forma de tabela, não de baralho. Cada linha com a própria borda, canto e vão era
+ * a pilha de cartões arredondados que mais denuncia interface gerada sem decisão.
+ * A linha perde a moldura; um editor aberto dentro da lista mantém a dele.
+ */
+.est-lista {
+  gap: 0;
+  overflow: hidden;
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+.est-lista > li + li { border-top: 1px solid var(--regua); }
+.est-lista .est-produto {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }

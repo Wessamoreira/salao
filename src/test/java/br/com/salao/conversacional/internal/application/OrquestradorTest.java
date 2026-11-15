@@ -140,11 +140,11 @@ class OrquestradorTest {
     }
 
     private Orquestrador.Conversa conversa(UsuarioEfetivo usuario, String entrada) {
-        return new Orquestrador.Conversa(usuario, "Studio", "sábado, 13:00", entrada, List.of());
+        return new Orquestrador.Conversa(new QuemFala.DaEquipe(usuario), "Studio", "sábado, 13:00", entrada, List.of());
     }
 
     private Orquestrador.Resultado conduzir(String entrada, List<Orquestrador.Troca> historico) {
-        return orquestrador.conduzir(new Orquestrador.Conversa(recepcao, "Studio", "sábado, 13:00",
+        return orquestrador.conduzir(new Orquestrador.Conversa(new QuemFala.DaEquipe(recepcao), "Studio", "sábado, 13:00",
                 entrada, historico), orcamento, executor);
     }
 

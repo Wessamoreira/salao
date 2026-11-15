@@ -13,7 +13,7 @@
   justify-items: center;
   align-content: start;
   padding: clamp(48px, 12vh, 140px) var(--e-4) var(--e-4);
-  background: rgb(20 24 27 / 40%);
+  background: color-mix(in srgb, var(--espelho) 40%, transparent);
   animation: paleta-fundo var(--mov-imediato) var(--mov-curva);
 }
 
@@ -45,6 +45,8 @@
   border: 0;
   font: inherit;
   font-size: var(--t-16);
+  min-height: 0;
+  box-shadow: none;
 }
 .paleta-campo input:focus { outline: none; }
 .paleta-campo input::placeholder { color: var(--tinta-fraca); }
@@ -112,13 +114,24 @@
 .paleta-item-rotulo { flex: 1; font-weight: var(--p-medio); }
 /*
  * `--tinta-fraca`, e não `--tinta-tenue`: o sistema de design mediu 3.03 para tinta-tenue
- * sobre papel e a reservou a traço e separador. Rota é texto — alguém lê para saber para
- * onde vai.
+ * sobre papel e a reservou a traço e separador. O telefone é texto — alguém lê para conferir.
  */
-.paleta-item-rota {
+.paleta-item-detalhe {
   color: var(--tinta-fraca);
-  font-family: var(--fonte-mono);
-  font-size: var(--t-11);
+  font-size: var(--t-12);
+  font-variant-numeric: tabular-nums;
+}
+.paleta-item-enter {
+  min-width: 24px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  color: var(--tinta-fraca);
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-1);
+  font-family: inherit;
+  font-size: var(--t-12);
 }
 
 .paleta-vazio {

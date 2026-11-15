@@ -91,6 +91,29 @@ public class ConcluirExecucao {
     }
 
     /**
+     * RT-CNV-010 — a conversa de quem não é da equipe.
+     *
+     * <p>A resposta vai para ELA, e não para a equipe: o destino da saída é o telefone de quem
+     * escreveu, como em toda RESPOSTA. Sem {@code usuario_efetivo_id}, porque não houve em nome de
+     * quem — e com {@code de_visitante}, para a trilha não confundir isto com alguém da equipe sem
+     * nome (V70).
+     *
+     * <p>Sem pedido de confirmação: não existe intenção pendente no caminho dela.
+     */
+    @Transactional
+    public void deVisitante(Alvo alvo, String telefone, Orquestrador.Resultado resultado,
+                            Instant agora) {
+        UUID execucaoId = alvo.id();
+        if (execucoes.concluirDeVisitante(execucaoId, resultado, agora) != 1) {
+            return;
+        }
+        execucoes.juntar(alvo.absorvidas(), execucaoId);
+        saida.enfileirar(MensagensParaEquipeJdbc.Motivo.RESPOSTA, execucaoId, telefone,
+                resultado.resposta(), List.of(), agora);
+        acoes.registrar(execucaoId, agora);
+    }
+
+    /**
      * Recusada sem conversa — identidade, limite, teto. {@code parcial} é o que chegou a acontecer
      * antes do corte, e vai para o rastro também.
      */

@@ -19,6 +19,7 @@ import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import java.sql.ResultSet;
 import java.time.Instant;
+import br.com.salao.shared.agente.FerramentaDoBalcao;
 import org.springframework.security.access.prepost.PreAuthorize;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -237,11 +238,38 @@ class ArquiteturaTest {
     private static final String WEBHOOK_DO_WHATSAPP =
             "br.com.salao.conversacional.internal.web.WebhookDoWhatsAppController";
 
+    /**
+     * Casos de uso <strong>públicos por desenho</strong>: o que qualquer pessoa aprende parada no
+     * balcão — ADR-0011.
+     *
+     * <p>Categoria descoberta em RT-CNV-010, quando o dono abriu o agente para a cliente. Ela é
+     * diferente das três de cima, e a diferença importa:
+     *
+     * <ul>
+     *   <li>não é {@code TRANCADOS_PELA_IDENTIDADE}: lá a tranca é verificada dentro do caso de uso
+     *       (o autor é o dono da conta). Aqui não há autor;
+     *   <li>não é {@code NAO_SAO_PORTA}: estes SÃO porta — a conversa de um número desconhecido
+     *       chega neles;
+     *   <li>não é {@code AUTENTICADOS_PELO_PROVEDOR}: lá existe uma tranca na borda (o HMAC da
+     *       Meta). Aqui não existe tranca nenhuma, e é esse o ponto.
+     * </ul>
+     *
+     * <p><strong>A condição para entrar é a mais dura das quatro listas:</strong> o caso de uso não
+     * pode ter como devolver o que o balcão não mostra. Não "filtra antes de devolver" — não tem
+     * onde caber, porque o tipo de retorno não tem o campo. Um nome aqui é a decisão de pôr aquele
+     * dado ao alcance de qualquer pessoa do mundo que escreva para o número do salão.
+     */
+    private static final String[] PUBLICOS_DO_BALCAO = {
+        "br.com.salao.catalogo.internal.application.ServicosDoBalcaoUseCase",
+        "br.com.salao.agenda.internal.application.HorariosDoBalcaoUseCase",
+    };
+
     private static DescribedPredicate<JavaClass> foraDaListaDeTrancadosPelaIdentidade() {
         var permitidas = new java.util.HashSet<String>();
         permitidas.addAll(Set.of(TRANCADOS_PELA_IDENTIDADE));
         permitidas.addAll(Set.of(NAO_SAO_PORTA));
         permitidas.addAll(Set.of(AUTENTICADOS_PELO_PROVEDOR));
+        permitidas.addAll(Set.of(PUBLICOS_DO_BALCAO));
         return DescribedPredicate.describe("fora das listas de exceção",
                 classe -> !permitidas.contains(classe.getFullName()));
     }
@@ -279,6 +307,35 @@ class ArquiteturaTest {
                     .should().dependOnClassesThat().haveFullyQualifiedName(classe)
                     .because(classe + " está na lista de \"não é porta\" e por isso dispensa "
                             + "@PreAuthorize; um controller chamando-o quebra essa premissa")
+                    .check(CLASSES);
+        }
+    }
+
+    /**
+     * O que sustenta {@code PUBLICOS_DO_BALCAO}: só a ferramenta do balcão chega lá.
+     *
+     * <p>Nenhum controller, e nenhuma ferramenta da equipe. Sem isto, um caso de uso sem tranca
+     * nenhuma ficaria a uma tela de distância de virar porta aberta — e a tela pareceria inocente,
+     * porque o caso de uso "já existia".
+     *
+     * <p>A permissão de alcance é por pacote e por tipo: quem chama tem de ser uma
+     * {@link FerramentaDoBalcao}, ou a própria configuração do módulo, que monta o bean.
+     */
+    @Test
+    void o_publico_do_balcao_so_e_alcancado_pela_ferramenta_do_balcao() {
+        for (String classe : PUBLICOS_DO_BALCAO) {
+            noClasses().that().resideInAPackage("..web..")
+                    .should().dependOnClassesThat().haveFullyQualifiedName(classe)
+                    .because(classe + " é público por desenho (ADR-0011) e não tem tranca "
+                            + "nenhuma; um controller chamando-o o expõe sem permissão")
+                    .check(CLASSES);
+
+            noClasses().that().areNotAssignableTo(FerramentaDoBalcao.class)
+                    .and().haveSimpleNameNotEndingWith("Config")
+                    .and().doNotHaveFullyQualifiedName(classe)
+                    .should().dependOnClassesThat().haveFullyQualifiedName(classe)
+                    .because(classe + " é público por desenho (ADR-0011): só a ferramenta do "
+                            + "balcão e a configuração do módulo podem alcançá-lo")
                     .check(CLASSES);
         }
     }

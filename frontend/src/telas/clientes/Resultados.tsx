@@ -2,6 +2,7 @@ import { Esqueleto, Vazio } from '../../layout/Pagina';
 import type { Cliente, ResultadoDaBusca } from '../../api/clientes';
 import { comoChamar } from '../../api/clientes';
 import { Telefone } from './Telefone';
+import { iniciais } from './iniciais';
 
 interface Props {
   resultado: ResultadoDaBusca | undefined;
@@ -58,17 +59,24 @@ export function Resultados({ resultado, termo, carregando, selecionadoId,
               aria-current={cliente.id === selecionadoId}
               onClick={() => aoSelecionar(cliente)}
             >
-              <div className="cli-item-nome">{chamado}</div>
-              {/* O nome de documento só aparece quando difere do apelido: repetir
-                  a mesma linha duas vezes é ruído numa lista que se lê de relance. */}
-              {chamado !== cliente.nome && (
-                <div className="cli-item-formal">{cliente.nome}</div>
-              )}
-              {cliente.telefone && (
-                <div className="cli-item-fone">
-                  <Telefone e164={cliente.telefone} destacar={porTelefone ? termo : undefined} />
-                </div>
-              )}
+              {/* O rosto (RT-CLI-008): âncora para o olho correr a lista. Fora do nome falado
+                  da linha — o leitor de tela já lê o nome inteiro logo depois. */}
+              <span className="cli-avatar" aria-hidden="true">{iniciais(cliente.nome)}</span>
+              <span className="cli-item-texto">
+                <span className="cli-item-nome">{chamado}</span>
+                <span className="cli-item-linha">
+                  {/* O nome de documento só aparece quando difere do apelido: repetir
+                      a mesma linha duas vezes é ruído numa lista que se lê de relance. */}
+                  {chamado !== cliente.nome && (
+                    <span className="cli-item-formal">{cliente.nome}</span>
+                  )}
+                  {cliente.telefone && (
+                    <span className="cli-item-fone">
+                      <Telefone e164={cliente.telefone} destacar={porTelefone ? termo : undefined} />
+                    </span>
+                  )}
+                </span>
+              </span>
             </button>
           </li>
         );

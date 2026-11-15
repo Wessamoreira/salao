@@ -168,6 +168,10 @@ app.agente:
   # Por salão, por dia civil no fuso do salão. Atingido, o agente para de chamar o modelo até virar
   # o dia.
   teto-diario-usd: ${AGENTE_TETO_DIARIO_USD:2.00}
+  # RT-CNV-010 — quanto do teto acima quem NÃO é da equipe pode gastar. Metade, por decisão do dono
+  # (27/09/2026): estourado este pote, a cliente deixa de ser respondida e a equipe continua
+  # trabalhando. Sem ele, cem números errados de madrugada deixariam a recepção sem agente no dia.
+  teto-diario-do-visitante-usd: ${AGENTE_TETO_VISITANTE_USD:1.00}
   # Conversas por telefone por hora. Protege o teto de um único número em laço — e de quem descobriu
   # o número da recepção.
   limite-por-telefone-por-hora: ${AGENTE_LIMITE_TELEFONE_HORA:30}

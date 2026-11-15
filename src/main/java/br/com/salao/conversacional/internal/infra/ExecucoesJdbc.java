@@ -126,6 +126,36 @@ public class ExecucoesJdbc {
     }
 
     /**
+     * RT-CNV-010 — encerrada como conversa de visitante: sem usuário efetivo, e marcada como tal.
+     *
+     * <p>Um comando à parte, e não um booleano em {@link #concluir}: a diferença não é um campo, é
+     * uma categoria — e um parâmetro {@code true} no meio de sete argumentos é o que alguém troca
+     * de lugar sem o compilador reclamar.
+     */
+    @Transactional
+    public int concluirDeVisitante(UUID id, Orquestrador.Resultado resultado, Instant agora) {
+        return jdbc.sql("""
+                update execucao_do_agente
+                   set status = 'CONCLUIDA', de_visitante = true, usuario_efetivo_id = null,
+                       resposta = :resposta, ferramentas = cast(:ferramentas as jsonb),
+                       iteracoes = :iteracoes, modelo = :modelo, tokens_entrada = :entrada,
+                       tokens_saida = :saida, custo_estimado_usd = :custo, concluida_em = :agora,
+                       reservada_ate = null, ultimo_erro = null
+                 where id = :id and status = 'PENDENTE'
+                """)
+                .param("id", id)
+                .param("resposta", resultado.resposta())
+                .param("ferramentas", json.writeValueAsString(resultado.chamadas()))
+                .param("iteracoes", resultado.iteracoes())
+                .param("modelo", resultado.modelo())
+                .param("entrada", resultado.tokensEntrada())
+                .param("saida", resultado.tokensSaida())
+                .param("custo", resultado.custo())
+                .param("agora", Timestamp.from(agora))
+                .update();
+    }
+
+    /**
      * RT-CNV-005 — encerrada sem o modelo: a resposta a uma confirmação é do servidor, e não houve
      * ferramenta, token nem custo.
      *

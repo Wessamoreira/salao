@@ -547,3 +547,41 @@ Três decisões que ficam:
 A direção de `16-design-system.md` está certa e continua valendo: back-office neutro, cor só onde
 carrega informação, forma além de cor, escala de espaçamento fixa, vinho como única cor de marca.
 Nada aqui é troca de direção — é a execução que faltava.
+
+## Quarta passada — 15/11/2026: o app instalado (`RT-INF-013`)
+
+O pedido do dono: *"PWA que se comporte como app, e no desktop algo realmente bonito"*. A
+medição achou primeiro o que estava quebrado sem ninguém ver:
+
+- **No iPhone instalado, a barra de topo ficava debaixo do relógio.** O `index.html` pedia status
+  bar translúcido e não tinha `viewport-fit=cover`: o texto branco do sistema ficava sobre a barra
+  branca, e nenhuma área segura era respeitada.
+- **O splash era bege** (`#f3f2ef`), resto de uma paleta abandonada — e a sequência de abertura
+  piscava bege → escuro (boot) → claro (login) → escuro (lateral).
+- **A versão nova assumia sozinha** (`skipWaiting`) e apagava o cache da anterior com a aba
+  aberta usando-o. Ver R-UX-23.
+- **A prévia do sistema não abria:** importava `SemTela`, apagado em RT-FIN-013. Agora ela monta a
+  agenda real dentro da casca — a moldura só se julga com a tela que mais se olha dentro dela.
+
+O que entrou, com o motivo de cada um em `16-design-system.md` ("A moldura") e na doc da rotina:
+
+- [x] **G1 · A moldura.** Desktop, celular, porta do sistema e splash são o mesmo objeto.
+- [x] **G2 · Abas no polegar** abaixo de 820px, com "Mais" abrindo a navegação completa como folha
+      inferior (R-UX-22). O hambúrguer saiu.
+- [x] **G3 · Janela própria no desktop:** Window Controls Overlay, faixa arrastável com a seção e o
+      salão, e título da janela acompanhando a tela.
+- [x] **G4 · Versão nova espera o clique** (R-UX-23), e é procurada a cada hora.
+- [x] **G5 · "Instalar o app"** no menu da conta, só quando o navegador deixa pedir.
+- [x] **G6 · Ícones** separados por finalidade (`any`, `maskable`, `apple-touch-icon`) e capturas
+      `wide`/`narrow` para a janela de instalação.
+- [x] **G7 · A agenda no celular** sem cartão dentro da folha, e com o cabeçalho que não corta a
+      seta de próximo dia.
+- [x] **G8 · Dependências** atualizadas dentro das faixas declaradas (React 19.3, Vite 8.3,
+      TanStack Query 5.107). TypeScript 7, Vitest 5 e jsdom 31 são troca de versão maior — ficam
+      para uma rotina própria, não de carona numa de desenho.
+
+**Não feito, e por quê:** modo escuro da folha (F2) — a moldura já é escura, mas a folha exige
+refazer a medição de contraste par a par; contadores nas abas (B3) — o servidor ainda não manda os
+números; arrastar a folha inferior para fechar — sem o gesto, uma alça desenhada seria promessa
+falsa.
+

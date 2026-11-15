@@ -6,6 +6,7 @@ import { Barreira } from './layout/Barreira';
 import { Esqueleto } from './layout/Pagina';
 import { Casca } from './layout/Casca';
 import { Protegida } from './layout/Protegida';
+import { Simbolo } from './layout/Simbolo';
 import { Login } from './telas/Login';
 import { SegundoFator } from './telas/SegundoFator';
 import { MinhaSenha } from './telas/acessos/MinhaSenha';
@@ -112,7 +113,7 @@ export function App() {
 function Inicializando() {
   return (
     <main className="inicio-carga" aria-label="Abrindo o sistema">
-      <span className="inicio-carga-marca" aria-hidden="true">S</span>
+      <span className="inicio-carga-marca"><Simbolo tamanho={56} /></span>
       <span className="inicio-carga-linha" />
     </main>
   );

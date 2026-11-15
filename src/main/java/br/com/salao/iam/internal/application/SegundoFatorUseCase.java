@@ -10,8 +10,6 @@ import br.com.salao.iam.internal.infra.MfaJdbc;
 import br.com.salao.shared.erro.ErroDeDominio;
 import br.com.salao.shared.tempo.Relogio;
 import br.com.salao.shared.tenant.TenantContext;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -66,10 +64,7 @@ public class SegundoFatorUseCase {
         String segredo = Totp.novoSegredo();
         mfa.salvarSegredo(tenant, usuarioId, segredo);
 
-        String rotulo = URLEncoder.encode(nomeDoSalao + ":" + email, StandardCharsets.UTF_8);
-        String emissor = URLEncoder.encode(nomeDoSalao, StandardCharsets.UTF_8);
-        String uri = "otpauth://totp/" + rotulo + "?secret=" + segredo + "&issuer=" + emissor
-                + "&digits=" + Totp.DIGITOS + "&period=" + Totp.JANELA.toSeconds();
+        String uri = Totp.uriDeConfiguracao(nomeDoSalao, email, segredo);
 
         log.info("Segundo fator inscrito (pendente de confirmação) para o usuário {}", usuarioId);
         return new Inscricao(segredo, uri);

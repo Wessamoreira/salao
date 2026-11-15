@@ -1,26 +1,64 @@
 {
-  "name": "Salão — Gestão e Agenda",
-  "short_name": "Salão",
+  "id": "/",
+  "name": "Nexo — Gestão e Agenda do Salão",
+  "short_name": "Nexo",
   "description": "Agenda, atendimento e gestão do salão.",
   "lang": "pt-BR",
+  "dir": "ltr",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
   "orientation": "any",
-  "background_color": "#f3f2ef",
-  "theme_color": "#20282d",
+  "background_color": "#1c1c1e",
+  "theme_color": "#1c1c1e",
+  "categories": [
+    "business",
+    "productivity"
+  ],
+  "launch_handler": {
+    "client_mode": [
+      "focus-existing",
+      "auto"
+    ]
+  },
   "icons": [
     {
       "src": "/pwa-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/pwa-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/captura-desktop.png",
+      "sizes": "1440x900",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "A agenda do dia no computador da recepção"
+    },
+    {
+      "src": "/captura-celular.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "A agenda no celular, com a navegação no alcance do polegar"
     }
   ]
 }

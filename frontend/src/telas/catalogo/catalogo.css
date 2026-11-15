@@ -113,17 +113,6 @@
 }
 .cat-campo > span { color: var(--tinta-fraca); }
 .cat-campo-largo { flex: 1 1 220px; min-width: 0; }
-.cat-campo input,
-.cat-campo select {
-  min-height: 32px;
-  padding: 0 var(--e-2);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-2);
-  font: inherit;
-  font-size: var(--t-14);
-}
 .cat-campo input[type='number'] { width: 84px; font-variant-numeric: tabular-nums; }
 
 .cat-receita {
@@ -314,4 +303,28 @@
   .cat-servico { grid-template-columns: 1fr; }
   .cat-numeros { justify-content: flex-start; }
   .cat-numeros div { text-align: left; }
+}
+
+/* ------------------------------------------------------------------ RT-INF-016
+ *
+ * A lista é UMA superfície: uma borda em volta da lista inteira e uma régua fina entre as
+ * linhas — forma de tabela, não de baralho. Cada linha com a própria borda, canto e vão era
+ * a pilha de cartões arredondados que mais denuncia interface gerada sem decisão.
+ * A linha perde a moldura; um editor aberto dentro da lista mantém a dele.
+ */
+.cat-lista,
+.cat-recursos {
+  gap: 0;
+  overflow: hidden;
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+.cat-lista > li + li,
+.cat-recursos > li + li { border-top: 1px solid var(--regua); }
+.cat-lista .cat-servico,
+.cat-recursos .cat-recurso {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }

@@ -61,8 +61,8 @@
 .conectividade.flutuante {
   position: fixed;
   z-index: 90;
-  right: var(--e-4);
-  bottom: var(--e-4);
+  right: max(var(--e-4), env(safe-area-inset-right, 0px));
+  bottom: max(var(--e-4), env(safe-area-inset-bottom, 0px));
   max-width: min(380px, calc(100vw - var(--e-6)));
   flex-wrap: wrap;
   padding: var(--e-3) var(--e-4);

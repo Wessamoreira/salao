@@ -10,7 +10,6 @@
 .cnc-tela {
   display: grid;
   gap: var(--e-8);
-  max-width: 1080px;
   margin: 0 auto;
 }
 
@@ -177,16 +176,9 @@
   color: var(--tinta-fraca);
   font-weight: var(--p-normal);
 }
+/* RT-INF-017: o desenho vem do controle padrão (componentes.css); aqui só o que é desta tela. */
 .cnc-campo select {
-  min-height: 32px;
   width: 100%;
-  padding: 0 var(--e-2);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-2);
-  font: inherit;
-  font-size: var(--t-12);
 }
 .cnc-campo-lido {
   overflow: hidden;
@@ -341,16 +333,6 @@
   font-size: var(--t-12);
   font-weight: var(--p-forte);
 }
-.cnc-mes select {
-  min-height: 32px;
-  padding: 0 var(--e-3);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-2);
-  font: inherit;
-  font-weight: var(--p-normal);
-}
 
 /*
  * As contas do mês são o seletor. A barra no topo diz o que cada uma significa; o rótulo diz o mesmo
@@ -475,29 +457,13 @@
   gap: var(--e-2);
   font-size: var(--t-12);
 }
-.cnc-decisao-forma select {
-  padding: var(--e-1) var(--e-2);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-2);
-  font: inherit;
-  font-size: var(--t-12);
-}
 .cnc-decisao-motivo {
   font-size: var(--t-12);
   font-weight: var(--p-forte);
 }
+/* RT-INF-017: o desenho vem do controle padrão (componentes.css); aqui só o que é desta tela. */
 .cnc-decisao textarea {
   max-width: 78ch;
-  padding: var(--e-2) var(--e-3);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-2);
-  font: inherit;
-  font-size: var(--t-14);
-  resize: vertical;
 }
 .cnc-decisao textarea:focus-visible,
 .cnc-decisao-forma select:focus-visible {
@@ -595,6 +561,8 @@
   font-size: var(--t-14);
   font-feature-settings: var(--numerais);
   text-align: right;
+  min-height: 0;
+  box-shadow: none;
 }
 .cnc-com-sufixo input:focus-visible { outline: none; }
 

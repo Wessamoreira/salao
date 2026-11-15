@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ContaDaComanda, FormaDePagamento } from '../../api/comandas';
 import { FORMAS, reais } from '../../api/comandas';
+import { Icone } from '../../layout/Icone';
 
 /**
  * RT-ATD-008 — o split, e o restante sempre visível.
@@ -11,6 +12,10 @@ import { FORMAS, reais } from '../../api/comandas';
  *
  * O valor do campo já vem preenchido com **o que falta** — que é o que a recepção vai
  * digitar em nove de cada dez vezes.
+ *
+ * RT-ATD-009 — a forma é escolhida em botões de rádio, não num `<select>`: é a escolha mais
+ * repetida do dia, e um toque vale mais que abrir uma lista. Rádio nativo, então teclado
+ * (setas) e leitor de tela funcionam sem nada a mais.
  */
 export function Pagamentos({ conta, aoRegistrar, aoRemover, bloqueado, ocupado }: {
   conta: ContaDaComanda;
@@ -28,6 +33,7 @@ export function Pagamentos({ conta, aoRegistrar, aoRemover, bloqueado, ocupado }
 
   return (
     <section className="cmd-pagamentos" aria-label="Pagamento">
+      {conta.pagamentos.length > 0 && (
       <ul className="cmd-pagos">
         {conta.pagamentos.map((p) => (
           <li key={p.id} className="cmd-pago">
@@ -38,14 +44,15 @@ export function Pagamentos({ conta, aoRegistrar, aoRemover, bloqueado, ocupado }
             <span className="cmd-pago-valor">{reais(p.valor)}</span>
             {!bloqueado && (
               <button type="button" className="cmd-remover" onClick={() => aoRemover(p.id)}
-                disabled={ocupado}
+                disabled={ocupado} title="Remover"
                 aria-label={`Remover pagamento de ${reais(p.valor)}`}>
-                remover
+                <Icone nome="fechar" tamanho={16} />
               </button>
             )}
           </li>
         ))}
       </ul>
+      )}
 
       {!bloqueado && (
         <form
@@ -59,13 +66,16 @@ export function Pagamentos({ conta, aoRegistrar, aoRemover, bloqueado, ocupado }
             }
           }}
         >
-          <label className="cmd-rotulo" htmlFor="cmd-forma">Forma</label>
-          <select id="cmd-forma" className="cmd-campo" value={forma}
-            onChange={(e) => setForma(e.target.value as FormaDePagamento)}>
+          <fieldset className="cmd-formas">
+            <legend className="cmd-rotulo">Forma</legend>
             {FORMAS.map((f) => (
-              <option key={f.forma} value={f.forma}>{f.rotulo}</option>
+              <label key={f.forma} className="cmd-forma-opcao">
+                <input type="radio" name="cmd-forma" value={f.forma}
+                  checked={forma === f.forma} onChange={() => setForma(f.forma)} />
+                <span>{f.rotulo}</span>
+              </label>
             ))}
-          </select>
+          </fieldset>
 
           <label className="cmd-rotulo" htmlFor="cmd-valor">Valor</label>
           <input
@@ -78,7 +88,7 @@ export function Pagamentos({ conta, aoRegistrar, aoRemover, bloqueado, ocupado }
              * sempre — e deixá-lo como placeholder, em vez de valor, mantém o campo
              * editável para o split sem obrigar a apagar nada.
              */
-            placeholder={restante > 0 ? restante.toFixed(2) : '0,00'}
+            placeholder={restante > 0 ? restante.toFixed(2).replace('.', ',') : '0,00'}
             value={valor}
             onChange={(e) => setValor(e.target.value)}
           />

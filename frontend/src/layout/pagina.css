@@ -34,6 +34,23 @@
 /* Tela que se desenha inteira (a grade da agenda, a comanda) manda o corpo não respirar. */
 .pagina-corpo:has(> .pagina-cheia) { padding: 0; }
 
+/*
+ * RT-INF-016 — UMA largura para toda tela: 1120px, centrada.
+ *
+ * Antes cada tela tinha a sua: cinco esticavam até a borda (em 1440px, o nome a 1.400px do
+ * botão "Abrir" da mesma linha), duas paravam em 1080px. Agora é a regra do corpo, e a tela
+ * não precisa pedir. Quem é formulário de uma coluna (configuração, busca de cliente) continua
+ * com a largura própria e mais estreita — a regra da tela vem depois e vence.
+ */
+/* `:where` deixa esta regra com especificidade de UMA classe — a mesma da tela. Sem ele,
+   `.pagina-corpo > :not(.pagina-cheia)` pesava (0,2,0) e vencia os 560px da configuração,
+   que esticou até 1120px (corrigido em RT-INF-017). */
+.pagina-corpo > :where(:not(.pagina-cheia)) {
+  width: 100%;
+  max-width: 1120px;
+  margin-inline: auto;
+}
+
 /* Só aparece fora da casca (teste, prévia isolada). Ver o comentário em Pagina.tsx. */
 .pagina-acoes-soltas {
   display: flex;
@@ -46,7 +63,8 @@
 /* ------------------------------------------------------------------ ações */
 
 .pagina-acao {
-  min-height: 32px;
+  /* A altura do controle: na mesma linha de um campo, o botão não fica mais baixo. */
+  min-height: var(--controle);
   display: inline-flex;
   align-items: center;
   gap: var(--e-2);
@@ -177,4 +195,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .esqueleto-linha { animation: none; }
+}
+
+/* Dedo, não ponteiro: o botão acompanha o campo na altura do toque (RT-INF-017). */
+@media (max-width: 820px) {
+  .pagina-acao { min-height: var(--controle-toque); font-size: var(--t-14); }
 }

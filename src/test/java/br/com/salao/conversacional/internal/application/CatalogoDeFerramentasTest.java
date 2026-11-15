@@ -36,7 +36,7 @@ class CatalogoDeFerramentasTest {
                 leitura("financeiro", Permissao.FINANCEIRO_LER_TODOS),
                 leitura("duas", Permissao.AGENDA_LER_TODAS, Permissao.FINANCEIRO_LER_TODOS)));
 
-        assertThat(catalogo.permitidasPara(recepcao)).extracting(Ferramenta::nome)
+        assertThat(catalogo.permitidasPara(new QuemFala.DaEquipe(recepcao))).extracting(Ferramenta::nome)
                 .containsExactly("listar");
     }
 
@@ -48,7 +48,7 @@ class CatalogoDeFerramentasTest {
                 escrita("agendar", Permissao.AGENDA_ESCREVER_TODAS),
                 escrita("estornar", Permissao.FINANCEIRO_LER_TODOS)));
 
-        assertThat(catalogo.permitidasPara(recepcao)).extracting(Ferramenta::nome)
+        assertThat(catalogo.permitidasPara(new QuemFala.DaEquipe(recepcao))).extracting(Ferramenta::nome)
                 .containsExactly("agendar");
     }
 
@@ -60,7 +60,7 @@ class CatalogoDeFerramentasTest {
         var escritaLivre = escrita("escrita_livre");
         var catalogo = new CatalogoDeFerramentas(List.of(livre, escritaLivre));
 
-        assertThat(catalogo.permitidasPara(recepcao)).isEmpty();
+        assertThat(catalogo.permitidasPara(new QuemFala.DaEquipe(recepcao))).isEmpty();
         assertThat(CatalogoDeFerramentas.podeUsar(recepcao, escritaLivre))
                 .as("a mesma pergunta decide a confirmação").isFalse();
     }

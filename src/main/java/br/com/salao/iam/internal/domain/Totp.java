@@ -44,6 +44,29 @@ public final class Totp {
     }
 
     /** Segredo novo, em Base32 — o formato que os autenticadores leem. */
+    /**
+     * O endereço que o aplicativo autenticador lê no QR code (formato Key Uri, do Google
+     * Authenticator — o que todos os outros seguem).
+     *
+     * <p><b>Espaço é {@code %20}, não {@code +}.</b> {@code URLEncoder} é codificação de
+     * formulário HTML, onde {@code +} quer dizer espaço; num endereço, {@code +} é um sinal de
+     * mais. Com ele, o salão "Salao Wesley" aparecia como "Salao+Wesley" no celular de quem
+     * escaneou — e o nome é o que a pessoa procura na lista do autenticador às oito da manhã.
+     *
+     * @param emissor o nome do salão: aparece como título da conta no aplicativo
+     * @param conta   quem é a pessoa nesse salão (o e-mail)
+     */
+    public static String uriDeConfiguracao(String emissor, String conta, String segredoBase32) {
+        String rotulo = codificar(emissor + ":" + conta);
+        return "otpauth://totp/" + rotulo + "?secret=" + segredoBase32 + "&issuer=" + codificar(emissor)
+                + "&digits=" + DIGITOS + "&period=" + JANELA.toSeconds();
+    }
+
+    private static String codificar(String texto) {
+        return java.net.URLEncoder.encode(texto, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
+    }
+
     public static String novoSegredo() {
         byte[] bytes = new byte[BYTES_DO_SEGREDO];
         ALEATORIO.nextBytes(bytes);

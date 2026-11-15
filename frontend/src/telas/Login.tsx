@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ErroDaApi, api } from '../api/http';
 import { definirTokenAtual } from '../sessao/sessao';
 import { Autenticacao } from './Autenticacao';
+import { saudacao } from './saudacao';
 import { Campo } from './Campo';
 
 interface RespostaDeLogin {
@@ -92,7 +93,7 @@ export function Login() {
   }
 
   return (
-    <Autenticacao titulo="Entrar" apoio="Use a conta do salão.">
+    <Autenticacao titulo={saudacao()} apoio="Entre com a conta do salão.">
       <form ref={formulario} className="auth-formulario" onSubmit={entrar} noValidate>
         {erro && <p id={ID_DO_ERRO} className="auth-erro" role="alert">{erro.texto}</p>}
 

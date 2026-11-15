@@ -70,6 +70,8 @@
   font-size: var(--t-16);
   font-feature-settings: var(--numerais);
   text-align: right;
+  min-height: 0;
+  box-shadow: none;
 }
 .prc-com-sufixo input:focus-visible { outline: none; }
 
@@ -199,16 +201,9 @@
   color: var(--tinta-fraca);
 }
 .prc-decisao .prc-com-sufixo { justify-self: start; }
+/* RT-INF-017: o desenho vem do controle padrão (componentes.css); aqui só o que é desta tela. */
 .prc-decisao textarea {
   max-width: 78ch;
-  padding: var(--e-2) var(--e-3);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-2);
-  font: inherit;
-  font-size: var(--t-14);
-  resize: vertical;
 }
 .prc-decisao textarea:focus-visible { outline: 2px solid var(--foco); outline-offset: 1px; }
 .prc-decisao .erro { margin: 0; }

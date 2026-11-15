@@ -12,10 +12,22 @@ import { Icone } from './Icone';
 import { Barreira } from './Barreira';
 import { DestinoDasAcoes } from './destinoDasAcoes';
 import { Paleta } from './Paleta';
+import { Simbolo } from './Simbolo';
 import { Conectividade } from '../pwa/Conectividade';
+import { aplicarAtualizacao, instalar, useEstadoDoApp } from '../pwa/registro';
+import { useBarraDeTituloPropria } from '../pwa/janela';
 import './casca.css';
 
 const CHAVE_RECOLHIDA = 'salao:lateral-recolhida';
+
+/**
+ * Quantas seções cabem nas abas do celular antes do "Mais".
+ *
+ * Quatro e não cinco: o "Mais" ocupa a quinta, e ele precisa existir sempre — é por ele que
+ * se chega à conta, à senha e ao "sair". Cinco alvos de 72 px numa tela de 360 px é o limite
+ * em que o polegar ainda acerta sem olhar.
+ */
+const ABAS = 4;
 
 /**
  * A casca desenha exatamente o que `/me/capabilities` enviou.
@@ -40,6 +52,8 @@ export function Casca() {
   const [saindo, setSaindo] = useState(false);
   const [erroAoSair, setErroAoSair] = useState(false);
   const conectado = useConectado();
+  const app = useEstadoDoApp();
+  const barraPropria = useBarraDeTituloPropria();
   const local = useLocation();
   const navegar = useNavigate();
   const clienteDeConsultas = useQueryClient();
@@ -167,21 +181,55 @@ export function Casca() {
     return () => document.removeEventListener('keydown', aoTeclar);
   }, [menuAberto]);
 
+  /*
+   * O título da janela acompanha a tela.
+   *
+   * Instalado, o título é o que aparece no Alt-Tab, no dock e na lista de janelas — e ele era
+   * fixo em "Studio · Agenda", dizendo "Agenda" com o financeiro aberto.
+   */
+  const nomeDoSalao = capacidades?.estabelecimento.nome;
+  const secaoDoTitulo = capacidades?.menus
+    .find((menu) => local.pathname.startsWith(menu.rota))?.rotulo ?? 'Início';
+  useEffect(() => {
+    if (nomeDoSalao) document.title = `${secaoDoTitulo} · ${nomeDoSalao}`;
+  }, [secaoDoTitulo, nomeDoSalao]);
+
   if (isPending) return <Carregando />;
   if (!capacidades) return null;
 
   const secoes = secoesDe(capacidades);
   const menuAtual = capacidades.menus.find((menu) => local.pathname.startsWith(menu.rota));
   const nomeDaSecao = menuAtual?.rotulo ?? 'Início';
+  /*
+   * As abas são os primeiros menus NA ORDEM DO SERVIDOR (grupos e posição vêm de
+   * /me/capabilities). O front escolhe quantos cabem, não quais: é a mesma decisão de
+   * desenho que recolher a lateral, e nenhuma decisão de permissão.
+   */
+  const abas = secoes.flatMap((secao) => secao.itens).slice(0, ABAS);
+  // Fora das abas, o "Mais" acende: nenhuma aba acesa diria que a pessoa não está em lugar nenhum.
+  const maisAtivo = Boolean(menuAtual) && !abas.some((menu) => menu.id === menuAtual?.id);
   const rotaDaAgenda = capacidades.menus.find((menu) => menu.rota === '/agenda')?.rota;
-  const iniciaisDoSalao = iniciais(capacidades.estabelecimento.nome);
   const inicialDoUsuario = capacidades.nome.trim().charAt(0).toLocaleUpperCase('pt-BR') || 'U';
 
   return (
     <div className={`casca${recolhida ? ' recolhida' : ''}`}>
       <a className="casca-pular" href="#conteudo-principal">Ir para o conteúdo</a>
 
-      <aside ref={lateral} className={`casca-lateral${menuAberto ? ' aberta' : ''}`}
+      {/*
+        A barra de título da janela instalada (Window Controls Overlay). Fora dela tem altura
+        zero e não existe. Dentro, é a faixa de moldura onde moram os botões da janela, e é
+        por ela que se arrasta: a mesma informação do título da janela, desenhada no lugar
+        onde o sistema operacional a desenharia.
+      */}
+      {barraPropria && (
+        <div className="casca-janela" aria-hidden="true">
+          <span>{nomeDaSecao}</span>
+          <span className="casca-janela-salao">{capacidades.estabelecimento.nome}</span>
+        </div>
+      )}
+
+      <aside ref={lateral} id="casca-navegacao"
+        className={`casca-lateral${menuAberto ? ' aberta' : ''}`}
         aria-label="Navegação">
         <header className="casca-marca">
           {/*
@@ -189,12 +237,14 @@ export function Casca() {
             de design chama de "gesto editorial": o negócio é beleza, e a marca do salão
             merece um desenho — o resto da tela, não.
           */}
-          <span className="casca-placa" aria-hidden="true">{iniciaisDoSalao}</span>
+          {/* RT-INF-017 — a marca do produto e o nome do salão: o ícone do Nexo é o mesmo
+              que a pessoa tocou para abrir o app; o salão é de quem é o sistema. */}
+          <span className="casca-placa" aria-hidden="true"><Simbolo tamanho={32} /></span>
           <span className="casca-identidade">
             <strong title={capacidades.estabelecimento.nome}>
               {capacidades.estabelecimento.nome}
             </strong>
-            <small>gestão do salão</small>
+            <small>nexo</small>
           </span>
 
           <button className="casca-recolher" type="button" onClick={alternarRecolhida}
@@ -249,6 +299,14 @@ export function Casca() {
           {contaAberta && (
             <div className="casca-conta-menu" role="menu" aria-label="Conta">
               <p className="casca-conta-email" title={capacidades.email}>{capacidades.email}</p>
+              {/* Só existe quando o navegador deixou pedir — oferecer e não poder é pior. */}
+              {app.podeInstalar && (
+                <button className="casca-conta-item" type="button" role="menuitem"
+                  onClick={() => { setContaAberta(false); void instalar(); }}>
+                  <Icone nome="instalar" tamanho={16} />
+                  <span>Instalar o app</span>
+                </button>
+              )}
               <button className="casca-conta-item" type="button" role="menuitem"
                 onClick={() => { setContaAberta(false); navegar('/seguranca/segundo-fator'); }}>
                 <Icone nome="escudo" tamanho={16} />
@@ -296,12 +354,6 @@ export function Casca() {
 
       <div className="casca-coluna">
         <header className="casca-topo">
-          <button ref={botaoAbrir} className="casca-abrir-menu" type="button"
-            aria-label="Abrir menu"
-            aria-expanded={menuAberto} onClick={() => setMenuAberto(true)}>
-            <Icone nome="menu" />
-          </button>
-
           {/*
             Este É o título da página. Cada tela tinha um `h1` próprio repetindo a mesma
             palavra logo abaixo daqui, comendo oitenta pixels de altura sem informar
@@ -325,6 +377,13 @@ export function Casca() {
           </button>
 
           <div className="casca-topo-final">
+            {/* Versão nova já baixada, esperando o clique (R-UX-23). É o sistema falando,
+                então usa a mesma superfície escura do estado de conexão. */}
+            {app.versaoNova && (
+              <button className="casca-versao" type="button" onClick={aplicarAtualizacao}>
+                <span className="casca-versao-texto">Versão nova ·</span> Atualizar
+              </button>
+            )}
             {/* Estado do sistema fica na moldura do sistema, antes das ações da tela: ele
                 muda o que as ações conseguem fazer. */}
             <Conectividade variante="barra"
@@ -359,6 +418,38 @@ export function Casca() {
           </DestinoDasAcoes>
         </main>
       </div>
+
+      {/*
+        As abas do toque (R-UX-22). Só aparecem abaixo de 820 px, por CSS: decidir no
+        JavaScript exigiria ouvir o tamanho da tela e redesenhar a casca a cada rotação.
+
+        Precarrega no `pointerdown`, e não no `mouseenter` que não existe no toque: entre o
+        dedo encostar e o clique há o intervalo de graça que a lateral ganha com o hover.
+      */}
+      <nav className="casca-abas" aria-label="Atalhos">
+        <ul>
+          {abas.map((menu) => (
+            <li key={menu.id}>
+              <NavLink to={menu.rota} viewTransition
+                onPointerDown={() => precarregar(menu.rota)}
+                onFocus={() => precarregar(menu.rota)}
+                className={({ isActive }) => `casca-aba${isActive ? ' ativo' : ''}`}>
+                <span className="casca-aba-icone"><Icone nome={menu.icone} tamanho={20} /></span>
+                <span className="casca-aba-rotulo">{menu.rotulo}</span>
+              </NavLink>
+            </li>
+          ))}
+          <li>
+            <button ref={botaoAbrir} type="button"
+              className={`casca-aba${maisAtivo ? ' ativo' : ''}`}
+              aria-expanded={menuAberto} aria-controls="casca-navegacao"
+              onClick={() => setMenuAberto(true)}>
+              <span className="casca-aba-icone"><Icone nome="menu" tamanho={20} /></span>
+              <span className="casca-aba-rotulo">Mais</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
 
       {/* Montada só quando aberta: é o que faz o termo digitado voltar ao zero sem
           nenhum efeito limpando estado. */}
@@ -420,15 +511,16 @@ function secoesDe(capacidades: Capacidades) {
   return secoes;
 }
 
-function iniciais(nome: string): string {
-  const partes = nome.trim().split(/\s+/).filter(Boolean);
-  if (partes.length === 0) return 'S';
-  // Uma palavra vira UMA letra: "Salão" abreviado em "SA" não abrevia nada, só trunca.
-  if (partes.length === 1) return partes[0].charAt(0).toLocaleUpperCase('pt-BR');
-  return `${partes[0][0]}${partes.at(-1)?.[0] ?? ''}`.toLocaleUpperCase('pt-BR');
-}
-
+/**
+ * O perfil em português de gente. Era o código em minúsculas — "Recepcao", sem acento. O
+ * perfil continua vindo do servidor; aqui só a palavra que se mostra, com o código como
+ * reserva para um perfil novo que ainda não tenha nome aqui.
+ */
+const ROTULO_DO_PERFIL: Record<string, string> = {
+  ADMIN: 'Administração', GERENTE: 'Gerência', RECEPCAO: 'Recepção', PROFISSIONAL: 'Profissional',
+};
 function rotuloDoPerfil(perfil: string): string {
+  if (ROTULO_DO_PERFIL[perfil]) return ROTULO_DO_PERFIL[perfil];
   const limpo = perfil.toLocaleLowerCase('pt-BR').replaceAll('_', ' ');
   return limpo.charAt(0).toLocaleUpperCase('pt-BR') + limpo.slice(1);
 }

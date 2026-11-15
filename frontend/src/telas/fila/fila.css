@@ -254,17 +254,10 @@
 }
 .fil-horario input:focus-visible + span { outline: 2px solid var(--foco); outline-offset: 2px; }
 
+/* RT-INF-017: o desenho vem do controle padrão (componentes.css); aqui só o que é desta tela. */
 .fil-motivo textarea {
   display: block;
   width: 100%;
-  padding: var(--e-2) var(--e-3);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-2);
-  font: inherit;
-  font-size: var(--t-14);
-  resize: vertical;
 }
 .fil-motivo .fil-ajuda { font-size: var(--t-12); }
 

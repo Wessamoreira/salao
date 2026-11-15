@@ -65,4 +65,22 @@ class TotpTest {
         assertThat(Totp.conferir(segredo, "12345", agora, 1)).isEqualTo(-1);
         assertThat(Totp.conferir(segredo, null, agora, 1)).isEqualTo(-1);
     }
+
+    @Test
+    @DisplayName("o endereço do QR leva espaço como %20 — com '+', o celular mostrava 'Salao+Wesley'")
+    void enderecoDoQrCodificaEspacoComoPercentVinte() {
+        String uri = Totp.uriDeConfiguracao("Salao Wesley", "dono@salao.local", "JBSWY3DPEHPK3PXP");
+
+        assertThat(uri).isEqualTo("otpauth://totp/Salao%20Wesley%3Adono%40salao.local"
+                + "?secret=JBSWY3DPEHPK3PXP&issuer=Salao%20Wesley&digits=6&period=30");
+        assertThat(uri).doesNotContain("+");
+    }
+
+    @Test
+    @DisplayName("acento no nome do salão vai em UTF-8, e o autenticador mostra 'Salão' certo")
+    void acentoVaiEmUtf8() {
+        assertThat(Totp.uriDeConfiguracao("Salão", "a@b.c", "X"))
+                .startsWith("otpauth://totp/Sal%C3%A3o%3Aa%40b.c?secret=X&issuer=Sal%C3%A3o");
+    }
 }
+

@@ -106,16 +106,9 @@
 }
 .fin-campo > span { color: var(--tinta-fraca); }
 .fin-campo-largo { flex: 1 1 260px; min-width: 0; }
+/* RT-INF-017: o desenho vem do controle padrão (componentes.css); aqui só o que é desta tela. */
 .fin-campo input,
 .fin-campo select {
-  min-height: 32px;
-  padding: 0 var(--e-2);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-2);
-  font: inherit;
-  font-size: var(--t-14);
   font-variant-numeric: tabular-nums;
 }
 
@@ -154,9 +147,25 @@
   font-weight: var(--p-normal);
 }
 .fin-numero.destaque > strong { font-weight: var(--p-forte); }
-/* A única cor da tela: quem adiantou mais do que ganhou atravessa o mês devendo. */
+/*
+ * Quem adiantou mais do que ganhou atravessa o mês devendo — a linha que alguém vai perguntar.
+ *
+ * Era o número pintado de vermelho, e cor de status não passa AA como texto (medido em
+ * 16-design-system.md). RT-INF-016: o número fica em tinta, e a dívida é MARCA — o fundo claro
+ * e a barra de 2px da falta, o mesmo vocabulário de status do sistema inteiro. Em preto e
+ * branco continua legível: o sinal de menos já está no valor.
+ */
 .fin-numero > strong.devendo,
-.fin-linha-valor.devendo { color: var(--status-falta); }
+.fin-linha-valor.devendo {
+  padding: 0 var(--e-1);
+  color: var(--tinta);
+  background: var(--status-falta-fundo);
+  box-shadow: inset 2px 0 0 var(--status-falta);
+  border-radius: 0 var(--raio-1) var(--raio-1) 0;
+}
+/* A marca abraça o número, não a coluna: encostada à direita, onde o número já estava. */
+.fin-numero > strong.devendo { align-self: flex-end; }
+.fin-linha-valor.devendo { justify-self: end; }
 
 /* ------------------------------------------------------------------ o extrato */
 
@@ -271,4 +280,31 @@
   .fin-fechamento { grid-template-columns: minmax(0, 1fr) auto; }
   .fin-vale .fin-ajuda,
   .fin-fechamento .fin-ajuda { grid-column: 1 / -1; }
+}
+
+/* ------------------------------------------------------------------ RT-INF-016
+ *
+ * A lista é UMA superfície: uma borda em volta da lista inteira e uma régua fina entre as
+ * linhas — forma de tabela, não de baralho. Cada linha com a própria borda, canto e vão era
+ * a pilha de cartões arredondados que mais denuncia interface gerada sem decisão.
+ * A linha perde a moldura; um editor aberto dentro da lista mantém a dele.
+ */
+.fin-lista,
+.fin-vales,
+.fin-fechamentos {
+  gap: 0;
+  overflow: hidden;
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+.fin-lista > li + li,
+.fin-vales > li + li,
+.fin-fechamentos > li + li { border-top: 1px solid var(--regua); }
+.fin-lista .fin-pessoa,
+.fin-vales .fin-vale,
+.fin-fechamentos .fin-fechamento {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }

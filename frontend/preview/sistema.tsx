@@ -17,7 +17,8 @@ import { MemoryRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { Casca } from '../src/layout/Casca';
 import { Clientes } from '../src/telas/clientes/Clientes';
 import { Configuracao } from '../src/telas/config/Configuracao';
-import { SemTela } from '../src/telas/SemTela';
+import { Agenda } from '../src/telas/agenda/Agenda';
+import { RESPOSTA_DA_AGENDA, VAGAS } from './dados-da-agenda';
 import '../src/estilo/global.css';
 
 const CAPACIDADES = {
@@ -68,6 +69,8 @@ const CLIENTES = [
 
 function responder(url: string, metodo: string): unknown {
   if (url.includes('/me/capabilities')) return CAPACIDADES;
+  if (url.includes('/vagas-abertas')) return VAGAS;
+  if (url.includes('/v1/agendamentos/dia')) return RESPOSTA_DA_AGENDA;
   if (url.includes('/v1/configuracao')) return CONFIGURACAO;
   if (url.includes('/consentimentos')) return [];
   // ANTES do ramo de busca: `possiveis-duplicados` também casa com `/v1/clientes`, e
@@ -147,24 +150,23 @@ function temPreviaPropria(tela: string, previa: string) {
 createRoot(document.getElementById('raiz')!).render(
   <StrictMode>
     <QueryClientProvider client={cliente}>
-      <MemoryRouter initialEntries={['/clientes']}>
+      <MemoryRouter initialEntries={[new URLSearchParams(location.search).get('tela') ?? '/agenda']}>
         <Routes>
           {/*
-            ATENÇÃO: esta prévia é da CASCA, não do sistema.
-            Agenda e Atendimento entram aqui como "Em breve" de propósito — elas têm prévia
-            própria (`previa-agenda`, `previa-comandas`), e carregá-las aqui faria esta página
-            demorar para mostrar o que ela existe para mostrar: menu, topo e busca.
-            No aplicativo de verdade (`src/App.tsx`) as duas são telas completas; só `/estoque`
-            e `/financeiro` mostram "Em breve".
+            A casca com as telas reais que têm dados falsos aqui: agenda, clientes e
+            configurações. As outras apontam para a prévia própria. `?tela=/clientes` abre
+            direto numa delas.
           */}
           <Route element={<Casca />}>
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/config" element={<Configuracao />} />
-            <Route path="/estoque" element={<SemTela area="estoque" />} />
-            <Route path="/financeiro" element={<SemTela area="financeiro" />} />
-            <Route path="/agenda" element={temPreviaPropria('Agenda', 'agenda')} />
+            {/* RT-INF-013 — a agenda entra de verdade: é a tela que mais se olha, e a
+                moldura só se julga com ela dentro. */}
+            <Route path="/agenda" element={<Agenda />} />
+            <Route path="/estoque" element={temPreviaPropria('Estoque', 'estoque')} />
+            <Route path="/financeiro" element={temPreviaPropria('Financeiro', 'financeiro')} />
             <Route path="/comandas" element={temPreviaPropria('Atendimento', 'comandas')} />
-            <Route path="*" element={<Navigate to="/clientes" replace />} />
+            <Route path="*" element={<Navigate to="/agenda" replace />} />
           </Route>
         </Routes>
       </MemoryRouter>

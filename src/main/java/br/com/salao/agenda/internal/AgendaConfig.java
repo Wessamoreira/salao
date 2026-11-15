@@ -7,7 +7,9 @@ import br.com.salao.agenda.internal.application.CalculoDeCandidatas;
 import br.com.salao.agenda.internal.application.CancelarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConfirmarAgendamentoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarAgendamentoUseCase;
+import br.com.salao.agenda.internal.application.CalculoDeDisponibilidade;
 import br.com.salao.agenda.internal.application.ConsultarDisponibilidadeUseCase;
+import br.com.salao.agenda.internal.application.HorariosDoBalcaoUseCase;
 import br.com.salao.agenda.internal.application.ConsultarVagasAbertasUseCase;
 import br.com.salao.agenda.internal.application.EnfileirarDiaDaSerieUseCase;
 import br.com.salao.agenda.internal.application.EmpurrarAgendaUseCase;
@@ -16,6 +18,7 @@ import br.com.salao.agenda.internal.application.CriarRecorrenciaUseCase;
 import br.com.salao.agenda.internal.application.EncerrarRecorrenciaUseCase;
 import br.com.salao.agenda.internal.application.FerramentaAgendar;
 import br.com.salao.agenda.internal.application.FerramentaConsultarDisponibilidade;
+import br.com.salao.agenda.internal.application.FerramentaHorariosDoBalcao;
 import br.com.salao.agenda.internal.application.PainelDoBalcaoUseCase;
 import br.com.salao.agenda.internal.application.RegistroDaSerie;
 import br.com.salao.agenda.internal.application.ReagendarUseCase;
@@ -61,12 +64,25 @@ public class AgendaConfig {
         return useCase;
     }
 
+    /** ADR-0011 — a conta, compartilhada pelo caso de uso da equipe e pelo do balcão. */
     @Bean
-    public ConsultarDisponibilidadeUseCase consultarDisponibilidadeUseCase(
+    public CalculoDeDisponibilidade calculoDeDisponibilidade(
             ProfissionalApi equipe, ServicoApi catalogo, RecursoApi recursos,
             EstabelecimentoApi estabelecimentos, AgendaJdbc agenda, Relogio relogio) {
-        return new ConsultarDisponibilidadeUseCase(equipe, catalogo, recursos, estabelecimentos,
+        return new CalculoDeDisponibilidade(equipe, catalogo, recursos, estabelecimentos,
                 agenda, relogio);
+    }
+
+    @Bean
+    public ConsultarDisponibilidadeUseCase consultarDisponibilidadeUseCase(
+            CalculoDeDisponibilidade calculo) {
+        return new ConsultarDisponibilidadeUseCase(calculo);
+    }
+
+    /** RT-CNV-010 / ADR-0011 — público por desenho: ver o javadoc da classe. */
+    @Bean
+    public HorariosDoBalcaoUseCase horariosDoBalcaoUseCase(CalculoDeDisponibilidade calculo) {
+        return new HorariosDoBalcaoUseCase(calculo);
     }
 
     // ------------------------------------------------------------------ RT-AGD-002
@@ -257,6 +273,14 @@ public class AgendaConfig {
             ConsultarDisponibilidadeUseCase consultar, EstabelecimentoApi estabelecimentos,
             ObjectMapper json) {
         return new FerramentaConsultarDisponibilidade(consultar, estabelecimentos, json);
+    }
+
+    /** RT-CNV-010 — a mesma pergunta, para quem não é da equipe. Ver ADR-0011. */
+    @Bean
+    public FerramentaHorariosDoBalcao ferramentaHorariosDoBalcao(
+            HorariosDoBalcaoUseCase horarios, ServicoApi catalogo,
+            EstabelecimentoApi estabelecimentos, ObjectMapper json) {
+        return new FerramentaHorariosDoBalcao(horarios, catalogo, estabelecimentos, json);
     }
 
     /** Marcar pelo agente: simula para o modelo, grava só com a confirmação da pessoa. */

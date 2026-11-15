@@ -10,10 +10,12 @@ import br.com.salao.conversacional.internal.application.Orcamento;
 import br.com.salao.conversacional.internal.application.Orquestrador;
 import br.com.salao.conversacional.internal.application.PrecoDoModelo;
 import br.com.salao.conversacional.internal.application.ProporIntencao;
+import br.com.salao.conversacional.internal.application.QuemFala;
 import br.com.salao.conversacional.internal.application.TransacaoSomenteLeitura;
 import br.com.salao.conversacional.internal.domain.CodigoDeConfirmacao;
 import br.com.salao.iam.api.EstabelecimentoApi;
 import br.com.salao.iam.api.Identificacao;
+import br.com.salao.iam.api.MotivoDaRecusa;
 import br.com.salao.iam.api.UsuarioEfetivo;
 import br.com.salao.iam.api.UsuarioEfetivoApi;
 import br.com.salao.shared.agente.FerramentaDeEscrita;
@@ -193,6 +195,7 @@ public class ProcessadorDeInteracoes {
     private final ConsumoDeIaJdbc consumo;
     private final LimitePorTelefone limite;
     private final BigDecimal tetoDiario;
+    private final BigDecimal tetoDoVisitante;
     private final Duration janela;
     private final Duration tetoDeEspera;
     private final ProporIntencao propor;
@@ -208,6 +211,7 @@ public class ProcessadorDeInteracoes {
                                    Orquestrador orquestrador, ModeloDeLinguagem modelo,
                                    PrecoDoModelo preco, ConsumoDeIaJdbc consumo,
                                    LimitePorTelefone limite, BigDecimal tetoDiario,
+                                   BigDecimal tetoDoVisitante,
                                    Duration janela, Duration tetoDeEspera,
                                    ProporIntencao propor, ConfirmarPeloCodigo confirmar,
                                    DecidirAceite decidirAceite, ConcluirExecucao concluir,
@@ -223,6 +227,7 @@ public class ProcessadorDeInteracoes {
         this.consumo = consumo;
         this.limite = limite;
         this.tetoDiario = tetoDiario;
+        this.tetoDoVisitante = tetoDoVisitante;
         this.janela = janela;
         this.tetoDeEspera = tetoDeEspera;
         this.propor = propor;
@@ -376,8 +381,16 @@ public class ProcessadorDeInteracoes {
         // entre elas, a segunda viria NaoIdentificado e o cast estouraria.
         var identificacao = usuarios.identificarPorTelefone(r.telefone());
         if (identificacao instanceof Identificacao.NaoIdentificado(var motivo)) {
-            concluir.recusada(rajada.alvo(), motivo.name(), null, null, agora);
-            contar("recusada_identidade");
+            // RT-CNV-010 — só o número DESCONHECIDO vira conversa de visitante. Conta inativa,
+            // bloqueada, de perfil que exige segundo fator ou de dispositivo é da EQUIPE, e o canal
+            // a recusa de propósito (RN-IAM-020): deixá-la cair aqui daria a uma conta bloqueada um
+            // caminho de volta, estreito mas real.
+            if (motivo != MotivoDaRecusa.TELEFONE_DESCONHECIDO) {
+                concluir.recusada(rajada.alvo(), motivo.name(), null, null, agora);
+                contar("recusada_identidade");
+                return;
+            }
+            conduzirVisitante(rajada, salao, agora);
             return;
         }
         UsuarioEfetivo usuario = ((Identificacao.Identificado) identificacao).usuario();
@@ -444,8 +457,9 @@ public class ProcessadorDeInteracoes {
             }
         };
 
-        var resultado = orquestrador.conduzir(new Orquestrador.Conversa(usuario, nomeDoSalao,
-                agoraNoSalao, rajada.entrada(), historico), orcamento, executor);
+        var resultado = orquestrador.conduzir(new Orquestrador.Conversa(
+                new QuemFala.DaEquipe(usuario), nomeDoSalao, agoraNoSalao, rajada.entrada(),
+                historico), orcamento, executor);
 
         if (resultado.desfecho() == Orquestrador.Desfecho.TETO_ATINGIDO) {
             concluir.recusada(rajada.alvo(), "TETO_DE_CUSTO", usuario.usuarioId(), resultado,
@@ -456,6 +470,81 @@ public class ProcessadorDeInteracoes {
         }
         concluir.conduzida(rajada.alvo(), r.telefone(), usuario.usuarioId(), resultado, relogio.agora());
         contar("concluida");
+    }
+
+    /**
+     * RT-CNV-010 / ADR-0011 — a conversa de quem não é da equipe.
+     *
+     * <p>Três coisas a distinguem da conversa da equipe, e as três são estruturais:
+     *
+     * <ul>
+     *   <li><b>sem contexto de segurança</b> — nenhum {@code emNomeDe}, porque não há em nome de
+     *       quem. As ferramentas do balcão chamam casos de uso públicos por desenho, que não
+     *       consultam o que não é do balcão;
+     *   <li><b>sem histórico</b> — o histórico existe para a equipe retomar um assunto, e aqui ele
+     *       carregaria a conversa de um número para a volta seguinte sem que ninguém tenha decidido
+     *       por quanto tempo guardar a conversa de uma cliente;
+     *   <li><b>pote de custo próprio</b> (RN-CNV-035) — estourado, ela para e a equipe continua.
+     * </ul>
+     *
+     * <p>{@code propor} não é alcançável: o catálogo da visitante não tem ferramenta de escrita.
+     * Se um dia tiver, este método falha alto em vez de gravar.
+     */
+    private void conduzirVisitante(Rajada rajada, UUID salao, Instant agora) {
+        Reservada r = rajada.quemResponde();
+        if (!limite.consumir(salao, r.telefone())) {
+            concluir.recusada(rajada.alvo(), "LIMITE_POR_TELEFONE", null, null, agora);
+            contar("visitante_recusada_limite");
+            return;
+        }
+
+        ZoneId fuso = estabelecimentos.fusoDe(salao);
+        LocalDate dia = relogio.hojeEm(fuso);
+        String nomeDoSalao = estabelecimentos.configuracao(salao).map(c -> c.nome()).orElse("");
+        String agoraNoSalao = agora.atZone(fuso).format(FORMATO_DO_AGORA);
+
+        Orcamento orcamento = new Orcamento() {
+            @Override
+            public boolean reservar(BigDecimal piorCaso) {
+                return consumo.reservarParaVisitante(salao, dia, piorCaso, tetoDiario,
+                        tetoDoVisitante);
+            }
+
+            @Override
+            public void liquidar(BigDecimal reservado, BigDecimal real, int entrada, int saida) {
+                consumo.liquidarDoVisitante(salao, dia, reservado, real, entrada, saida);
+            }
+        };
+
+        ExecutorDeFerramenta executor = new ExecutorDeFerramenta() {
+            @Override
+            public JsonNode executar(FerramentaDeLeitura ferramenta, JsonNode argumentos) {
+                // Transação somente leitura, e nada mais: não há identidade para assumir, e o que
+                // impede esta chamada de ir longe demais é a forma do caso de uso que ela chama.
+                return somenteLeitura.executar(() -> ferramenta.executar(argumentos));
+            }
+
+            @Override
+            public String propor(FerramentaDeEscrita ferramenta, JsonNode argumentos) {
+                throw new IllegalStateException(
+                        "ferramenta de escrita oferecida a quem não é da equipe: "
+                                + ferramenta.nome());
+            }
+        };
+
+        var resultado = orquestrador.conduzir(new Orquestrador.Conversa(new QuemFala.Visitante(),
+                nomeDoSalao, agoraNoSalao, rajada.entrada(), List.of()), orcamento, executor);
+
+        if (resultado.desfecho() == Orquestrador.Desfecho.TETO_ATINGIDO) {
+            // Sem resposta a ela, de propósito: "acabou a cota" é assunto do salão, não dela — e
+            // dizê-lo convidaria quem quisesse gastar a cota a conferir se conseguiu.
+            concluir.recusada(rajada.alvo(), "TETO_DO_VISITANTE", null, resultado, relogio.agora());
+            contar("visitante_recusada_teto");
+            log.warn("Salão {} atingiu o teto diário de custo com desconhecidos", salao);
+            return;
+        }
+        concluir.deVisitante(rajada.alvo(), r.telefone(), resultado, relogio.agora());
+        contar("visitante_concluida");
     }
 
     /**

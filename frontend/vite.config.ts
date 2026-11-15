@@ -23,17 +23,24 @@ function pwaDoSalao(): Plugin {
     generateBundle(_opcoes, bundle) {
       const gerados = Object.values(bundle).map((arquivo) => `/${arquivo.fileName}`).sort();
       const appShell = [...new Set([
-        '/', '/index.html', '/manifest.webmanifest', '/pwa-icon.svg',
-        '/pwa-icon-192.png', '/pwa-icon-512.png', ...gerados,
+        '/', '/index.html', '/manifest.webmanifest', '/favicon-48.png',
+        '/pwa-icon-192.png', '/pwa-icon-512.png', '/pwa-maskable-512.png',
+        '/apple-touch-icon.png', ...gerados,
       ])];
       const versao = createHash('sha256').update(appShell.join('|')).digest('hex').slice(0, 12);
       const fonte = `
 const CACHE = 'salao-shell-${versao}';
 const APP_SHELL = ${JSON.stringify(appShell)};
 
+// Sem skipWaiting aqui (RT-INF-013, R-UX-23): assumir sozinha apagaria o cache da versão
+// que a aba aberta ainda está usando. A versão nova espera o clique em "Atualizar".
+// Na primeira instalação não há quem esperar, e ela ativa direto.
 self.addEventListener('install', (evento) => {
   evento.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(APP_SHELL)));
-  self.skipWaiting();
+});
+
+self.addEventListener('message', (evento) => {
+  if (evento.data && evento.data.tipo === 'atualizar') self.skipWaiting();
 });
 
 self.addEventListener('activate', (evento) => {
@@ -97,6 +104,14 @@ export default defineConfig({
     },
   },
   test: {
+    /*
+     * 15s por teste, não os 5s do padrão. Com o servidor da prévia e o Chrome abertos na mesma
+     * máquina, 35 testes estouraram os 5s em 15/11/2026 e passaram todos com a máquina livre —
+     * nenhum por asserção. É o mesmo motivo do `asyncUtilTimeout` em `teste/preparo.ts`: teste
+     * instável ensina a ignorar vermelho. O prazo só decide quando desistir; quem passa, passa
+     * na mesma velocidade.
+     */
+    testTimeout: 15_000,
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/teste/preparo.ts',

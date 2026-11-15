@@ -5,6 +5,7 @@ import { ErroDaApi, api } from '../api/http';
 import { chaveDasCapacidades, useCapacidades } from '../api/capacidades';
 import { definirTokenAtual } from '../sessao/sessao';
 import { Autenticacao } from './Autenticacao';
+import { QrCode } from '../layout/QrCode';
 
 interface Inscricao { segredo: string; uriOtpauth: string }
 interface Confirmacao { codigos: string[]; aviso: string; sessao: { tokenDeAcesso: string } }
@@ -57,6 +58,7 @@ function Inscrever() {
   const [codigo, definirCodigo] = useState('');
   const [codigos, definirCodigos] = useState<string[] | null>(null);
   const [erro, definirErro] = useState<string | null>(null);
+  const [copiada, definirCopiada] = useState(false);
 
   async function comecar() {
     definirInscricao(await api<Inscricao>('/v1/auth/mfa/inscrever', { method: 'POST' }));
@@ -105,8 +107,29 @@ function Inscrever() {
 
   return (
     <Moldura titulo="Ative o segundo fator"
-      descricao="No aplicativo autenticador, use este código de configuração. Depois informe os seis dígitos que ele mostrar.">
-      <div className="auth-segredo">{inscricao.segredo}</div>
+      descricao="Escaneie o código com o aplicativo autenticador do celular. Depois informe os seis dígitos que ele mostrar.">
+      {/*
+        RT-INF-017 — QR em vez de 32 caracteres para digitar. Gerado aqui, no navegador: o
+        conteúdo do QR é o segredo do segundo fator, e nunca vai a um serviço de fora.
+      */}
+      <div className="auth-qr">
+        <QrCode texto={inscricao.uriOtpauth} tamanho={176}
+          rotulo="Código QR para configurar o aplicativo autenticador" />
+      </div>
+      {/* No celular não dá para escanear a própria tela: o link abre o autenticador direto. */}
+      <a className="auth-abrir-autenticador" href={inscricao.uriOtpauth}>
+        Abrir no aplicativo autenticador
+      </a>
+      <details className="auth-chave">
+        <summary>Não consegue escanear? Use a chave</summary>
+        {/* Em grupos de quatro: é como os autenticadores mostram, e como se confere de olho. */}
+        <p className="auth-segredo">{inscricao.segredo.match(/.{1,4}/g)?.join(' ')}</p>
+        <button type="button" className="auth-copiar" onClick={() => {
+          void navigator.clipboard?.writeText(inscricao.segredo).then(() => definirCopiada(true));
+        }}>
+          {copiada ? 'Chave copiada' : 'Copiar a chave'}
+        </button>
+      </details>
       <CampoDeCodigo valor={codigo} aoMudar={definirCodigo} aoConfirmar={confirmar} />
       {erro && <Alerta>{erro}</Alerta>}
       <Botao onClick={confirmar}>Confirmar</Botao>

@@ -8,40 +8,51 @@
  * Todo valor vem dos tokens. Número solto aqui é bug de rigor.
  */
 
+/* A tela que se desenha inteira precisa de altura definida para as colunas rolarem sozinhas. */
+.pagina:has(> .pagina-corpo > .cli-tela) { height: 100%; }
+
+/*
+ * RT-CLI-008 — duas colunas FIXAS desde o início: lista à esquerda, ficha à direita. Nada muda
+ * de lugar no clique — só o conteúdo da direita troca. (Antes a busca saía do centro para a
+ * esquerda ao abrir uma ficha, e a tela inteira pulava no momento da escolha.)
+ */
 .cli-tela {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  gap: 0 var(--e-8);
+  width: 100%;
+  max-width: 1200px;
   height: 100%;
-  padding: var(--e-6);
-  align-content: start;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--e-4) var(--e-6);
+  margin-inline: auto;
+  padding: var(--e-6) var(--e-6) 0;
 }
 
-/*
- * PROCURANDO: a busca é a página, numa coluna centrada.
- *
- * Reservar a coluna da ficha antes de existir ficha deixava setecentos pixels de nada ao lado
- * de um campo encolhido no canto — a forma exata de uma tela inacabada. Centrada, a mesma
- * largura serve ao campo, à leitura do termo e aos resultados, e a margem vira composição em
- * vez de sobra.
- *
- * 640px não é gosto: é onde um nome de cliente e um telefone cabem numa linha confortável, e
- * é a mesma medida de leitura que a ficha usa do outro lado (620px + a barra de seleção).
- */
-.cli-tela.procurando {
-  grid-template-columns: minmax(0, 640px);
-  justify-content: center;
+.cli-painel {
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: var(--e-6);
 }
 
-/* LENDO: o assunto virou a ficha, e a busca fica à mão na coluna estreita. */
-.cli-tela.lendo { grid-template-columns: minmax(280px, 360px) 1fr; }
+.cli-painel-lista { grid-column: 1; grid-row: 2; }
+.cli-painel-ficha { grid-column: 2; grid-row: 1 / -1; }
 
-/*
- * A dica fica ALINHADA COM O CAMPO, na largura dele. Ela explica o campo; centralizada
- * na área de trabalho, soltava-se dele e passava a parecer resultado de uma busca que
- * ninguém fez. O estado vazio de verdade — "ninguém com esse nome" — usa a moldura
- * compartilhada e fica centralizado, porque aí o assunto é a área toda.
- */
+/* Sem ficha aberta, a coluna da direita diz o que vai aparecer nela — e não fica um vão. */
+.cli-sem-ficha {
+  min-height: 240px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--e-3);
+  padding: var(--e-8);
+  color: var(--tinta-fraca);
+  border: 1px dashed var(--regua-forte);
+  border-radius: var(--raio-2);
+  text-align: center;
+}
+.cli-sem-ficha p { margin: 0; font-size: var(--t-14); }
+
 .cli-dica {
   max-width: 520px;
   margin-top: var(--e-2);
@@ -57,21 +68,15 @@
   font-weight: var(--p-forte);
 }
 
+/* A busca mora na coluna da lista — ela filtra a lista —, e a ficha sobe até o topo ao lado. */
 .cli-cabecalho {
-  grid-column: 1 / -1;
-  padding-bottom: var(--e-6);
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e-2);
 }
-/*
- * Procurando, o bloco começa abaixo da borda, não colado nela.
- *
- * Não é centralização vertical: o bloco cresce quando os resultados chegam, e centrar faria
- * o campo subir e descer a cada letra digitada. É um respiro fixo, proporcional à altura da
- * janela, que põe a busca na linha em que o olho já está.
- */
-.cli-tela.procurando .cli-cabecalho { padding-top: clamp(var(--e-2), 7vh, var(--e-10)); }
-/* Lendo, o campo volta ao tamanho da coluna da esquerda: ele continua à mão, sem competir
-   com a ficha, que é o que a pessoa está lendo. */
-.cli-tela.lendo .cli-busca-caixa { max-width: 360px; }
+
 
 /* ---------------------------------------------------------------------------
  * A busca é a tela, não um acessório de canto.
@@ -84,16 +89,21 @@
   display: flex;
   align-items: center;
   gap: var(--e-3);
-  padding: var(--e-3) var(--e-4);
+  min-height: 52px;
+  padding: 0 var(--e-4);
   color: var(--tinta-fraca);
   background: var(--papel);
   border: 1px solid var(--regua-forte);
   border-radius: var(--raio-2);
-  transition: border-color var(--mov-imediato) var(--mov-curva);
+  transition: border-color var(--mov-imediato) var(--mov-curva),
+    box-shadow var(--mov-imediato) var(--mov-curva);
 }
 /* O foco fica na CAIXA: com o anel no input de dentro, o contorno apareceria por dentro da
    moldura, meio pixel fora de lugar, que é o tipo de detalhe que faz uma tela parecer torta. */
-.cli-busca-caixa:focus-within { border-color: var(--foco); }
+.cli-busca-caixa:focus-within {
+  border-color: var(--foco);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--foco) 14%, transparent);
+}
 .cli-busca-caixa > svg { flex: 0 0 20px; }
 
 .cli-busca {
@@ -102,10 +112,13 @@
   min-width: 0;
   padding: 0;
   font-family: inherit;
-  font-size: var(--t-20);
+  font-size: var(--t-16);
   color: var(--tinta);
   background: transparent;
   border: 0;
+  /* A caixa desenha a borda e o foco; o controle padrão (RT-INF-017) sobraria por dentro. */
+  min-height: 0;
+  box-shadow: none;
 }
 .cli-busca:focus-visible { outline: none; }
 /* Medido: --tinta-tenue dá 2.36 e é ilegível de fato. O texto do placeholder aqui
@@ -182,60 +195,70 @@
   overflow: hidden;
 }
 
+/*
+ * A linha com rosto (RT-CLI-008): iniciais num círculo neutro — cor é de status, não de
+ * pessoa —, o nome como a recepção chama e, numa linha só, o nome de documento e o telefone.
+ * Selecionada: fundo e barra de tinta, como em todo o sistema. Sem sublinhado: lia como link.
+ */
 .cli-item {
-  display: block;
   width: 100%;
-  padding: var(--e-3) var(--e-3);
-  font: inherit;
-  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: var(--e-3);
+  padding: var(--e-3) var(--e-4) var(--e-3) var(--e-3);
   color: inherit;
   background: transparent;
   border: 0;
   border-bottom: 1px solid var(--regua);
-  border-left: 3px solid transparent;
   border-radius: 0;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
   transition: background var(--mov-imediato) var(--mov-curva);
 }
-/*
- * Hover e seleção mudam a BARRA, não o fundo.
- *
- * Trocar o fundo mudaria o contraste do texto a cada estado — e o estado de hover
- * cairia num par pior que o de repouso. Forma em vez de preenchimento também é o
- * que o sistema pede: cor só onde carrega informação.
- */
-.cli-item:hover { border-left-color: var(--regua-forte); }
-.cli-item[aria-current='true'] { border-left-color: var(--tinta); }
-.cli-item[aria-current='true'] .cli-item-nome { text-decoration: underline;
-  text-decoration-thickness: 1px; text-underline-offset: 3px; }
-.cli-item:last-child { border-bottom: 0; }
-
-.cli-item-nome { font-size: var(--t-14); font-weight: 600; }
-/* O nome de documento, quando difere de como a pessoa é chamada. */
-.cli-item-formal { font-size: var(--t-12); color: var(--tinta-fraca); }
-/*
- * --tinta-fraca, e NÃO --tinta-tenue.
- *
- * O sistema permite o tênue só em texto não essencial, "nunca em informação que o
- * usuário precise ler para decidir algo" — e este número é exatamente o que a
- * recepção confere contra o identificador de chamadas. É a informação mais
- * essencial da tela, e a primeira versão a pintou com a cor reservada a metadado.
- */
-.cli-item-fone {
-  margin-top: var(--e-1);
-  font-size: var(--t-12);
-  color: var(--tinta-fraca);
-  font-variant-numeric: tabular-nums;
+.cli-item:hover { background: var(--papel-fundo); }
+.cli-item[aria-current='true'] {
+  background: var(--papel-afundado);
+  box-shadow: inset 2px 0 0 var(--tinta);
 }
-/* Os dígitos que casaram com o que foi digitado: é neles que o olho confere
-   contra o identificador de chamadas. Peso, não cor — o sistema reserva cor
-   para status. */
-.cli-item-fone b { font-weight: 700; color: var(--tinta); }
+.cli-lista > li:last-child .cli-item { border-bottom: 0; }
 
-/* ---------------------------------------------------------------------------
- * Vazio — o estado PADRÃO desta tela, não uma exceção.
- * Não existe endpoint que liste todo mundo (RT-CLI-002), então a tela abre assim.
- * ------------------------------------------------------------------------- */
+.cli-avatar {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  display: grid;
+  place-items: center;
+  color: var(--tinta);
+  background: var(--papel-afundado);
+  border-radius: 50%;
+  font-size: var(--t-12);
+  font-weight: var(--p-forte);
+  letter-spacing: 0.02em;
+}
+.cli-item[aria-current='true'] .cli-avatar { color: var(--papel); background: var(--tinta); }
+.cli-avatar-grande { width: 52px; height: 52px; flex-basis: 52px; font-size: var(--t-16); }
+
+.cli-item-texto { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cli-item-nome {
+  overflow: hidden;
+  font-size: var(--t-14);
+  font-weight: var(--p-forte);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.cli-item-linha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--e-2);
+  color: var(--tinta-fraca);
+  font-size: var(--t-12);
+}
+.cli-item-formal + .cli-item-fone::before { content: '·'; margin-right: var(--e-2); }
+.cli-item-fone { font-variant-numeric: tabular-nums; }
+/* O trecho que casou com os dígitos digitados: peso, não cor — cor é de status. */
+.cli-item-fone b { font-weight: var(--p-pesado); color: var(--tinta); }
+
 .cli-vazio {
   padding: var(--e-8) var(--e-3);
   font-size: var(--t-14);
@@ -264,7 +287,8 @@ kbd {
 }
 /* Linha longa cansa mesmo quando há espaço sobrando: o par nome-à-esquerda /
    estado-à-direita do consentimento obrigava o olho a atravessar a tela inteira. */
-.cli-ficha > * { max-width: 620px; }
+/* A coluna da ficha já tem medida de leitura (~750px): o limite de 620px, de quando a ficha
+   era mais larga, cortava as réguas antes da borda do cartão. */
 
 /*
  * A fonte operacional, e não a serifada de identidade.
@@ -278,18 +302,18 @@ kbd {
  */
 /* O cabeçalho ocupa a largura do cartão, e não a medida de leitura: é onde mora a saída,
    e uma saída no meio do cartão parece um × perdido. */
-.cli-ficha > .cli-ficha-topo { max-width: none; }
-.cli-ficha-topo {
+.cli-ficha > .cli-ficha-topo {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--e-4);
+  padding-bottom: var(--e-5);
+  border-bottom: 1px solid var(--regua);
 }
-/* Fechar é saída, não ação: sem moldura, e só ganha peso quando o ponteiro chega. */
+.cli-ficha-quem { min-width: 0; flex: 1; }
 .cli-fechar {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+  width: var(--controle);
+  height: var(--controle);
   display: grid;
   place-items: center;
   padding: 0;
@@ -309,7 +333,8 @@ kbd {
   line-height: 1.2;
   letter-spacing: -0.005em;
 }
-.cli-ficha-formal { margin-top: var(--e-1); font-size: var(--t-12); color: var(--tinta-fraca); }
+.cli-ficha-nome { margin: 0; }
+.cli-ficha-formal { margin: var(--e-1) 0 0; font-size: var(--t-14); color: var(--tinta-fraca); }
 
 .cli-dados {
   display: grid;
@@ -319,10 +344,9 @@ kbd {
   font-size: var(--t-14);
 }
 .cli-dados dt {
-  font-size: var(--t-10);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  /* Caixa normal (RT-CLI-008): o versalete de 10px gritava mais que o dado que nomeia. */
+  font-size: var(--t-12);
+  font-weight: var(--p-medio);
   /* --tinta-fraca, não --tinta-tenue: o sistema declara que o tênue não passa em
      AA no tamanho de rótulo, e foi esse exato erro que a revisão pegou antes. */
   color: var(--tinta-fraca);
@@ -398,6 +422,11 @@ kbd {
   border: 0;
   border-bottom: 1px solid var(--regua-forte);
   cursor: pointer;
+  min-height: 0;
+  padding: 0;
+  border-radius: 0;
+  background-image: none;
+  appearance: auto;
 }
 
 /* ---------------------------------------------------------------------------
@@ -430,17 +459,27 @@ kbd {
 .cli-acao-grave { color: var(--tinta-fraca); }
 
 
-@media (max-width: 900px) {
+/*
+ * Abaixo de 1024px: uma coluna. Com a ficha aberta, só a ficha — como um app de contatos; o
+ * fechar (e o Esc, e o voltar do celular) devolve a lista.
+ */
+@media (max-width: 1024px) {
+  .pagina:has(> .pagina-corpo > .cli-tela) { height: auto; }
   .cli-tela {
-    grid-template-columns: 1fr;
-    gap: var(--e-6) 0;
     height: auto;
-    min-height: 100%;
-    padding: var(--e-4);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    padding: var(--e-4) var(--e-4) 0;
   }
-  .cli-cabecalho { padding-bottom: var(--e-4); }
-  .cli-busca { max-width: none; min-height: 46px; font-size: var(--t-16); }
+  .cli-painel { overflow: visible; }
+  .cli-cabecalho, .cli-painel-lista, .cli-painel-ficha { grid-column: 1; grid-row: auto; }
+  .cli-tela.lendo .cli-painel-lista,
+  .cli-tela:not(.lendo) .cli-sem-ficha { display: none; }
   .cli-ficha { padding: var(--e-4); }
+  /* O nome não divide linha com o botão: o fechar fica ao lado do nome, e "Corrigir ficha"
+     desce inteiro para a linha de baixo, no alcance do polegar. */
+  .cli-ficha-topo { flex-wrap: wrap; }
+  .cli-ficha-topo .pagina-acao { order: 4; flex-basis: 100%; justify-content: center; }
 }
 
 @media (max-width: 480px) {

@@ -117,17 +117,6 @@
 }
 .eqp-campo > span { color: var(--tinta-fraca); }
 .eqp-campo-largo { flex: 1 1 240px; min-width: 0; }
-.eqp-campo input,
-.eqp-campo select {
-  min-height: 32px;
-  padding: 0 var(--e-2);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-2);
-  font: inherit;
-  font-size: var(--t-14);
-}
 .eqp-campo input[type='number'] { width: 76px; font-variant-numeric: tabular-nums; }
 
 .eqp-com-sufixo { display: flex; align-items: center; gap: var(--e-2); }
@@ -173,15 +162,9 @@
   gap: var(--e-1);
   font-variant-numeric: tabular-nums;
 }
+/* RT-INF-017: o desenho vem do controle padrão (componentes.css); aqui só o que é desta tela. */
 .eqp-faixa input {
-  min-height: 28px;
-  padding: 0 var(--e-1);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-1);
-  font: inherit;
-  font-size: var(--t-12);
+  padding: 0 var(--e-2);
 }
 .eqp-tirar {
   width: 22px;
@@ -227,14 +210,10 @@
   color: var(--tinta-fraca);
   font-size: var(--t-12);
 }
+/* RT-INF-017: o desenho vem do controle padrão (componentes.css); aqui só o que é desta tela. */
 .eqp-duracao input {
   width: 68px;
-  min-height: 28px;
-  padding: 0 var(--e-1);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-1);
-  font: inherit;
-  font-size: var(--t-12);
+  padding: 0 var(--e-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -274,4 +253,28 @@
   .eqp-pessoa { grid-template-columns: auto minmax(0, 1fr); }
   .eqp-jornada-resumo,
   .eqp-acoes { grid-column: 2; }
+}
+
+/* ------------------------------------------------------------------ RT-INF-016
+ *
+ * A lista é UMA superfície: uma borda em volta da lista inteira e uma régua fina entre as
+ * linhas — forma de tabela, não de baralho. Cada linha com a própria borda, canto e vão era
+ * a pilha de cartões arredondados que mais denuncia interface gerada sem decisão.
+ * A linha perde a moldura; um editor aberto dentro da lista mantém a dele.
+ */
+.eqp-lista,
+.eqp-bloqueios {
+  gap: 0;
+  overflow: hidden;
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+.eqp-lista > li + li,
+.eqp-bloqueios > li + li { border-top: 1px solid var(--regua); }
+.eqp-lista .eqp-pessoa,
+.eqp-bloqueios > li {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }

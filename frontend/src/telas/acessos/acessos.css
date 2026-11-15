@@ -195,16 +195,6 @@
 /* A frase tem vinte e poucos caracteres: num campo de tela inteira, "Gerar outra" ficaria a meio
    metro do que ele gera. */
 .acs-campo-senha { flex: 0 1 340px; min-width: 0; }
-.acs-campo input {
-  min-height: 32px;
-  padding: 0 var(--e-2);
-  color: var(--tinta);
-  background: var(--papel);
-  border: 1px solid var(--regua-forte);
-  border-radius: var(--raio-2);
-  font: inherit;
-  font-size: var(--t-14);
-}
 
 .acs-acoes-bloco {
   display: flex;
@@ -318,4 +308,25 @@
   .acs-perfil,
   .acs-situacao { grid-column: 2; }
   .acs-acoes { grid-column: 3; grid-row: 1; }
+}
+
+/* ------------------------------------------------------------------ RT-INF-016
+ *
+ * A lista é UMA superfície: uma borda em volta da lista inteira e uma régua fina entre as
+ * linhas — forma de tabela, não de baralho. Cada linha com a própria borda, canto e vão era
+ * a pilha de cartões arredondados que mais denuncia interface gerada sem decisão.
+ * A linha perde a moldura; um editor aberto dentro da lista mantém a dele.
+ */
+.acs-lista {
+  gap: 0;
+  overflow: hidden;
+  background: var(--papel);
+  border: 1px solid var(--regua-forte);
+  border-radius: var(--raio-2);
+}
+.acs-lista > li + li { border-top: 1px solid var(--regua); }
+.acs-lista .acs-pessoa {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
 }

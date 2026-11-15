@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { deveSerAcessivel } from '../teste/acessibilidade';
@@ -36,14 +36,28 @@ const capacidadesDeRecepcao: Capacidades = {
   mfaAtivo: false, mfaObrigatorio: false,
 };
 
-function montar() {
+function montar(rota = '/agenda') {
   const cliente = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={cliente}>
-      <MemoryRouter initialEntries={['/agenda']}><Casca /></MemoryRouter>
+      <MemoryRouter initialEntries={[rota]}><Casca /></MemoryRouter>
     </QueryClientProvider>,
   );
 }
+
+/** A lateral e as abas desenham os mesmos menus; cada teste diz de qual está falando. */
+const lateral = async () => within(await screen.findByRole('navigation', { name: 'Seções do sistema' }));
+const abas = async () => within(await screen.findByRole('navigation', { name: 'Atalhos' }));
+
+const muitosMenus = [
+  { id: 'agenda', rotulo: 'Agenda', rota: '/agenda', icone: 'calendario', grupo: 'operacao' },
+  { id: 'atendimento', rotulo: 'Atendimento', rota: '/comandas', icone: 'tesoura',
+    grupo: 'operacao' },
+  { id: 'clientes', rotulo: 'Clientes', rota: '/clientes', icone: 'pessoas', grupo: 'operacao' },
+  { id: 'fila', rotulo: 'Fila de espera', rota: '/fila', icone: 'ampulheta', grupo: 'operacao' },
+  { id: 'estoque', rotulo: 'Estoque', rota: '/estoque', icone: 'caixa', grupo: 'gestao' },
+  { id: 'config', rotulo: 'Configurações', rota: '/config', icone: 'engrenagem', grupo: 'sistema' },
+];
 
 describe('casca', () => {
   it('desenha só os menus que o servidor mandou', async () => {
@@ -52,8 +66,9 @@ describe('casca', () => {
     // promessa de que o front não decide nada (inviolável nº 6).
     montar();
 
-    expect(await screen.findAllByText('Agenda')).toHaveLength(2);
-    expect(screen.getByText('Clientes')).toBeInTheDocument();
+    const menu = await lateral();
+    expect(menu.getByRole('link', { name: 'Agenda' })).toBeInTheDocument();
+    expect(menu.getByRole('link', { name: 'Clientes' })).toBeInTheDocument();
     expect(screen.queryByText('Financeiro')).not.toBeInTheDocument();
     expect(screen.queryByText('Configurações')).not.toBeInTheDocument();
   });
@@ -64,11 +79,11 @@ describe('casca', () => {
     expect(await screen.findByText('Studio Marilda')).toBeInTheDocument();
   });
 
-  it('abre e fecha a navegação móvel sem perder os menus do servidor', async () => {
+  it('o "Mais" abre e fecha a navegação completa, e devolve o foco', async () => {
     montar();
     await screen.findByText('Studio Marilda');
 
-    const abrir = screen.getByRole('button', { name: 'Abrir menu' });
+    const abrir = screen.getByRole('button', { name: 'Mais' });
     fireEvent.click(abrir);
     expect(abrir).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('complementary', { name: 'Navegação' })).toHaveClass('aberta');
@@ -139,8 +154,9 @@ describe('casca', () => {
     montar();
 
     expect(await screen.findByText('Studio Marilda')).toBeInTheDocument();
-    expect(screen.getAllByText('Agenda').length).toBeGreaterThan(0);
-    expect(screen.getByText('Clientes')).toBeInTheDocument();
+    const menu = await lateral();
+    expect(menu.getByRole('link', { name: 'Agenda' })).toBeInTheDocument();
+    expect(menu.getByRole('link', { name: 'Clientes' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Operação' })).not.toBeInTheDocument();
   });
 
@@ -155,7 +171,7 @@ describe('casca', () => {
 
     montar();
 
-    expect(await screen.findByText('Novidade')).toBeInTheDocument();
+    expect((await lateral()).getByRole('link', { name: 'Novidade' })).toBeInTheDocument();
   });
 
   it('encerra a sessão pelo backend antes de voltar ao login', async () => {
@@ -208,7 +224,7 @@ describe('o pedaço da tela chega antes do clique', () => {
     // existe de graça — é ele que paga o download.
     precarregar.mockClear();
     montar();
-    const clientes = await screen.findByRole('link', { name: /Clientes/ });
+    const clientes = (await lateral()).getByRole('link', { name: 'Clientes' });
 
     fireEvent.mouseEnter(clientes);
 
@@ -218,18 +234,73 @@ describe('o pedaço da tela chega antes do clique', () => {
   it('pelo teclado, o foco faz o mesmo papel', async () => {
     precarregar.mockClear();
     montar();
-    const clientes = await screen.findByRole('link', { name: /Clientes/ });
+    const clientes = (await lateral()).getByRole('link', { name: 'Clientes' });
 
     fireEvent.focus(clientes);
 
     expect(precarregar).toHaveBeenCalledWith('/clientes');
+  });
+
+  it('no toque, o dedo encostando na aba já começa a baixar a tela', async () => {
+    // Não existe `mouseenter` no toque: sem isto o celular perderia o intervalo de graça.
+    precarregar.mockClear();
+    montar();
+    const clientes = (await abas()).getByRole('link', { name: 'Clientes' });
+
+    fireEvent.pointerDown(clientes);
+
+    expect(precarregar).toHaveBeenCalledWith('/clientes');
+  });
+});
+
+describe('as abas do toque (R-UX-22)', () => {
+  it('mostram os quatro primeiros menus na ordem do servidor, e o Mais', async () => {
+    // O front escolhe QUANTOS cabem, não QUAIS: a ordem é a de /me/capabilities. Se o
+    // servidor puser Estoque antes da Fila, a aba muda sem ninguém tocar neste arquivo.
+    vi.mocked(api).mockResolvedValueOnce({ ...capacidadesDeRecepcao, menus: muitosMenus } as never);
+    montar();
+
+    const atalhos = await abas();
+    const rotulos = atalhos.getAllByRole('link').map((link) => link.textContent);
+    expect(rotulos).toEqual(['Agenda', 'Atendimento', 'Clientes', 'Fila de espera']);
+    expect(atalhos.getByRole('button', { name: 'Mais' })).toBeInTheDocument();
+    expect(atalhos.queryByRole('link', { name: 'Estoque' })).not.toBeInTheDocument();
+  });
+
+  it('com a tela atual nas abas, a aba dela acende e o Mais não', async () => {
+    vi.mocked(api).mockResolvedValueOnce({ ...capacidadesDeRecepcao, menus: muitosMenus } as never);
+    montar('/clientes');
+
+    const atalhos = await abas();
+    expect(atalhos.getByRole('link', { name: 'Clientes' })).toHaveClass('ativo');
+    expect(atalhos.getByRole('button', { name: 'Mais' })).not.toHaveClass('ativo');
+  });
+
+  it('fora das abas, o Mais acende — ninguém fica sem saber onde está', async () => {
+    vi.mocked(api).mockResolvedValueOnce({ ...capacidadesDeRecepcao, menus: muitosMenus } as never);
+    montar('/config');
+
+    const atalhos = await abas();
+    expect(atalhos.getByRole('button', { name: 'Mais' })).toHaveClass('ativo');
+    expect(atalhos.getAllByRole('link').filter((link) => link.classList.contains('ativo')))
+      .toHaveLength(0);
+  });
+});
+
+describe('a janela', () => {
+  it('o título acompanha a tela, com o nome do salão', async () => {
+    // Instalado, o título é o que aparece no Alt-Tab e no dock. Era fixo em "Agenda".
+    montar('/clientes');
+    await screen.findByText('Studio Marilda');
+
+    await waitFor(() => expect(document.title).toBe('Clientes · Studio Marilda'));
   });
 });
 
 describe('acessibilidade', () => {
   it('não tem violação estrutural: a casca com o menu', async () => {
     const { container } = montar();
-    await screen.findByRole('link', { name: 'Agenda' });
+    await lateral();
 
     await deveSerAcessivel(container);
   });

@@ -60,45 +60,56 @@
   }
   /* Sobre o menu escuro, tinta sobre tinta não existe: lá o anel é claro. */
   .casca-lateral :focus-visible,
-  .auth-placa:focus-visible {
+  .casca-abas :focus-visible {
     outline-color: var(--foco-claro);
+  }
+
+  /*
+   * A moldura vai até a borda da janela (RT-INF-013). Sem isto, o elástico da rolagem no
+   * macOS e no iOS mostra o cinza do papel atrás da moldura escura — a costura aparece.
+   */
+  html:has(.casca) { background: var(--espelho); }
+  html:has(.auth-tela),
+  html:has(.inicio-carga) { background: var(--espelho); }
+
+  /*
+   * Instalado, ele é aplicativo: a página inteira não quica nem dispara o "puxar para
+   * recarregar" — quem rola é a folha, e só ela. Recarregar sem querer no meio de uma
+   * comanda é perder o que estava sendo digitado.
+   */
+  @media (display-mode: standalone), (display-mode: window-controls-overlay) {
+    html, body { overscroll-behavior: none; }
   }
   a { color: oklch(0.55 0.10 252); }
   a:hover { color: oklch(0.45 0.10 252); }
 }
 
-/* O boot nunca deixa uma tela branca enquanto o cookie seguro restaura a sessão. */
+/* O boot nunca deixa uma tela branca enquanto o cookie seguro restaura a sessão. É a
+   continuação do splash do app instalado: a noite da marca e o ícone que a pessoa tocou. */
 .inicio-carga {
   min-height: 100dvh;
   display: grid;
   place-content: center;
   justify-items: center;
-  gap: var(--e-4);
+  gap: var(--e-5);
   background: var(--espelho);
 }
-.inicio-carga-marca {
-  width: 52px;
-  height: 52px;
-  display: grid;
-  place-items: center;
-  color: var(--espelho);
-  background: var(--metal);
-  border-radius: var(--raio-2);
-  font-family: var(--fonte-identidade);
-  font-size: var(--t-30);
-}
+/* O símbolo, sozinho na moldura: é o mesmo desenho do ícone que a pessoa acabou de tocar. */
+.inicio-carga-marca { display: grid; place-items: center; }
 .inicio-carga-linha {
   width: 52px;
   height: 2px;
   overflow: hidden;
-  background: var(--espelho-regua);
+  background: var(--noite-traco);
+  border-radius: 1px;
 }
 .inicio-carga-linha::after {
   content: '';
   display: block;
   width: 45%;
   height: 100%;
-  background: var(--metal-claro);
+  /* Cor mínima: a única cor do carregamento é o ícone. */
+  background: var(--noite-texto);
   animation: inicio-carga 900ms var(--mov-curva) infinite alternate;
 }
 @keyframes inicio-carga { to { transform: translateX(122%); } }

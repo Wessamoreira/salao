@@ -5,7 +5,8 @@
   margin: 0 auto;
   /* Formulário é leitura em coluna: linha longa obriga o olho a voltar ao começo, e
      aqui cada campo tem uma explicação embaixo que precisa ser lida. */
-  max-width: 560px;
+  /* 880px: duas colunas de leitura (RT-INF-017). Em uma coluna só, 560px. */
+  max-width: 880px;
   /*
    * Superfície, não trecho do fundo.
    *
@@ -47,3 +48,26 @@
 
 /* A primeira seção não leva a linha de separação: ela vem logo abaixo do título. */
 .cfg-tela > section:first-of-type { margin-top: 0; }
+
+/*
+ * RT-INF-017 — tela de AJUSTES: o ajuste à esquerda (rótulo e o que ele muda), o controle à
+ * direita. Numa coluna só, a explicação de cada campo atravessava a tela inteira embaixo dele,
+ * e o olho perdia de qual campo ela era. Assim cada linha é uma decisão: o que é, o que muda,
+ * e onde se muda.
+ */
+@media (min-width: 900px) {
+  .cfg-tela .campo {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    column-gap: var(--e-8);
+    align-items: start;
+    margin-bottom: 0;
+    padding: var(--e-4) 0;
+    border-top: 1px solid var(--regua);
+  }
+  .cfg-tela .secao-titulo + .campo { border-top: 0; }
+  /* O rótulo alinha com o meio do controle (36px), não com o topo dele. */
+  .cfg-tela .campo > span:first-child { grid-column: 1; grid-row: 1; margin: 9px 0 0; }
+  .cfg-tela .campo > :is(input, select, textarea) { grid-column: 2; grid-row: 1 / span 2; }
+  .cfg-tela .campo > .campo-ajuda { grid-column: 1; grid-row: 2; margin-top: var(--e-1); }
+}

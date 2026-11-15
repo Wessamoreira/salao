@@ -7,6 +7,7 @@ import { AvisoDeDuplicado } from './AvisoDeDuplicado';
 import { EditarFicha } from './EditarFicha';
 import { Consentimentos } from './Consentimentos';
 import { Telefone } from './Telefone';
+import { iniciais } from './iniciais';
 
 /**
  * A ficha de quem está sendo atendida.
@@ -43,10 +44,16 @@ export function Ficha({ cliente, aoSair }: { cliente: Cliente; aoSair: () => voi
         tablet. Sem o botão, o único caminho visível era clicar em outra pessoa.
       */}
       <header className="cli-ficha-topo">
-        <div>
+        <span className="cli-avatar cli-avatar-grande" aria-hidden="true">{iniciais(atual.nome)}</span>
+        <div className="cli-ficha-quem">
           <h2 className="cli-ficha-nome">{chamado}</h2>
           {chamado !== atual.nome && <p className="cli-ficha-formal">{atual.nome}</p>}
         </div>
+        {/* Corrigir é a ação mais usada da ficha: botão, ao lado do fechar — e não mais um
+            link sublinhado no meio do texto (RT-CLI-008). */}
+        <button type="button" className="pagina-acao discreta" onClick={() => setEmEdicao(true)}>
+          Corrigir ficha
+        </button>
         <button type="button" className="cli-fechar" onClick={aoSair} aria-label="Fechar a ficha">
           <Icone nome="fechar" tamanho={16} />
         </button>
@@ -58,13 +65,6 @@ export function Ficha({ cliente, aoSair }: { cliente: Cliente; aoSair: () => voi
         <dt>E-mail</dt>
         <dd>{atual.email}</dd>
       </dl>
-
-      {/* Discreta: corrigir é frequente, mas não é o que se veio fazer nesta tela. */}
-      <p style={{ marginTop: 'var(--e-4)' }}>
-        <button type="button" className="acao-discreta" onClick={() => setEmEdicao(true)}>
-          Corrigir ficha
-        </button>
-      </p>
 
       <Consentimentos clienteId={atual.id} />
 
